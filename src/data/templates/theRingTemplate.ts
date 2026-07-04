@@ -1192,6 +1192,63 @@ export const theRingTemplate: Project = {
         views: ["system-alpha"],
         positions: { "system-alpha": { x: 550, y: 380 } }
       }
+    },
+    {
+      id: "nfc-rfid-chip",
+      type: "blockNode",
+      position: { x: 180, y: 550 },
+      data: {
+        name: "NFC / RFID Tag Chip",
+        category: "Electronics",
+        status: "Later",
+        description: "Highly compact NFC/RFID transceiver chip allowing passive data exchanges (e.g. sharing contact cards, triggering actions) even when ring is powered off.",
+        purpose: "Enables zero-power credential exchanges and proximity triggers.",
+        requirements: "Dual-interface EEPROM, SPI/I2C connection to MCU, small footprint.",
+        candidateComponents: "NXP NTAG223 or STMicroelectronics ST25DV04K.",
+        risks: "Antenna de-tuning inside metallic casing, data interception.",
+        notes: "Can operate passively using phone's RF field or actively via MCU power.",
+        testingNotes: "Test read/write cycles using standard NFC-enabled smartphone.",
+        views: ["electronics"],
+        positions: { electronics: { x: 180, y: 550 } }
+      }
+    },
+    {
+      id: "nfc-window",
+      type: "blockNode",
+      position: { x: 50, y: 450 },
+      data: {
+        name: "NFC RF Pass-Through Window",
+        category: "Mechanical",
+        status: "Later",
+        description: "Non-metallic outer casing segment (plastic, resin, or ceramic) to allow RF electromagnetic waves to penetrate the titanium ring body.",
+        purpose: "Prevents the titanium casing from acting as a Faraday cage, blocking NFC signals.",
+        requirements: "Minimal width 3mm, sealed against water (IP68).",
+        candidateComponents: "Zirconia Ceramic insert or PEEK plastic shell segment.",
+        risks: "Weakens mechanical integrity, color mismatch with metal.",
+        notes: "Must align precisely with the NFC antenna tag.",
+        testingNotes: "Check NFC range through casing using RF signal meter.",
+        views: ["outer"],
+        positions: { outer: { x: 50, y: 450 } }
+      }
+    },
+    {
+      id: "nfc-antenna",
+      type: "blockNode",
+      position: { x: 260, y: 450 },
+      data: {
+        name: "NFC Coil Antenna",
+        category: "Mechanical",
+        status: "Later",
+        description: "Thin PCB-etched or wire-wound coil antenna optimized for 13.56 MHz NFC frequency.",
+        purpose: "Couples with external reader magnetic fields to transfer power and data.",
+        requirements: "Inductance matched to 13.56 MHz (typically 1.5 - 2.5 uH), fits around the band.",
+        candidateComponents: "Custom flex-PCB trace antenna (6-turn coil).",
+        risks: "Impedance mismatch, coupling loss due to proximity of copper ground planes.",
+        notes: "Must be placed directly beneath the non-metallic casing window.",
+        testingNotes: "Measure antenna inductance on LCR meter before/after mounting.",
+        views: ["internal"],
+        positions: { internal: { x: 260, y: 450 } }
+      }
     }
   ],
   edges: [

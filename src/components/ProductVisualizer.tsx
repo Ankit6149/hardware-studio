@@ -125,6 +125,15 @@ export const ProductVisualizer: React.FC = () => {
               >
                 <title>Bottom Orientation ridge</title>
               </path>
+
+              {/* NFC RF Window slot on the side casing */}
+              <path
+                d="M 27 115 A 75 75 0 0 0 35 135 L 45 130 A 64 64 0 0 1 38 112 Z"
+                className={`${getHotspotStyles('nfc-window', 'stroke')} ${getHotspotStyles('nfc-window', 'fill')} fill-purple-500/20 transition-all cursor-pointer`}
+                onClick={() => handleHotspotClick('nfc-window')}
+              >
+                <title>NFC RF Pass-Through Window</title>
+              </path>
             </svg>
 
             {/* Legend info panel */}
@@ -211,6 +220,15 @@ export const ProductVisualizer: React.FC = () => {
                 onClick={() => handleHotspotClick('battery-zone-later')}
               >
                 <title>Curved Lithium Polymer battery</title>
+              </path>
+
+              {/* NFC Coil Antenna surrounding the side bottom arc */}
+              <path 
+                d="M 45 135 A 64 64 0 0 0 70 157" 
+                className={`${getHotspotStyles('nfc-antenna', 'stroke')} fill-none stroke-[2.5px] stroke-purple-500 transition-all cursor-pointer`}
+                onClick={() => handleHotspotClick('nfc-antenna')}
+              >
+                <title>NFC Coil Antenna</title>
               </path>
 
               {/* Charging Pins Contact targets */}
