@@ -35,7 +35,13 @@ export const BlueprintDossier: React.FC = () => {
     powerBudget, 
     pinMap, 
     firmwareTasks, 
-    batteryCapacityMah 
+    batteryCapacityMah,
+    boards = [],
+    circuitBlocks = [],
+    boardComponents = [],
+    nets = [],
+    pcbConstraints = [],
+    manufacturingChecklist = []
   } = project;
 
   const report = calculateReadinessScore(project);
@@ -52,6 +58,7 @@ export const BlueprintDossier: React.FC = () => {
     alpha: true,
     testing: true,
     bom: true,
+    boardPlanning: true,
     readiness: true
   });
 
@@ -1088,7 +1095,309 @@ export const BlueprintDossier: React.FC = () => {
           )}
         </div>
 
-        {/* 11. READINESS REVIEW ACCORDION */}
+        {/* 11. BOARD PLANNING & ECAD PREPARATION ACCORDION */}
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm print:shadow-none print:border-slate-300">
+          <button 
+            onClick={() => toggleSection('boardPlanning')}
+            className="w-full flex items-center justify-between p-4 bg-slate-50/50 border-b border-slate-150 text-left font-bold text-slate-800 print:bg-white print:border-slate-300"
+          >
+            <span className="flex items-center space-x-2">
+              <Layers className="w-4 h-4 text-slate-500" />
+              <span>11. Board Planning & ECAD Prep</span>
+            </span>
+            <span className="print:hidden">
+              {expandedSections.boardPlanning ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </span>
+          </button>
+          
+          {expandedSections.boardPlanning && (
+            <div className="p-5 space-y-6">
+              
+              {/* PCBs List */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">PCB / Board Specifications</h4>
+                {boards.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic">No PCBs/boards planned yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider text-left border-b border-slate-200">
+                          <th className="p-2">Board Name</th>
+                          <th className="p-2">Type</th>
+                          <th className="p-2">Substrate</th>
+                          <th className="p-2">Layers</th>
+                          <th className="p-2">Dimensions</th>
+                          <th className="p-2">Placement</th>
+                          <th className="p-2">Status</th>
+                          <th className="p-2">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {boards.map(b => (
+                          <tr key={b.id} className="text-[11px] align-top hover:bg-slate-50/50">
+                            <td className="p-2 font-bold text-slate-900">{b.name}</td>
+                            <td className="p-2">{b.boardType}</td>
+                            <td className="p-2 font-mono">{b.substrate}</td>
+                            <td className="p-2 text-center">{b.layerCount}</td>
+                            <td className="p-2 font-mono">{b.dimensionsMm}</td>
+                            <td className="p-2">{b.placement}</td>
+                            <td className="p-2">
+                              <span className="bg-slate-100 text-slate-650 px-1 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border border-slate-200">
+                                {b.status}
+                              </span>
+                            </td>
+                            <td className="p-2 leading-relaxed text-[10px]">
+                              <div><strong>Purpose</strong>: {b.purpose}</div>
+                              {b.mountingNotes && <div><strong>Mount</strong>: {b.mountingNotes}</div>}
+                              {b.connectorNotes && <div><strong>Connectors</strong>: {b.connectorNotes}</div>}
+                              {b.thermalNotes && <div><strong>Thermal</strong>: {b.thermalNotes}</div>}
+                              {b.rfNotes && <div><strong>RF</strong>: {b.rfNotes}</div>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Circuits Blocks */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Circuit Blocks Planning</h4>
+                {circuitBlocks.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic">No circuit blocks configured yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider text-left border-b border-slate-200">
+                          <th className="p-2">Block Name</th>
+                          <th className="p-2">Type</th>
+                          <th className="p-2">Target Board</th>
+                          <th className="p-2">Description</th>
+                          <th className="p-2">Interface</th>
+                          <th className="p-2">Design Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {circuitBlocks.map(c => {
+                          const targetBoardName = boards.find(b => b.id === c.boardId)?.name || 'Unassigned';
+                          return (
+                            <tr key={c.id} className="text-[11px] align-top hover:bg-slate-50/50">
+                              <td className="p-2 font-bold text-slate-900">{c.name}</td>
+                              <td className="p-2 font-mono text-[10px]">{c.circuitType}</td>
+                              <td className="p-2">{targetBoardName}</td>
+                              <td className="p-2 leading-normal">{c.description}</td>
+                              <td className="p-2 font-mono text-[10px]">{c.interfaceType || 'Direct Pin'}</td>
+                              <td className="p-2 leading-relaxed text-[10px]">
+                                <div><strong>RefDes</strong>: <code className="bg-slate-100 px-1 rounded font-bold text-slate-650">{c.referenceDesignators}</code></div>
+                                {c.powerNets && <div><strong>Power Nets</strong>: {c.powerNets}</div>}
+                                {c.signalNets && <div><strong>Signal Nets</strong>: {c.signalNets}</div>}
+                                {c.designNotes && <div className="mt-1 text-slate-500">{c.designNotes}</div>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Component Placement */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Board Components & Placement</h4>
+                {boardComponents.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic">No board components placed yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider text-left border-b border-slate-200">
+                          <th className="p-2">Ref Des</th>
+                          <th className="p-2">Name</th>
+                          <th className="p-2">Type</th>
+                          <th className="p-2">Value</th>
+                          <th className="p-2">Package / Footprint</th>
+                          <th className="p-2">Board</th>
+                          <th className="p-2 text-center">Side</th>
+                          <th className="p-2">Criticality</th>
+                          <th className="p-2">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {boardComponents.map(bc => {
+                          const targetBoardName = boards.find(b => b.id === bc.boardId)?.name || 'Unassigned';
+                          return (
+                            <tr key={bc.id} className="text-[11px] align-top hover:bg-slate-50/50">
+                              <td className="p-2 font-bold font-mono text-indigo-700">{bc.referenceDesignator}</td>
+                              <td className="p-2 font-bold text-slate-800">{bc.componentName}</td>
+                              <td className="p-2 text-[10px]">{bc.componentType}</td>
+                              <td className="p-2 font-mono text-[10px]">{bc.value || 'N/A'}</td>
+                              <td className="p-2 font-mono text-[10px]">{bc.footprint || bc.packageName || 'N/A'}</td>
+                              <td className="p-2">{targetBoardName}</td>
+                              <td className="p-2 text-center font-bold text-slate-600">{bc.side}</td>
+                              <td className="p-2 text-[10px]">
+                                <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${
+                                  ['High', 'RF Critical', 'Thermal Critical'].includes(bc.placementCriticality) 
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200' 
+                                    : 'bg-slate-100 text-slate-550'
+                                }`}>
+                                  {bc.placementCriticality}
+                                </span>
+                              </td>
+                              <td className="p-2 text-[10px] text-slate-500 leading-normal max-w-xs">{bc.notes}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Signaling Nets */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-bold text-slate-550 uppercase tracking-widest">Signaling Nets & Netlist Prep</h4>
+                {nets.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic">No signal/power nets mapped yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider text-left border-b border-slate-200">
+                          <th className="p-2">Net Name</th>
+                          <th className="p-2">Type</th>
+                          <th className="p-2 text-center">Voltage</th>
+                          <th className="p-2">Source Component:Pin</th>
+                          <th className="p-2">Target Component:Pin</th>
+                          <th className="p-2">Impedance Req</th>
+                          <th className="p-2">Current Est.</th>
+                          <th className="p-2">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {nets.map(n => (
+                          <tr key={n.id} className="text-[11px] align-top hover:bg-slate-50/50">
+                            <td className="p-2 font-bold font-mono text-cyan-800">{n.netName}</td>
+                            <td className="p-2 font-mono text-[10px]">{n.netType}</td>
+                            <td className="p-2 text-center font-mono font-bold text-slate-650">{n.voltage || 'N/A'}</td>
+                            <td className="p-2 font-mono text-[10px]">{n.sourceComponent}:{n.sourcePin}</td>
+                            <td className="p-2 font-mono text-[10px]">{n.targetComponent}:{n.targetPin}</td>
+                            <td className="p-2 font-mono text-[10px] text-slate-500">{n.impedanceRequirement || 'N/A'}</td>
+                            <td className="p-2 font-mono text-[10px] text-slate-550">{n.currentEstimate || 'N/A'}</td>
+                            <td className="p-2 text-[10px] text-slate-500 leading-normal max-w-xs">{n.notes}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* PCB Constraints */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-bold text-slate-550 uppercase tracking-widest">PCB Layout Constraints & Tolerances</h4>
+                {pcbConstraints.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic">No PCB constraints defined yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider text-left border-b border-slate-200">
+                          <th className="p-2">PCB Board</th>
+                          <th className="p-2">Constraint Type</th>
+                          <th className="p-2">Value / Parameter</th>
+                          <th className="p-2 text-center">Severity</th>
+                          <th className="p-2">Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {pcbConstraints.map(pc => {
+                          const targetBoardName = boards.find(b => b.id === pc.boardId)?.name || 'All boards';
+                          return (
+                            <tr key={pc.id} className="text-[11px] align-top hover:bg-slate-50/50">
+                              <td className="p-2 font-bold text-slate-800">{targetBoardName}</td>
+                              <td className="p-2 font-bold text-slate-900">{pc.constraintType}</td>
+                              <td className="p-2 font-mono text-[10px] font-bold text-slate-650">{pc.value} {pc.unit}</td>
+                              <td className="p-2 text-center">
+                                <span className={`px-1 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+                                  pc.severity === 'Critical' 
+                                    ? 'bg-rose-100 text-rose-800 border border-rose-200' 
+                                    : pc.severity === 'Warning' 
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    : 'bg-slate-100 text-slate-550'
+                                }`}>
+                                  {pc.severity}
+                                </span>
+                              </td>
+                              <td className="p-2 text-[10px] text-slate-500 leading-normal max-w-xs">{pc.description}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Checklist */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-bold text-slate-550 uppercase tracking-widest">Pre-Layout Verification Checklist</h4>
+                {manufacturingChecklist.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic">No checklist items created.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider text-left border-b border-slate-200">
+                          <th className="p-2">Category</th>
+                          <th className="p-2">Checklist Verification Item</th>
+                          <th className="p-2 text-center">Status</th>
+                          <th className="p-2">Owner Notes & Blockers</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {manufacturingChecklist.map(ch => (
+                          <tr key={ch.id} className="text-[11px] align-top hover:bg-slate-50/50">
+                            <td className="p-2 font-bold text-slate-800">{ch.category}</td>
+                            <td className="p-2 leading-normal">{ch.item}</td>
+                            <td className="p-2 text-center">
+                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${
+                                ch.status === 'Done'
+                                  ? 'bg-emerald-100 text-emerald-850 border-emerald-250'
+                                  : ch.status === 'Blocked'
+                                  ? 'bg-rose-100 text-rose-850 border-rose-250 font-extrabold animate-pulse'
+                                  : ch.status === 'In Progress'
+                                  ? 'bg-cyan-100 text-cyan-850 border-cyan-250'
+                                  : 'bg-slate-100 text-slate-550 border-slate-200'
+                              }`}>
+                                {ch.status}
+                              </span>
+                            </td>
+                            <td className="p-2 leading-relaxed text-[10px] text-slate-500">
+                              <div>{ch.ownerNotes}</div>
+                              {ch.blockingReason && (
+                                <div className="text-rose-700 font-bold mt-1 flex items-center">
+                                  <AlertTriangle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                                  <span>Blocker: {ch.blockingReason}</span>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+        </div>
+
+        {/* 12. READINESS REVIEW ACCORDION */}
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm print:shadow-none print:border-slate-300">
           <button 
             onClick={() => toggleSection('readiness')}
@@ -1096,7 +1405,7 @@ export const BlueprintDossier: React.FC = () => {
           >
             <span className="flex items-center space-x-2">
               <FileCheck2 className="w-4 h-4 text-slate-500" />
-              <span>11. Readiness Review & Actions</span>
+              <span>12. Readiness Review & Actions</span>
             </span>
             <span className="print:hidden">
               {expandedSections.readiness ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}

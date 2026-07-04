@@ -14,6 +14,11 @@ import { PinMapTable } from './PinMapTable';
 import { FirmwarePlan } from './FirmwarePlan';
 import { ReadinessDashboard } from './ReadinessDashboard';
 import { BlueprintDossier } from './BlueprintDossier';
+import { BoardStudio } from './BoardStudio';
+import { CircuitPlanner } from './CircuitPlanner';
+import { NetlistPlanner } from './NetlistPlanner';
+import { PCBConstraints } from './PCBConstraints';
+import { ManufacturingPack } from './ManufacturingPack';
 
 export const AppShell: React.FC = () => {
   const { activeView, loadProjectFromLocalStorage } = useProjectStore();
@@ -45,13 +50,37 @@ export const AppShell: React.FC = () => {
         return <ExportCenter />;
       case 'dossier':
         return <BlueprintDossier />;
+      case 'board-studio':
+        return <BoardStudio />;
+      case 'circuit-planner':
+        return <CircuitPlanner />;
+      case 'netlist-planner':
+        return <NetlistPlanner />;
+      case 'pcb-constraints':
+        return <PCBConstraints />;
+      case 'mfg-pack':
+        return <ManufacturingPack />;
       default:
         return <BlueprintCanvas />;
     }
   };
 
   // Canvas views are drawing-board views
-  const tabularViews = ['bom', 'testing', 'exports', 'power-budget', 'pin-map', 'firmware-plan', 'readiness', 'dossier'];
+  const tabularViews = [
+    'bom', 
+    'testing', 
+    'exports', 
+    'power-budget', 
+    'pin-map', 
+    'firmware-plan', 
+    'readiness', 
+    'dossier',
+    'board-studio',
+    'circuit-planner',
+    'netlist-planner',
+    'pcb-constraints',
+    'mfg-pack'
+  ];
   const isCanvasView = !tabularViews.includes(activeView);
   const showVisualizer = !tabularViews.includes(activeView);
 

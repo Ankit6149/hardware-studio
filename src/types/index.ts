@@ -109,6 +109,94 @@ export interface FirmwareTask {
   notes: string;
 }
 
+export interface BoardItem {
+  id: string;
+  name: string;
+  boardType: 'Main PCB' | 'Flex PCB' | 'Rigid PCB' | 'Rigid-Flex' | 'Daughterboard' | 'Charging Board' | 'Sensor Board' | 'Debug Board';
+  linkedProductArea?: string;
+  purpose: string;
+  dimensionsMm: string;
+  layerCount: number;
+  substrate: 'FR4' | 'Polyimide Flex' | 'Rigid-Flex' | 'Ceramic' | 'Other';
+  placement: 'Internal' | 'Outer' | 'Dock' | 'Strap' | 'Ring Arc' | 'Unknown';
+  mountingNotes: string;
+  connectorNotes: string;
+  thermalNotes: string;
+  rfNotes: string;
+  status: 'Concept' | 'Planned' | 'In Layout' | 'Reviewed' | 'Ready for ECAD';
+}
+
+export interface CircuitBlock {
+  id: string;
+  name: string;
+  circuitType: 'MCU' | 'Power' | 'Charger' | 'Sensor' | 'Haptic' | 'LED' | 'RF' | 'Debug' | 'Protection' | 'Connector' | 'Passive Network';
+  boardId: string;
+  linkedBlueprintBlock?: string;
+  description: string;
+  requiredComponents: string;
+  referenceDesignators: string;
+  powerNets: string;
+  signalNets: string;
+  interfaceType: string;
+  datasheetNotes: string;
+  designNotes: string;
+  risks: string;
+  status: 'Concept' | 'In Progress' | 'Complete' | 'Needs Review';
+}
+
+export interface BoardComponent {
+  id: string;
+  boardId: string;
+  circuitBlockId: string;
+  referenceDesignator: string;
+  componentName: string;
+  componentType: string;
+  value: string;
+  packageName: string;
+  footprint: string;
+  partNumber: string;
+  quantity: number;
+  side: 'Top' | 'Bottom' | 'Both' | 'Unknown';
+  placementCriticality: 'Low' | 'Medium' | 'High' | 'RF Critical' | 'Thermal Critical';
+  datasheetUrl?: string;
+  supplier?: string;
+  notes: string;
+}
+
+export interface NetItem {
+  id: string;
+  netName: string;
+  netType: 'Power' | 'Ground' | 'Signal' | 'Clock' | 'RF' | 'Differential' | 'Analog' | 'Digital' | 'Programming';
+  voltage: string;
+  sourceComponent: string;
+  sourcePin: string;
+  targetComponent: string;
+  targetPin: string;
+  protocol: string;
+  currentEstimate: string;
+  impedanceRequirement: string;
+  notes: string;
+}
+
+export interface PCBConstraint {
+  id: string;
+  boardId: string;
+  constraintType: 'Board Outline' | 'Layer Stack' | 'Trace Width' | 'Clearance' | 'Via' | 'RF Keepout' | 'Antenna' | 'Battery' | 'Thermal' | 'Flex Bend' | 'Mounting' | 'Test Point' | 'Connector' | 'Silkscreen';
+  value: string;
+  unit: string;
+  description: string;
+  severity: 'Info' | 'Warning' | 'Critical';
+}
+
+export interface ManufacturingChecklistItem {
+  id: string;
+  category: 'Schematic' | 'PCB Layout' | 'BOM' | 'Assembly' | 'Testing' | 'Compliance' | 'Mechanical' | 'Export';
+  item: string;
+  status: 'Not Started' | 'In Progress' | 'Done' | 'Blocked';
+  ownerNotes: string;
+  blockingReason?: string;
+}
+
 export interface Project {
   id: string;
   projectName: string;
@@ -125,6 +213,15 @@ export interface Project {
   powerBudget: PowerBudgetItem[];
   pinMap: PinMapItem[];
   firmwareTasks: FirmwareTask[];
-  batteryCapacityMah?: number; // Feature 7: battery capacity input
+  batteryCapacityMah?: number;
+  
+  // Board Studio extensions
+  boards?: BoardItem[];
+  circuitBlocks?: CircuitBlock[];
+  boardComponents?: BoardComponent[];
+  nets?: NetItem[];
+  pcbConstraints?: PCBConstraint[];
+  manufacturingChecklist?: ManufacturingChecklistItem[];
 }
+
 

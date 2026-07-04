@@ -7,7 +7,24 @@ const escapeMarkdown = (text: string | number | undefined | null): string => {
 };
 
 export const exportBlueprintDossierMarkdown = (project: Project) => {
-  const { projectName, description, nodes, edges, bom, testing, powerBudget, pinMap, firmwareTasks, batteryCapacityMah } = project;
+  const { 
+    projectName, 
+    description, 
+    nodes, 
+    edges, 
+    bom, 
+    testing, 
+    powerBudget, 
+    pinMap, 
+    firmwareTasks, 
+    batteryCapacityMah,
+    boards = [],
+    circuitBlocks = [],
+    boardComponents = [],
+    nets = [],
+    pcbConstraints = [],
+    manufacturingChecklist = []
+  } = project;
   const report = calculateReadinessScore(project);
   
   // Prototype Gate status
@@ -293,7 +310,65 @@ ${(() => {
 
 ---
 
-## 12. PROTOTYPE READY REVIEW & ACTION ITEMS
+---
+
+## 12. BOARD PLANNING & ECAD PREPARATION
+This section details the PCB layouts, components mapping, schematic circuits prep, impedance traces nets, outline clearance constraints, and layout package checklist details.
+
+### 12.1 PCB Specifications
+${(() => {
+  if (boards.length === 0) return '*No PCBs/boards planned yet.*';
+  return `| Board Name | Type | Substrate | Layers | Dimensions | Placement | Status | Purpose / Mounting |\n| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n` +
+    boards.map(b => `| **${escapeMarkdown(b.name)}** | ${escapeMarkdown(b.boardType)} | ${escapeMarkdown(b.substrate)} | ${b.layerCount} | ${escapeMarkdown(b.dimensionsMm)} | ${escapeMarkdown(b.placement)} | \`${escapeMarkdown(b.status)}\` | Purpose: ${escapeMarkdown(b.purpose)} <br> Mount: ${escapeMarkdown(b.mountingNotes)} |`).join('\n');
+})()}
+
+### 12.2 Sourcing Footprints & Placement (ECAD Prep)
+${(() => {
+  if (boardComponents.length === 0) return '*No board components placed yet.*';
+  return `| Ref Des | Name | Type | Value | Footprint / Package | PCB Board | Side | Criticality |\n| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n` +
+    boardComponents.map(bc => {
+      const boardName = boards.find(b => b.id === bc.boardId)?.name || 'Unassigned';
+      return `| **${escapeMarkdown(bc.referenceDesignator)}** | ${escapeMarkdown(bc.componentName)} | ${escapeMarkdown(bc.componentType)} | ${escapeMarkdown(bc.value)} | ${escapeMarkdown(bc.footprint)} / ${escapeMarkdown(bc.packageName)} | ${escapeMarkdown(boardName)} | ${escapeMarkdown(bc.side)} | \`${escapeMarkdown(bc.placementCriticality)}\` |`;
+    }).join('\n');
+})()}
+
+### 12.3 Circuit Blocks Planning
+${(() => {
+  if (circuitBlocks.length === 0) return '*No circuit blocks configured yet.*';
+  return `| Circuit Block | Category / Type | Target PCB | Description | Interface | Design & Sourcing Notes |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n` +
+    circuitBlocks.map(c => {
+      const boardName = boards.find(b => b.id === c.boardId)?.name || 'Unassigned';
+      return `| **${escapeMarkdown(c.name)}** | \`${escapeMarkdown(c.circuitType)}\` | ${escapeMarkdown(boardName)} | ${escapeMarkdown(c.description)} | ${escapeMarkdown(c.interfaceType || 'Direct Pin')} | RefDes: \`${escapeMarkdown(c.referenceDesignators)}\` <br> Notes: ${escapeMarkdown(c.designNotes)} |`;
+    }).join('\n');
+})()}
+
+### 12.4 Signaling Nets & Netlist Prep
+${(() => {
+  if (nets.length === 0) return '*No signal/power nets mapped yet.*';
+  return `| Net Name | Type | Target Voltage | Source Pin | Destination Pin | Current Est. | Impedance |\n| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n` +
+    nets.map(n => `| **${escapeMarkdown(n.netName)}** | \`${escapeMarkdown(n.netType)}\` | ${escapeMarkdown(n.voltage || 'N/A')} | ${escapeMarkdown(n.sourceComponent)}:${escapeMarkdown(n.sourcePin)} | ${escapeMarkdown(n.targetComponent)}:${escapeMarkdown(n.targetPin)} | ${escapeMarkdown(n.currentEstimate || 'N/A')} | ${escapeMarkdown(n.impedanceRequirement || 'N/A')} |`).join('\n');
+})()}
+
+### 12.5 Electrical & Mechanical Constraints
+${(() => {
+  if (pcbConstraints.length === 0) return '*No PCB constraints defined yet.*';
+  return `| Target PCB | Constraint Type | Parameter Value | Unit | Severity | Description / Details |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n` +
+    pcbConstraints.map(pc => {
+      const boardName = boards.find(b => b.id === pc.boardId)?.name || 'All boards';
+      return `| ${escapeMarkdown(boardName)} | **${escapeMarkdown(pc.constraintType)}** | ${escapeMarkdown(pc.value)} | ${escapeMarkdown(pc.unit)} | \`${escapeMarkdown(pc.severity)}\` | ${escapeMarkdown(pc.description)} |`;
+    }).join('\n');
+})()}
+
+### 12.6 Pre-Layout Verification Checklist
+${(() => {
+  if (manufacturingChecklist.length === 0) return '*No pre-layout checklist items created.*';
+  return `| Check Category | Task Verification Item | Assigned Status | Owner Notes & Blockers |\n| :--- | :--- | :--- | :--- |\n` +
+    manufacturingChecklist.map(ch => `| **${escapeMarkdown(ch.category)}** | ${escapeMarkdown(ch.item)} | \`${escapeMarkdown(ch.status)}\` | ${escapeMarkdown(ch.ownerNotes)} ${ch.blockingReason ? `<br>**Blocker**: ${escapeMarkdown(ch.blockingReason)}` : ''} |`).join('\n');
+})()}
+
+---
+
+## 13. PROTOTYPE READY REVIEW & ACTION ITEMS
 Summary dashboard and gating review checks.
 
 - **Readiness Score Index**: ${report.overallScore} / 100
@@ -316,7 +391,24 @@ ${report.nextActions.slice(0, 5).map((act, index) => `${index + 1}. **${act}**`)
 };
 
 export const exportBlueprintDossierJson = (project: Project) => {
-  const { projectName, description, nodes, edges, bom, testing, powerBudget, pinMap, firmwareTasks, batteryCapacityMah } = project;
+  const { 
+    projectName, 
+    description, 
+    nodes, 
+    edges, 
+    bom, 
+    testing, 
+    powerBudget, 
+    pinMap, 
+    firmwareTasks, 
+    batteryCapacityMah,
+    boards = [],
+    circuitBlocks = [],
+    boardComponents = [],
+    nets = [],
+    pcbConstraints = [],
+    manufacturingChecklist = []
+  } = project;
   const report = calculateReadinessScore(project);
   
   const rawObj = {
@@ -341,7 +433,13 @@ export const exportBlueprintDossierJson = (project: Project) => {
       testing,
       powerBudget,
       pinMap,
-      firmwareTasks
+      firmwareTasks,
+      boards,
+      circuitBlocks,
+      boardComponents,
+      nets,
+      pcbConstraints,
+      manufacturingChecklist
     }
   };
   

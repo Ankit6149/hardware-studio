@@ -8,7 +8,13 @@ import {
   NodeData, 
   PowerBudgetItem, 
   PinMapItem, 
-  FirmwareTask 
+  FirmwareTask,
+  BoardItem,
+  CircuitBlock,
+  BoardComponent,
+  NetItem,
+  PCBConstraint,
+  ManufacturingChecklistItem
 } from '../types';
 import { templates } from '../data/templates';
 
@@ -66,6 +72,38 @@ interface ProjectState extends Project {
   updateFirmwareTask: (id: string, data: Partial<FirmwareTask>) => void;
   deleteFirmwareTask: (id: string) => void;
   generateFirmwareTasksFromBlueprint: () => void;
+
+  // Board Studio management
+  addBoard: (item: Omit<BoardItem, 'id'>) => void;
+  updateBoard: (id: string, data: Partial<BoardItem>) => void;
+  deleteBoard: (id: string) => void;
+
+  addCircuitBlock: (item: Omit<CircuitBlock, 'id'>) => void;
+  updateCircuitBlock: (id: string, data: Partial<CircuitBlock>) => void;
+  deleteCircuitBlock: (id: string) => void;
+
+  addBoardComponent: (item: Omit<BoardComponent, 'id'>) => void;
+  updateBoardComponent: (id: string, data: Partial<BoardComponent>) => void;
+  deleteBoardComponent: (id: string) => void;
+
+  addNet: (item: Omit<NetItem, 'id'>) => void;
+  updateNet: (id: string, data: Partial<NetItem>) => void;
+  deleteNet: (id: string) => void;
+
+  addPCBConstraint: (item: Omit<PCBConstraint, 'id'>) => void;
+  updatePCBConstraint: (id: string, data: Partial<PCBConstraint>) => void;
+  deletePCBConstraint: (id: string) => void;
+
+  addChecklistItem: (item: Omit<ManufacturingChecklistItem, 'id'>) => void;
+  updateChecklistItem: (id: string, data: Partial<ManufacturingChecklistItem>) => void;
+  deleteChecklistItem: (id: string) => void;
+
+  generateBoardPlanFromProduct: () => void;
+  generateCircuitsFromBlueprint: () => void;
+  generateBoardComponentsFromBOM: () => void;
+  generateNetsFromPinMap: () => void;
+  generatePCBConstraintsFromBoard: () => void;
+  generateManufacturingChecklist: () => void;
 
   // Project Actions
   saveActiveProject: () => void;
@@ -252,7 +290,15 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       powerBudget: state.powerBudget,
       pinMap: state.pinMap,
       firmwareTasks: state.firmwareTasks,
-      batteryCapacityMah: state.batteryCapacityMah
+      batteryCapacityMah: state.batteryCapacityMah,
+      
+      // Board Studio fields
+      boards: state.boards || [],
+      circuitBlocks: state.circuitBlocks || [],
+      boardComponents: state.boardComponents || [],
+      nets: state.nets || [],
+      pcbConstraints: state.pcbConstraints || [],
+      manufacturingChecklist: state.manufacturingChecklist || []
     };
   };
 
@@ -272,6 +318,12 @@ export const useProjectStore = create<ProjectState>((set, get) => {
 
   return {
     ...initialProject,
+    boards: initialProject.boards || [],
+    circuitBlocks: initialProject.circuitBlocks || [],
+    boardComponents: initialProject.boardComponents || [],
+    nets: initialProject.nets || [],
+    pcbConstraints: initialProject.pcbConstraints || [],
+    manufacturingChecklist: initialProject.manufacturingChecklist || [],
     selectedNodeId: null,
     projectsList: [],
 
@@ -1074,7 +1126,96 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           acceptanceCriteria: f.acceptanceCriteria || "",
           notes: f.notes || ""
         })),
-        batteryCapacityMah: Number(json.batteryCapacityMah) || 100
+        batteryCapacityMah: Number(json.batteryCapacityMah) || 100,
+        // Board Studio extensions
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        boards: (json.boards || []).map((b: any) => ({
+          id: b.id || `board_${Math.random()}`,
+          name: b.name || "Main PCB",
+          boardType: b.boardType || "Main PCB",
+          linkedProductArea: b.linkedProductArea || "",
+          purpose: b.purpose || "",
+          dimensionsMm: b.dimensionsMm || "10 x 10",
+          layerCount: Number(b.layerCount) || 2,
+          substrate: b.substrate || "FR4",
+          placement: b.placement || "Internal",
+          mountingNotes: b.mountingNotes || "",
+          connectorNotes: b.connectorNotes || "",
+          thermalNotes: b.thermalNotes || "",
+          rfNotes: b.rfNotes || "",
+          status: b.status || "Concept"
+        })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        circuitBlocks: (json.circuitBlocks || []).map((cb: any) => ({
+          id: cb.id || `circuit_${Math.random()}`,
+          name: cb.name || "",
+          circuitType: cb.circuitType || "MCU",
+          boardId: cb.boardId || "",
+          linkedBlueprintBlock: cb.linkedBlueprintBlock || "",
+          description: cb.description || "",
+          requiredComponents: cb.requiredComponents || "",
+          referenceDesignators: cb.referenceDesignators || "",
+          powerNets: cb.powerNets || "",
+          signalNets: cb.signalNets || "",
+          interfaceType: cb.interfaceType || "",
+          datasheetNotes: cb.datasheetNotes || "",
+          designNotes: cb.designNotes || "",
+          risks: cb.risks || "",
+          status: cb.status || "Concept"
+        })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        boardComponents: (json.boardComponents || []).map((bc: any) => ({
+          id: bc.id || `cmp_${Math.random()}`,
+          boardId: bc.boardId || "",
+          circuitBlockId: bc.circuitBlockId || "",
+          referenceDesignator: bc.referenceDesignator || "",
+          componentName: bc.componentName || "",
+          componentType: bc.componentType || "",
+          value: bc.value || "",
+          packageName: bc.packageName || "",
+          footprint: bc.footprint || "",
+          partNumber: bc.partNumber || "",
+          quantity: Number(bc.quantity) || 1,
+          side: bc.side || "Top",
+          placementCriticality: bc.placementCriticality || "Low",
+          datasheetUrl: bc.datasheetUrl || "",
+          supplier: bc.supplier || "",
+          notes: bc.notes || ""
+        })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        nets: (json.nets || []).map((n: any) => ({
+          id: n.id || `net_${Math.random()}`,
+          netName: n.netName || "",
+          netType: n.netType || "Signal",
+          voltage: n.voltage || "",
+          sourceComponent: n.sourceComponent || "",
+          sourcePin: n.sourcePin || "",
+          targetComponent: n.targetComponent || "",
+          targetPin: n.targetPin || "",
+          protocol: n.protocol || "",
+          currentEstimate: n.currentEstimate || "",
+          impedanceRequirement: n.impedanceRequirement || "",
+          notes: n.notes || ""
+        })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        pcbConstraints: (json.pcbConstraints || []).map((c: any) => ({
+          id: c.id || `const_${Math.random()}`,
+          boardId: c.boardId || "",
+          constraintType: c.constraintType || "Board Outline",
+          value: c.value || "",
+          unit: c.unit || "",
+          description: c.description || "",
+          severity: c.severity || "Info"
+        })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        manufacturingChecklist: (json.manufacturingChecklist || []).map((mc: any) => ({
+          id: mc.id || `mfg_${Math.random()}`,
+          category: mc.category || "Schematic",
+          item: mc.item || "",
+          status: mc.status || "Not Started",
+          ownerNotes: mc.ownerNotes || "",
+          blockingReason: mc.blockingReason || ""
+        }))
       };
 
       const saved = getSavedProjects();
@@ -1100,6 +1241,648 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         const first = Object.keys(allProjects)[0];
         if (first) get().loadProject(first);
       }
+    },
+
+    // Board Studio Actions
+    addBoard: (item) => {
+      const id = `board_${Date.now()}_${Math.random()}`;
+      const newItem: BoardItem = { ...item, id };
+      const boards = [...(get().boards || []), newItem];
+      persistChange({ boards });
+    },
+
+    updateBoard: (id, fields) => {
+      const boards = (get().boards || []).map(b => b.id === id ? { ...b, ...fields } : b);
+      persistChange({ boards });
+    },
+
+    deleteBoard: (id) => {
+      const boards = (get().boards || []).filter(b => b.id !== id);
+      persistChange({ boards });
+    },
+
+    addCircuitBlock: (item) => {
+      const id = `circuit_${Date.now()}_${Math.random()}`;
+      const newItem: CircuitBlock = { ...item, id };
+      const circuitBlocks = [...(get().circuitBlocks || []), newItem];
+      persistChange({ circuitBlocks });
+    },
+
+    updateCircuitBlock: (id, fields) => {
+      const circuitBlocks = (get().circuitBlocks || []).map(cb => cb.id === id ? { ...cb, ...fields } : cb);
+      persistChange({ circuitBlocks });
+    },
+
+    deleteCircuitBlock: (id) => {
+      const circuitBlocks = (get().circuitBlocks || []).filter(cb => cb.id !== id);
+      persistChange({ circuitBlocks });
+    },
+
+    addBoardComponent: (item) => {
+      const id = `cmp_${Date.now()}_${Math.random()}`;
+      const newItem: BoardComponent = { ...item, id };
+      const boardComponents = [...(get().boardComponents || []), newItem];
+      persistChange({ boardComponents });
+    },
+
+    updateBoardComponent: (id, fields) => {
+      const boardComponents = (get().boardComponents || []).map(bc => bc.id === id ? { ...bc, ...fields } : bc);
+      persistChange({ boardComponents });
+    },
+
+    deleteBoardComponent: (id) => {
+      const boardComponents = (get().boardComponents || []).filter(bc => bc.id !== id);
+      persistChange({ boardComponents });
+    },
+
+    addNet: (item) => {
+      const id = `net_${Date.now()}_${Math.random()}`;
+      const newItem: NetItem = { ...item, id };
+      const nets = [...(get().nets || []), newItem];
+      persistChange({ nets });
+    },
+
+    updateNet: (id, fields) => {
+      const nets = (get().nets || []).map(n => n.id === id ? { ...n, ...fields } : n);
+      persistChange({ nets });
+    },
+
+    deleteNet: (id) => {
+      const nets = (get().nets || []).filter(n => n.id !== id);
+      persistChange({ nets });
+    },
+
+    addPCBConstraint: (item) => {
+      const id = `const_${Date.now()}_${Math.random()}`;
+      const newItem: PCBConstraint = { ...item, id };
+      const pcbConstraints = [...(get().pcbConstraints || []), newItem];
+      persistChange({ pcbConstraints });
+    },
+
+    updatePCBConstraint: (id, fields) => {
+      const pcbConstraints = (get().pcbConstraints || []).map(c => c.id === id ? { ...c, ...fields } : c);
+      persistChange({ pcbConstraints });
+    },
+
+    deletePCBConstraint: (id) => {
+      const pcbConstraints = (get().pcbConstraints || []).filter(c => c.id !== id);
+      persistChange({ pcbConstraints });
+    },
+
+    addChecklistItem: (item) => {
+      const id = `chk_${Date.now()}_${Math.random()}`;
+      const newItem: ManufacturingChecklistItem = { ...item, id };
+      const manufacturingChecklist = [...(get().manufacturingChecklist || []), newItem];
+      persistChange({ manufacturingChecklist });
+    },
+
+    updateChecklistItem: (id, fields) => {
+      const manufacturingChecklist = (get().manufacturingChecklist || []).map(mc => mc.id === id ? { ...mc, ...fields } : mc);
+      persistChange({ manufacturingChecklist });
+    },
+
+    deleteChecklistItem: (id) => {
+      const manufacturingChecklist = (get().manufacturingChecklist || []).filter(mc => mc.id !== id);
+      persistChange({ manufacturingChecklist });
+    },
+
+    generateBoardPlanFromProduct: () => {
+      const name = get().projectName.toLowerCase();
+      const template = get().templateName?.toLowerCase() || "";
+      const boards = [...(get().boards || [])];
+
+      const addIfUnique = (item: Omit<BoardItem, 'id'>) => {
+        if (!boards.some(b => b.name.toLowerCase() === item.name.toLowerCase())) {
+          boards.push({
+            ...item,
+            id: `board_gen_${Math.random()}_${Date.now()}`
+          });
+        }
+      };
+
+      if (name.includes("ring") || template.includes("ring") || template.includes("wearable")) {
+        addIfUnique({
+          name: "Main Curved Flex PCB",
+          boardType: "Flex PCB",
+          linkedProductArea: "Inner Housing",
+          purpose: "Hosts core MCU, IMU sensor, touch electrode connections, and haptics",
+          dimensionsMm: "18.5 x 6.5 x 0.15",
+          layerCount: 2,
+          substrate: "Polyimide Flex",
+          placement: "Ring Arc",
+          mountingNotes: "Adhesively laminated to inner support titanium structure.",
+          connectorNotes: "ZIF interface connector for programming bridge.",
+          thermalNotes: "Locate thermal vias adjacent to active regulator gates.",
+          rfNotes: "Ensure ground trace keepouts near antenna traces.",
+          status: "Concept"
+        });
+        addIfUnique({
+          name: "Charging Contact Board",
+          boardType: "Rigid PCB",
+          linkedProductArea: "Lower Housing Outer",
+          purpose: "Hosts outer battery contact charging nodes and ESD transient protect filters",
+          dimensionsMm: "6.0 x 4.0 x 0.8",
+          layerCount: 2,
+          substrate: "FR4",
+          placement: "Internal",
+          mountingNotes: "Fitted inside epoxy moisture sealing slots.",
+          connectorNotes: "Spring contact pins connecting to main Flex PCB.",
+          thermalNotes: "Requires isolation buffer from heat sources.",
+          rfNotes: "No RF shielding active on this daughterboard.",
+          status: "Concept"
+        });
+        addIfUnique({
+          name: "Debug/Test Pogo Pad Region",
+          boardType: "Debug Board",
+          linkedProductArea: "Internal Frame",
+          purpose: "SWD trace points used for post-assembly testing",
+          dimensionsMm: "8.0 x 3.0 x 0.8",
+          layerCount: 2,
+          substrate: "FR4",
+          placement: "Internal",
+          mountingNotes: "Placed along structural divider edge.",
+          connectorNotes: "Temporary bed-of-nails contact pads.",
+          thermalNotes: "No active power loads routed here.",
+          rfNotes: "Keep SWD clock trace separated from BLE antenna.",
+          status: "Concept"
+        });
+      } else {
+        addIfUnique({
+          name: "Main Electronics Board",
+          boardType: "Main PCB",
+          linkedProductArea: "Core Casing",
+          purpose: "Main system control board.",
+          dimensionsMm: "45.0 x 30.0 x 1.6",
+          layerCount: 4,
+          substrate: "FR4",
+          placement: "Internal",
+          mountingNotes: "Four M2 screw mounting points.",
+          connectorNotes: "USB-C charging connector.",
+          thermalNotes: "Copper pour planes for grounding heatsinks.",
+          rfNotes: "RF microstrip path with 50-ohm target impedance.",
+          status: "Concept"
+        });
+      }
+
+      persistChange({ boards });
+    },
+
+    generateCircuitsFromBlueprint: () => {
+      const boards = get().boards || [];
+      if (boards.length === 0) return;
+      const mainBoardId = boards[0].id;
+      const circuitBlocks = [...(get().circuitBlocks || [])];
+
+      const addIfUnique = (item: Omit<CircuitBlock, 'id'>) => {
+        if (!circuitBlocks.some(cb => cb.name.toLowerCase() === item.name.toLowerCase())) {
+          circuitBlocks.push({
+            ...item,
+            id: `circuit_gen_${Math.random()}_${Date.now()}`
+          });
+        }
+      };
+
+      addIfUnique({
+        name: "MCU Circuit",
+        circuitType: "MCU",
+        boardId: mainBoardId,
+        description: "ESP32-C3 microcontroller core processor with decoupling caps and crystal oscillator.",
+        requiredComponents: "ESP32-C3-MINI-1, 40MHz Crystal, 100nF Cap (x4), 10uF Cap (x1)",
+        referenceDesignators: "U1, Y1, C1, C2, C3, C4, C5",
+        powerNets: "3V3, GND",
+        signalNets: "SWD_CLK, SWD_IO, TOUCH_INT, HAPTIC_PWM",
+        interfaceType: "SWD, GPIO, I2C, SPI",
+        datasheetNotes: "Follow decoupling layout guidelines adjacent to power pins.",
+        designNotes: "Single-ended trace routing matching 3.3V voltage constraints.",
+        risks: "Decoupling trace distance must be under 1.5mm to minimize inductance.",
+        status: "Concept"
+      });
+
+      addIfUnique({
+        name: "Power Regulation",
+        circuitType: "Power",
+        boardId: mainBoardId,
+        description: "3.3V low dropout linear voltage regulator.",
+        requiredComponents: "AP2112K-3.3TRG1 LDO, 1uF Cap (x2)",
+        referenceDesignators: "U2, C6, C7",
+        powerNets: "VBAT, 3V3, GND",
+        signalNets: "None",
+        interfaceType: "Direct Power Output",
+        datasheetNotes: "Output capacitor must have low ESR.",
+        designNotes: "Trace width must support up to 300mA current draws.",
+        risks: "Thermal dissipation. Keep ground plane copper heatsink adjacent.",
+        status: "Concept"
+      });
+
+      addIfUnique({
+        name: "Charger & Protection",
+        circuitType: "Charger",
+        boardId: mainBoardId,
+        description: "LiPo battery charger controller and protection circuit.",
+        requiredComponents: "MCP73831-2ATI/OT Charger, AP9101C BMS, MOSFET Gate",
+        referenceDesignators: "U3, U4, Q1, R1, C8",
+        powerNets: "VBUS, VBAT, GND",
+        signalNets: "CHARGE_STAT",
+        interfaceType: "Analog Input, GPIO Status",
+        datasheetNotes: "Program charge resistor sets constant current.",
+        designNotes: "Keep charging trace isolated from sensitive RF signals.",
+        risks: "Over-current protection triggers. ESD protection mandatory on charge pads.",
+        status: "Concept"
+      });
+
+      addIfUnique({
+        name: "Haptic Driver",
+        circuitType: "Haptic",
+        boardId: mainBoardId,
+        description: "Low power vibration driver circuit.",
+        requiredComponents: "DRV2605LDGSR Driver, 1uF Cap (x1), Flyback Diode",
+        referenceDesignators: "U5, D1, C9",
+        powerNets: "VBAT, 3V3, GND",
+        signalNets: "HAPTIC_PWM, HAPTIC_EN",
+        interfaceType: "PWM, I2C Control",
+        datasheetNotes: "Inductive flyback protection diode required.",
+        designNotes: "Place filter cap near driver power terminals.",
+        risks: "Vibration noise on sensor traces. Route traces with guard rings.",
+        status: "Concept"
+      });
+
+      addIfUnique({
+        name: "Touch Input",
+        circuitType: "LED",
+        boardId: mainBoardId,
+        description: "Capacitive touch sensing controller.",
+        requiredComponents: "I2C Touch IC, Series Resistors (x2)",
+        referenceDesignators: "U6, R2, R3",
+        powerNets: "3V3, GND",
+        signalNets: "TOUCH_SDA, TOUCH_SCL, TOUCH_INT",
+        interfaceType: "I2C, Interrupt",
+        datasheetNotes: "Shield electrodes with ground copper grid.",
+        designNotes: "Trace capacitance must be matched to prevent sensitivity losses.",
+        risks: "Water drop touch triggers. Software calibration maps mandatory.",
+        status: "Concept"
+      });
+
+      addIfUnique({
+        name: "BLE/RF Antenna",
+        circuitType: "RF",
+        boardId: mainBoardId,
+        description: "Bluetooth Low Energy RF antenna matching network.",
+        requiredComponents: "2.4GHz Chip Antenna, Inductors (x2), Capacitors (x2)",
+        referenceDesignators: "ANT1, L1, L2, C10, C11",
+        powerNets: "GND",
+        signalNets: "RF_ANT_IN",
+        interfaceType: "RF Single Ended",
+        datasheetNotes: "Requires keepout region under the chip antenna footprint.",
+        designNotes: "Route matching microstrip trace to exactly 50-ohm characteristic impedance.",
+        risks: "Antenna mismatch losses. Flex bending changes antenna matching values.",
+        status: "Concept"
+      });
+
+      addIfUnique({
+        name: "Debug & Programming",
+        circuitType: "Debug",
+        boardId: mainBoardId,
+        description: "SWD programming header connection pads.",
+        requiredComponents: "Pogo Pad Test Point (x4)",
+        referenceDesignators: "TP1, TP2, TP3, TP4",
+        powerNets: "3V3, GND",
+        signalNets: "SWD_CLK, SWD_IO",
+        interfaceType: "SWD interface",
+        datasheetNotes: "Gold plating required for contact longevity.",
+        designNotes: "Space debug pads 1.27mm center-to-center.",
+        risks: "Corrosion and shorting risks if contacts are exposed to moisture.",
+        status: "Concept"
+      });
+
+      persistChange({ circuitBlocks });
+    },
+
+    generateBoardComponentsFromBOM: () => {
+      const boards = get().boards || [];
+      if (boards.length === 0) return;
+      const mainBoardId = boards[0].id;
+      const circuitBlocks = get().circuitBlocks || [];
+      const boardComponents = [...(get().boardComponents || [])];
+
+      const addIfUnique = (item: Omit<BoardComponent, 'id'>) => {
+        if (!boardComponents.some(bc => bc.referenceDesignator.toLowerCase() === item.referenceDesignator.toLowerCase())) {
+          boardComponents.push({
+            ...item,
+            id: `cmp_gen_${Math.random()}_${Date.now()}`
+          });
+        }
+      };
+
+      get().bom.forEach((bomItem, idx) => {
+        const nameLower = bomItem.blockName.toLowerCase();
+        let ref = `U${idx + 1}`;
+        let side: 'Top' | 'Bottom' | 'Both' | 'Unknown' = 'Top';
+        let criticality: 'Low' | 'Medium' | 'High' | 'RF Critical' | 'Thermal Critical' = 'Medium';
+        let blockId = "";
+
+        if (nameLower.includes("mcu") || nameLower.includes("controller") || nameLower.includes("soc")) {
+          ref = `U1`;
+          criticality = 'High';
+          blockId = circuitBlocks.find(cb => cb.circuitType === 'MCU')?.id || "";
+        } else if (nameLower.includes("regulator") || nameLower.includes("ldo")) {
+          ref = `U2`;
+          criticality = 'Thermal Critical';
+          blockId = circuitBlocks.find(cb => cb.circuitType === 'Power')?.id || "";
+        } else if (nameLower.includes("charger")) {
+          ref = `U3`;
+          criticality = 'Thermal Critical';
+          blockId = circuitBlocks.find(cb => cb.circuitType === 'Charger')?.id || "";
+        } else if (nameLower.includes("haptic") || nameLower.includes("motor")) {
+          ref = `M1`;
+          criticality = 'Medium';
+          blockId = circuitBlocks.find(cb => cb.circuitType === 'Haptic')?.id || "";
+        } else if (nameLower.includes("antenna") || nameLower.includes("ble") || nameLower.includes("radio")) {
+          ref = `ANT1`;
+          criticality = 'RF Critical';
+          blockId = circuitBlocks.find(cb => cb.circuitType === 'RF')?.id || "";
+        } else if (nameLower.includes("battery") || nameLower.includes("cell")) {
+          ref = `BT1`;
+          side = 'Bottom';
+          criticality = 'High';
+        } else if (nameLower.includes("led")) {
+          ref = `D2`;
+          criticality = 'Low';
+        } else {
+          ref = `U_BOM_${idx + 1}`;
+        }
+
+        addIfUnique({
+          boardId: mainBoardId,
+          circuitBlockId: blockId,
+          referenceDesignator: ref,
+          componentName: bomItem.candidateComponent || "Passive Component",
+          componentType: bomItem.blockName,
+          value: bomItem.voltage || "N/A",
+          packageName: bomItem.packageSize || "0402",
+          footprint: bomItem.dimensions || "0402",
+          partNumber: bomItem.partNumber || "TBD",
+          quantity: bomItem.quantity || 1,
+          side,
+          placementCriticality: criticality,
+          datasheetUrl: bomItem.datasheetUrl,
+          supplier: bomItem.supplier || "Digikey",
+          notes: bomItem.notes || "Auto-mapped component from BOM registry."
+        });
+      });
+
+      persistChange({ boardComponents });
+    },
+
+    generateNetsFromPinMap: () => {
+      const nets = [...(get().nets || [])];
+
+      const addIfUnique = (item: Omit<NetItem, 'id'>) => {
+        if (!nets.some(n => n.netName.toLowerCase() === item.netName.toLowerCase())) {
+          nets.push({
+            ...item,
+            id: `net_gen_${Math.random()}_${Date.now()}`
+          });
+        }
+      };
+
+      // Always seed power nets
+      addIfUnique({
+        netName: "GND",
+        netType: "Ground",
+        voltage: "0V",
+        sourceComponent: "BT1",
+        sourcePin: "BAT_GND",
+        targetComponent: "U1",
+        targetPin: "GND",
+        protocol: "Power Plane",
+        currentEstimate: "150mA",
+        impedanceRequirement: "Min ground loop inductance",
+        notes: "Primary ground return path net."
+      });
+
+      addIfUnique({
+        netName: "3V3",
+        netType: "Power",
+        voltage: "3.3V",
+        sourceComponent: "U2",
+        sourcePin: "OUT_3V3",
+        targetComponent: "U1",
+        targetPin: "VDD_3V3",
+        protocol: "Power Trace",
+        currentEstimate: "80mA",
+        impedanceRequirement: "Low ESR feed",
+        notes: "Main regulated digital power net."
+      });
+
+      addIfUnique({
+        netName: "VBAT",
+        netType: "Power",
+        voltage: "3.7V",
+        sourceComponent: "BT1",
+        sourcePin: "BAT_POS",
+        targetComponent: "U2",
+        targetPin: "IN_VIN",
+        protocol: "Power Trace",
+        currentEstimate: "120mA",
+        impedanceRequirement: "Thick Trace width",
+        notes: "Battery raw power net."
+      });
+
+      get().pinMap.forEach(p => {
+        let type: 'Power' | 'Ground' | 'Signal' | 'Clock' | 'RF' | 'Differential' | 'Analog' | 'Digital' | 'Programming' = 'Signal';
+        if (p.protocol === 'Power') type = 'Power';
+        else if (p.protocol === 'Ground') type = 'Ground';
+        else if (p.protocol === 'Touch') type = 'Analog';
+        else if (p.protocol === 'UART') type = 'Programming';
+
+        addIfUnique({
+          netName: p.signalName,
+          netType: type,
+          voltage: p.voltage || "3.3V",
+          sourceComponent: "U1",
+          sourcePin: p.mcuPin || "FLOAT",
+          targetComponent: p.connectedBlock,
+          targetPin: "1",
+          protocol: p.protocol,
+          currentEstimate: "50uA",
+          impedanceRequirement: p.protocol === 'Touch' ? "Guard traces keepout shielding" : "General 50-ohm single ended",
+          notes: p.notes || "Logical signal trace."
+        });
+      });
+
+      persistChange({ nets });
+    },
+
+    generatePCBConstraintsFromBoard: () => {
+      const boards = get().boards || [];
+      if (boards.length === 0) return;
+      const mainBoard = boards[0];
+      const pcbConstraints = [...(get().pcbConstraints || [])];
+
+      const addIfUnique = (item: Omit<PCBConstraint, 'id'>) => {
+        if (!pcbConstraints.some(c => c.boardId === item.boardId && c.constraintType === item.constraintType && c.value === item.value)) {
+          pcbConstraints.push({
+            ...item,
+            id: `const_gen_${Math.random()}_${Date.now()}`
+          });
+        }
+      };
+
+      if (mainBoard.substrate === 'Polyimide Flex') {
+        addIfUnique({
+          boardId: mainBoard.id,
+          constraintType: "Flex Bend",
+          value: "1.5",
+          unit: "mm",
+          description: "Minimum dynamic bend radius constraints inside housing loop.",
+          severity: "Critical"
+        });
+        addIfUnique({
+          boardId: mainBoard.id,
+          constraintType: "Trace Width",
+          value: "4",
+          unit: "mil",
+          description: "Minimum trace width for signal lines on Polyimide flex.",
+          severity: "Warning"
+        });
+        addIfUnique({
+          boardId: mainBoard.id,
+          constraintType: "Clearance",
+          value: "4",
+          unit: "mil",
+          description: "Minimum clearance distance between separate conductive traces.",
+          severity: "Critical"
+        });
+        addIfUnique({
+          boardId: mainBoard.id,
+          constraintType: "Antenna",
+          value: "5.0",
+          unit: "mm",
+          description: "Keepout window with zero copper ground fill adjacent to BLE chip antenna.",
+          severity: "Critical"
+        });
+        addIfUnique({
+          boardId: mainBoard.id,
+          constraintType: "Test Point",
+          value: "0.8",
+          unit: "mm",
+          description: "SWD debug test point diameter minimum for spring probe contact.",
+          severity: "Info"
+        });
+      } else {
+        addIfUnique({
+          boardId: mainBoard.id,
+          constraintType: "Board Outline",
+          value: mainBoard.dimensionsMm,
+          unit: "mm",
+          description: "Board geometry outline size constraint bounds.",
+          severity: "Info"
+        });
+        addIfUnique({
+          boardId: mainBoard.id,
+          constraintType: "Trace Width",
+          value: "6",
+          unit: "mil",
+          description: "Default signal line minimum copper width.",
+          severity: "Info"
+        });
+        addIfUnique({
+          boardId: mainBoard.id,
+          constraintType: "Clearance",
+          value: "6",
+          unit: "mil",
+          description: "Default minimum signal clearance spacing rules.",
+          severity: "Info"
+        });
+        addIfUnique({
+          boardId: mainBoard.id,
+          constraintType: "Via",
+          value: "0.3 / 0.6",
+          unit: "mm",
+          description: "Drill hole size and annular ring pad width dimensions.",
+          severity: "Info"
+        });
+      }
+
+      persistChange({ pcbConstraints });
+    },
+
+    generateManufacturingChecklist: () => {
+      const manufacturingChecklist = [...(get().manufacturingChecklist || [])];
+
+      const addIfUnique = (item: Omit<ManufacturingChecklistItem, 'id'>) => {
+        if (!manufacturingChecklist.some(m => m.item.toLowerCase() === item.item.toLowerCase())) {
+          manufacturingChecklist.push({
+            ...item,
+            id: `mfg_chk_gen_${Math.random()}_${Date.now()}`
+          });
+        }
+      };
+
+      addIfUnique({
+        category: "Schematic",
+        item: "Run Electrical Rules Check (ERC) with zero active error listings",
+        status: "Not Started",
+        ownerNotes: "Ensure floating pins are explicitly set to no-connect."
+      });
+
+      addIfUnique({
+        category: "Schematic",
+        item: "Verify component footprint mappings are compatible with selected supplier manufacturer part numbers",
+        status: "Not Started",
+        ownerNotes: "Check dual-pack logic gate pin assignments."
+      });
+
+      addIfUnique({
+        category: "PCB Layout",
+        item: "Run Design Rules Check (DRC) to ensure trace alignment matches manufacturing capabilities",
+        status: "Not Started",
+        ownerNotes: "Set clearances to 4mil matching flex board factory."
+      });
+
+      addIfUnique({
+        category: "PCB Layout",
+        item: "Verify copper keepout regions are active below BLE transceiver antenna trace",
+        status: "Not Started",
+        ownerNotes: "Clear all ground pour planes inside 5mm antenna boundary."
+      });
+
+      addIfUnique({
+        category: "PCB Layout",
+        item: "Confirm bend region clearance for polyimide flex tracks to protect traces against fractures",
+        status: "Not Started",
+        ownerNotes: "No component solder pads placed within 1.5mm of bend line."
+      });
+
+      addIfUnique({
+        category: "BOM",
+        item: "Confirm procurement pricing and active distributor stock counts match required quantities",
+        status: "Not Started",
+        ownerNotes: "Verify MCU packaging availability."
+      });
+
+      addIfUnique({
+        category: "Assembly",
+        item: "Generate Centroid CPL component coordinate pick-and-place files",
+        status: "Not Started",
+        ownerNotes: "Check coordinate origin matches layout center."
+      });
+
+      addIfUnique({
+        category: "Testing",
+        item: "Map debug pogo pad positions to test bed frame constraints",
+        status: "Not Started",
+        ownerNotes: "Align SWD pads to 1.27mm probe needles spacing."
+      });
+
+      addIfUnique({
+        category: "Compliance",
+        item: "Prepare Bluetooth emissions testing protocol documentation for FCC compliance audit",
+        status: "Not Started",
+        ownerNotes: "Set firmware test register script to continuous Tx carrier wave output."
+      });
+
+      persistChange({ manufacturingChecklist });
     }
   };
 });

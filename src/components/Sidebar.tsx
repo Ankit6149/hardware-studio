@@ -16,7 +16,12 @@ import {
   ChevronDown,
   ChevronRight,
   FileCheck2,
-  FileText
+  FileText,
+  Layers,
+  Boxes,
+  Network,
+  Ruler,
+  Package
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -38,6 +43,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     { id: 'firmware', label: 'Firmware', icon: Binary },
     { id: 'power', label: 'Power', icon: Zap },
     { id: 'system-alpha', label: 'System Alpha', icon: Cloud },
+    
+    // Board Studio / ECAD Prep
+    { id: 'board-studio', label: 'Board Studio', icon: Layers },
+    { id: 'circuit-planner', label: 'Circuit Planner', icon: Boxes },
+    { id: 'netlist-planner', label: 'Netlist Planner', icon: Network },
+    { id: 'pcb-constraints', label: 'PCB Constraints', icon: Ruler },
+    { id: 'mfg-pack', label: 'Manufacturing Pack', icon: Package },
+
     { id: 'bom', label: 'BOM', icon: Table },
     { id: 'power-budget', label: 'Power Budget', icon: Zap },
     { id: 'pin-map', label: 'Pin Map', icon: Cpu },
@@ -87,7 +100,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
   };
 
   // Determine if active view allows placing blocks
-  const tabularViews = ['bom', 'testing', 'exports', 'power-budget', 'pin-map', 'firmware-plan', 'readiness', 'dossier'];
+  const tabularViews = [
+    'bom', 
+    'testing', 
+    'exports', 
+    'power-budget', 
+    'pin-map', 
+    'firmware-plan', 
+    'readiness', 
+    'dossier',
+    'board-studio',
+    'circuit-planner',
+    'netlist-planner',
+    'pcb-constraints',
+    'mfg-pack'
+  ];
   const isCanvasView = !tabularViews.includes(activeView);
 
   return (
@@ -118,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
                   <span className={`text-[8px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wider ${
                     isActive ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-500'
                   }`}>
-                    {s.id === 'bom' ? 'BOM' : s.id === 'testing' ? 'QA' : 'DOC'}
+                    {s.id === 'bom' ? 'BOM' : s.id === 'testing' ? 'QA' : ['board-studio', 'circuit-planner', 'netlist-planner', 'pcb-constraints', 'mfg-pack'].includes(s.id) ? 'PCB' : 'DOC'}
                   </span>
                 )}
               </button>
