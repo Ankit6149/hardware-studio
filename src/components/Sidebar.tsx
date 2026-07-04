@@ -15,7 +15,8 @@ import {
   Plus,
   ChevronDown,
   ChevronRight,
-  FileCheck2
+  FileCheck2,
+  FileText
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -43,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     { id: 'firmware-plan', label: 'Firmware Plan', icon: Binary },
     { id: 'testing', label: 'Testing', icon: CheckSquare },
     { id: 'readiness', label: 'Readiness Review', icon: FileCheck2 },
+    { id: 'dossier', label: 'Blueprint Dossier', icon: FileText },
     { id: 'exports', label: 'Exports', icon: Download },
   ];
 
@@ -85,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
   };
 
   // Determine if active view allows placing blocks
-  const tabularViews = ['bom', 'testing', 'exports', 'power-budget', 'pin-map', 'firmware-plan', 'readiness'];
+  const tabularViews = ['bom', 'testing', 'exports', 'power-budget', 'pin-map', 'firmware-plan', 'readiness', 'dossier'];
   const isCanvasView = !tabularViews.includes(activeView);
 
   return (

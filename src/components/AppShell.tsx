@@ -13,6 +13,7 @@ import { PowerBudgetTable } from './PowerBudgetTable';
 import { PinMapTable } from './PinMapTable';
 import { FirmwarePlan } from './FirmwarePlan';
 import { ReadinessDashboard } from './ReadinessDashboard';
+import { BlueprintDossier } from './BlueprintDossier';
 
 export const AppShell: React.FC = () => {
   const { activeView, loadProjectFromLocalStorage } = useProjectStore();
@@ -42,13 +43,15 @@ export const AppShell: React.FC = () => {
         return <ReadinessDashboard />;
       case 'exports':
         return <ExportCenter />;
+      case 'dossier':
+        return <BlueprintDossier />;
       default:
         return <BlueprintCanvas />;
     }
   };
 
   // Canvas views are drawing-board views
-  const tabularViews = ['bom', 'testing', 'exports', 'power-budget', 'pin-map', 'firmware-plan', 'readiness'];
+  const tabularViews = ['bom', 'testing', 'exports', 'power-budget', 'pin-map', 'firmware-plan', 'readiness', 'dossier'];
   const isCanvasView = !tabularViews.includes(activeView);
   const showVisualizer = !tabularViews.includes(activeView);
 
