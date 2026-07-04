@@ -1,8 +1,29 @@
 import { Project } from '../../types';
 
 export const theRingTemplate: Project = {
+  id: "the-ring",
   projectName: "The Ring",
+  description: "The Ring is a smart wearable command/input device. It captures user intent through touch and provides haptic response.",
+  createdAt: "2026-07-04T12:00:00Z",
+  updatedAt: "2026-07-04T12:00:00Z",
+  templateName: "The Ring",
+  version: "1.0",
   activeView: "master",
+  batteryCapacityMah: 18,
+  powerBudget: [
+    { id: "pb-mcu", blockName: "BLE MCU / Controller", voltage: "3.3", activeCurrentMa: 15.0, sleepCurrentUa: 15.0, dutyCyclePercent: 5.0, quantity: 1, notes: "Nordic/ESP32 processing cycles." },
+    { id: "pb-haptic", blockName: "Haptic Motor Output", voltage: "3.3", activeCurrentMa: 80.0, sleepCurrentUa: 0.0, dutyCyclePercent: 1.0, quantity: 1, notes: "Vibration feedback spikes." },
+    { id: "pb-touch", blockName: "Button / Touch Input Circuit", voltage: "3.3", activeCurrentMa: 1.5, sleepCurrentUa: 5.0, dutyCyclePercent: 10.0, quantity: 1, notes: "Capacitive polling cycles." }
+  ],
+  pinMap: [
+    { id: "pm-1", signalName: "TOUCH_SENSE", connectedBlock: "button-touch-zone", mcuPin: "GPIO_4", direction: "Input", protocol: "Touch", voltage: "3.3V", notes: "Connects to capacitive copper foil." },
+    { id: "pm-2", signalName: "HAPTIC_PWM", connectedBlock: "haptic-motor-output", mcuPin: "GPIO_5", direction: "Output", protocol: "PWM", voltage: "3.3V", notes: "Drives the haptic BJT switch." },
+    { id: "pm-3", signalName: "DEBUG_TX", connectedBlock: "debug-led", mcuPin: "GPIO_21", direction: "Output", protocol: "UART", voltage: "3.3V", notes: "Console output line." }
+  ],
+  firmwareTasks: [
+    { id: "ft-1", name: "Boot sequence and power initialization", type: "State", linkedBlock: "ble-mcu", priority: "MVP", status: "Not Started", description: "Initialize CPU frequency and BLE profiles.", acceptanceCriteria: "Console outputs boot logs successfully.", notes: "" },
+    { id: "ft-2", name: "Button Debounce and Interrupt Handler", type: "Driver", linkedBlock: "button-input-circuit", priority: "MVP", status: "Not Started", description: "Setup interrupt on GPIO state change.", acceptanceCriteria: "Detect click events on scope.", notes: "" }
+  ],
   nodes: [
     // --- MASTER BLUEPRINT VIEW ---
     {

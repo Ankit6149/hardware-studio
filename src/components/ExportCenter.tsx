@@ -6,7 +6,8 @@ import { FileJson, FileText, Download, CheckCircle, Database } from 'lucide-reac
 import { runValidationRules } from '../lib/validationRules';
 
 export const ExportCenter: React.FC = () => {
-  const { projectName, nodes, edges, bom, testing } = useProjectStore();
+  const project = useProjectStore();
+  const { projectName, nodes, edges, bom, testing } = project;
 
   const warnings = runValidationRules(nodes, edges);
   
@@ -51,7 +52,7 @@ export const ExportCenter: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => exportProjectJson({ projectName, activeView: 'master', nodes, edges, bom, testing })}
+              onClick={() => exportProjectJson(project)}
               className="mt-6 w-full flex items-center justify-center space-x-1.5 bg-slate-900 hover:bg-slate-800 active:scale-98 text-white py-2 rounded-lg text-xs font-semibold shadow-sm transition-all border border-slate-950 cursor-pointer"
             >
               <Download className="w-4 h-4" />
@@ -71,7 +72,7 @@ export const ExportCenter: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => exportProjectMarkdown({ projectName, activeView: 'master', nodes, edges, bom, testing })}
+              onClick={() => exportProjectMarkdown(project)}
               className="mt-6 w-full flex items-center justify-center space-x-1.5 bg-slate-900 hover:bg-slate-800 active:scale-98 text-white py-2 rounded-lg text-xs font-semibold shadow-sm transition-all border border-slate-950 cursor-pointer"
             >
               <Download className="w-4 h-4" />

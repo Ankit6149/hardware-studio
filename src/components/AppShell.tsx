@@ -9,6 +9,10 @@ import { ExportCenter } from './ExportCenter';
 import { PropertiesPanel } from './PropertiesPanel';
 import { ReviewWarnings } from './ReviewWarnings';
 import { ProductVisualizer } from './ProductVisualizer';
+import { PowerBudgetTable } from './PowerBudgetTable';
+import { PinMapTable } from './PinMapTable';
+import { FirmwarePlan } from './FirmwarePlan';
+import { ReadinessDashboard } from './ReadinessDashboard';
 
 export const AppShell: React.FC = () => {
   const { activeView, loadProjectFromLocalStorage } = useProjectStore();
@@ -25,6 +29,14 @@ export const AppShell: React.FC = () => {
         return <BOMTable />;
       case 'testing':
         return <TestingBoard />;
+      case 'power-budget':
+        return <PowerBudgetTable />;
+      case 'pin-map':
+        return <PinMapTable />;
+      case 'firmware-plan':
+        return <FirmwarePlan />;
+      case 'readiness':
+        return <ReadinessDashboard />;
       case 'exports':
         return <ExportCenter />;
       default:
@@ -32,8 +44,10 @@ export const AppShell: React.FC = () => {
     }
   };
 
-  // Properties panel is only relevant for graphical views
-  const isCanvasView = !['bom', 'testing', 'exports'].includes(activeView);
+  // Canvas views are drawing-board views
+  const tabularViews = ['bom', 'testing', 'exports', 'power-budget', 'pin-map', 'firmware-plan', 'readiness'];
+  const isCanvasView = !tabularViews.includes(activeView);
+  const showVisualizer = !tabularViews.includes(activeView);
 
   if (!mounted) {
     return (
@@ -50,7 +64,7 @@ export const AppShell: React.FC = () => {
         <Sidebar />
         <main className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden">
           <div className="flex-1 flex min-h-0 relative">
-            <ProductVisualizer />
+            {showVisualizer && <ProductVisualizer />}
             <div className="flex-1 h-full flex flex-col relative min-w-0">
               {renderContent()}
             </div>

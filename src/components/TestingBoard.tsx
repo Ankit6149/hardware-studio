@@ -1,24 +1,51 @@
 import React, { useState } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { TestStage } from '../types';
-import { Plus, Trash2, CheckCircle2, AlertOctagon, HelpCircle, Hourglass, HelpCircle as HelpIcon } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { StatCard } from '../ui/StatCard';
+import { Badge } from '../ui/Badge';
+import { 
+  Plus, 
+  Trash2, 
+  Copy, 
+  CheckCircle2, 
+  AlertOctagon, 
+  HelpCircle, 
+  Hourglass, 
+  RefreshCw, 
+  Link2,
+  FileCheck2,
+  ExternalLink
+} from 'lucide-react';
 
 export const TestingBoard: React.FC = () => {
-  const { testing, addTestStage, updateTestStage, deleteTestStage } = useProjectStore();
+  const { 
+    testing, 
+    nodes,
+    addTestStage, 
+    updateTestStage, 
+    deleteTestStage,
+    duplicateTestStage,
+    generateTestsFromMVP
+  } = useProjectStore();
+
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [selectedStageId, setSelectedStageId] = useState<string | null>(
     testing.length > 0 ? testing[0].id : null
   );
 
   const activeStage = testing.find(t => t.id === selectedStageId) || (testing.length > 0 ? testing[0] : null);
 
-  const handleAddField = (id: string, key: keyof TestStage, value: string) => {
+  const handleAddField = (id: string, key: keyof TestStage, value: any) => {
     updateTestStage(id, { [key]: value });
   };
 
   const handleAddStage = () => {
     const nextIdx = testing.length;
     const newId = `stage_${Date.now()}`;
+    
     addTestStage({
+      id: newId,
       name: `Stage ${nextIdx}: New Test Protocol`,
       goal: "",
       partsNeeded: "",
@@ -26,10 +53,24 @@ export const TestingBoard: React.FC = () => {
       passCriteria: "",
       risks: "",
       status: "Not Started",
-      notes: ""
+      notes: "",
+      category: "General",
+      linkedBlocks: [],
+      resultNotes: "",
+      evidenceLink: ""
     });
-    // Set selected stage to the newly created one
+    
     setSelectedStageId(newId);
+  };
+
+  const handleDuplicate = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    duplicateTestStage(id);
+    const updated = useProjectStore.getState().testing;
+    const last = updated[updated.length - 1];
+    if (last) {
+      setSelectedStageId(last.id);
+    }
   };
 
   const handleDeleteStage = (id: string, e: React.MouseEvent) => {
@@ -43,113 +84,182 @@ export const TestingBoard: React.FC = () => {
     }
   };
 
+  const handleLinkBlockToggle = (blockId: string) => {
+    if (!activeStage) return;
+    const current = activeStage.linkedBlocks || [];
+    let updated: string[];
+    if (current.includes(blockId)) {
+      updated = current.filter(id => id !== blockId);
+    } else {
+      updated = [...current, blockId];
+    }
+    handleAddField(activeStage.id, 'linkedBlocks', updated);
+  };
+
   const getStatusBadge = (status: TestStage['status']) => {
     switch (status) {
       case 'Passed':
-        return <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded flex items-center space-x-1"><CheckCircle2 className="w-3 h-3 text-green-600 mr-0.5" /><span>Passed</span></span>;
+        return <Badge variant="success">Passed</Badge>;
       case 'Failed':
-        return <span className="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded flex items-center space-x-1"><AlertOctagon className="w-3 h-3 text-red-600 mr-0.5" /><span>Failed</span></span>;
+        return <Badge variant="error">Failed</Badge>;
       case 'In Progress':
-        return <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded flex items-center space-x-1"><Hourglass className="w-3 h-3 text-blue-600 mr-0.5" /><span>In Progress</span></span>;
+        return <Badge variant="info">In Progress</Badge>;
       case 'Blocked':
-        return <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded flex items-center space-x-1"><AlertOctagon className="w-3 h-3 text-amber-600 mr-0.5" /><span>Blocked</span></span>;
+        return <Badge variant="warning">Blocked</Badge>;
       default:
-        return <span className="bg-gray-100 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded flex items-center space-x-1"><HelpCircle className="w-3 h-3 text-gray-500 mr-0.5" /><span>Not Started</span></span>;
+        return <Badge variant="neutral">Not Started</Badge>;
     }
   };
 
+  const getStatusBorder = (status: TestStage['status']) => {
+    switch (status) {
+      case 'Passed': return 'border-l-[3.5px] border-l-emerald-500';
+      case 'Failed': return 'border-l-[3.5px] border-l-rose-500';
+      case 'In Progress': return 'border-l-[3.5px] border-l-blue-500';
+      case 'Blocked': return 'border-l-[3.5px] border-l-amber-500';
+      default: return 'border-l-[3.5px] border-l-slate-300';
+    }
+  };
+
+  // Metrics
+  const totalCount = testing.length;
+  const passedCount = testing.filter(t => t.status === 'Passed').length;
+  const progressCount = testing.filter(t => t.status === 'In Progress').length;
+  const blockedCount = testing.filter(t => t.status === 'Blocked').length;
+  const failedCount = testing.filter(t => t.status === 'Failed').length;
+
+  const categories = ["ALL", "Electrical", "Mechanical", "Firmware", "Interaction", "General"];
+
+  const filteredTesting = testing.filter(t => {
+    if (filterCategory === 'ALL') return true;
+    return t.category === filterCategory;
+  });
+
   return (
-    <div className="flex-1 bg-slate-50 flex flex-col overflow-hidden p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-lg font-bold text-slate-800 tracking-tight uppercase">Testing & Verification Board</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Define stage-by-stage testing criteria and keep track of pass status.</p>
+    <div className="flex-1 bg-slate-50 flex flex-col min-h-0 p-6 space-y-6 overflow-y-auto font-mono text-xs">
+      
+      {/* Header controls banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-4 rounded-lg shadow-sm">
+        <div className="space-y-1">
+          <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">
+            Testing & Verification Board
+          </h2>
+          <p className="text-[11px] text-slate-500 leading-normal max-w-xl">
+            Design stage-by-stage testing instructions, link blocks to verification scopes, and log results to prove prototype readiness.
+          </p>
         </div>
-        <button
-          onClick={handleAddStage}
-          className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white px-3.5 py-1.5 rounded-md text-xs font-semibold shadow-sm transition-all cursor-pointer border border-slate-950"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Add Test Stage</span>
-        </button>
-      </div>
 
-      {/* QA Stats Summary Dashboard */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5 select-none">
-        <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Total Tests</span>
-          <span className="text-lg font-extrabold text-slate-800 mt-1 block">{testing.length} stages</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-          <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest block">Passed</span>
-          <span className="text-lg font-extrabold text-emerald-700 mt-1 block">
-            {testing.filter(t => t.status === 'Passed').length}
-          </span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-          <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest block">In Progress</span>
-          <span className="text-lg font-extrabold text-blue-700 mt-1 block">
-            {testing.filter(t => t.status === 'In Progress').length}
-          </span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-          <span className="text-[9px] font-bold text-amber-600 uppercase tracking-widest block">Blocked</span>
-          <span className="text-lg font-extrabold text-amber-700 mt-1 block">
-            {testing.filter(t => t.status === 'Blocked').length}
-          </span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-          <span className="text-[9px] font-bold text-slate-450 uppercase tracking-widest block">Not Started</span>
-          <span className="text-lg font-extrabold text-slate-600 mt-1 block">
-            {testing.filter(t => t.status === 'Not Started' || !t.status).length}
-          </span>
+        {/* Action Controls */}
+        <div className="flex items-center space-x-2 shrink-0">
+          <Button 
+            onClick={generateTestsFromMVP} 
+            variant="outline" 
+            size="xs"
+            icon={<RefreshCw className="w-3.5 h-3.5" />}
+          >
+            Generate MVP Tests
+          </Button>
+          <Button 
+            onClick={handleAddStage} 
+            variant="primary" 
+            size="xs"
+            icon={<Plus className="w-3.5 h-3.5" />}
+          >
+            Add Test Stage
+          </Button>
         </div>
       </div>
 
-      <div className="flex-1 flex gap-6 overflow-hidden min-h-0">
-        {/* Left Column: Stages List */}
-        <div className="w-80 bg-white border border-slate-200 rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.02)] overflow-y-auto flex flex-col shrink-0">
-          <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Test Stages ({testing.length})</span>
+      {/* Metrics Dashboard */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <StatCard title="Total QA Tests" value={totalCount} status="info" icon={<FileCheck2 className="w-4 h-4 text-cyan-500" />} />
+        <StatCard title="Passed" value={passedCount} status="success" icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />} />
+        <StatCard title="In Progress" value={progressCount} status="info" icon={<Hourglass className="w-4 h-4 text-blue-500" />} />
+        <StatCard title="Blocked" value={blockedCount} status="warning" icon={<AlertOctagon className="w-4 h-4 text-amber-500" />} />
+        <StatCard title="Failed" value={failedCount} status={failedCount > 0 ? 'error' : 'success'} icon={<AlertOctagon className="w-4 h-4 text-rose-500" />} />
+      </div>
+
+      {/* Filters Categories */}
+      <div className="flex border-b border-slate-200 shrink-0">
+        {categories.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setFilterCategory(cat)}
+            className={`px-4 py-2 text-xs font-mono font-bold border-b-2 uppercase transition-all duration-150 ${
+              filterCategory === cat
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/20'
+                : 'border-transparent text-slate-400 hover:text-slate-700'
+            }`}
+          >
+            {cat === 'ALL' ? 'All categories' : cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Two Column Board */}
+      <div className="flex-1 flex gap-6 overflow-hidden min-h-0 shrink-0">
+        
+        {/* Left Side: Stages Directory */}
+        <div className="w-80 bg-white border border-slate-200 rounded-lg shadow-sm overflow-y-auto flex flex-col shrink-0">
+          <div className="p-3 border-b border-slate-150 bg-slate-50/50 flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-650 uppercase tracking-wider">
+              Test Stages Directories ({filteredTesting.length})
+            </span>
           </div>
-          {testing.length === 0 ? (
+
+          {filteredTesting.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400">
-              <HelpIcon className="w-8 h-8 text-slate-350 mb-2" />
-              <span className="text-xs font-bold text-slate-500">No stages configured</span>
-              <p className="text-[10px] text-slate-400 mt-1 max-w-[200px]">Click &quot;Add Test Stage&quot; above to start defining hardware tests.</p>
+              <HelpCircle className="w-8 h-8 text-slate-350 mb-2" />
+              <p className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">No tests listed</p>
+              <p className="text-[9px] text-slate-400 mt-1 max-w-[200px] leading-relaxed">
+                Click 'Add Test Stage' or sync MVP blocks to generate initial tests.
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100 flex-1">
-              {testing.map((stage) => {
+              {filteredTesting.map((stage) => {
                 const isActive = activeStage?.id === stage.id;
                 return (
                   <div
                     key={stage.id}
                     onClick={() => setSelectedStageId(stage.id)}
-                    className={`p-3.5 text-left transition-all duration-150 cursor-pointer flex items-start justify-between select-none relative ${
+                    className={`p-3 text-left transition-all duration-150 cursor-pointer flex items-start justify-between select-none relative ${
                       isActive 
-                        ? 'bg-slate-50/80 font-bold border-l-[3.5px] border-slate-900 shadow-sm' 
+                        ? 'bg-slate-50/80 font-bold shadow-sm' 
                         : 'hover:bg-slate-50/50'
-                    }`}
+                    } ${getStatusBorder(stage.status)}`}
                   >
                     <div className="flex-1 min-w-0 pr-2">
                       <p className={`text-xs font-bold truncate ${isActive ? 'text-slate-900' : 'text-slate-700'}`}>
                         {stage.name || "Unnamed Stage"}
                       </p>
-                      <p className="text-[10px] text-slate-400 truncate mt-1">
+                      <p className="text-[9px] text-slate-400 truncate mt-1">
                         {stage.goal || "No goal specified"}
                       </p>
-                      <div className="mt-2.5">
+                      <div className="mt-2 flex items-center space-x-1.5">
                         {getStatusBadge(stage.status)}
+                        <span className="text-[8px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded font-bold uppercase">
+                          {stage.category || 'General'}
+                        </span>
                       </div>
                     </div>
-                    <button
-                      onClick={(e) => handleDeleteStage(stage.id, e)}
-                      className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors"
-                      title="Delete Stage"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    
+                    <div className="flex items-center space-x-1 shrink-0">
+                      <button
+                        onClick={(e) => handleDuplicate(stage.id, e)}
+                        className="text-slate-400 hover:text-slate-650 p-1 hover:bg-slate-100 rounded"
+                        title="Duplicate Stage"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteStage(stage.id, e)}
+                        className="text-slate-400 hover:text-rose-600 p-1 hover:bg-rose-50 rounded"
+                        title="Delete Stage"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -157,135 +267,210 @@ export const TestingBoard: React.FC = () => {
           )}
         </div>
 
-        {/* Right Column: Detailed Form */}
-        <div className="flex-1 bg-white border border-slate-200 rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.02)] overflow-y-auto flex flex-col p-6">
+        {/* Right Side: Execution Detail Form */}
+        <div className="flex-1 bg-white border border-slate-200 rounded-lg shadow-sm overflow-y-auto flex flex-col p-6">
           {activeStage ? (
-            <div className="space-y-5">
-              {/* Form Header */}
-              <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+            <div className="space-y-6">
+              
+              {/* Form Title & Status header */}
+              <div className="flex items-center justify-between pb-3.5 border-b border-slate-150">
                 <input
                   type="text"
                   value={activeStage.name}
                   onChange={(e) => handleAddField(activeStage.id, 'name', e.target.value)}
-                  className="text-base font-extrabold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-slate-800 focus:outline-none px-1 py-0.5 w-2/3 transition-all"
+                  className="text-sm font-extrabold text-slate-850 bg-transparent border-b border-transparent hover:border-slate-250 focus:border-slate-800 focus:outline-none px-1.5 py-0.5 w-2/3 transition-all"
                   placeholder="Stage Name"
                 />
-                
-                <div className="flex items-center space-x-2">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Status:</label>
-                  <select
-                    value={activeStage.status}
-                    onChange={(e) => handleAddField(activeStage.id, 'status', e.target.value as TestStage['status'])}
-                    className="bg-white border border-slate-200 hover:border-slate-350 focus:border-slate-900 rounded px-2.5 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-900"
-                  >
-                    <option value="Not Started">Not Started</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Passed">Passed</option>
-                    <option value="Failed">Failed</option>
-                    <option value="Blocked">Blocked</option>
-                  </select>
+
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-1.5">
+                    <label className="text-[9px] font-bold text-slate-450 uppercase tracking-widest leading-none">Category:</label>
+                    <select
+                      value={activeStage.category || 'General'}
+                      onChange={(e) => handleAddField(activeStage.id, 'category', e.target.value)}
+                      className="bg-white border border-slate-250 rounded px-2 py-0.5 text-xs font-semibold text-slate-700 focus:outline-none"
+                    >
+                      {["General", "Electrical", "Mechanical", "Firmware", "Interaction"].map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center space-x-1.5">
+                    <label className="text-[9px] font-bold text-slate-450 uppercase tracking-widest leading-none">Status:</label>
+                    <select
+                      value={activeStage.status}
+                      onChange={(e) => handleAddField(activeStage.id, 'status', e.target.value)}
+                      className="bg-white border border-slate-250 rounded px-2.5 py-0.5 text-xs font-semibold text-slate-700 focus:outline-none"
+                    >
+                      <option value="Not Started">Not Started</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Passed">Passed</option>
+                      <option value="Failed">Failed</option>
+                      <option value="Blocked">Blocked</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              {/* Group 1: Scope & Tools */}
-              <div className="bg-slate-50/50 border border-slate-100 rounded-lg p-4 space-y-4">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-1.5 mb-1">Scope & Tools</span>
-                
+              {/* Box 1: Goal & Tools */}
+              <div className="bg-slate-50/50 border border-slate-150 rounded-lg p-4 space-y-4">
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-1.5">Scope definitions</span>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Goal of this test stage</label>
+                    <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Scope / Goal</label>
                     <textarea
                       rows={3}
                       value={activeStage.goal}
                       onChange={(e) => handleAddField(activeStage.id, 'goal', e.target.value)}
-                      className="w-full bg-white border border-slate-200 hover:border-slate-350 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded p-2.5 text-xs font-medium text-slate-700 resize-none transition-all"
-                      placeholder="e.g. Prove input and haptic feedback logic behavior"
+                      className="w-full bg-white border border-slate-250 rounded p-2 text-xs font-medium text-slate-700 font-sans resize-none"
+                      placeholder="e.g. Validate battery charger thermal cut-off threshold"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Parts & Tools Needed</label>
+                    <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Equipment / Parts Needed</label>
                     <textarea
                       rows={3}
                       value={activeStage.partsNeeded}
                       onChange={(e) => handleAddField(activeStage.id, 'partsNeeded', e.target.value)}
-                      className="w-full bg-white border border-slate-200 hover:border-slate-350 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded p-2.5 text-xs font-medium text-slate-700 resize-none transition-all"
-                      placeholder="e.g. ESP32 devkit, breadboard, wire wraps, resistors"
+                      className="w-full bg-white border border-slate-250 rounded p-2 text-xs font-medium text-slate-700 font-sans resize-none"
+                      placeholder="e.g. Rigol Oscilloscope, 10-ohm power load, thermometer"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Group 2: Execution Protocol */}
-              <div className="bg-white border border-slate-100 rounded-lg p-4 space-y-3 shadow-sm">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-1.5 mb-1">Execution Protocol</span>
-                
+              {/* Box 2: Test Script */}
+              <div className="bg-white border border-slate-150 rounded-lg p-4 space-y-3 shadow-sm">
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-1.5">Testing execution instructions</span>
                 <div>
-                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Testing Steps</label>
+                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Execution Steps</label>
                   <textarea
                     rows={4}
                     value={activeStage.steps}
                     onChange={(e) => handleAddField(activeStage.id, 'steps', e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100/30 hover:border-slate-350 focus:bg-white focus:border-slate-950 focus:ring-1 focus:ring-slate-950 rounded p-2.5 text-xs font-medium text-slate-700 resize-none transition-all"
-                    placeholder="1. Solder pin headers to board.&#10;2. Solder motor to NPN driver.&#10;3. Trigger pin check code."
+                    className="w-full bg-slate-50 border border-slate-200 rounded p-2.5 text-xs font-medium text-slate-700 font-sans resize-none"
+                    placeholder="1. Power up target PCB...&#10;2. Apply thermal probe to charger IC...&#10;3. Trigger active charge curve."
                   />
                 </div>
               </div>
 
-              {/* Group 3: Validation & Risk */}
-              <div className="bg-slate-50/50 border border-slate-100 rounded-lg p-4 space-y-4">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-1.5 mb-1">Validation & Risk</span>
-                
+              {/* Box 3: Verification Standards */}
+              <div className="bg-slate-50/50 border border-slate-150 rounded-lg p-4 space-y-4">
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-1.5">Pass parameters</span>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Pass Criteria</label>
+                    <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Pass criteria</label>
                     <textarea
                       rows={3}
                       value={activeStage.passCriteria}
                       onChange={(e) => handleAddField(activeStage.id, 'passCriteria', e.target.value)}
-                      className="w-full bg-white border border-slate-200 hover:border-slate-350 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded p-2.5 text-xs font-medium text-slate-700 resize-none transition-all"
-                      placeholder="Single click produces quick buzz, double click triggers double buzz"
+                      className="w-full bg-white border border-slate-250 rounded p-2 text-xs font-medium text-slate-700 font-sans resize-none"
+                      placeholder="Charging cuts off cleanly when temperature exceeds 45 degrees C."
                     />
                   </div>
 
                   <div>
-                    <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Risks & Mitigation</label>
+                    <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Test Risks & Safety hazards</label>
                     <textarea
                       rows={3}
                       value={activeStage.risks}
                       onChange={(e) => handleAddField(activeStage.id, 'risks', e.target.value)}
-                      className="w-full bg-white border border-slate-200 hover:border-slate-350 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded p-2.5 text-xs font-medium text-slate-700 resize-none transition-all"
-                      placeholder="Power spikes resetting MCU. flyback diode added."
+                      className="w-full bg-white border border-slate-250 rounded p-2 text-xs font-medium text-slate-700 font-sans resize-none"
+                      placeholder="Battery overheating spike. Keep fireproof pouch on hand."
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Group 4: Log Notes */}
-              <div className="bg-white border border-slate-100 rounded-lg p-4 space-y-3 shadow-sm">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-1.5 mb-1">Developer Logs</span>
-                
-                <div>
-                  <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Developer Notes</label>
-                  <textarea
-                    rows={3}
-                    value={activeStage.notes}
-                    onChange={(e) => handleAddField(activeStage.id, 'notes', e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100/30 hover:border-slate-350 focus:bg-white focus:border-slate-950 focus:ring-1 focus:ring-slate-950 rounded p-2.5 text-xs font-medium text-slate-700 resize-none transition-all"
-                    placeholder="Enter details on setup debug outputs, firmware git branch references, or findings."
-                  />
+              {/* Box 4: Links to canvas blocks */}
+              <div className="bg-white border border-slate-150 rounded-lg p-4 space-y-3.5 shadow-sm">
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-1.5 flex items-center">
+                  <Link2 className="w-3 h-3 text-slate-450 mr-1 rotate-45" />
+                  <span>Linked Architecture Component Blocks</span>
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {nodes.filter(n => n.type === 'blockNode').map(n => {
+                    const isLinked = (activeStage.linkedBlocks || []).includes(n.id);
+                    return (
+                      <label 
+                        key={n.id} 
+                        className={`flex items-center space-x-2 border rounded p-2 cursor-pointer transition-all duration-150 select-none ${
+                          isLinked 
+                            ? 'border-emerald-500 bg-emerald-50/20 text-emerald-800' 
+                            : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isLinked}
+                          onChange={() => handleLinkBlockToggle(n.id)}
+                          className="rounded text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-[9px] font-bold truncate uppercase">{n.data.name}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Box 5: Evidence & Result Logs */}
+              <div className="bg-white border border-slate-150 rounded-lg p-4 space-y-4 shadow-sm">
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-1.5">Developer results log & evidence links</span>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Result Notes / Findings</label>
+                    <textarea
+                      rows={3}
+                      value={activeStage.resultNotes || ''}
+                      onChange={(e) => handleAddField(activeStage.id, 'resultNotes', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100/30 hover:border-slate-350 focus:bg-white focus:border-slate-900 rounded p-2 text-xs font-medium text-slate-700 font-sans resize-none"
+                      placeholder="e.g. Cutoff triggered successfully at 45.4C. Charging resumes below 38C."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Evidence URL / Git branch</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={activeStage.evidenceLink || ''}
+                        onChange={(e) => handleAddField(activeStage.id, 'evidenceLink', e.target.value)}
+                        className="w-full bg-white border border-slate-250 rounded pl-8 pr-8 py-1.5 text-xs text-blue-700 truncate focus:outline-none"
+                        placeholder="e.g. https://github.com/Ankit6149/hardware-studio/pull/12"
+                      />
+                      <Link2 className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                      {activeStage.evidenceLink && activeStage.evidenceLink.startsWith('http') && (
+                        <a 
+                          href={activeStage.evidenceLink} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-650"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-400 py-12">
-              <CheckCircle2 className="w-12 h-12 text-slate-200 mb-3" />
-              <p className="font-bold text-slate-500">No Stage Selected</p>
-              <p className="text-[10px] text-slate-400 mt-1 max-w-[260px] text-center leading-relaxed">Click a test stage on the left panel or click &quot;Add Test Stage&quot; to start documenting verification procedures.</p>
+              <CheckCircle2 className="w-12 h-12 text-slate-200 mb-3 animate-pulse" />
+              <p className="font-bold text-slate-500 uppercase tracking-wider text-xs">No Stage Selected</p>
+              <p className="text-[10px] text-slate-400 mt-1 max-w-[260px] text-center leading-relaxed">
+                Click a test stage on the directory sidebar or click 'Add Test Stage' to document verification.
+              </p>
             </div>
           )}
         </div>
+
       </div>
+
     </div>
   );
 };

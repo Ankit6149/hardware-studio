@@ -14,7 +14,8 @@ import {
   Download,
   Plus,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  FileCheck2
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -37,7 +38,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     { id: 'power', label: 'Power', icon: Zap },
     { id: 'system-alpha', label: 'System Alpha', icon: Cloud },
     { id: 'bom', label: 'BOM', icon: Table },
+    { id: 'power-budget', label: 'Power Budget', icon: Zap },
+    { id: 'pin-map', label: 'Pin Map', icon: Cpu },
+    { id: 'firmware-plan', label: 'Firmware Plan', icon: Binary },
     { id: 'testing', label: 'Testing', icon: CheckSquare },
+    { id: 'readiness', label: 'Readiness Review', icon: FileCheck2 },
     { id: 'exports', label: 'Exports', icon: Download },
   ];
 
@@ -80,7 +85,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
   };
 
   // Determine if active view allows placing blocks
-  const isCanvasView = !['bom', 'testing', 'exports'].includes(activeView);
+  const tabularViews = ['bom', 'testing', 'exports', 'power-budget', 'pin-map', 'firmware-plan', 'readiness'];
+  const isCanvasView = !tabularViews.includes(activeView);
 
   return (
     <aside className="w-64 border-r border-slate-200 bg-white flex flex-col h-full shrink-0 shadow-sm z-20 overflow-hidden">
@@ -91,7 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
           {sections.map(s => {
             const Icon = s.icon;
             const isActive = activeView === s.id;
-            const isTable = ['bom', 'testing', 'exports'].includes(s.id);
+            const isTable = tabularViews.includes(s.id);
             return (
               <button
                 key={s.id}
