@@ -1593,7 +1593,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
 
       addIfUnique({
         name: "Touch Input",
-        circuitType: "LED",
+        circuitType: "Sensor",
         boardId: mainBoardId,
         description: "Capacitive touch sensing controller.",
         requiredComponents: "I2C Touch IC, Series Resistors (x2)",
