@@ -8,7 +8,7 @@ import { exportBoardPlanJson } from '../lib/exportBoardPlan';
 import { exportToCSV } from '../lib/exportCsv';
 import { FileJson, FileText, Download, Cpu, Layers, Table, Info } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
-import { exportBlueprintSheetsMarkdown, exportBlueprintSheetsJson } from '../lib/exportBlueprintSheets';
+import { exportBlueprintSheetsMarkdown, exportBlueprintSheetsJson, exportBlueprintSheetsHtml } from '../lib/exportBlueprintSheets';
 
 export const ExportCenter: React.FC = () => {
   const project = useProjectStore();
@@ -279,20 +279,27 @@ export const ExportCenter: React.FC = () => {
                 Download all 12 visual engineering sheets as print-ready markdown, technical layout documents, or serialized design data.
               </p>
             </div>
-            <div className="flex space-x-3 pt-2">
+            <div className="grid grid-cols-3 gap-2 pt-2">
               <button
                 onClick={() => downloadTextFile("blueprint_sheets.md", exportBlueprintSheetsMarkdown(project))}
-                className="flex-1 flex items-center justify-center space-x-1 bg-slate-900 hover:bg-slate-805 text-white py-1.8 rounded text-[10px] font-bold transition-all border border-slate-950 cursor-pointer"
+                className="flex items-center justify-center space-x-1 bg-slate-900 hover:bg-slate-805 text-white py-1.8 rounded text-[9px] font-bold transition-all border border-slate-950 cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export MD</span>
+                <Download className="w-3 h-3 text-slate-100" />
+                <span>MD</span>
+              </button>
+              <button
+                onClick={() => downloadTextFile("blueprint_sheets.html", exportBlueprintSheetsHtml(project), "text/html")}
+                className="flex items-center justify-center space-x-1 bg-white hover:bg-slate-50 text-slate-650 py-1.8 rounded text-[9px] font-bold transition-all border border-slate-200 cursor-pointer"
+              >
+                <Download className="w-3 h-3 text-slate-400" />
+                <span>HTML</span>
               </button>
               <button
                 onClick={() => downloadTextFile("blueprint_sheets.json", exportBlueprintSheetsJson(project), "application/json")}
-                className="flex-1 flex items-center justify-center space-x-1 bg-white hover:bg-slate-50 text-slate-650 py-1.8 rounded text-[10px] font-bold transition-all border border-slate-200 cursor-pointer"
+                className="flex items-center justify-center space-x-1 bg-white hover:bg-slate-50 text-slate-650 py-1.8 rounded text-[9px] font-bold transition-all border border-slate-200 cursor-pointer"
               >
-                <FileJson className="w-3.5 h-3.5 text-slate-450" />
-                <span>Export JSON</span>
+                <FileJson className="w-3 h-3 text-slate-450" />
+                <span>JSON</span>
               </button>
             </div>
           </div>
