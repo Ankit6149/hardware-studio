@@ -48,7 +48,7 @@ export const PropertiesPanel: React.FC = () => {
   const inbound = edges.filter(e => e.target === selectedNodeId);
   const outbound = edges.filter(e => e.source === selectedNodeId);
 
-  const handleFieldChange = (key: string, value: any) => {
+  const handleFieldChange = (key: string, value: string | string[]) => {
     updateNode(selectedNode.id, { [key]: value });
   };
 
@@ -59,9 +59,7 @@ export const PropertiesPanel: React.FC = () => {
   };
 
   const handleDuplicate = () => {
-    const dupId = `node_dup_${Date.now()}`;
     addNode({
-      id: dupId,
       type: selectedNode.type,
       position: { x: selectedNode.position.x + 30, y: selectedNode.position.y + 30 },
       width: selectedNode.width,

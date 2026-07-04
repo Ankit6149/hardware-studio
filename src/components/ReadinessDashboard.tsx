@@ -1,18 +1,12 @@
 import React from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { calculateReadinessScore } from '../lib/readinessScore';
-import { StatCard } from '../ui/StatCard';
 import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { 
   ShieldAlert, 
-  AlertTriangle, 
-  HelpCircle, 
   CheckSquare, 
-  Play,
-  CheckCircle2,
-  FileCheck2,
-  Lightbulb
+  CheckCircle2
 } from 'lucide-react';
 
 export const ReadinessDashboard: React.FC = () => {

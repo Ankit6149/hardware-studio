@@ -1,5 +1,4 @@
 import { Project, CustomNode, BOMItem, TestStage } from '../types';
-import { runValidationRules } from './validationRules';
 import { calculateReadinessScore } from './readinessScore';
 
 const escapeMarkdown = (text: string | number | undefined | null): string => {

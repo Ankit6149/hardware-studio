@@ -2,18 +2,15 @@ import React, { useState } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { Button } from '../ui/Button';
 import { StatCard } from '../ui/StatCard';
-import { Badge } from '../ui/Badge';
 import { 
   Plus, 
   Trash2, 
   RefreshCw, 
   Code, 
-  Download, 
   FileText, 
   CheckCircle,
   Clock,
-  AlertTriangle,
-  Play
+  AlertTriangle
 } from 'lucide-react';
 import { exportFirmwareSkeletonFile } from '../lib/exportFirmware';
 
@@ -52,23 +49,7 @@ export const FirmwarePlan: React.FC = () => {
     return task.priority.toLowerCase() === activeTab;
   });
 
-  const getPriorityBadge = (prio: string) => {
-    switch (prio) {
-      case 'MVP': return 'success';
-      case 'Later': return 'info';
-      case 'Future': return 'accent';
-      default: return 'neutral';
-    }
-  };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'Done': return 'success';
-      case 'In Progress': return 'info';
-      case 'Blocked': return 'error';
-      default: return 'neutral';
-    }
-  };
 
   // Summary Metrics
   const totalTasks = firmwareTasks.length;
@@ -191,7 +172,7 @@ export const FirmwarePlan: React.FC = () => {
               {filteredTasks.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-6 text-center text-slate-400">
-                    No firmware tasks listed. Click 'Sync Firmware Blocks' to auto-generate from architecture tags.
+                    No firmware tasks listed. Click &apos;Sync Firmware Blocks&apos; to auto-generate from architecture tags.
                   </td>
                 </tr>
               ) : (

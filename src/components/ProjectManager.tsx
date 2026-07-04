@@ -4,7 +4,6 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Input, Textarea } from '../ui/FormControls';
 import { 
-  FolderOpen, 
   Save, 
   Copy, 
   Trash2, 
@@ -113,7 +112,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
         } else {
           showToast(`Import failed: ${res.error}`, "error");
         }
-      } catch (err) {
+      } catch {
         showToast("Invalid JSON file formatting.", "error");
       }
     };

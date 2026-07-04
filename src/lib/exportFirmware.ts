@@ -3,7 +3,6 @@ import { Project } from '../types';
 export const generateFirmwareSkeleton = (project: Project): string => {
   const pinMap = project.pinMap || [];
   const firmwareTasks = project.firmwareTasks || [];
-  const projectNameSafe = project.projectName.replace(/\s+/g, '_');
 
   // Format Pin configurations
   const pinDefinitions = pinMap.map(pin => {

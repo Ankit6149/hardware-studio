@@ -20,7 +20,10 @@ export const AppShell: React.FC = () => {
 
   useEffect(() => {
     loadProjectFromLocalStorage();
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadProjectFromLocalStorage]);
 
   const renderContent = () => {

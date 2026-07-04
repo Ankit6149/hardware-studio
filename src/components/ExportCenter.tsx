@@ -7,7 +7,7 @@ import { runValidationRules } from '../lib/validationRules';
 
 export const ExportCenter: React.FC = () => {
   const project = useProjectStore();
-  const { projectName, nodes, edges, bom, testing } = project;
+  const { nodes, edges, bom, testing } = project;
 
   const warnings = runValidationRules(nodes, edges);
   

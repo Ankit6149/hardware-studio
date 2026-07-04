@@ -15,7 +15,6 @@ import {
   Coins 
 } from 'lucide-react';
 import { exportToCSV } from '../lib/exportCsv';
-import { exportProjectMarkdown } from '../lib/exportMarkdown';
 
 export const BOMTable: React.FC = () => {
   const { 
@@ -28,7 +27,7 @@ export const BOMTable: React.FC = () => {
 
   const [activeStageFilter, setActiveStageFilter] = useState<string>('ALL');
 
-  const handleAddField = (id: string, key: keyof BOMItem, value: any) => {
+  const handleAddField = (id: string, key: keyof BOMItem, value: string | number) => {
     let parsedValue = value;
     if (key === 'quantity') {
       parsedValue = value === '' ? 1 : Number(value);
@@ -106,9 +105,6 @@ export const BOMTable: React.FC = () => {
     exportToCSV(`${projectNameSafe()}_bom.csv`, headers, rows);
   };
 
-  const handleExportMD = () => {
-    exportProjectMarkdown(useProjectStore.getState());
-  };
 
   const projectNameSafe = () => {
     return useProjectStore.getState().projectName.toLowerCase().replace(/\s+/g, '_');
@@ -235,7 +231,7 @@ export const BOMTable: React.FC = () => {
                       <HelpCircle className="w-8 h-8 text-slate-350" />
                       <p className="font-bold text-slate-500 uppercase tracking-wider text-xs">No Components Configured</p>
                       <p className="text-[10px] text-slate-400 mt-1 max-w-sm">
-                        Click 'Sync MVP Blocks' to load nodes from your canvas flow, or add lines manually to trace components.
+                        Click &apos;Sync MVP Blocks&apos; to load nodes from your canvas flow, or add lines manually to trace components.
                       </p>
                     </div>
                   </td>

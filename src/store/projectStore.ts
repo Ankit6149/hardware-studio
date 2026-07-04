@@ -74,6 +74,7 @@ interface ProjectState extends Project {
   deleteProject: (id: string) => void;
   loadProjectFromTemplate: (templateId: string) => void;
   resetProject: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   importProjectJSON: (json: any) => { success: boolean; error?: string };
   loadProjectFromLocalStorage: () => void;
 }
@@ -107,6 +108,7 @@ const getSavedProjects = (): Record<string, Project> => {
         activeView: oldObj.activeView || 'master',
         nodes: oldObj.nodes || ringTpl?.nodes || [],
         edges: oldObj.edges || ringTpl?.edges || [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         bom: (oldObj.bom || []).map((b: any) => ({
           id: b.id || `bom_${Math.random()}`,
           blockName: b.blockName || '',
@@ -128,6 +130,7 @@ const getSavedProjects = (): Record<string, Project> => {
           alternative: b.alternative || '',
           notes: b.notes || ''
         })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         testing: (oldObj.testing || []).map((t: any) => ({
           id: t.id || `stage_${Math.random()}`,
           name: t.name || '',
@@ -638,7 +641,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
 
       activeNodes.forEach(node => {
         const nameLower = node.data.name.toLowerCase();
-        let volt = "3.3";
+        const volt = "3.3";
         let activeI = 1.0;
         let sleepI = 5.0;
 
@@ -772,8 +775,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         const nameLower = node.data.name.toLowerCase();
         let tName = "";
         let tType: 'State' | 'Driver' | 'BLE' | 'Power' | 'Safety' | 'Test' | 'Integration' = 'Driver';
-        let desc = node.data.description || "";
-        let ac = node.data.requirements || "Verified compiler load.";
+        const desc = node.data.description || "";
+        const ac = node.data.requirements || "Verified compiler load.";
 
         if (nameLower.includes("state") || nameLower.includes("loop")) {
           tName = `${node.data.name} Logic Loop`;
@@ -940,7 +943,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       }
     },
 
-    importProjectJSON: (json) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    importProjectJSON: (json: any) => {
       if (!json || typeof json !== 'object') {
         return { success: false, error: "Invalid JSON format." };
       }
@@ -960,6 +964,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         templateName: json.templateName || "Imported Project",
         version: json.version || "1.0",
         activeView: json.activeView || "master",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         nodes: (json.nodes || []).map((n: any) => ({
           ...n,
           id: n.id || `node_${Math.random()}`,
@@ -989,12 +994,14 @@ export const useProjectStore = create<ProjectState>((set, get) => {
             priority: n.data?.priority || "Medium"
           }
         })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         edges: (json.edges || []).map((e: any) => ({
           ...e,
           id: e.id || `edge_${Math.random()}`,
           views: e.views || ["master"],
           label: e.label || ""
         })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         bom: (json.bom || []).map((b: any) => ({
           id: b.id || `bom_${Math.random()}`,
           blockName: b.blockName || "",
@@ -1016,6 +1023,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           alternative: b.alternative || "",
           notes: b.notes || ""
         })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         testing: (json.testing || []).map((t: any) => ({
           id: t.id || `stage_${Math.random()}`,
           name: t.name || "",
@@ -1032,6 +1040,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           evidenceLink: t.evidenceLink || "",
           order: t.order || 0
         })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         powerBudget: (json.powerBudget || []).map((p: any) => ({
           id: p.id || `pwr_${Math.random()}`,
           blockName: p.blockName || "",
@@ -1042,6 +1051,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           quantity: Number(p.quantity) || 1,
           notes: p.notes || ""
         })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pinMap: (json.pinMap || []).map((p: any) => ({
           id: p.id || `pin_${Math.random()}`,
           signalName: p.signalName || "",
@@ -1052,6 +1062,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           voltage: p.voltage || "",
           notes: p.notes || ""
         })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         firmwareTasks: (json.firmwareTasks || []).map((f: any) => ({
           id: f.id || `fw_task_${Math.random()}`,
           name: f.name || "",

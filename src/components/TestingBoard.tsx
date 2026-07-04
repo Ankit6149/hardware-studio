@@ -36,7 +36,7 @@ export const TestingBoard: React.FC = () => {
 
   const activeStage = testing.find(t => t.id === selectedStageId) || (testing.length > 0 ? testing[0] : null);
 
-  const handleAddField = (id: string, key: keyof TestStage, value: any) => {
+  const handleAddField = (id: string, key: keyof TestStage, value: string | string[]) => {
     updateTestStage(id, { [key]: value });
   };
 
@@ -212,7 +212,7 @@ export const TestingBoard: React.FC = () => {
               <HelpCircle className="w-8 h-8 text-slate-350 mb-2" />
               <p className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">No tests listed</p>
               <p className="text-[9px] text-slate-400 mt-1 max-w-[200px] leading-relaxed">
-                Click 'Add Test Stage' or sync MVP blocks to generate initial tests.
+                Click &apos;Add Test Stage&apos; or sync MVP blocks to generate initial tests.
               </p>
             </div>
           ) : (
@@ -463,7 +463,7 @@ export const TestingBoard: React.FC = () => {
               <CheckCircle2 className="w-12 h-12 text-slate-200 mb-3 animate-pulse" />
               <p className="font-bold text-slate-500 uppercase tracking-wider text-xs">No Stage Selected</p>
               <p className="text-[10px] text-slate-400 mt-1 max-w-[260px] text-center leading-relaxed">
-                Click a test stage on the directory sidebar or click 'Add Test Stage' to document verification.
+                Click a test stage on the directory sidebar or click &apos;Add Test Stage&apos; to document verification.
               </p>
             </div>
           )}

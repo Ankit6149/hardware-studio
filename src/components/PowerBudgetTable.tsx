@@ -11,7 +11,6 @@ import {
   Zap, 
   AlertTriangle, 
   RefreshCw, 
-  FileSpreadsheet, 
   Download 
 } from 'lucide-react';
 import { exportToCSV } from '../lib/exportCsv';
@@ -235,7 +234,7 @@ export const PowerBudgetTable: React.FC = () => {
               {powerBudget.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-6 text-center text-slate-400">
-                    No active loads configured. Click 'Sync Power Blocks' or add lines manually to build budget.
+                    No active loads configured. Click &apos;Sync Power Blocks&apos; or add lines manually to build budget.
                   </td>
                 </tr>
               ) : (

@@ -3,10 +3,7 @@ import { useProjectStore } from '../store/projectStore';
 import { 
   FolderOpen, 
   LayoutTemplate, 
-  RotateCcw, 
-  Download,
-  FileJson,
-  FileText
+  RotateCcw
 } from 'lucide-react';
 import { ProjectManager } from './ProjectManager';
 import { TemplatePicker } from './TemplatePicker';

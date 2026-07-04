@@ -10,7 +10,6 @@ import {
   RefreshCw, 
   Download, 
   Cpu, 
-  CheckCircle,
   HelpCircle
 } from 'lucide-react';
 import { exportToCSV } from '../lib/exportCsv';

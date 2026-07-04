@@ -26,7 +26,6 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   // 1. ARCHITECTURE SCORE (Max 100)
   let archScore = 50;
   const nodes = project.nodes || [];
-  const edges = project.edges || [];
   
   const hasInput = nodes.some(n => 
     n.data?.status === 'MVP' && 
