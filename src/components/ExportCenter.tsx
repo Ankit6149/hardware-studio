@@ -8,6 +8,7 @@ import { exportBoardPlanJson } from '../lib/exportBoardPlan';
 import { exportToCSV } from '../lib/exportCsv';
 import { FileJson, FileText, Download, Cpu, Layers, Table, Info } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
+import { exportBlueprintSheetsMarkdown, exportBlueprintSheetsJson } from '../lib/exportBlueprintSheets';
 
 export const ExportCenter: React.FC = () => {
   const project = useProjectStore();
@@ -208,14 +209,14 @@ export const ExportCenter: React.FC = () => {
         </div>
 
         {/* Master Exporters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Blueprint Dossier Card */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-4">
             <div className="space-y-2">
               <div className="w-9 h-9 rounded bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-650">
                 <FileText className="w-4 h-4" />
               </div>
-              <h2 className="text-xs font-black text-slate-805 uppercase tracking-wider font-mono">Blueprint Dossier Export</h2>
+              <h2 className="text-xs font-black text-slate-850 uppercase tracking-wider font-mono">Blueprint Dossier Export</h2>
               <p className="text-[11px] text-slate-550 leading-relaxed font-sans">
                 Compile a detailed executive, mechanical, electrical, and validation dossier report including structural layout tables, pin assignments, power profiles, and design heuristics warnings.
               </p>
@@ -244,7 +245,7 @@ export const ExportCenter: React.FC = () => {
               <div className="w-9 h-9 rounded bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-650">
                 <Layers className="w-4 h-4" />
               </div>
-              <h2 className="text-xs font-black text-slate-805 uppercase tracking-wider font-mono">ECAD Prep & Code skeleton</h2>
+              <h2 className="text-xs font-black text-slate-850 uppercase tracking-wider font-mono">ECAD Prep & Code skeleton</h2>
               <p className="text-[11px] text-slate-550 leading-relaxed font-sans">
                 Download a JSON schema mapping boards, functional netlists, constraints, and reference designators. Download a matching C++ state driver skeleton file to boot MCU pins.
               </p>
@@ -263,6 +264,35 @@ export const ExportCenter: React.FC = () => {
               >
                 <Cpu className="w-3.5 h-3.5 text-indigo-500" />
                 <span>C++ Driver (.ino)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Blueprint Drawing Pack */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-9 h-9 rounded bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-650">
+                <FileText className="w-4 h-4" />
+              </div>
+              <h2 className="text-xs font-black text-slate-850 uppercase tracking-wider font-mono">Blueprint Drawing Pack</h2>
+              <p className="text-[11px] text-slate-550 leading-relaxed font-sans">
+                Download all 12 visual engineering sheets as print-ready markdown, technical layout documents, or serialized design data.
+              </p>
+            </div>
+            <div className="flex space-x-3 pt-2">
+              <button
+                onClick={() => downloadTextFile("blueprint_sheets.md", exportBlueprintSheetsMarkdown(project))}
+                className="flex-1 flex items-center justify-center space-x-1 bg-slate-900 hover:bg-slate-805 text-white py-1.8 rounded text-[10px] font-bold transition-all border border-slate-950 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export MD</span>
+              </button>
+              <button
+                onClick={() => downloadTextFile("blueprint_sheets.json", exportBlueprintSheetsJson(project), "application/json")}
+                className="flex-1 flex items-center justify-center space-x-1 bg-white hover:bg-slate-50 text-slate-650 py-1.8 rounded text-[10px] font-bold transition-all border border-slate-200 cursor-pointer"
+              >
+                <FileJson className="w-3.5 h-3.5 text-slate-450" />
+                <span>Export JSON</span>
               </button>
             </div>
           </div>

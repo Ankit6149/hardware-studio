@@ -20,6 +20,7 @@ import { NetlistPlanner } from './NetlistPlanner';
 import { PCBConstraints } from './PCBConstraints';
 import { ManufacturingPack } from './ManufacturingPack';
 import { ProjectDashboard } from './ProjectDashboard';
+import { BlueprintSheets } from './BlueprintSheets';
 
 export const AppShell: React.FC = () => {
   const { activeView, loadProjectFromLocalStorage } = useProjectStore();
@@ -37,6 +38,8 @@ export const AppShell: React.FC = () => {
     switch (activeView) {
       case 'dashboard':
         return <ProjectDashboard />;
+      case 'blueprint-sheets':
+        return <BlueprintSheets />;
       case 'bom':
         return <BOMTable />;
       case 'testing':
@@ -73,6 +76,7 @@ export const AppShell: React.FC = () => {
   // Canvas views are drawing-board views
   const tabularViews = [
     'dashboard',
+    'blueprint-sheets',
     'bom', 
     'testing', 
     'exports', 

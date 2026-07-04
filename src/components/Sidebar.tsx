@@ -43,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
         { id: 'dashboard', label: 'Project Dashboard', icon: LayoutDashboard },
         { id: 'readiness', label: 'Readiness Review', icon: FileCheck2 },
         { id: 'dossier', label: 'Blueprint Dossier', icon: FileText },
+        { id: 'blueprint-sheets', label: 'Blueprint Sheets', icon: FileText },
       ]
     },
     {

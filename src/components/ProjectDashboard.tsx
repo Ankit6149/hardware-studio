@@ -221,6 +221,14 @@ export const ProjectDashboard: React.FC = () => {
 
         <div className="shrink-0 flex space-x-3">
           <Button
+            onClick={() => setActiveView('blueprint-sheets')}
+            variant="outline"
+            size="sm"
+            icon={<FileText className="w-4 h-4" />}
+          >
+            Open Blueprint Sheets
+          </Button>
+          <Button
             onClick={() => setActiveView('dossier')}
             variant="outline"
             size="sm"
