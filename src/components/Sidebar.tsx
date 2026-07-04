@@ -21,7 +21,8 @@ import {
   Boxes,
   Network,
   Ruler,
-  Package
+  Package,
+  LayoutDashboard
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -35,30 +36,52 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     Electronics: true
   });
 
-  const sections = [
-    { id: 'master', label: 'Overview', icon: Eye },
-    { id: 'outer', label: 'Outer Design', icon: Palette },
-    { id: 'internal', label: 'Internal Layout', icon: Layout },
-    { id: 'electronics', label: 'Electronics', icon: Cpu },
-    { id: 'firmware', label: 'Firmware', icon: Binary },
-    { id: 'power', label: 'Power', icon: Zap },
-    { id: 'system-alpha', label: 'System Alpha', icon: Cloud },
-    
-    // Board Studio / ECAD Prep
-    { id: 'board-studio', label: 'Board Studio', icon: Layers },
-    { id: 'circuit-planner', label: 'Circuit Planner', icon: Boxes },
-    { id: 'netlist-planner', label: 'Netlist Planner', icon: Network },
-    { id: 'pcb-constraints', label: 'PCB Constraints', icon: Ruler },
-    { id: 'mfg-pack', label: 'Manufacturing Pack', icon: Package },
-
-    { id: 'bom', label: 'BOM', icon: Table },
-    { id: 'power-budget', label: 'Power Budget', icon: Zap },
-    { id: 'pin-map', label: 'Pin Map', icon: Cpu },
-    { id: 'firmware-plan', label: 'Firmware Plan', icon: Binary },
-    { id: 'testing', label: 'Testing', icon: CheckSquare },
-    { id: 'readiness', label: 'Readiness Review', icon: FileCheck2 },
-    { id: 'dossier', label: 'Blueprint Dossier', icon: FileText },
-    { id: 'exports', label: 'Exports', icon: Download },
+  const sidebarGroups = [
+    {
+      title: "Overview",
+      items: [
+        { id: 'dashboard', label: 'Project Dashboard', icon: LayoutDashboard },
+        { id: 'readiness', label: 'Readiness Review', icon: FileCheck2 },
+        { id: 'dossier', label: 'Blueprint Dossier', icon: FileText },
+      ]
+    },
+    {
+      title: "Product Blueprint",
+      items: [
+        { id: 'master', label: 'Master Blueprint', icon: Eye },
+        { id: 'outer', label: 'Outer Design', icon: Palette },
+        { id: 'internal', label: 'Internal Layout', icon: Layout },
+        { id: 'electronics', label: 'Electronics Architecture', icon: Cpu },
+        { id: 'system-alpha', label: 'System Alpha Integration', icon: Cloud },
+      ]
+    },
+    {
+      title: "Engineering Prep",
+      items: [
+        { id: 'bom', label: 'BOM', icon: Table },
+        { id: 'power-budget', label: 'Power Budget', icon: Zap },
+        { id: 'pin-map', label: 'Pin Map', icon: Cpu },
+        { id: 'firmware-plan', label: 'Firmware Plan', icon: Binary },
+        { id: 'testing', label: 'Testing Plan', icon: CheckSquare },
+      ]
+    },
+    {
+      title: "Board Studio / ECAD Prep",
+      items: [
+        { id: 'board-studio', label: 'Boards', icon: Layers },
+        { id: 'circuit-planner', label: 'Circuits', icon: Boxes },
+        { id: 'board-components', label: 'Components', icon: Cpu },
+        { id: 'netlist-planner', label: 'Nets', icon: Network },
+        { id: 'pcb-constraints', label: 'PCB Constraints', icon: Ruler },
+        { id: 'mfg-pack', label: 'Manufacturing Checklist', icon: Package },
+      ]
+    },
+    {
+      title: "Exports",
+      items: [
+        { id: 'exports', label: 'Export Center', icon: Download },
+      ]
+    }
   ];
 
   const toggleCategory = (cat: string) => {
@@ -101,6 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
 
   // Determine if active view allows placing blocks
   const tabularViews = [
+    'dashboard',
     'bom', 
     'testing', 
     'exports', 
@@ -111,6 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     'dossier',
     'board-studio',
     'circuit-planner',
+    'board-components',
     'netlist-planner',
     'pcb-constraints',
     'mfg-pack'
@@ -120,37 +145,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
   return (
     <aside className="w-64 border-r border-slate-200 bg-white flex flex-col h-full shrink-0 shadow-sm z-20 overflow-hidden">
       {/* Blueprint Navigation */}
-      <div className="p-4 border-b border-slate-100">
-        <h2 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Blueprint Sections</h2>
-        <nav className="space-y-1">
-          {sections.map(s => {
-            const Icon = s.icon;
-            const isActive = activeView === s.id;
-            const isTable = tabularViews.includes(s.id);
-            return (
-              <button
-                key={s.id}
-                onClick={() => setActiveView(s.id)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-xs font-semibold tracking-wide transition-all duration-150 cursor-pointer group ${
-                  isActive 
-                    ? 'bg-slate-900 text-white shadow-sm border border-slate-950 font-bold' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
-                }`}
-              >
-                <div className="flex items-center space-x-2.5">
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-emerald-400' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                  <span>{s.label}</span>
-                </div>
-                {isTable && (
-                  <span className={`text-[8px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wider ${
-                    isActive ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {s.id === 'bom' ? 'BOM' : s.id === 'testing' ? 'QA' : ['board-studio', 'circuit-planner', 'netlist-planner', 'pcb-constraints', 'mfg-pack'].includes(s.id) ? 'PCB' : 'DOC'}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+      <div className="p-3 border-b border-slate-100 overflow-y-auto max-h-[65vh] select-none shrink-0">
+        <nav className="space-y-3">
+          {sidebarGroups.map(group => (
+            <div key={group.title} className="space-y-1">
+              <h3 className="text-[8px] font-extrabold text-slate-400 uppercase tracking-widest px-2.5 mb-1.5">{group.title}</h3>
+              <div className="space-y-0.5">
+                {group.items.map(s => {
+                  const Icon = s.icon;
+                  const isActive = activeView === s.id;
+                  const isTable = tabularViews.includes(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setActiveView(s.id)}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-[11px] font-semibold tracking-wide transition-all duration-150 cursor-pointer group ${
+                        isActive 
+                          ? 'bg-slate-900 text-white shadow-sm border border-slate-950 font-bold' 
+                          : 'text-slate-650 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-emerald-450' : 'text-slate-450 group-hover:text-slate-600'}`} />
+                        <span>{s.label}</span>
+                      </div>
+                      {isTable && (
+                        <span className={`text-[7px] px-1 py-0.2 rounded font-mono font-bold tracking-wider ${
+                          isActive ? 'bg-slate-800 text-slate-350' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {s.id === 'bom' ? 'BOM' : s.id === 'testing' ? 'QA' : ['board-studio', 'circuit-planner', 'board-components', 'netlist-planner', 'pcb-constraints', 'mfg-pack'].includes(s.id) ? 'PCB' : 'DOC'}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
       </div>
 

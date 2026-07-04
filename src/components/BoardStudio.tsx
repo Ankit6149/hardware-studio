@@ -26,8 +26,19 @@ export const BoardStudio: React.FC = () => {
     generateBoardPlanFromProduct,
     generateBoardComponentsFromBOM
   } = useProjectStore();
+  const { activeView } = useProjectStore();
 
   const [activeTab, setActiveTab] = useState<'boards' | 'components'>('boards');
+
+  React.useEffect(() => {
+    if (activeView === 'board-components') {
+      const t = setTimeout(() => setActiveTab('components'), 0);
+      return () => clearTimeout(t);
+    } else if (activeView === 'board-studio') {
+      const t = setTimeout(() => setActiveTab('boards'), 0);
+      return () => clearTimeout(t);
+    }
+  }, [activeView]);
   const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
   
   // Board form state

@@ -89,11 +89,32 @@ export const ReadinessDashboard: React.FC = () => {
               <span className="text-xs font-bold text-slate-800 font-mono">
                 {report.overallScore >= 80 ? '🔥 PROTOTYPE READY' : report.overallScore >= 50 ? '⚠️ VERIFICATION PENDING' : '❌ CONCEPT BLOCK STAGE'}
               </span>
-              <p className="text-[10px] text-slate-500 leading-relaxed">
+              <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
                 {report.overallScore >= 80 
                   ? "Your hardware planning model meets all basic verification criteria. You are clear to export plans." 
                   : "Resolve all active blockers and warnings below to push your index towards production ready."}
               </p>
+            </div>
+
+            {/* Verification Gates */}
+            <div className="w-full border-t border-slate-100 pt-3 mt-1 space-y-1.5 text-left">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Gateway Verification Status</span>
+              <div className="grid grid-cols-1 gap-1">
+                {[
+                  { name: "ECAD Ready Gate", status: report.canMoveToEcad },
+                  { name: "Prototype Ready Gate", status: report.canMoveToPrototype },
+                  { name: "Factory Ready Gate", status: report.canMoveToFactoryHandoff }
+                ].map((gate, i) => (
+                  <div key={i} className="flex items-center justify-between text-[10px] font-sans font-semibold bg-slate-50 border border-slate-100 rounded px-2.5 py-1">
+                    <span className="text-slate-650">{gate.name}</span>
+                    <span className={`text-[8px] font-bold uppercase tracking-wider ${
+                      gate.status ? 'text-emerald-600' : 'text-slate-400'
+                    }`}>
+                      {gate.status ? '● PASSED' : '○ LOCKED'}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
           </CardContent>
@@ -108,13 +129,15 @@ export const ReadinessDashboard: React.FC = () => {
             
             {/* Category Bars */}
             {[
-              { label: 'Architecture Topology', val: report.categories.architecture },
-              { label: 'Component Sourcing (BOM)', val: report.categories.components },
-              { label: 'Power Regulators & Runtimes', val: report.categories.power },
-              { label: 'Firmware driver plans', val: report.categories.firmware },
-              { label: 'Test verification stages', val: report.categories.testing },
-              { label: 'Safety mitigations & risks', val: report.categories.safety },
-              { label: 'Documentation details', val: report.categories.documentation }
+              { label: 'Product Architecture', val: report.categories.architecture },
+              { label: 'Electronics (BOM Sourcing)', val: report.categories.components },
+              { label: 'Board/PCB Prep', val: report.categories.boardPrep },
+              { label: 'Power Regulators & Rails', val: report.categories.power },
+              { label: 'Firmware Driver Plans', val: report.categories.firmware },
+              { label: 'Test Protocols & Verification', val: report.categories.testing },
+              { label: 'Manufacturing Release Pack', val: report.categories.manufacturing },
+              { label: 'Documentation details', val: report.categories.documentation },
+              { label: 'Safety & Compliance Risks', val: report.categories.safety }
             ].map((cat, idx) => (
               <div key={idx} className="space-y-1">
                 <div className="flex justify-between items-center text-[10px] font-bold text-slate-650 font-mono uppercase tracking-wider">

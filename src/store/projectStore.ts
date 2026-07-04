@@ -104,6 +104,7 @@ interface ProjectState extends Project {
   generateNetsFromPinMap: () => void;
   generatePCBConstraintsFromBoard: () => void;
   generateManufacturingChecklist: () => void;
+  generateFullProductPlan: () => { success: boolean; summary: string };
 
   // Project Actions
   saveActiveProject: () => void;
@@ -919,6 +920,12 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           pinMap: proj.pinMap || [],
           firmwareTasks: proj.firmwareTasks || [],
           batteryCapacityMah: proj.batteryCapacityMah || 100,
+          boards: proj.boards || [],
+          circuitBlocks: proj.circuitBlocks || [],
+          boardComponents: proj.boardComponents || [],
+          nets: proj.nets || [],
+          pcbConstraints: proj.pcbConstraints || [],
+          manufacturingChecklist: proj.manufacturingChecklist || [],
           selectedNodeId: null,
           projectsList: syncProjectsList(saved)
         });
@@ -1360,7 +1367,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         }
       };
 
-      if (name.includes("ring") || template.includes("ring") || template.includes("wearable")) {
+      if (name.includes("ring") || template.includes("ring") || template.includes("the-ring")) {
         addIfUnique({
           name: "Main Curved Flex PCB",
           boardType: "Flex PCB",
@@ -1404,6 +1411,84 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           connectorNotes: "Temporary bed-of-nails contact pads.",
           thermalNotes: "No active power loads routed here.",
           rfNotes: "Keep SWD clock trace separated from BLE antenna.",
+          status: "Concept"
+        });
+      } else if (name.includes("button") || template.includes("button") || template.includes("ble-button")) {
+        addIfUnique({
+          name: "Main Button Beacon PCB",
+          boardType: "Rigid PCB",
+          linkedProductArea: "Keyfob Casing",
+          purpose: "Hosts CR2032 battery retainer, tactile push button, BLE beacon transmitter chip, and debug header pads.",
+          dimensionsMm: "22.5 x 22.5 x 1.0",
+          layerCount: 2,
+          substrate: "FR4",
+          placement: "Internal",
+          mountingNotes: "Snaps directly into casing plastic alignment rails.",
+          connectorNotes: "Direct battery clips, debugging pogo-pins.",
+          thermalNotes: "Minimal thermal load, LDO regulator remains sleep-powered.",
+          rfNotes: "Keepout window for printed PCB trace antenna.",
+          status: "Concept"
+        });
+      } else if (name.includes("sensor") || template.includes("sensor") || template.includes("iot-sensor")) {
+        addIfUnique({
+          name: "Main Telemetry PCB",
+          boardType: "Main PCB",
+          linkedProductArea: "Weatherproof Enclosure",
+          purpose: "Core telemetry routing. Hosts ESP32 microcontroller, solar charge controller, and flash buffer memory.",
+          dimensionsMm: "55.0 x 35.0 x 1.6",
+          layerCount: 4,
+          substrate: "FR4",
+          placement: "Internal",
+          mountingNotes: "Four M3 mechanical brass standoffs.",
+          connectorNotes: "Terminal blocks for analog input sensor feeds.",
+          thermalNotes: "Exposed pad copper pour for regulator cooling.",
+          rfNotes: "Ensure ground trace keepouts near antenna traces.",
+          status: "Concept"
+        });
+        addIfUnique({
+          name: "Solar Charging Shield",
+          boardType: "Charging Board",
+          linkedProductArea: "Enclosure Top Lid",
+          purpose: "Hosts solar input voltage filters, overvoltage clamping diodes, and status charging indicator LEDs.",
+          dimensionsMm: "40.0 x 30.0 x 1.6",
+          layerCount: 2,
+          substrate: "FR4",
+          placement: "Dock",
+          mountingNotes: "Mounts to top cover lid using rubber vibration isolator gaskets.",
+          connectorNotes: "Two-pin JST connector for lithium battery pack.",
+          thermalNotes: "Keep heat sinks isolated from temperature sensor nodes.",
+          rfNotes: "No RF shielding active on this board.",
+          status: "Concept"
+        });
+      } else if (name.includes("wearable") || template.includes("wearable") || template.includes("generic-wearable")) {
+        addIfUnique({
+          name: "Main Watch circular PCB",
+          boardType: "Rigid PCB",
+          linkedProductArea: "Watch Casing Internal",
+          purpose: "Circular board outline hosting watch MCU, SPI flash, accelerometer, and AMOLED screen connector.",
+          dimensionsMm: "32.0 x 32.0 x 1.2",
+          layerCount: 4,
+          substrate: "FR4",
+          placement: "Internal",
+          mountingNotes: "Press fit with custom circular elastomer bracket.",
+          connectorNotes: "FPC ribbon cable interface for display and sensor.",
+          thermalNotes: "Thermal vias to back of board watch casing heatsink.",
+          rfNotes: "BLE matched trace to custom PCB frame antenna.",
+          status: "Concept"
+        });
+        addIfUnique({
+          name: "PPG Heart Rate Sensor Flex",
+          boardType: "Flex PCB",
+          linkedProductArea: "Casing Back Glass",
+          purpose: "Optical green LED and photodiode routing for finger/wrist heart rate telemetry.",
+          dimensionsMm: "12.0 x 10.0 x 0.15",
+          layerCount: 2,
+          substrate: "Polyimide Flex",
+          placement: "Strap",
+          mountingNotes: "Bonded with thermal tape to sensor glass windows.",
+          connectorNotes: "ZIF connector bridge to main circular PCB.",
+          thermalNotes: "Thermistor zone isolated from LED heat spikes.",
+          rfNotes: "No active radio units routed on flex tail.",
           status: "Concept"
         });
       } else {
@@ -1883,6 +1968,86 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       });
 
       persistChange({ manufacturingChecklist });
+    },
+
+    generateFullProductPlan: () => {
+      const before = {
+        bom: get().bom.length,
+        power: get().powerBudget.length,
+        pins: get().pinMap.length,
+        firmware: get().firmwareTasks.length,
+        testing: get().testing.length,
+        boards: (get().boards || []).length,
+        circuits: (get().circuitBlocks || []).length,
+        components: (get().boardComponents || []).length,
+        nets: (get().nets || []).length,
+        constraints: (get().pcbConstraints || []).length,
+        checklist: (get().manufacturingChecklist || []).length
+      };
+
+      // Run all generators
+      get().generateBOMFromMVP();
+      get().generatePowerFromBlueprint();
+      get().generatePinMapFromBlueprint();
+      get().generateFirmwareTasksFromBlueprint();
+      get().generateTestsFromMVP();
+      get().generateBoardPlanFromProduct();
+      get().generateCircuitsFromBlueprint();
+      get().generateBoardComponentsFromBOM();
+      get().generateNetsFromPinMap();
+      get().generatePCBConstraintsFromBoard();
+      get().generateManufacturingChecklist();
+
+      const after = {
+        bom: get().bom.length,
+        power: get().powerBudget.length,
+        pins: get().pinMap.length,
+        firmware: get().firmwareTasks.length,
+        testing: get().testing.length,
+        boards: (get().boards || []).length,
+        circuits: (get().circuitBlocks || []).length,
+        components: (get().boardComponents || []).length,
+        nets: (get().nets || []).length,
+        constraints: (get().pcbConstraints || []).length,
+        checklist: (get().manufacturingChecklist || []).length
+      };
+
+      const added = {
+        bom: after.bom - before.bom,
+        power: after.power - before.power,
+        pins: after.pins - before.pins,
+        firmware: after.firmware - before.firmware,
+        testing: after.testing - before.testing,
+        boards: after.boards - before.boards,
+        circuits: after.circuits - before.circuits,
+        components: after.components - before.components,
+        nets: after.nets - before.nets,
+        constraints: after.constraints - before.constraints,
+        checklist: after.checklist - before.checklist
+      };
+
+      const summaryParts = [
+        added.bom > 0 && `${added.bom} BOM items`,
+        added.power > 0 && `${added.power} power budget rows`,
+        added.pins > 0 && `${added.pins} pin mappings`,
+        added.firmware > 0 && `${added.firmware} firmware tasks`,
+        added.testing > 0 && `${added.testing} test stages`,
+        added.boards > 0 && `${added.boards} boards`,
+        added.circuits > 0 && `${added.circuits} circuits`,
+        added.components > 0 && `${added.components} board components`,
+        added.nets > 0 && `${added.nets} net items`,
+        added.constraints > 0 && `${added.constraints} PCB constraints`,
+        added.checklist > 0 && `${added.checklist} checklist items`
+      ].filter(Boolean);
+
+      const summaryStr = summaryParts.length > 0
+        ? `Added: ${summaryParts.join(', ')}.`
+        : "No new items added. Your project plan is already fully up to date.";
+
+      return {
+        success: true,
+        summary: summaryStr
+      };
     }
   };
 });
