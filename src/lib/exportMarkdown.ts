@@ -1,0 +1,129 @@
+import { Project, CustomNode, BOMItem, TestStage } from '../types';
+import { runValidationRules } from './validationRules';
+
+export const exportProjectMarkdown = (project: Project) => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    let md = `# Hardware Studio by System Alpha — ${project.projectName} Blueprint\n\n`;
+    
+    md += `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+    md += `Workspace: System Alpha Hardware Studio V1\n\n`;
+    
+    md += `## 1. Product Overview\n\n`;
+    md += `This blueprint outlines the hardware architecture, outer casing design direction, internal component zones, electronic block diagrams, firmware state logic, power distribution rails, and external System Alpha integrations for **${project.projectName}**.\n\n`;
+
+    // Filter nodes by views helper
+    const getNodesInView = (view: string): CustomNode[] => {
+      return project.nodes.filter(n => n.data.views && n.data.views.includes(view));
+    };
+
+    const views = [
+      { id: 'master', name: 'Master Architecture Flow' },
+      { id: 'outer', name: 'Outer Design & Appearance Direction' },
+      { id: 'internal', name: 'Internal Layout Placement Zones' },
+      { id: 'electronics', name: 'Electronics & Circuits' },
+      { id: 'firmware', name: 'Firmware Behavior & States' },
+      { id: 'power', name: 'Power System & Rails' },
+      { id: 'system-alpha', name: 'System Alpha External Integration' }
+    ];
+
+    md += `## 2. Blueprint Views & Architecture\n\n`;
+    
+    views.forEach(v => {
+      md += `### 2.${views.indexOf(v) + 1} ${v.name} View\n\n`;
+      const viewNodes = getNodesInView(v.id);
+      
+      if (viewNodes.length === 0) {
+        md += `*No blocks configured for this view.*\n\n`;
+        return;
+      }
+      
+      viewNodes.forEach(node => {
+        const d = node.data;
+        if (node.type === 'boundaryNode') {
+          md += `#### [Boundary] ${d.name} (${d.status})\n`;
+          md += `- **Scope Details:** ${d.description || 'N/A'}\n`;
+          if (d.notes) md += `- **Notes:** ${d.notes}\n`;
+          md += `\n`;
+          return;
+        }
+
+        md += `#### ${d.name}\n`;
+        md += `- **Category:** ${d.category} | **Status:** ${d.status}\n`;
+        if (d.description) md += `- **Description:** ${d.description}\n`;
+        if (d.purpose) md += `- **Purpose:** ${d.purpose}\n`;
+        if (d.requirements) md += `- **Requirements:** ${d.requirements}\n`;
+        if (d.candidateComponents) md += `- **Candidate Components:** ${d.candidateComponents}\n`;
+        if (d.risks) md += `- **Risks:** ${d.risks}\n`;
+        if (d.testingNotes) md += `- **Testing Method:** ${d.testingNotes}\n`;
+        if (d.notes) md += `- **Notes:** ${d.notes}\n`;
+        md += `\n`;
+      });
+      md += `\n`;
+    });
+
+    // BOM View
+    md += `## 3. Bill of Materials (BOM)\n\n`;
+    if (project.bom.length === 0) {
+      md += `*No components listed in the BOM.*\n\n`;
+    } else {
+      md += `| Block | Candidate Component | Stage | Voltage | Interface | Size Notes | Cost | Supplier | Status | Risk | Alternative |\n`;
+      md += `| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n`;
+      project.bom.forEach((b: BOMItem) => {
+        md += `| ${b.blockName || ''} | ${b.candidateComponent || ''} | ${b.stage || ''} | ${b.voltage || ''} | ${b.interface || ''} | ${b.sizeNotes || ''} | ${b.costEstimate || ''} | ${b.supplier || ''} | ${b.status || ''} | ${b.risk || ''} | ${b.alternative || ''} |\n`;
+      });
+      md += `\n`;
+    }
+
+    // Testing Stages
+    md += `## 4. Stage-Based Testing & Verification Plan\n\n`;
+    if (project.testing.length === 0) {
+      md += `*No testing stages configured.*\n\n`;
+    } else {
+      project.testing.forEach((stage: TestStage) => {
+        md += `### ${stage.name}\n`;
+        md += `- **Status:** **${stage.status}**\n`;
+        md += `- **Goal:** ${stage.goal || 'N/A'}\n`;
+        md += `- **Parts Required:** ${stage.partsNeeded || 'N/A'}\n`;
+        md += `- **Testing Steps:** ${stage.steps || 'N/A'}\n`;
+        md += `- **Pass Criteria:** ${stage.passCriteria || 'N/A'}\n`;
+        if (stage.risks) md += `- **Risks & Mitigation:** ${stage.risks}\n`;
+        if (stage.notes) md += `- **Developer Notes:** ${stage.notes}\n`;
+        md += `\n`;
+      });
+    }
+
+    // Validation & Warnings
+    md += `## 5. Automated Review & Warnings\n\n`;
+    const warnings = runValidationRules(project.nodes, project.edges);
+    if (warnings.length === 0) {
+      md += `✓ **Review Pass:** No logical architecture warnings detected in the current blueprint.\n\n`;
+    } else {
+      md += `⚠️ **Logical warnings detected:**\n\n`;
+      warnings.forEach((w, idx) => {
+        md += `${idx + 1}. **[${w.severity.toUpperCase()}]** ${w.message}\n`;
+      });
+      md += `\n`;
+    }
+
+    // Footer
+    md += `---\n*Generated by Hardware Studio by System Alpha. Copying or redistribution is permitted.*`;
+
+    // Trigger file download
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const fileName = `${project.projectName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_blueprint.md`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Failed to export Markdown:", error);
+  }
+};

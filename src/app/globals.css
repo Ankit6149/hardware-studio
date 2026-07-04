@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Premium Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* React Flow custom styling adjustments for professional blueprint look */
+.react-flow__node {
+  cursor: grab;
+}
+
+.react-flow__node:active {
+  cursor: grabbing;
+}
+
+.react-flow__handle {
+  width: 7px !important;
+  height: 7px !important;
+  background-color: #cbd5e1 !important;
+  border: 1.5px solid #ffffff !important;
+  box-shadow: 0 0 2px rgba(15, 23, 42, 0.1);
+  transition: all 150ms ease-in-out;
+}
+
+.react-flow__handle:hover {
+  background-color: #475569 !important;
+  transform: scale(1.2);
+}
+
+.react-flow__edge-path {
+  stroke: #94a3b8 !important;
+  stroke-width: 1.5px !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #475569 !important;
+  stroke-dasharray: 4;
+  animation: dash 1s linear infinite;
+  stroke-width: 2px !important;
+}
+
+@keyframes dash {
+  from {
+    stroke-dashoffset: 8;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.react-flow__controls-button {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  fill: currentColor !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: #f8fafc !important;
+}
+
+.react-flow__minimap {
+  background-color: #ffffff !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
