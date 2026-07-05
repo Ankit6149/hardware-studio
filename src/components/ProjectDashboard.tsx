@@ -81,6 +81,93 @@ export const ProjectDashboard: React.FC = () => {
     return Math.round((passedCount / testing.length) * 100);
   };
 
+  const getSheetStatus = (num: number): { label: string; variant: 'success' | 'warning' | 'error' | 'neutral' } => {
+    switch (num) {
+      case 1:
+      case 16:
+        return { label: "Complete", variant: "success" };
+      case 2:
+        return nodes.filter(n => n.type !== 'boundaryNode').length > 0 
+          ? { label: "Complete", variant: "success" } 
+          : { label: "Missing", variant: "error" };
+      case 3:
+        const outline = pcbConstraints.find(c => c.constraintType === 'Board Outline');
+        return outline && outline.value && outline.value !== "0 x 0"
+          ? { label: "Complete", variant: "success" } 
+          : { label: "Warning", variant: "warning" };
+      case 4:
+      case 5:
+        return nodes.length > 0 
+          ? { label: "Complete", variant: "success" } 
+          : { label: "Warning", variant: "warning" };
+      case 6:
+        return boards.length > 0 
+          ? (boards.some(b => !b.dimensionsMm || b.dimensionsMm === "0 x 0") ? { label: "Partial", variant: "warning" } : { label: "Complete", variant: "success" }) 
+          : { label: "Missing", variant: "error" };
+      case 7:
+        return pcbConstraints.length > 0 
+          ? { label: "Complete", variant: "success" } 
+          : { label: "Warning", variant: "warning" };
+      case 8:
+        const missingFootprintCount = boardComponents.filter(c => !c.footprint || c.footprint.toUpperCase().includes("REQUIRED")).length;
+        return boardComponents.length > 0 
+          ? (missingFootprintCount > 0 ? { label: `${missingFootprintCount} Missing FP`, variant: "warning" } : { label: "Complete", variant: "success" }) 
+          : { label: "Warning", variant: "warning" };
+      case 9:
+        return circuitBlocks.length > 0 
+          ? { label: "Complete", variant: "success" } 
+          : { label: "Warning", variant: "warning" };
+      case 10:
+        const hasGND = nets.some(n => n.netName.toUpperCase() === 'GND' || n.netType === 'Ground');
+        return nets.length > 0 
+          ? (!hasGND ? { label: "No GND Pin", variant: "error" } : { label: "Complete", variant: "success" }) 
+          : { label: "Warning", variant: "warning" };
+      case 11:
+        return powerBudget.length > 0 
+          ? { label: "Complete", variant: "success" } 
+          : { label: "Warning", variant: "warning" };
+      case 12:
+        return pinMap.length > 0 
+          ? { label: "Complete", variant: "success" } 
+          : { label: "Warning", variant: "warning" };
+      case 13:
+        return firmwareTasks.length > 0 
+          ? { label: "Complete", variant: "success" } 
+          : { label: "Warning", variant: "warning" };
+      case 14:
+        const failedCount = testing.filter(t => t.status === 'Failed').length;
+        return testing.length > 0 
+          ? (failedCount > 0 ? { label: `${failedCount} Failed`, variant: "error" } : { label: "Complete", variant: "success" }) 
+          : { label: "Warning", variant: "warning" };
+      case 15:
+        const blockedCount = manufacturingChecklist.filter(m => m.status === 'Blocked').length;
+        return manufacturingChecklist.length > 0 
+          ? (blockedCount > 0 ? { label: `${blockedCount} Blocked`, variant: "error" } : { label: "Complete", variant: "success" }) 
+          : { label: "Warning", variant: "warning" };
+      default:
+        return { label: "Draft", variant: "neutral" };
+    }
+  };
+
+  const blueprintSheets = [
+    { num: 1, name: "Cover / Release Index" },
+    { num: 2, name: "Product Architecture" },
+    { num: 3, name: "Mechanical Outer Shell" },
+    { num: 4, name: "Internal Layout" },
+    { num: 5, name: "Exploded Assembly" },
+    { num: 6, name: "Board / PCB Outline" },
+    { num: 7, name: "Stackup & Constraints" },
+    { num: 8, name: "Component Placement" },
+    { num: 9, name: "Electrical Circuit Pack" },
+    { num: 10, name: "Net Routing" },
+    { num: 11, name: "Power Tree" },
+    { num: 12, name: "Pin Map MCU Interface" },
+    { num: 13, name: "Firmware Architecture" },
+    { num: 14, name: "Testing & Validation" },
+    { num: 15, name: "Manufacturing Handoff" },
+    { num: 16, name: "Missing Files Factory Check" }
+  ];
+
   // Pipeline configuration
   const pipelineStages = [
     {
@@ -259,7 +346,7 @@ export const ProjectDashboard: React.FC = () => {
           { label: 'Critical Blockers', val: report.blockers.length, sub: 'Requires immediate review', color: report.blockers.length > 0 ? 'text-rose-600 font-extrabold' : 'text-slate-800' }
         ].map((m, idx) => (
           <div key={idx} className="bg-white border border-slate-200 rounded-lg p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <span className="text-[9px] font-bold text-slate-450 uppercase tracking-widest block font-mono">{m.label}</span>
+            <span className="text-[9px] font-bold text-slate-455 uppercase tracking-widest block font-mono">{m.label}</span>
             <span className={`text-2xl font-black mt-1.5 block font-mono ${m.color}`}>{m.val}</span>
             <span className="text-[10px] text-slate-450 leading-relaxed block mt-1">{m.sub}</span>
           </div>
@@ -299,7 +386,7 @@ export const ProjectDashboard: React.FC = () => {
                 <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider font-mono border ${
                   gate.ready 
                     ? 'bg-emerald-100 text-emerald-850 border-emerald-200' 
-                    : 'bg-slate-100 text-slate-450 border-slate-200'
+                    : 'bg-slate-100 text-slate-455 border-slate-200'
                 }`}>
                   {gate.ready ? 'PASSED' : 'LOCKED'}
                 </span>
@@ -313,6 +400,48 @@ export const ProjectDashboard: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Blueprint Pack Readiness Check Grid */}
+      <Card className="bg-white border border-slate-200 shadow-sm font-mono text-xs">
+        <CardHeader className="bg-slate-50/50 border-b border-slate-150">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <CardTitle>Blueprint Pack Readiness Check</CardTitle>
+              <p className="text-[10px] text-slate-450">Review layout completion tags and statistics for all 16 engineering sheets.</p>
+            </div>
+            <Button
+              onClick={() => setActiveView('blueprint-sheets')}
+              variant="outline"
+              size="xs"
+            >
+              Open Drawing Pack
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            {blueprintSheets.map(s => {
+              const statusInfo = getSheetStatus(s.num);
+              return (
+                <div 
+                  key={s.num} 
+                  onClick={() => {
+                    setActiveView('blueprint-sheets');
+                  }}
+                  className="border border-slate-200 bg-white hover:bg-slate-50/50 p-2.5 rounded flex items-center justify-between transition-all cursor-pointer select-none"
+                >
+                  <span className="text-[9.5px] font-bold text-slate-700 truncate w-[70%]">
+                    SH {s.num.toString().padStart(2, '0')}: {s.name}
+                  </span>
+                  <Badge variant={statusInfo.variant} className="scale-75 shrink-0 -mr-1">
+                    {statusInfo.label}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Conceptual-to-Factory Pipeline Visualizer */}
       <Card className="bg-white border border-slate-200 shadow-sm">

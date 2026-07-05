@@ -276,7 +276,7 @@ export const ExportCenter: React.FC = () => {
               </div>
               <h2 className="text-xs font-black text-slate-850 uppercase tracking-wider font-mono">Blueprint Drawing Pack</h2>
               <p className="text-[11px] text-slate-550 leading-relaxed font-sans">
-                Download all 12 visual engineering sheets as print-ready markdown, technical layout documents, or serialized design data.
+                Download all 16 visual engineering sheets as print-ready markdown, technical layout documents, or serialized design data.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 pt-2">
