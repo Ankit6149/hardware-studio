@@ -316,6 +316,14 @@ export const ProjectDashboard: React.FC = () => {
             Open Blueprint Sheets
           </Button>
           <Button
+            onClick={() => setActiveView('blueprint-editor')}
+            variant="outline"
+            size="sm"
+            icon={<FileText className="w-4 h-4" />}
+          >
+            Open Blueprint Editor
+          </Button>
+          <Button
             onClick={() => setActiveView('dossier')}
             variant="outline"
             size="sm"
@@ -354,7 +362,7 @@ export const ProjectDashboard: React.FC = () => {
       </div>
 
       {/* Gating Status Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { 
             name: "ECAD Layout Gate", 
@@ -373,6 +381,12 @@ export const ProjectDashboard: React.FC = () => {
             ready: report.canMoveToFactoryHandoff, 
             desc: "Ready to export final dossier, component coordinates, and run factory bring-up scripts.",
             reqs: "Requires full board prep schemas, completed pre-layout checklist review, zero blocked issues, and readiness >85."
+          },
+          { 
+            name: "Direct Fab Gate", 
+            ready: report.canMoveToFabrication, 
+            desc: "Ready to push Gerber ZIP artwork and NC drills package direct to fabrication house production floor.", 
+            reqs: "Requires prototype gate passed, uploaded CAD files verified (Gerber, Drills, BOM, CPL, DFM) and 0 blockers." 
           }
         ].map((gate, idx) => (
           <div key={idx} className={`border rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-4 bg-white ${

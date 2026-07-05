@@ -44,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
         { id: 'readiness', label: 'Readiness Review', icon: FileCheck2 },
         { id: 'dossier', label: 'Blueprint Dossier', icon: FileText },
         { id: 'blueprint-sheets', label: 'Blueprint Sheets', icon: FileText },
+        { id: 'blueprint-editor', label: 'Blueprint Editor', icon: Palette },
       ]
     },
     {
@@ -139,7 +140,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     'board-components',
     'netlist-planner',
     'pcb-constraints',
-    'mfg-pack'
+    'mfg-pack',
+    'blueprint-sheets',
+    'blueprint-editor'
   ];
   const isCanvasView = !tabularViews.includes(activeView);
 

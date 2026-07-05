@@ -101,9 +101,13 @@ export const ReadinessDashboard: React.FC = () => {
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Gateway Verification Status</span>
               <div className="grid grid-cols-1 gap-1">
                 {[
-                  { name: "ECAD Ready Gate", status: report.canMoveToEcad },
+                  { name: "Planning Complete Gate", status: report.isPlanningComplete },
+                  { name: "Blueprint Pack Gate", status: report.isBlueprintPackComplete },
+                  { name: "ECAD Prep Gate", status: report.canMoveToEcad },
+                  { name: "MCAD Prep Gate", status: report.canMoveToMcad },
                   { name: "Prototype Ready Gate", status: report.canMoveToPrototype },
-                  { name: "Factory Ready Gate", status: report.canMoveToFactoryHandoff }
+                  { name: "Factory Handoff Gate", status: report.canMoveToFactoryHandoff },
+                  { name: "Direct Fabrication Gate", status: report.canMoveToFabrication }
                 ].map((gate, i) => (
                   <div key={i} className="flex items-center justify-between text-[10px] font-sans font-semibold bg-slate-50 border border-slate-100 rounded px-2.5 py-1">
                     <span className="text-slate-650">{gate.name}</span>
@@ -125,19 +129,26 @@ export const ReadinessDashboard: React.FC = () => {
           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
             <CardTitle>Heuristics Category breakdown</CardTitle>
           </CardHeader>
-          <CardContent className="p-5 space-y-4">
+          <CardContent className="p-5 space-y-3.5 max-h-[480px] overflow-y-auto scrollbar-thin">
             
             {/* Category Bars */}
             {[
               { label: 'Product Architecture', val: report.categories.architecture },
-              { label: 'Electronics (BOM Sourcing)', val: report.categories.components },
+              { label: 'Mechanical Layout', val: report.categories.mechanical },
+              { label: 'Assembly Layout', val: report.categories.assembly },
               { label: 'Board/PCB Prep', val: report.categories.boardPrep },
-              { label: 'Power Regulators & Rails', val: report.categories.power },
+              { label: 'PCB Constraints', val: report.categories.constraints },
+              { label: 'Component Placement', val: report.categories.components },
+              { label: 'Circuit/Schematic Prep', val: report.categories.electronics },
+              { label: 'Nets Layout', val: report.categories.nets },
+              { label: 'MCU Pin Map', val: report.categories.pinMap },
+              { label: 'Power Budget Tree', val: report.categories.power },
               { label: 'Firmware Driver Plans', val: report.categories.firmware },
-              { label: 'Test Protocols & Verification', val: report.categories.testing },
-              { label: 'Manufacturing Release Pack', val: report.categories.manufacturing },
+              { label: 'Test Protocols & QA', val: report.categories.testing },
+              { label: 'Manufacturing Checklist', val: report.categories.manufacturing },
+              { label: 'Factory files package', val: report.categories.factoryFiles },
               { label: 'Documentation details', val: report.categories.documentation },
-              { label: 'Safety & Compliance Risks', val: report.categories.safety }
+              { label: 'Safety & Compliance', val: report.categories.safety }
             ].map((cat, idx) => (
               <div key={idx} className="space-y-1">
                 <div className="flex justify-between items-center text-[10px] font-bold text-slate-650 font-mono uppercase tracking-wider">

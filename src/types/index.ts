@@ -161,6 +161,10 @@ export interface BoardComponent {
   datasheetUrl?: string;
   supplier?: string;
   notes: string;
+  placementX?: number;
+  placementY?: number;
+  rotationDeg?: number;
+  lockedPlacement?: boolean;
 }
 
 export interface NetItem {
@@ -222,6 +226,110 @@ export interface Project {
   nets?: NetItem[];
   pcbConstraints?: PCBConstraint[];
   manufacturingChecklist?: ManufacturingChecklistItem[];
+  editorLayouts?: {
+    product?: EditorObject[];
+    mechanical?: EditorObject[];
+    assembly?: EditorObject[];
+    board?: EditorObject[];
+    components?: EditorObject[];
+    circuits?: EditorObject[];
+    nets?: EditorObject[];
+    power?: EditorObject[];
+    pins?: EditorObject[];
+    firmware?: EditorObject[];
+    testing?: EditorObject[];
+    handoff?: EditorObject[];
+  };
+  editorConnections?: EditorConnection[];
+  factoryFiles?: {
+    gerberZip?: FactoryFileStatus;
+    drillFiles?: FactoryFileStatus;
+    schematicPdf?: FactoryFileStatus;
+    kicadProject?: FactoryFileStatus;
+    altiumProject?: FactoryFileStatus;
+    easyEdaProject?: FactoryFileStatus;
+    stepFile?: FactoryFileStatus;
+    stlFile?: FactoryFileStatus;
+    cplCsv?: FactoryFileStatus;
+    bomCsv?: FactoryFileStatus;
+    dfmReport?: FactoryFileStatus;
+    dftReport?: FactoryFileStatus;
+    firmwareHex?: FactoryFileStatus;
+    flashingGuide?: FactoryFileStatus;
+  };
 }
+
+export type EditorMode =
+  | "product"
+  | "mechanical"
+  | "assembly"
+  | "board"
+  | "components"
+  | "circuits"
+  | "nets"
+  | "power"
+  | "pins"
+  | "firmware"
+  | "testing"
+  | "handoff";
+
+export type EditorObject = {
+  id: string;
+  mode: EditorMode;
+  sourceType:
+    | "node"
+    | "board"
+    | "component"
+    | "circuit"
+    | "net"
+    | "power"
+    | "pin"
+    | "firmware"
+    | "test"
+    | "checklist"
+    | "mechanical-zone"
+    | "assembly-layer"
+    | "factory-file"
+    | "annotation"
+    | "dimension"
+    | "warning";
+  sourceId?: string;
+  label: string;
+  kind: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation?: number;
+  layer?: string;
+  locked?: boolean;
+  visible?: boolean;
+  zIndex?: number;
+  style?: {
+    stroke?: string;
+    fill?: string;
+    lineStyle?: "solid" | "dashed" | "dotted";
+  };
+  metadata?: Record<string, string | number | boolean | null>;
+};
+
+export type EditorConnection = {
+  id: string;
+  mode: EditorMode;
+  sourceObjectId: string;
+  targetObjectId: string;
+  label?: string;
+  kind?: "signal" | "power" | "ground" | "mechanical" | "assembly" | "firmware" | "test" | "handoff";
+  netId?: string;
+  style?: Record<string, string>;
+};
+
+export type FactoryFileStatus = {
+  status: "Not Generated" | "Conceptual" | "Needs External Tool" | "Uploaded" | "Verified";
+  notes?: string;
+  source?: "Hardware Studio" | "KiCad" | "Altium" | "EasyEDA" | "Fusion" | "Onshape" | "SolidWorks" | "External";
+  fileName?: string;
+  lastUpdated?: string;
+};
 
 

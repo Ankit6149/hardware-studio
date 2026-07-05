@@ -21,6 +21,7 @@ import { PCBConstraints } from './PCBConstraints';
 import { ManufacturingPack } from './ManufacturingPack';
 import { ProjectDashboard } from './ProjectDashboard';
 import { BlueprintSheets } from './BlueprintSheets';
+import { BlueprintEditor } from './BlueprintEditor';
 
 export const AppShell: React.FC = () => {
   const { activeView, loadProjectFromLocalStorage } = useProjectStore();
@@ -40,6 +41,8 @@ export const AppShell: React.FC = () => {
         return <ProjectDashboard />;
       case 'blueprint-sheets':
         return <BlueprintSheets />;
+      case 'blueprint-editor':
+        return <BlueprintEditor />;
       case 'bom':
         return <BOMTable />;
       case 'testing':
@@ -90,7 +93,8 @@ export const AppShell: React.FC = () => {
     'board-components',
     'netlist-planner',
     'pcb-constraints',
-    'mfg-pack'
+    'mfg-pack',
+    'blueprint-editor'
   ];
   const isCanvasView = !tabularViews.includes(activeView);
   const showVisualizer = !tabularViews.includes(activeView);

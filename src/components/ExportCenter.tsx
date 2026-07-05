@@ -190,6 +190,46 @@ export const ExportCenter: React.FC = () => {
     exportToCSV("manufacturing_checklist_sheet.csv", headers, rows);
   };
 
+  const totalLayoutObjs = Object.values(project.editorLayouts || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+
+  const downloadEditorLayoutCsv = () => {
+    const headers = ["Object ID", "Editor Mode", "Source Type", "Source ID", "Label", "Kind / Symbol", "X position", "Y position", "Width", "Height", "Rotation (deg)", "Layer"];
+    const rows: (string | number)[][] = [];
+    Object.entries(project.editorLayouts || {}).forEach(([, list]) => {
+      if (Array.isArray(list)) {
+        list.forEach(obj => {
+          rows.push([
+            obj.id,
+            obj.mode,
+            obj.sourceType,
+            obj.sourceId || '',
+            obj.label,
+            obj.kind,
+            obj.x,
+            obj.y,
+            obj.width,
+            obj.height,
+            obj.rotation || 0,
+            obj.layer || ''
+          ]);
+        });
+      }
+    });
+    exportToCSV("blueprint_editor_layout.csv", headers, rows);
+  };
+
+  const downloadFactoryFilesCsv = () => {
+    const headers = ["File Key", "Handoff Status", "Source CAD", "File Name", "Notes"];
+    const rows = Object.entries(project.factoryFiles || {}).map(([key, val]) => [
+      key.replace(/([A-Z])/g, ' $1'),
+      val.status,
+      val.source || '',
+      val.fileName || '',
+      val.notes || ''
+    ]);
+    exportToCSV("factory_files_checklist.csv", headers, rows);
+  };
+
   return (
     <div className="flex-1 bg-slate-50 overflow-y-auto p-6 flex flex-col items-center select-none font-sans">
       <div className="w-full max-w-4xl space-y-6">
@@ -324,7 +364,9 @@ export const ExportCenter: React.FC = () => {
                 { name: "Placed Components", count: boardComponents.length, download: downloadComponentsCsv },
                 { name: "Nets Routing Tracks", count: nets.length, download: downloadNetlistCsv },
                 { name: "PCB Constraints", count: pcbConstraints.length, download: downloadConstraintsCsv },
-                { name: "Manufacturing Checklist", count: manufacturingChecklist.length, download: downloadChecklistCsv }
+                { name: "Manufacturing Checklist", count: manufacturingChecklist.length, download: downloadChecklistCsv },
+                { name: "Editor Layout Objects", count: totalLayoutObjs, download: downloadEditorLayoutCsv },
+                { name: "Factory File Statuses", count: Object.keys(project.factoryFiles || {}).length, download: downloadFactoryFilesCsv }
               ].map((sheet, idx) => (
                 <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-center justify-between hover:border-slate-350 transition-all">
                   <div className="space-y-0.5">

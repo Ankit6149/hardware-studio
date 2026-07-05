@@ -14,9 +14,24 @@ import {
   BoardComponent,
   NetItem,
   PCBConstraint,
-  ManufacturingChecklistItem
+  ManufacturingChecklistItem,
+  EditorMode,
+  EditorObject,
+  EditorConnection,
+  FactoryFileStatus
 } from '../types';
 import { templates } from '../data/templates';
+import {
+  generateEditorLayouts,
+  autoPlaceComponents,
+  autoCreateNetsFromPinMap,
+  autoCreatePinMapFromCircuits,
+  autoCreateFirmwareTasksFromHardware,
+  autoCreateTestsFromHardware,
+  autoCreateHandoffChecklist,
+  fixMissingDimensionsWithPlaceholder,
+  getInitialFactoryFiles
+} from '../lib/editorLayoutGenerators';
 
 interface ProjectState extends Project {
   selectedNodeId: string | null;
@@ -116,6 +131,29 @@ interface ProjectState extends Project {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   importProjectJSON: (json: any) => { success: boolean; error?: string };
   loadProjectFromLocalStorage: () => void;
+
+  // Editor & Factory Handoff Actions
+  updateEditorObjectPosition: (mode: EditorMode, id: string, x: number, y: number) => void;
+  updateEditorObjectSize: (mode: EditorMode, id: string, width: number, height: number) => void;
+  updateEditorObjectRotation: (mode: EditorMode, id: string, rotation: number) => void;
+  updateEditorObjectMetadata: (mode: EditorMode, id: string, metadata: Record<string, string | number | boolean | null>) => void;
+  addEditorObject: (mode: EditorMode, obj: Omit<EditorObject, 'id' | 'mode'> & { id?: string }) => void;
+  deleteEditorObject: (mode: EditorMode, id: string) => void;
+  duplicateEditorObject: (mode: EditorMode, id: string) => void;
+  updateEditorConnection: (id: string, connection: Partial<EditorConnection>) => void;
+  addEditorConnection: (connection: Omit<EditorConnection, 'id'>) => void;
+  deleteEditorConnection: (id: string) => void;
+  generateEditorLayouts: () => void;
+  resetEditorLayout: (mode: EditorMode) => void;
+  autoPlaceComponents: () => void;
+  autoCreateNetsFromPinMap: () => void;
+  autoCreatePinMapFromCircuits: () => void;
+  autoCreateFirmwareTasksFromHardware: () => void;
+  autoCreateTestsFromHardware: () => void;
+  autoCreateHandoffChecklist: () => void;
+  fixMissingDimensionsWithPlaceholder: () => void;
+  addRequiredFactoryFileChecklist: () => void;
+  updateFactoryFileStatus: (fileKey: string, status?: FactoryFileStatus['status'], notes?: string, source?: FactoryFileStatus['source'], fileName?: string) => void;
 }
 
 const PROJECTS_KEY = 'hardware_studio_projects_v1';
@@ -299,7 +337,10 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       boardComponents: state.boardComponents || [],
       nets: state.nets || [],
       pcbConstraints: state.pcbConstraints || [],
-      manufacturingChecklist: state.manufacturingChecklist || []
+      manufacturingChecklist: state.manufacturingChecklist || [],
+      editorLayouts: state.editorLayouts || {},
+      editorConnections: state.editorConnections || [],
+      factoryFiles: state.factoryFiles || {}
     };
   };
 
@@ -325,6 +366,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     nets: initialProject.nets || [],
     pcbConstraints: initialProject.pcbConstraints || [],
     manufacturingChecklist: initialProject.manufacturingChecklist || [],
+    editorLayouts: initialProject.editorLayouts || {},
+    editorConnections: initialProject.editorConnections || [],
+    factoryFiles: initialProject.factoryFiles || {},
     selectedNodeId: null,
     projectsList: [],
 
@@ -2048,6 +2092,231 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         success: true,
         summary: summaryStr
       };
+    },
+
+    updateEditorObjectPosition: (mode, id, x, y) => {
+      const layouts = { ...(get().editorLayouts || {}) };
+      const modeObjects = layouts[mode] || [];
+      const updated = modeObjects.map(obj => obj.id === id ? { ...obj, x, y } : obj);
+      layouts[mode] = updated;
+      
+      let boardComponents = get().boardComponents || [];
+      const targetObj = modeObjects.find(o => o.id === id);
+      if (mode === 'components' && targetObj && targetObj.sourceType === 'component' && targetObj.sourceId) {
+        boardComponents = boardComponents.map(bc => bc.id === targetObj.sourceId ? { ...bc, placementX: x, placementY: y } : bc);
+      }
+
+      persistChange({ editorLayouts: layouts, boardComponents });
+    },
+
+    updateEditorObjectSize: (mode, id, width, height) => {
+      const layouts = { ...(get().editorLayouts || {}) };
+      const modeObjects = layouts[mode] || [];
+      layouts[mode] = modeObjects.map(obj => obj.id === id ? { ...obj, width, height } : obj);
+      persistChange({ editorLayouts: layouts });
+    },
+
+    updateEditorObjectRotation: (mode, id, rotation) => {
+      const layouts = { ...(get().editorLayouts || {}) };
+      const modeObjects = layouts[mode] || [];
+      layouts[mode] = modeObjects.map(obj => obj.id === id ? { ...obj, rotation } : obj);
+
+      let boardComponents = get().boardComponents || [];
+      const targetObj = modeObjects.find(o => o.id === id);
+      if (mode === 'components' && targetObj && targetObj.sourceType === 'component' && targetObj.sourceId) {
+        boardComponents = boardComponents.map(bc => bc.id === targetObj.sourceId ? { ...bc, rotationDeg: rotation } : bc);
+      }
+
+      persistChange({ editorLayouts: layouts, boardComponents });
+    },
+
+    updateEditorObjectMetadata: (mode, id, metadata) => {
+      const layouts = { ...(get().editorLayouts || {}) };
+      const modeObjects = layouts[mode] || [];
+      layouts[mode] = modeObjects.map(obj => obj.id === id ? { ...obj, metadata: { ...(obj.metadata || {}), ...metadata } } : obj);
+      persistChange({ editorLayouts: layouts });
+    },
+
+    addEditorObject: (mode, obj) => {
+      const layouts = { ...(get().editorLayouts || {}) };
+      const modeObjects = layouts[mode] || [];
+      const newObj: EditorObject = {
+        ...obj,
+        id: obj.id || `obj_${mode}_${Date.now()}`,
+        mode
+      };
+      layouts[mode] = [...modeObjects, newObj];
+      persistChange({ editorLayouts: layouts });
+    },
+
+    deleteEditorObject: (mode, id) => {
+      const layouts = { ...(get().editorLayouts || {}) };
+      const modeObjects = layouts[mode] || [];
+      layouts[mode] = modeObjects.filter(obj => obj.id !== id);
+      
+      const connections = (get().editorConnections || []).filter(c => c.sourceObjectId !== id && c.targetObjectId !== id);
+
+      persistChange({ editorLayouts: layouts, editorConnections: connections });
+    },
+
+    duplicateEditorObject: (mode, id) => {
+      const layouts = { ...(get().editorLayouts || {}) };
+      const modeObjects = layouts[mode] || [];
+      const target = modeObjects.find(obj => obj.id === id);
+      if (!target) return;
+
+      const dup: EditorObject = {
+        ...target,
+        id: `obj_${mode}_dup_${Date.now()}`,
+        label: `${target.label} (Copy)`,
+        x: target.x + 20,
+        y: target.y + 20
+      };
+      layouts[mode] = [...modeObjects, dup];
+      persistChange({ editorLayouts: layouts });
+    },
+
+    updateEditorConnection: (id, conn) => {
+      const connections = (get().editorConnections || []).map(c => c.id === id ? { ...c, ...conn } : c);
+      persistChange({ editorConnections: connections });
+    },
+
+    addEditorConnection: (conn) => {
+      const connections = [...(get().editorConnections || [])];
+      const newConn: EditorConnection = {
+        ...conn,
+        id: `conn_${conn.mode}_${Date.now()}`
+      };
+      connections.push(newConn);
+      persistChange({ editorConnections: connections });
+    },
+
+    deleteEditorConnection: (id) => {
+      const connections = (get().editorConnections || []).filter(c => c.id !== id);
+      persistChange({ editorConnections: connections });
+    },
+
+    generateEditorLayouts: () => {
+      const project = getCleanProjectData(get());
+      const { layouts, connections } = generateEditorLayouts(project);
+      
+      const existingLayouts = get().editorLayouts || {};
+      const mergedLayouts: typeof layouts = {};
+
+      Object.keys(layouts).forEach(key => {
+        const mode = key as EditorMode;
+        const newModeObjs = layouts[mode] || [];
+        const oldModeObjs = existingLayouts[mode] || [];
+
+        mergedLayouts[mode] = newModeObjs.map(newObj => {
+          const matched = oldModeObjs.find(oldObj => oldObj.id === newObj.id);
+          if (matched) {
+            return {
+              ...newObj,
+              x: matched.x,
+              y: matched.y,
+              width: matched.width,
+              height: matched.height,
+              rotation: matched.rotation,
+              locked: matched.locked,
+              visible: matched.visible
+            };
+          }
+          return newObj;
+        });
+      });
+
+      persistChange({ 
+        editorLayouts: mergedLayouts, 
+        editorConnections: connections,
+        factoryFiles: get().factoryFiles || getInitialFactoryFiles()
+      });
+    },
+
+    resetEditorLayout: (mode) => {
+      const project = getCleanProjectData(get());
+      const { layouts, connections } = generateEditorLayouts(project);
+      
+      const currentLayouts = { ...(get().editorLayouts || {}) };
+      currentLayouts[mode] = layouts[mode] || [];
+
+      const currentConns = (get().editorConnections || []).filter(c => c.mode !== mode);
+      const modeConns = connections.filter(c => c.mode === mode);
+
+      persistChange({ 
+        editorLayouts: currentLayouts, 
+        editorConnections: [...currentConns, ...modeConns] 
+      });
+    },
+
+    autoPlaceComponents: () => {
+      const project = getCleanProjectData(get());
+      const placed = autoPlaceComponents(project);
+      persistChange({ boardComponents: placed });
+      get().generateEditorLayouts();
+    },
+
+    autoCreateNetsFromPinMap: () => {
+      const project = getCleanProjectData(get());
+      const nets = autoCreateNetsFromPinMap(project);
+      persistChange({ nets });
+      get().generateEditorLayouts();
+    },
+
+    autoCreatePinMapFromCircuits: () => {
+      const project = getCleanProjectData(get());
+      const pinMap = autoCreatePinMapFromCircuits(project);
+      persistChange({ pinMap });
+      get().generateEditorLayouts();
+    },
+
+    autoCreateFirmwareTasksFromHardware: () => {
+      const project = getCleanProjectData(get());
+      const firmwareTasks = autoCreateFirmwareTasksFromHardware(project);
+      persistChange({ firmwareTasks });
+      get().generateEditorLayouts();
+    },
+
+    autoCreateTestsFromHardware: () => {
+      const project = getCleanProjectData(get());
+      const testing = autoCreateTestsFromHardware(project);
+      persistChange({ testing });
+      get().generateEditorLayouts();
+    },
+
+    autoCreateHandoffChecklist: () => {
+      const project = getCleanProjectData(get());
+      const checklist = autoCreateHandoffChecklist(project);
+      persistChange({ manufacturingChecklist: checklist });
+      get().generateEditorLayouts();
+    },
+
+    fixMissingDimensionsWithPlaceholder: () => {
+      const project = getCleanProjectData(get());
+      const boards = fixMissingDimensionsWithPlaceholder(project);
+      persistChange({ boards });
+      get().generateEditorLayouts();
+    },
+
+    addRequiredFactoryFileChecklist: () => {
+      const factoryFiles = get().factoryFiles || getInitialFactoryFiles();
+      persistChange({ factoryFiles });
+      get().generateEditorLayouts();
+    },
+
+    updateFactoryFileStatus: (fileKey, status, notes, source, fileName) => {
+      const factoryFiles: Record<string, FactoryFileStatus | undefined> = { ...(get().factoryFiles || getInitialFactoryFiles()) };
+      const current = factoryFiles[fileKey] || { status: "Not Generated" };
+      factoryFiles[fileKey] = {
+        ...current,
+        status: status !== undefined ? status : current.status,
+        notes: notes !== undefined ? notes : current.notes,
+        source: source !== undefined ? source : current.source,
+        fileName: fileName !== undefined ? fileName : current.fileName,
+        lastUpdated: new Date().toLocaleDateString()
+      };
+      persistChange({ factoryFiles });
+      get().generateEditorLayouts();
     }
   };
 });
