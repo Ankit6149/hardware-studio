@@ -242,6 +242,13 @@ const getSavedProjects = (): Record<string, Project> => {
     const ringTemplate = templates.find(t => t.id === 'the-ring')?.project;
     if (ringTemplate) {
       const initial = JSON.parse(JSON.stringify(ringTemplate)) as Project;
+      
+      // Pre-generate CAD layout coordinates and initial manufacturing status checks
+      const { layouts, connections } = generateEditorLayouts(initial);
+      initial.editorLayouts = layouts;
+      initial.editorConnections = connections;
+      initial.factoryFiles = getInitialFactoryFiles(initial);
+
       const initialProjects = { [initial.id]: initial };
       window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(initialProjects));
       window.localStorage.setItem(ACTIVE_ID_KEY, initial.id);
@@ -1010,6 +1017,12 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         copy.createdAt = new Date().toISOString();
         copy.updatedAt = new Date().toISOString();
 
+        // Pre-generate CAD layout coordinates and initial manufacturing status checks
+        const { layouts, connections } = generateEditorLayouts(copy);
+        copy.editorLayouts = layouts;
+        copy.editorConnections = connections;
+        copy.factoryFiles = getInitialFactoryFiles(copy);
+
         const saved = getSavedProjects();
         saved[newId] = copy;
         saveProjectsToStorage(saved, newId);
@@ -1258,15 +1271,17 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           description: c.description || "",
           severity: c.severity || "Info"
         })),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        manufacturingChecklist: (json.manufacturingChecklist || []).map((mc: any) => ({
+        manufacturingChecklist: (json.manufacturingChecklist || []).map((mc: { id?: string; category?: string; item?: string; status?: string; ownerNotes?: string; blockingReason?: string }) => ({
           id: mc.id || `mfg_${Math.random()}`,
           category: mc.category || "Schematic",
           item: mc.item || "",
           status: mc.status || "Not Started",
           ownerNotes: mc.ownerNotes || "",
           blockingReason: mc.blockingReason || ""
-        }))
+        })),
+        editorLayouts: json.editorLayouts || {},
+        editorConnections: json.editorConnections || [],
+        factoryFiles: json.factoryFiles || {}
       };
 
       const saved = getSavedProjects();
@@ -2229,7 +2244,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       persistChange({ 
         editorLayouts: mergedLayouts, 
         editorConnections: connections,
-        factoryFiles: get().factoryFiles || getInitialFactoryFiles()
+        factoryFiles: get().factoryFiles || getInitialFactoryFiles(project)
       });
     },
 
@@ -2299,13 +2314,13 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     },
 
     addRequiredFactoryFileChecklist: () => {
-      const factoryFiles = get().factoryFiles || getInitialFactoryFiles();
+      const factoryFiles = get().factoryFiles || getInitialFactoryFiles(get());
       persistChange({ factoryFiles });
       get().generateEditorLayouts();
     },
 
     updateFactoryFileStatus: (fileKey, status, notes, source, fileName) => {
-      const factoryFiles: Record<string, FactoryFileStatus | undefined> = { ...(get().factoryFiles || getInitialFactoryFiles()) };
+      const factoryFiles: Record<string, FactoryFileStatus | undefined> = { ...(get().factoryFiles || getInitialFactoryFiles(get())) };
       const current = factoryFiles[fileKey] || { status: "Not Generated" };
       factoryFiles[fileKey] = {
         ...current,

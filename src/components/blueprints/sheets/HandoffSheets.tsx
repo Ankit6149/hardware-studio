@@ -28,24 +28,42 @@ export const MfgChecklistSheet: React.FC<SheetProps> = ({ project, report }) => 
         {/* Release Status Gates */}
         <div className="border p-4 bg-white rounded space-y-4">
           <span className="font-bold text-slate-850 block border-b pb-2">Handoff Readiness Gates</span>
-          <ul className="space-y-2.5 text-[9.5px]">
-            <li className="flex justify-between items-center pb-1 border-b border-slate-100">
-              <span>1. ECAD Layout Release:</span>
-              <span className={`font-bold px-1 rounded text-[8px] ${
-                report.canMoveToEcad ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-400'
-              }`}>{report.canMoveToEcad ? 'PASSED' : 'LOCKED'}</span>
+          <ul className="space-y-1.5 text-[8.5px]">
+            <li className="flex justify-between items-center pb-0.5 border-b border-slate-100">
+              <span>1. Planning Ready:</span>
+              <span className={`font-bold px-1 rounded text-[7.5px] ${
+                report.isPlanningReady ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-400'
+              }`}>{report.isPlanningReady ? 'PASSED' : 'LOCKED'}</span>
             </li>
-            <li className="flex justify-between items-center pb-1 border-b border-slate-100">
-              <span>2. Prototype Bring-Up:</span>
-              <span className={`font-bold px-1 rounded text-[8px] ${
+            <li className="flex justify-between items-center pb-0.5 border-b border-slate-100">
+              <span>2. Blueprint Pack Ready:</span>
+              <span className={`font-bold px-1 rounded text-[7.5px] ${
+                report.isBlueprintPackReady ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-400'
+              }`}>{report.isBlueprintPackReady ? 'PASSED' : 'LOCKED'}</span>
+            </li>
+            <li className="flex justify-between items-center pb-0.5 border-b border-slate-100">
+              <span>3. Editor Layout Ready:</span>
+              <span className={`font-bold px-1 rounded text-[7.5px] ${
+                report.isEditorLayoutReady ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-400'
+              }`}>{report.isEditorLayoutReady ? 'PASSED' : 'LOCKED'}</span>
+            </li>
+            <li className="flex justify-between items-center pb-0.5 border-b border-slate-100">
+              <span>4. Prototype Prep:</span>
+              <span className={`font-bold px-1 rounded text-[7.5px] ${
                 report.canMoveToPrototype ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-400'
               }`}>{report.canMoveToPrototype ? 'PASSED' : 'LOCKED'}</span>
             </li>
-            <li className="flex justify-between items-center">
-              <span>3. Factory Handoff Ready:</span>
-              <span className={`font-bold px-1 rounded text-[8px] ${
+            <li className="flex justify-between items-center pb-0.5 border-b border-slate-100">
+              <span>5. Factory Handoff:</span>
+              <span className={`font-bold px-1 rounded text-[7.5px] ${
                 report.canMoveToFactoryHandoff ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-400'
               }`}>{report.canMoveToFactoryHandoff ? 'PASSED' : 'LOCKED'}</span>
+            </li>
+            <li className="flex justify-between items-center">
+              <span>6. Direct Fabrication:</span>
+              <span className={`font-bold px-1 rounded text-[7.5px] ${
+                report.canMoveToFabrication ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-400'
+              }`}>{report.canMoveToFabrication ? 'PASSED' : 'LOCKED'}</span>
             </li>
           </ul>
 

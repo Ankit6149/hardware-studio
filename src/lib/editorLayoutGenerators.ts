@@ -11,22 +11,25 @@ import {
   FactoryFileStatus 
 } from '../types';
 
-export const getInitialFactoryFiles = (): Record<string, FactoryFileStatus> => {
+export const getInitialFactoryFiles = (project?: Project): Record<string, FactoryFileStatus> => {
+  const hasBom = project && project.bom && project.bom.length > 0;
+  const hasComponents = project && project.boardComponents && project.boardComponents.length > 0;
+  const hasFw = project && project.firmwareTasks && project.firmwareTasks.length > 0;
+
   return {
-    gerberZip: { status: "Not Generated", notes: "Requires Gerber RS-274X export from KiCad/Altium", source: "KiCad" },
-    drillFiles: { status: "Not Generated", notes: "Requires Excellon NC Drill files from KiCad/Altium", source: "KiCad" },
-    schematicPdf: { status: "Not Generated", notes: "Requires Schematic PDF print from KiCad/Altium", source: "KiCad" },
-    kicadProject: { status: "Not Generated", notes: "Altium or KiCad layout database source files", source: "KiCad" },
-    altiumProject: { status: "Not Generated", notes: "Alternative source database if not KiCad", source: "Altium" },
-    easyEdaProject: { status: "Not Generated", notes: "Alternative online ECAD source project", source: "EasyEDA" },
-    stepFile: { status: "Not Generated", notes: "STEP physical assembly model of PCB & casing", source: "Fusion" },
-    stlFile: { status: "Not Generated", notes: "STL 3D print model of casing outer shell", source: "Fusion" },
-    cplCsv: { status: "Conceptual", notes: "Generated in Hardware Studio components placement editor", source: "Hardware Studio" },
-    bomCsv: { status: "Conceptual", notes: "Generated in Hardware Studio BOM planner", source: "Hardware Studio" },
-    dfmReport: { status: "Not Generated", notes: "Fabrication capability check from fab house", source: "External" },
-    dftReport: { status: "Not Generated", notes: "Test probe point physical review report", source: "External" },
-    firmwareHex: { status: "Not Generated", notes: "Compiled hex/bin binary to flash MCU", source: "External" },
-    flashingGuide: { status: "Not Generated", notes: "Instruction document for flashing & board bring-up", source: "External" }
+    gerberZip: { status: "Not Generated", notes: "Requires Gerber RS-274X copper artwork layers export.", source: "KiCad" },
+    drillFiles: { status: "Not Generated", notes: "Requires Excellon NC drill coordinate hole list.", source: "KiCad" },
+    schematicPdf: { status: "Not Generated", notes: "Requires Schematic drawing PDF print sheets.", source: "KiCad" },
+    boardDrawing: { status: "Conceptual", notes: "Draft board dimensions and physical outline layout.", source: "Hardware Studio" },
+    enclosureDrawing: { status: "Not Generated", notes: "Requires MCAD mechanical casing dimension views.", source: "Fusion" },
+    stepFile: { status: "Not Generated", notes: "Requires 3D STEP overall physical assembly model.", source: "Fusion" },
+    stlFile: { status: "Not Generated", notes: "Requires 3D STL outer casing mesh model.", source: "Fusion" },
+    cplCsv: { status: hasComponents ? "Generated In App" : "Conceptual", notes: "Conceptual placement coordinate CSV list.", source: "Hardware Studio" },
+    bomCsv: { status: hasBom ? "Generated In App" : "Conceptual", notes: "Bill of materials parts procurement CSV list.", source: "Hardware Studio" },
+    dfmReport: { status: "Not Generated", notes: "Requires Design for Manufacturing verification report.", source: "External" },
+    dftReport: { status: "Not Generated", notes: "Requires Design for Testability analysis review.", source: "External" },
+    firmwareHex: { status: "Not Generated", notes: "Requires compiled Hex/Binary hex code to flash micro.", source: "External" },
+    flashingGuide: { status: hasFw ? "Generated In App" : "Not Generated", notes: "MCU firmware flashing guide instructions sheet.", source: "Hardware Studio" }
   };
 };
 

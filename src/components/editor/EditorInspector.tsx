@@ -81,7 +81,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
       store.updateChecklistItem(sourceId, { [fieldKey]: value });
     } else if (type === 'factory-file') {
       const notes = fieldKey === 'notes' ? (value as string) : undefined;
-      const status = fieldKey === 'status' ? (value as "Not Generated" | "Conceptual" | "Needs External Tool" | "Uploaded" | "Verified") : undefined;
+      const status = fieldKey === 'status' ? (value as "Not Generated" | "Conceptual" | "Generated In App" | "Needs Final Review" | "Verified") : undefined;
       const source = fieldKey === 'source' ? (value as "External" | "Hardware Studio" | "KiCad" | "Altium" | "EasyEDA" | "Fusion" | "Onshape" | "SolidWorks") : undefined;
       const fileName = fieldKey === 'fileName' ? (value as string) : undefined;
       store.updateFactoryFileStatus(sourceId, status, notes, source, fileName);
@@ -706,8 +706,8 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     >
                       <option value="Not Generated">Not Generated Yet</option>
                       <option value="Conceptual">Conceptual Planning Only</option>
-                      <option value="Needs External Tool">Needs ECAD/MCAD tool</option>
-                      <option value="Uploaded">Uploaded to Vault</option>
+                      <option value="Generated In App">Generated In App</option>
+                      <option value="Needs Final Review">Needs Final Review</option>
                       <option value="Verified">Verified by Engineer</option>
                     </select>
                   </div>

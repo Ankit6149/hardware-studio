@@ -27,12 +27,18 @@ export const CoverSheet: React.FC<CoverSheetProps> = ({ project, report }) => {
 
   // Determine current Release Status
   let releaseStatus = "DRAFT";
-  if (report.canMoveToFactoryHandoff) {
-    releaseStatus = "FACTORY HANDOFF PREP";
+  if (report.canMoveToFabrication) {
+    releaseStatus = "DIRECT FABRICATION READY";
+  } else if (report.canMoveToFactoryHandoff) {
+    releaseStatus = "FACTORY HANDOFF READY";
   } else if (report.canMoveToPrototype) {
-    releaseStatus = "PROTOTYPE PREP";
-  } else if (report.canMoveToEcad) {
-    releaseStatus = "ECAD PREP";
+    releaseStatus = "PROTOTYPE READY";
+  } else if (report.isEditorLayoutReady) {
+    releaseStatus = "EDITOR LAYOUT READY";
+  } else if (report.isBlueprintPackReady) {
+    releaseStatus = "BLUEPRINT PACK READY";
+  } else if (report.isPlanningReady) {
+    releaseStatus = "PLANNING READY";
   } else if (nodes.length > 0 && bom.length > 0) {
     releaseStatus = "CONCEPT DEVELOPMENT";
   }
@@ -119,18 +125,30 @@ export const CoverSheet: React.FC<CoverSheetProps> = ({ project, report }) => {
         <div className="border border-slate-900 p-4 space-y-3 flex flex-col justify-between bg-white">
           <div>
             <span className="text-[8px] font-black text-slate-450 uppercase tracking-widest block mb-2">GATEWAY AUDIT STATUS</span>
-            <div className="space-y-1.5 text-[9.5px]">
-              <div className="flex justify-between items-center border-b pb-1">
-                <span>01. ECAD PRE-LAYOUT GATE:</span>
-                <span className={`font-bold ${report.canMoveToEcad ? 'text-emerald-600' : 'text-slate-400'}`}>{report.canMoveToEcad ? "PASSED" : "LOCKED"}</span>
+            <div className="space-y-1 text-[8.5px]">
+              <div className="flex justify-between items-center border-b pb-0.5 font-mono">
+                <span>01. PLANNING READY:</span>
+                <span className={`font-bold ${report.isPlanningReady ? 'text-emerald-600' : 'text-slate-450'}`}>{report.isPlanningReady ? "PASSED" : "LOCKED"}</span>
               </div>
-              <div className="flex justify-between items-center border-b pb-1">
-                <span>02. PROTOTYPE BRING-UP GATE:</span>
-                <span className={`font-bold ${report.canMoveToPrototype ? 'text-emerald-600' : 'text-slate-400'}`}>{report.canMoveToPrototype ? "PASSED" : "LOCKED"}</span>
+              <div className="flex justify-between items-center border-b pb-0.5 font-mono">
+                <span>02. BLUEPRINT PACK READY:</span>
+                <span className={`font-bold ${report.isBlueprintPackReady ? 'text-emerald-600' : 'text-slate-455'}`}>{report.isBlueprintPackReady ? "PASSED" : "LOCKED"}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span>03. FACTORY HANDOFF GATE:</span>
-                <span className={`font-bold ${report.canMoveToFactoryHandoff ? 'text-emerald-600' : 'text-slate-400'}`}>{report.canMoveToFactoryHandoff ? "PASSED" : "LOCKED"}</span>
+              <div className="flex justify-between items-center border-b pb-0.5 font-mono">
+                <span>03. EDITOR LAYOUT READY:</span>
+                <span className={`font-bold ${report.isEditorLayoutReady ? 'text-emerald-600' : 'text-slate-455'}`}>{report.isEditorLayoutReady ? "PASSED" : "LOCKED"}</span>
+              </div>
+              <div className="flex justify-between items-center border-b pb-0.5 font-mono">
+                <span>04. PROTOTYPE PREP READY:</span>
+                <span className={`font-bold ${report.canMoveToPrototype ? 'text-emerald-600' : 'text-slate-455'}`}>{report.canMoveToPrototype ? "PASSED" : "LOCKED"}</span>
+              </div>
+              <div className="flex justify-between items-center border-b pb-0.5 font-mono">
+                <span>05. FACTORY HANDOFF READY:</span>
+                <span className={`font-bold ${report.canMoveToFactoryHandoff ? 'text-emerald-600' : 'text-slate-455'}`}>{report.canMoveToFactoryHandoff ? "PASSED" : "LOCKED"}</span>
+              </div>
+              <div className="flex justify-between items-center font-mono">
+                <span>06. DIRECT FABRICATION READY:</span>
+                <span className={`font-bold ${report.canMoveToFabrication ? 'text-emerald-600' : 'text-slate-455'}`}>{report.canMoveToFabrication ? "PASSED" : "LOCKED"}</span>
               </div>
             </div>
           </div>

@@ -127,25 +127,8 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
 
   const handleExportJSON = () => {
     const state = useProjectStore.getState();
-    exportProjectJson({
-      id: state.id,
-      projectName: state.projectName,
-      description: state.description,
-      createdAt: state.createdAt,
-      updatedAt: state.updatedAt,
-      templateName: state.templateName,
-      version: state.version,
-      activeView: state.activeView,
-      nodes: state.nodes,
-      edges: state.edges,
-      bom: state.bom,
-      testing: state.testing,
-      powerBudget: state.powerBudget,
-      pinMap: state.pinMap,
-      firmwareTasks: state.firmwareTasks,
-      batteryCapacityMah: state.batteryCapacityMah
-    });
-    showToast("Exported project JSON.", "success");
+    exportProjectJson(state);
+    showToast("Exported project JSON backup.", "success");
   };
 
   const handleExportMD = () => {

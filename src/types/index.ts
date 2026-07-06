@@ -245,9 +245,8 @@ export interface Project {
     gerberZip?: FactoryFileStatus;
     drillFiles?: FactoryFileStatus;
     schematicPdf?: FactoryFileStatus;
-    kicadProject?: FactoryFileStatus;
-    altiumProject?: FactoryFileStatus;
-    easyEdaProject?: FactoryFileStatus;
+    boardDrawing?: FactoryFileStatus;
+    enclosureDrawing?: FactoryFileStatus;
     stepFile?: FactoryFileStatus;
     stlFile?: FactoryFileStatus;
     cplCsv?: FactoryFileStatus;
@@ -325,7 +324,7 @@ export type EditorConnection = {
 };
 
 export type FactoryFileStatus = {
-  status: "Not Generated" | "Conceptual" | "Needs External Tool" | "Uploaded" | "Verified";
+  status: "Not Generated" | "Conceptual" | "Generated In App" | "Needs Final Review" | "Verified";
   notes?: string;
   source?: "Hardware Studio" | "KiCad" | "Altium" | "EasyEDA" | "Fusion" | "Onshape" | "SolidWorks" | "External";
   fileName?: string;

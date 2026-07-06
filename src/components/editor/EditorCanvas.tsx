@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { EditorObject, EditorConnection, EditorMode } from '../../types';
+import { EditorObject, EditorConnection, EditorMode, Project } from '../../types';
 import { EditorUIState } from './editorTypes';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 
@@ -9,6 +9,9 @@ interface EditorCanvasProps {
   objects: EditorObject[];
   connections: EditorConnection[];
   onUpdatePosition: (id: string, x: number, y: number) => void;
+  project: Project;
+  onGenerateLayouts?: () => void;
+  onAutoAction?: (action: string) => void;
 }
 
 export const EditorCanvas: React.FC<EditorCanvasProps> = ({
@@ -16,7 +19,10 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
   setUiState,
   objects,
   connections,
-  onUpdatePosition
+  onUpdatePosition,
+  project,
+  onGenerateLayouts,
+  onAutoAction
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isPanning, setIsPanning] = useState(false);
@@ -67,7 +73,9 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
             rawY = Math.round(rawY / GRID_SIZE) * GRID_SIZE;
           }
 
-          onUpdatePosition(draggedObjectId, Math.max(0, Math.min(800, rawX)), Math.max(0, Math.min(600, rawY)));
+          const maxX = 800 - (draggedObj.width || 40);
+          const maxY = 600 - (draggedObj.height || 40);
+          onUpdatePosition(draggedObjectId, Math.max(0, Math.min(maxX, rawX)), Math.max(0, Math.min(maxY, rawY)));
         }
       }
     }
@@ -85,11 +93,16 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
     setUiState(prev => ({ ...prev, selectedObjectId: obj.id }));
     setDraggedObjectId(obj.id);
     
-    // Track cursor click offset relative to the top-left of the dragged element
-    setDragStartOffset({
-      x: e.nativeEvent.offsetX,
-      y: e.nativeEvent.offsetY
-    });
+    // Calculate click coordinates in canvas scaled coordinates space
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (rect) {
+      const clickX = (e.clientX - rect.left - uiState.panX) / uiState.zoom;
+      const clickY = (e.clientY - rect.top - uiState.panY) / uiState.zoom;
+      setDragStartOffset({
+        x: clickX - obj.x,
+        y: clickY - obj.y
+      });
+    }
   };
 
   // Render warning message based on editor mode
@@ -225,23 +238,51 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
                   className="cursor-move"
                 >
                   {isCircular ? (
-                    <circle
-                      cx={obj.width / 2}
-                      cy={obj.height / 2}
-                      r={obj.width / 2}
-                      fill={fill}
-                      stroke={stroke}
-                      strokeWidth={strokeWidth}
-                    />
+                    <>
+                      <circle
+                        cx={obj.width / 2}
+                        cy={obj.height / 2}
+                        r={obj.width / 2}
+                        fill={fill}
+                        stroke={stroke}
+                        strokeWidth={strokeWidth}
+                      />
+                      {isSelected && (
+                        <circle
+                          cx={obj.width / 2}
+                          cy={obj.height / 2}
+                          r={obj.width / 2 + 2}
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="1"
+                          strokeDasharray="2,2"
+                        />
+                      )}
+                    </>
                   ) : (
-                    <rect
-                      width={obj.width}
-                      height={obj.height}
-                      rx="3"
-                      fill={fill}
-                      stroke={stroke}
-                      strokeWidth={strokeWidth}
-                    />
+                    <>
+                      <rect
+                        width={obj.width}
+                        height={obj.height}
+                        rx="3"
+                        fill={fill}
+                        stroke={stroke}
+                        strokeWidth={strokeWidth}
+                      />
+                      {isSelected && (
+                        <rect
+                          x="-2"
+                          y="-2"
+                          width={obj.width + 4}
+                          height={obj.height + 4}
+                          rx="4"
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="1"
+                          strokeDasharray="2,2"
+                        />
+                      )}
+                    </>
                   )}
 
                   {/* SMT Pins details for component/chip blocks */}
@@ -337,6 +378,49 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
           <Maximize className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Empty State Overlay */}
+      {objects.length === 0 && (
+        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 z-20 pointer-events-auto">
+          <div className="max-w-md bg-slate-900 border border-slate-800 rounded-lg p-6 space-y-4 shadow-2xl">
+            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-widest font-mono">
+              Drawing Layout Empty
+            </h3>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              No canvas objects exist for **{uiState.activeMode.toUpperCase()}** mode yet. 
+              {uiState.activeMode === 'components' && (project.boardComponents || []).length === 0 && (
+                <span className="block mt-1 font-semibold text-amber-400">SMT components need to be added to the project first.</span>
+              )}
+              {uiState.activeMode === 'circuits' && (project.circuitBlocks || []).length === 0 && (
+                <span className="block mt-1 font-semibold text-amber-400">Circuit blocks need to be configured in Circuit Planner.</span>
+              )}
+              {uiState.activeMode === 'nets' && (project.nets || []).length === 0 && (
+                <span className="block mt-1 font-semibold text-amber-400">Signal nets need to be configured in Nets/Connections list.</span>
+              )}
+            </p>
+            <div className="flex flex-col space-y-2 pt-2">
+              <button
+                onClick={() => {
+                  if (onGenerateLayouts) onGenerateLayouts();
+                }}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold font-mono tracking-widest text-[9.5px] uppercase py-2 px-4 rounded transition-colors cursor-pointer"
+              >
+                Generate Drawing Layouts
+              </button>
+              {uiState.activeMode === 'components' && (project.boardComponents || []).length === 0 && (
+                <button
+                  onClick={() => {
+                    if (onAutoAction) onAutoAction('auto-components');
+                  }}
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold font-mono tracking-widest text-[9.5px] uppercase py-2 px-4 rounded transition-colors cursor-pointer"
+                >
+                  Auto-Place Components
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

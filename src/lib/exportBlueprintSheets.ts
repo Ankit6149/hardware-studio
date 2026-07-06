@@ -24,9 +24,12 @@ export const exportBlueprintSheetsJson = (project: Project): string => {
     version: project.version || "1.0",
     readinessScore: report.overallScore,
     releaseGates: {
-      ecadReady: report.canMoveToEcad,
+      planningReady: report.isPlanningReady,
+      blueprintPackReady: report.isBlueprintPackReady,
+      editorLayoutReady: report.isEditorLayoutReady,
       prototypeReady: report.canMoveToPrototype,
-      factoryHandoffReady: report.canMoveToFactoryHandoff
+      factoryHandoffReady: report.canMoveToFactoryHandoff,
+      fabricationReady: report.canMoveToFabrication
     },
     blockers: report.blockers,
     warnings: report.warnings,
@@ -226,9 +229,12 @@ export const exportBlueprintSheetsMarkdown = (project: Project): string => {
 **Workspace Version**: ${project.version || "1.0"}
 **readiness score**: ${report.overallScore}/100
 **Release Gate Status**:
-- ECAD Pre-Layout Gate: **${report.canMoveToEcad ? "PASSED" : "LOCKED"}**
-- Prototype Bring-Up Gate: **${report.canMoveToPrototype ? "PASSED" : "LOCKED"}**
+- Planning Verification Gate: **${report.isPlanningReady ? "PASSED" : "LOCKED"}**
+- Blueprint Drawing Pack Gate: **${report.isBlueprintPackReady ? "PASSED" : "LOCKED"}**
+- CAD Editor Layout Gate: **${report.isEditorLayoutReady ? "PASSED" : "LOCKED"}**
+- Prototype Spin Gate: **${report.canMoveToPrototype ? "PASSED" : "LOCKED"}**
 - Factory Handoff Gate: **${report.canMoveToFactoryHandoff ? "PASSED" : "LOCKED"}**
+- Direct Fabrication Gate: **${report.canMoveToFabrication ? "PASSED" : "LOCKED"}**
 
 > [!WARNING]
 > **DISCLAIMER & ENGINEERING LIMITATION NOTICE**: This document represents conceptual schematic, wiring, mechanical, and stackup specifications. This is not factory production-ready Gerber, NC Drill, or STEP CAD artwork. All drawings require review by a certified hardware engineer before PCB procurement.
@@ -363,9 +369,12 @@ export const exportBlueprintSheetsHtml = (project: Project): string => {
         <tr><td>Template Type</td><td>${project.templateName || "Custom"}</td></tr>
         <tr><td>Workspace Version</td><td>${project.version || "1.0"}</td></tr>
         <tr><td>Overall Readiness Index</td><td><strong>${report.overallScore} / 100</strong></td></tr>
-        <tr><td>ECAD Pre-Layout Gate</td><td><strong>${report.canMoveToEcad ? "PASSED" : "LOCKED"}</strong></td></tr>
-        <tr><td>Prototype Bring-Up Gate</td><td><strong>${report.canMoveToPrototype ? "PASSED" : "LOCKED"}</strong></td></tr>
+        <tr><td>Planning Verification Gate</td><td><strong>${report.isPlanningReady ? "PASSED" : "LOCKED"}</strong></td></tr>
+        <tr><td>Blueprint Drawing Pack Gate</td><td><strong>${report.isBlueprintPackReady ? "PASSED" : "LOCKED"}</strong></td></tr>
+        <tr><td>CAD Editor Layout Gate</td><td><strong>${report.isEditorLayoutReady ? "PASSED" : "LOCKED"}</strong></td></tr>
+        <tr><td>Prototype Spin Gate</td><td><strong>${report.canMoveToPrototype ? "PASSED" : "LOCKED"}</strong></td></tr>
         <tr><td>Factory Handoff Gate</td><td><strong>${report.canMoveToFactoryHandoff ? "PASSED" : "LOCKED"}</strong></td></tr>
+        <tr><td>Direct Fabrication Gate</td><td><strong>${report.canMoveToFabrication ? "PASSED" : "LOCKED"}</strong></td></tr>
       </table>
       <div class="stamp-warning">Conceptual engineering prep only - All specifications require final hardware engineer review</div>
     </div>

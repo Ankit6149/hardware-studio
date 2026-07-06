@@ -10,8 +10,26 @@ import {
   ArrowRight, 
   RefreshCw, 
   Info,
-  CheckCircle
+  CheckCircle,
+  Download
 } from 'lucide-react';
+
+const getViewForAction = (action: string): string => {
+  const act = action.toLowerCase();
+  if (act.includes('architecture') || act.includes('product plan')) return 'master';
+  if (act.includes('mechanical') || act.includes('assembly') || act.includes('layout in editor') || act.includes('volume zone')) return 'blueprint-editor';
+  if (act.includes('board dimensions') || act.includes('active boards')) return 'board-studio';
+  if (act.includes('footprint') || act.includes('placement')) return 'board-components';
+  if (act.includes('circuit block') || act.includes('functional circuit')) return 'circuit-planner';
+  if (act.includes('gnd reference') || act.includes('routing tracks') || act.includes('net')) return 'netlist-planner';
+  if (act.includes('battery') || act.includes('power')) return 'power-budget';
+  if (act.includes('pin configuration') || act.includes('pin map')) return 'pin-map';
+  if (act.includes('driver tasks') || act.includes('firmware')) return 'firmware-plan';
+  if (act.includes('test procedure') || act.includes('testing')) return 'testing';
+  if (act.includes('checklist') || act.includes('handoff check') || act.includes('safety') || act.includes('hypoallergenic')) return 'mfg-pack';
+  if (act.includes('factory files') || act.includes('export') || act.includes('handoff ready')) return 'exports';
+  return 'master';
+};
 
 export const ProjectDashboard: React.FC = () => {
   const store = useProjectStore();
@@ -31,6 +49,8 @@ export const ProjectDashboard: React.FC = () => {
     nets = [], 
     pcbConstraints = [], 
     manufacturingChecklist = [],
+    factoryFiles = {},
+    editorLayouts = {},
     setActiveView,
     generateFullProductPlan,
     generateBOMFromMVP,
@@ -362,42 +382,54 @@ export const ProjectDashboard: React.FC = () => {
       </div>
 
       {/* Gating Status Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {[
           { 
-            name: "ECAD Layout Gate", 
-            ready: report.canMoveToEcad, 
-            desc: "Ready to transition blueprints and netlists into KiCad/Altium schematic placement.", 
-            reqs: "Requires boards, circuits, placed component packages, signaling nets, and 0 blockers." 
+            name: "Planning Gate", 
+            ready: report.isPlanningReady, 
+            desc: "Blueprints planning verification (BOM, Pin Map, Power, FW).", 
+            reqs: "BOM, Power, Pin Map, FW Tasks defined." 
           },
           { 
-            name: "Prototype Spin Gate", 
+            name: "Blueprint Pack", 
+            ready: report.isBlueprintPackReady, 
+            desc: "Blueprint drawing pack verification and schema locks.", 
+            reqs: "Planning gate passed and active boards configured." 
+          },
+          { 
+            name: "CAD Editor Layout", 
+            ready: report.isEditorLayoutReady, 
+            desc: "In-app layout placement editor coordinates generation.", 
+            reqs: "Active drawing components/routing in editor canvas." 
+          },
+          { 
+            name: "Prototype Spin", 
             ready: report.canMoveToPrototype, 
-            desc: "Ready to procure physical parts, order board samples, and assemble initial MVP board validation run.",
-            reqs: "Requires BOM sourced, power budget estimated, pin assignments locked, testing checklist defined, and readiness >70."
+            desc: "Physical component procurement and sample verification run.",
+            reqs: "Drawing pack, layouts, testing configured, readiness >=70, 0 blockers."
           },
           { 
-            name: "Factory Handoff Gate", 
+            name: "Factory Handoff", 
             ready: report.canMoveToFactoryHandoff, 
-            desc: "Ready to export final dossier, component coordinates, and run factory bring-up scripts.",
-            reqs: "Requires full board prep schemas, completed pre-layout checklist review, zero blocked issues, and readiness >85."
+            desc: "Final assembly and firmware manufacturing readiness sign-off.",
+            reqs: "Prototype gate passed, factory checklist items 100% completed, readiness >=85, 0 blockers."
           },
           { 
-            name: "Direct Fab Gate", 
+            name: "Direct Fabrication", 
             ready: report.canMoveToFabrication, 
-            desc: "Ready to push Gerber ZIP artwork and NC drills package direct to fabrication house production floor.", 
-            reqs: "Requires prototype gate passed, uploaded CAD files verified (Gerber, Drills, BOM, CPL, DFM) and 0 blockers." 
+            desc: "Production Gerber artwork, NC drill files and assembly map release.", 
+            reqs: "Handoff gate passed, required external files verified (Gerber, Drill, Schematic, BOM, CPL, DFM), 0 blockers." 
           }
         ].map((gate, idx) => (
-          <div key={idx} className={`border rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-4 bg-white ${
+          <div key={idx} className={`border rounded-xl p-4.5 shadow-sm flex flex-col justify-between space-y-3 bg-white hover:border-slate-350 transition-all ${
             gate.ready 
               ? 'border-emerald-250 bg-emerald-50/10' 
               : 'border-slate-200'
           }`}>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider font-mono text-slate-800">{gate.name}</span>
-                <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider font-mono border ${
+                <span className="text-[10px] font-bold uppercase tracking-wider font-mono text-slate-800 truncate" title={gate.name}>{gate.name}</span>
+                <span className={`px-1.5 py-0.25 rounded text-[8px] font-bold uppercase tracking-wider font-mono border ${
                   gate.ready 
                     ? 'bg-emerald-100 text-emerald-850 border-emerald-200' 
                     : 'bg-slate-100 text-slate-455 border-slate-200'
@@ -405,10 +437,10 @@ export const ProjectDashboard: React.FC = () => {
                   {gate.ready ? 'PASSED' : 'LOCKED'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-550 leading-normal">{gate.desc}</p>
+              <p className="text-[10px] text-slate-550 leading-normal font-sans">{gate.desc}</p>
             </div>
             
-            <div className="bg-slate-50 border border-slate-150 p-2.5 rounded text-[9px] text-slate-450 leading-relaxed font-mono">
+            <div className="bg-slate-50 border border-slate-150 p-2 rounded text-[8px] text-slate-400 leading-relaxed font-mono">
               <strong>Check Criteria</strong>: {gate.reqs}
             </div>
           </div>
@@ -457,16 +489,184 @@ export const ProjectDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Conceptual-to-Factory Pipeline Visualizer */}
+      {/* Coverage Overview Grid */}
+      {(() => {
+        const totalLayoutObjs = Object.values(editorLayouts || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+        const exportCheck = [
+          { label: "Layouts Config", ready: totalLayoutObjs > 0 },
+          { label: "Placements CSV", ready: boardComponents.length > 0 },
+          { label: "Schematic JSON", ready: circuitBlocks.length > 0 },
+          { label: "Mechanical JSON", ready: (editorLayouts.mechanical?.length || 0) > 0 },
+          { label: "Signaling Nets", ready: nets.length > 0 },
+          { label: "MCU Pin Map", ready: pinMap.length > 0 },
+          { label: "Firmware Tasks", ready: firmwareTasks.length > 0 },
+          { label: "Testing Protocols", ready: testing.length > 0 },
+          { label: "Factory Check", ready: Object.keys(factoryFiles).length > 0 },
+          { label: "Handoff Manifest", ready: report.overallScore > 0 }
+        ];
+        const readyExportsCount = exportCheck.filter(e => e.ready).length;
+
+        const fileStatuses = Object.values(factoryFiles || {}) as { status: string }[];
+        const countsByStatus = {
+          'Verified': fileStatuses.filter(f => f.status === 'Verified').length,
+          'Needs Final Review': fileStatuses.filter(f => f.status === 'Needs Final Review').length,
+          'Generated In App': fileStatuses.filter(f => f.status === 'Generated In App').length,
+          'Conceptual': fileStatuses.filter(f => f.status === 'Conceptual').length,
+          'Not Generated': fileStatuses.filter(f => f.status === 'Not Generated').length,
+        };
+
+        const statusColors: Record<string, string> = {
+          'Verified': 'text-emerald-600 bg-emerald-50 border-emerald-100',
+          'Needs Final Review': 'text-amber-600 bg-amber-50 border-amber-100',
+          'Generated In App': 'text-indigo-655 bg-indigo-50 border-indigo-100',
+          'Conceptual': 'text-blue-600 bg-blue-50 border-blue-100',
+          'Not Generated': 'text-slate-450 bg-slate-50 border-slate-100'
+        };
+
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Editor Coverage Card */}
+            <Card className="bg-white border border-slate-200 shadow-sm flex flex-col justify-between font-mono text-xs">
+              <CardHeader className="bg-slate-50/50 border-b border-slate-150 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-xs font-bold text-slate-800">CAD Editor Coverage</CardTitle>
+                    <p className="text-[10px] text-slate-450">Object statistics across layout modes.</p>
+                  </div>
+                  <Badge variant={totalLayoutObjs > 0 ? 'success' : 'neutral'} className="scale-90 shrink-0">
+                    {totalLayoutObjs > 0 ? 'Draft Active' : 'Empty Canvas'}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 flex-1 flex flex-col justify-between space-y-4">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] text-slate-650">
+                  {[
+                    { label: 'Product blocks', count: editorLayouts.product?.length || 0 },
+                    { label: 'Mechanical bounds', count: editorLayouts.mechanical?.length || 0 },
+                    { label: 'Assembly steps', count: editorLayouts.assembly?.length || 0 },
+                    { label: 'PCB Outlines', count: editorLayouts.board?.length || 0 },
+                    { label: 'Footprints mapped', count: editorLayouts.components?.length || 0 },
+                    { label: 'Schematic modules', count: editorLayouts.circuits?.length || 0 },
+                    { label: 'Net routing tracks', count: editorLayouts.nets?.length || 0 },
+                    { label: 'MCU Pin maps', count: editorLayouts.pins?.length || 0 },
+                  ].map((c, idx) => (
+                    <div key={idx} className="flex justify-between border-b border-slate-100 pb-1">
+                      <span className="truncate w-[75%] text-slate-500 font-sans">{c.label}</span>
+                      <span className="font-bold font-mono text-slate-800">{c.count}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between font-sans">
+                  <span className="text-[10px] font-bold text-slate-700">Total drafted: {totalLayoutObjs} objects</span>
+                  <button 
+                    onClick={() => setActiveView('blueprint-editor')}
+                    className="flex items-center space-x-1 px-2.5 py-1 bg-slate-900 hover:bg-slate-855 text-white rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    <span>Open Canvas</span>
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Native Export Coverage Card */}
+            <Card className="bg-white border border-slate-200 shadow-sm flex flex-col justify-between font-mono text-xs">
+              <CardHeader className="bg-slate-50/50 border-b border-slate-150 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-xs font-bold text-slate-800">Native Export Coverage</CardTitle>
+                    <p className="text-[10px] text-slate-450">Active serializers compile readiness.</p>
+                  </div>
+                  <Badge variant={readyExportsCount === 10 ? 'success' : 'neutral'} className="scale-90 shrink-0">
+                    {readyExportsCount}/10 Serializers
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 flex-1 flex flex-col justify-between space-y-4">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[9.5px]">
+                  {exportCheck.map((e, idx) => (
+                    <div key={idx} className="flex items-center space-x-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${e.ready ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                      <span className="text-slate-600 truncate font-sans">{e.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between font-sans">
+                  <span className="text-[10px] font-bold text-slate-700">Serializers active</span>
+                  <button 
+                    onClick={() => setActiveView('exports')}
+                    className="flex items-center space-x-1 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-750 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    <Download className="w-3 h-3 text-slate-400 shrink-0" />
+                    <span>Export Center</span>
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Factory Production Files Checklist Card */}
+            <Card className="bg-white border border-slate-200 shadow-sm flex flex-col justify-between font-mono text-xs">
+              <CardHeader className="bg-slate-50/50 border-b border-slate-150 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-xs font-bold text-slate-800">Factory Files Status</CardTitle>
+                    <p className="text-[10px] text-slate-450">Review physical file check validations.</p>
+                  </div>
+                  <Badge variant={countsByStatus['Verified'] >= 5 ? 'success' : 'neutral'} className="scale-90 shrink-0">
+                    {countsByStatus['Verified']} Verified
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 flex-1 flex flex-col justify-between space-y-4">
+                <div className="space-y-2 text-[10px]">
+                  {[
+                    { label: 'Gerber ZIP Copper Artwork', status: factoryFiles.gerberZip?.status || 'Not Generated' },
+                    { label: 'Excellon Drill Hole Lists', status: factoryFiles.drillFiles?.status || 'Not Generated' },
+                    { label: 'Electrical Schematic PDF', status: factoryFiles.schematicPdf?.status || 'Not Generated' },
+                    { label: 'Bill of Materials (BOM) CSV', status: factoryFiles.bomCsv?.status || 'Not Generated' },
+                    { label: 'Pick & Place Coordinate CSV', status: factoryFiles.cplCsv?.status || 'Not Generated' },
+                    { label: 'DFM Assembly Review Report', status: factoryFiles.dfmReport?.status || 'Not Generated' },
+                  ].map((f, idx) => {
+                    const badgeStyle = statusColors[f.status] || 'text-slate-500 bg-slate-50 border-slate-100';
+                    return (
+                      <div key={idx} className="flex items-center justify-between border-b border-slate-50 pb-1">
+                        <span className="text-slate-550 truncate font-sans w-[60%]">{f.label}</span>
+                        <span className={`text-[8px] font-bold font-mono px-1.5 py-0.5 border rounded uppercase shrink-0 ${badgeStyle}`}>
+                          {f.status}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between font-sans">
+                  <span className="text-[9px] text-slate-450">Verification Gates release</span>
+                  <button 
+                    onClick={() => setActiveView('mfg-pack')}
+                    className="flex items-center space-x-1 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-750 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    <span>Handoff Pack</span>
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+          </div>
+        );
+      })()}
+
+      {/* Engineering Pipeline & Disciplines */}
       <Card className="bg-white border border-slate-200 shadow-sm">
         <CardHeader className="bg-slate-50/50 border-b border-slate-150">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <CardTitle>Concept-to-Handoff Progress Pipeline</CardTitle>
+              <CardTitle>Engineering Pipeline & Disciplines</CardTitle>
               <p className="text-[10px] text-slate-450">Track, sync, and generate downstream planning lists from logical architectures.</p>
             </div>
             <span className="text-[9px] font-bold uppercase tracking-widest font-mono text-slate-450 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
-              Verification Pipeline
+              12 Active Disciplines
             </span>
           </div>
         </CardHeader>
@@ -549,15 +749,25 @@ export const ProjectDashboard: React.FC = () => {
             {report.nextActions.map((action, idx) => {
               const isBlocker = action.startsWith('Blocker:');
               const isWarning = action.startsWith('Warning:');
+              const view = getViewForAction(action);
               
               return (
-                <div key={idx} className="flex items-start space-x-2.5 bg-slate-50/50 p-2.5 rounded border border-slate-100">
-                  <Badge variant={isBlocker ? 'error' : isWarning ? 'warning' : 'neutral'} className="shrink-0 mt-0.5">
-                    {isBlocker ? 'Blocker' : isWarning ? 'Warning' : 'Info'}
-                  </Badge>
-                  <span className="text-[11px] text-slate-700 leading-normal font-sans font-medium">
-                    {action.replace(/^(Blocker|Warning|Suggestion):\s*/, '')}
-                  </span>
+                <div key={idx} className="flex items-center justify-between bg-slate-50/50 p-2.5 rounded border border-slate-100 group/item hover:bg-slate-50 transition-all">
+                  <div className="flex items-start space-x-2.5">
+                    <Badge variant={isBlocker ? 'error' : isWarning ? 'warning' : 'neutral'} className="shrink-0 mt-0.5">
+                      {isBlocker ? 'Blocker' : isWarning ? 'Warning' : 'Info'}
+                    </Badge>
+                    <span className="text-[11px] text-slate-700 leading-normal font-sans font-medium">
+                      {action.replace(/^(Blocker|Warning|Suggestion):\s*/, '')}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setActiveView(view)}
+                    className="flex items-center space-x-1 px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-650 rounded text-[9px] font-bold font-mono transition-all opacity-70 group-hover/item:opacity-100 cursor-pointer"
+                  >
+                    <span>Fix</span>
+                    <ArrowRight className="w-2.5 h-2.5 shrink-0 text-slate-400" />
+                  </button>
                 </div>
               );
             })}

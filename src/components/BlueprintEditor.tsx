@@ -281,6 +281,9 @@ export const BlueprintEditor: React.FC = () => {
           objects={activeLayoutObjects}
           connections={activeConnections}
           onUpdatePosition={handleUpdateObjectPosition}
+          project={store}
+          onGenerateLayouts={handleGenerateLayouts}
+          onAutoAction={handleAutoAction}
         />
 
         {/* Right attributes inspector panel */}

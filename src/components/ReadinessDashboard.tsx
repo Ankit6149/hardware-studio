@@ -101,11 +101,10 @@ export const ReadinessDashboard: React.FC = () => {
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Gateway Verification Status</span>
               <div className="grid grid-cols-1 gap-1">
                 {[
-                  { name: "Planning Complete Gate", status: report.isPlanningComplete },
-                  { name: "Blueprint Pack Gate", status: report.isBlueprintPackComplete },
-                  { name: "ECAD Prep Gate", status: report.canMoveToEcad },
-                  { name: "MCAD Prep Gate", status: report.canMoveToMcad },
-                  { name: "Prototype Ready Gate", status: report.canMoveToPrototype },
+                  { name: "Planning Gate", status: report.isPlanningReady },
+                  { name: "Blueprint Pack Gate", status: report.isBlueprintPackReady },
+                  { name: "CAD Editor Layout Gate", status: report.isEditorLayoutReady },
+                  { name: "Prototype Spin Gate", status: report.canMoveToPrototype },
                   { name: "Factory Handoff Gate", status: report.canMoveToFactoryHandoff },
                   { name: "Direct Fabrication Gate", status: report.canMoveToFabrication }
                 ].map((gate, i) => (
@@ -137,7 +136,6 @@ export const ReadinessDashboard: React.FC = () => {
               { label: 'Mechanical Layout', val: report.categories.mechanical },
               { label: 'Assembly Layout', val: report.categories.assembly },
               { label: 'Board/PCB Prep', val: report.categories.boardPrep },
-              { label: 'PCB Constraints', val: report.categories.constraints },
               { label: 'Component Placement', val: report.categories.components },
               { label: 'Circuit/Schematic Prep', val: report.categories.electronics },
               { label: 'Nets Layout', val: report.categories.nets },
@@ -146,8 +144,8 @@ export const ReadinessDashboard: React.FC = () => {
               { label: 'Firmware Driver Plans', val: report.categories.firmware },
               { label: 'Test Protocols & QA', val: report.categories.testing },
               { label: 'Manufacturing Checklist', val: report.categories.manufacturing },
-              { label: 'Factory files package', val: report.categories.factoryFiles },
-              { label: 'Documentation details', val: report.categories.documentation },
+              { label: 'Native Export Pack', val: report.categories.nativeExports },
+              { label: 'Factory Files Package', val: report.categories.factoryFiles },
               { label: 'Safety & Compliance', val: report.categories.safety }
             ].map((cat, idx) => (
               <div key={idx} className="space-y-1">

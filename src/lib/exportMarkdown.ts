@@ -22,13 +22,21 @@ export const exportProjectMarkdown = (project: Project) => {
     md += `### Overall Readiness Score: **${report.overallScore}/100**\n\n`;
     
     md += `#### Category Scores:\n`;
-    md += `- **Architecture:** ${report.categories.architecture}/100\n`;
-    md += `- **Components (BOM):** ${report.categories.components}/100\n`;
-    md += `- **Power System:** ${report.categories.power}/100\n`;
-    md += `- **Firmware Logic:** ${report.categories.firmware}/100\n`;
-    md += `- **Testing Plan:** ${report.categories.testing}/100\n`;
-    md += `- **Safety & Risk:** ${report.categories.safety}/100\n`;
-    md += `- **Documentation:** ${report.categories.documentation}/100\n\n`;
+    md += `- **Product Architecture:** ${report.categories.architecture}/100\n`;
+    md += `- **Mechanical Layout:** ${report.categories.mechanical}/100\n`;
+    md += `- **Assembly Layout:** ${report.categories.assembly}/100\n`;
+    md += `- **Board/PCB Prep:** ${report.categories.boardPrep}/100\n`;
+    md += `- **Component Placement:** ${report.categories.components}/100\n`;
+    md += `- **Circuit/Schematic Prep:** ${report.categories.electronics}/100\n`;
+    md += `- **Nets Layout:** ${report.categories.nets}/100\n`;
+    md += `- **MCU Pin Map:** ${report.categories.pinMap}/100\n`;
+    md += `- **Power Budget Tree:** ${report.categories.power}/100\n`;
+    md += `- **Firmware Driver Plans:** ${report.categories.firmware}/100\n`;
+    md += `- **Test Protocols & QA:** ${report.categories.testing}/100\n`;
+    md += `- **Manufacturing Checklist:** ${report.categories.manufacturing}/100\n`;
+    md += `- **Native Export Pack:** ${report.categories.nativeExports}/100\n`;
+    md += `- **Factory Files Package:** ${report.categories.factoryFiles}/100\n`;
+    md += `- **Safety & Risk:** ${report.categories.safety}/100\n\n`;
 
     if (report.blockers.length > 0) {
       md += `#### 🔴 Critical Blockers:\n`;

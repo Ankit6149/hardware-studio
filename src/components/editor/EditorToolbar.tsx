@@ -18,7 +18,9 @@ import {
   Network, 
   Sliders, 
   Package, 
-  CheckSquare 
+  CheckSquare,
+  Magnet,
+  Maximize
 } from 'lucide-react';
 
 interface EditorToolbarProps {
@@ -98,7 +100,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             className={`p-1.5 rounded transition-all cursor-pointer ${uiState.snapToGrid ? 'bg-slate-700 text-emerald-400' : 'text-slate-400 hover:text-slate-200'}`}
             title="Snap to Grid"
           >
-            <Compass className="w-3.5 h-3.5" />
+            <Magnet className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setUiState(p => ({ ...p, showLabels: !p.showLabels }))}
@@ -134,6 +136,15 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Auto Arrange</span>
+          </button>
+
+          <button
+            onClick={() => setUiState(p => ({ ...p, zoom: 1.0, panX: 0, panY: 0 }))}
+            className="flex items-center space-x-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 active:bg-slate-700 text-slate-350 hover:text-white rounded text-[10px] font-extrabold uppercase tracking-wider transition-all border border-slate-700 cursor-pointer"
+            title="Reset zoom and pan coordinates offset"
+          >
+            <Maximize className="w-3.5 h-3.5" />
+            <span>Reset View</span>
           </button>
 
           {/* Quick Autocomplete helpers dropdown */}
