@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { calculateReadinessScore } from '../lib/readinessScore';
 import { Button } from '../ui/Button';
@@ -11,25 +11,17 @@ import {
   RefreshCw, 
   Info,
   CheckCircle,
-  Download
+  Download,
+  AlertTriangle,
+  Play,
+  Hammer,
+  Settings,
+  ShieldCheck,
+  ChevronRight,
+  TrendingUp,
+  FileCode,
+  Check
 } from 'lucide-react';
-
-const getViewForAction = (action: string): string => {
-  const act = action.toLowerCase();
-  if (act.includes('architecture') || act.includes('product plan')) return 'master';
-  if (act.includes('mechanical') || act.includes('assembly') || act.includes('layout in editor') || act.includes('volume zone')) return 'blueprint-editor';
-  if (act.includes('board dimensions') || act.includes('active boards')) return 'board-studio';
-  if (act.includes('footprint') || act.includes('placement')) return 'board-components';
-  if (act.includes('circuit block') || act.includes('functional circuit')) return 'circuit-planner';
-  if (act.includes('gnd reference') || act.includes('routing tracks') || act.includes('net')) return 'netlist-planner';
-  if (act.includes('battery') || act.includes('power')) return 'power-budget';
-  if (act.includes('pin configuration') || act.includes('pin map')) return 'pin-map';
-  if (act.includes('driver tasks') || act.includes('firmware')) return 'firmware-plan';
-  if (act.includes('test procedure') || act.includes('testing')) return 'testing';
-  if (act.includes('checklist') || act.includes('handoff check') || act.includes('safety') || act.includes('hypoallergenic')) return 'mfg-pack';
-  if (act.includes('factory files') || act.includes('export') || act.includes('handoff ready')) return 'exports';
-  return 'master';
-};
 
 export const ProjectDashboard: React.FC = () => {
   const store = useProjectStore();
@@ -51,26 +43,34 @@ export const ProjectDashboard: React.FC = () => {
     manufacturingChecklist = [],
     factoryFiles = {},
     editorLayouts = {},
+    traces = [],
+    reviewResults = [],
     setActiveView,
     generateFullProductPlan,
-    generateBOMFromMVP,
-    generatePowerFromBlueprint,
-    generatePinMapFromBlueprint,
-    generateFirmwareTasksFromBlueprint,
-    generateTestsFromMVP,
-    generateBoardPlanFromProduct,
-    generateCircuitsFromBlueprint,
-    generateBoardComponentsFromBOM,
-    generateNetsFromPinMap,
-    generatePCBConstraintsFromBoard,
-    generateManufacturingChecklist
+    runFullDesignReview,
+    generateEditorLayouts,
+    addGndNet,
+    addVbatNet,
+    add3v3Net,
+    addI2cPullupResistor,
+    addFlybackDiode,
+    addDebugTestPad,
+    fixMissingDimensionsWithPlaceholder,
+    autoPlaceComponents,
+    autoCreateFirmwareTasksFromHardware,
+    autoCreateTestsFromHardware,
+    addRequiredFactoryFileChecklist
   } = store;
 
+  // Run initial review on load
+  useEffect(() => {
+    runFullDesignReview();
+  }, [runFullDesignReview]);
+
   const report = calculateReadinessScore(store);
-  
-  // Local state for full generation alert/toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'blockers' | 'warnings'>('all');
 
   const handleGenerateAll = () => {
     setIsGenerating(true);
@@ -78,9 +78,16 @@ export const ProjectDashboard: React.FC = () => {
       const res = generateFullProductPlan();
       setToastMessage(res.summary);
       setIsGenerating(false);
-      // Auto-dismiss toast after 7 seconds
-      setTimeout(() => setToastMessage(null), 7000);
-    }, 800);
+      runFullDesignReview();
+      setTimeout(() => setToastMessage(null), 5000);
+    }, 600);
+  };
+
+  const handleGenerateLayouts = () => {
+    generateEditorLayouts();
+    setToastMessage("Editor Layouts generated dynamically. View them in Blueprint Editor.");
+    runFullDesignReview();
+    setTimeout(() => setToastMessage(null), 5000);
   };
 
   const getSourcingRatio = () => {
@@ -101,702 +108,519 @@ export const ProjectDashboard: React.FC = () => {
     return Math.round((passedCount / testing.length) * 100);
   };
 
-  const getSheetStatus = (num: number): { label: string; variant: 'success' | 'warning' | 'error' | 'neutral' } => {
-    switch (num) {
-      case 1:
-      case 16:
-        return { label: "Complete", variant: "success" };
-      case 2:
-        return nodes.filter(n => n.type !== 'boundaryNode').length > 0 
-          ? { label: "Complete", variant: "success" } 
-          : { label: "Missing", variant: "error" };
-      case 3:
-        const outline = pcbConstraints.find(c => c.constraintType === 'Board Outline');
-        return outline && outline.value && outline.value !== "0 x 0"
-          ? { label: "Complete", variant: "success" } 
-          : { label: "Warning", variant: "warning" };
-      case 4:
-      case 5:
-        return nodes.length > 0 
-          ? { label: "Complete", variant: "success" } 
-          : { label: "Warning", variant: "warning" };
-      case 6:
-        return boards.length > 0 
-          ? (boards.some(b => !b.dimensionsMm || b.dimensionsMm === "0 x 0") ? { label: "Partial", variant: "warning" } : { label: "Complete", variant: "success" }) 
-          : { label: "Missing", variant: "error" };
-      case 7:
-        return pcbConstraints.length > 0 
-          ? { label: "Complete", variant: "success" } 
-          : { label: "Warning", variant: "warning" };
-      case 8:
-        const missingFootprintCount = boardComponents.filter(c => !c.footprint || c.footprint.toUpperCase().includes("REQUIRED")).length;
-        return boardComponents.length > 0 
-          ? (missingFootprintCount > 0 ? { label: `${missingFootprintCount} Missing FP`, variant: "warning" } : { label: "Complete", variant: "success" }) 
-          : { label: "Warning", variant: "warning" };
-      case 9:
-        return circuitBlocks.length > 0 
-          ? { label: "Complete", variant: "success" } 
-          : { label: "Warning", variant: "warning" };
-      case 10:
-        const hasGND = nets.some(n => n.netName.toUpperCase() === 'GND' || n.netType === 'Ground');
-        return nets.length > 0 
-          ? (!hasGND ? { label: "No GND Pin", variant: "error" } : { label: "Complete", variant: "success" }) 
-          : { label: "Warning", variant: "warning" };
-      case 11:
-        return powerBudget.length > 0 
-          ? { label: "Complete", variant: "success" } 
-          : { label: "Warning", variant: "warning" };
-      case 12:
-        return pinMap.length > 0 
-          ? { label: "Complete", variant: "success" } 
-          : { label: "Warning", variant: "warning" };
-      case 13:
-        return firmwareTasks.length > 0 
-          ? { label: "Complete", variant: "success" } 
-          : { label: "Warning", variant: "warning" };
-      case 14:
-        const failedCount = testing.filter(t => t.status === 'Failed').length;
-        return testing.length > 0 
-          ? (failedCount > 0 ? { label: `${failedCount} Failed`, variant: "error" } : { label: "Complete", variant: "success" }) 
-          : { label: "Warning", variant: "warning" };
-      case 15:
-        const blockedCount = manufacturingChecklist.filter(m => m.status === 'Blocked').length;
-        return manufacturingChecklist.length > 0 
-          ? (blockedCount > 0 ? { label: `${blockedCount} Blocked`, variant: "error" } : { label: "Complete", variant: "success" }) 
-          : { label: "Warning", variant: "warning" };
+  // Determine stage and next action
+  const getProjectStageInfo = () => {
+    if (report.canMoveToFabrication) {
+      return { stage: "Factory Released", action: "Export Handoff Package", nextView: "exports" };
+    }
+    if (report.canMoveToFactoryHandoff) {
+      return { stage: "Manufacturing Audit", action: "Verify Factory release files", nextView: "exports" };
+    }
+    if (report.canMoveToPrototype) {
+      return { stage: "Prototype Testing", action: "Execute bring-up checklist", nextView: "testing" };
+    }
+    if (report.isEditorLayoutReady) {
+      return { stage: "CAD Layout Routing", action: "Draw copper trace paths", nextView: "blueprint-editor" };
+    }
+    if (report.isBlueprintPackReady) {
+      return { stage: "Drawing Generation", action: "Review engineering sheets", nextView: "blueprint-sheets" };
+    }
+    return { stage: "Architecture & Planning", action: "Generate Full Product Plan", nextView: "generate" };
+  };
+
+  const stageInfo = getProjectStageInfo();
+
+  // 9 Pipeline Cards Configuration
+  const pipelineCards = [
+    {
+      title: "Product Architecture",
+      status: nodes.length > 0 ? "Mapped" : "Missing",
+      count: nodes.length,
+      unit: "subsystems",
+      missing: nodes.length === 0 ? "No blocks defined" : "",
+      fixAction: () => handleGenerateAll(),
+      fixLabel: "Seed default architecture",
+      viewKey: "electronics"
+    },
+    {
+      title: "Mechanical Design",
+      status: (editorLayouts.mechanical?.length || 0) > 0 ? "Drafted" : "Missing",
+      count: editorLayouts.mechanical?.length || 0,
+      unit: "envelope zones",
+      missing: (editorLayouts.mechanical?.length || 0) === 0 ? "No enclosure dimensions" : "",
+      fixAction: () => fixMissingDimensionsWithPlaceholder(),
+      fixLabel: "Generate outlines",
+      viewKey: "outer"
+    },
+    {
+      title: "PCB / Board Design",
+      status: boards.length > 0 ? "Defined" : "Missing",
+      count: boards.length,
+      unit: "active boards",
+      missing: boards.length === 0 ? "No substrates configured" : "",
+      fixAction: () => fixMissingDimensionsWithPlaceholder(),
+      fixLabel: "Add default board",
+      viewKey: "board-studio"
+    },
+    {
+      title: "Circuit / Schematic",
+      status: circuitBlocks.length > 0 ? "Planned" : "Missing",
+      count: circuitBlocks.length,
+      unit: "functional modules",
+      missing: circuitBlocks.length === 0 ? "Schematic symbols missing" : "",
+      fixAction: () => addI2cPullupResistor(),
+      fixLabel: "Add pullup resistors",
+      viewKey: "circuit-planner"
+    },
+    {
+      title: "Component Placement",
+      status: boardComponents.length > 0 ? "Placed" : "Missing",
+      count: boardComponents.length,
+      unit: "BOM SMT footprints",
+      missing: boardComponents.some(c => !c.placementX) ? "Footprints unplaced" : "",
+      fixAction: () => autoPlaceComponents(),
+      fixLabel: "Auto-place footprints",
+      viewKey: "board-components"
+    },
+    {
+      title: "Net Routing",
+      status: nets.length > 0 ? "Logical Netlist" : "Missing",
+      count: nets.length,
+      unit: "trace tracks",
+      missing: !nets.some(n => n.netName.toUpperCase() === 'GND') ? "Missing GND ground net" : "",
+      fixAction: () => addGndNet(),
+      fixLabel: "Connect return GND",
+      viewKey: "netlist-planner"
+    },
+    {
+      title: "Firmware",
+      status: firmwareTasks.length > 0 ? "Mapped loops" : "Missing",
+      count: firmwareTasks.length,
+      unit: "drivers tasks",
+      missing: firmwareTasks.length === 0 ? "No flow event loops" : "",
+      fixAction: () => autoCreateFirmwareTasksFromHardware(),
+      fixLabel: "Generate code loops",
+      viewKey: "firmware-plan"
+    },
+    {
+      title: "Testing",
+      status: testing.length > 0 ? `${getTestPassRatio()}% Passed` : "Missing",
+      count: testing.length,
+      unit: "QA procedures",
+      missing: testing.length === 0 ? "No bring-up tests" : "",
+      fixAction: () => autoCreateTestsFromHardware(),
+      fixLabel: "Seed diagnostic test plan",
+      viewKey: "testing"
+    },
+    {
+      title: "Manufacturing Package",
+      status: Object.values(factoryFiles).some(f => f.status === 'Verified') ? "Reviewed" : "Draft package",
+      count: Object.values(factoryFiles).filter(f => f.status !== 'Not Generated').length,
+      unit: "fab release files",
+      missing: Object.values(factoryFiles).length === 0 ? "Release files checklist empty" : "",
+      fixAction: () => addRequiredFactoryFileChecklist(),
+      fixLabel: "Build files checklists",
+      viewKey: "exports"
+    }
+  ];
+
+  // Map review results to action hooks
+  const getActionResolver = (resId: string) => {
+    switch (resId) {
+      case 'rev_erc_gnd':
+        return { label: "Add GND Net", run: () => addGndNet() };
+      case 'rev_arch_input':
+      case 'rev_arch_power':
+      case 'rev_arch_feedback':
+        return { label: "Generate Blueprint Pack", run: () => handleGenerateAll() };
+      case 'rev_erc_i2c_pullups':
+        return { label: "Add pull-ups (4.7k)", run: () => addI2cPullupResistor() };
+      case 'rev_erc_motor_protection':
+        return { label: "Add flyback protection", run: () => addFlybackDiode() };
+      case 'rev_erc_mcu_debug':
+        return { label: "Add SWD programming pads", run: () => addDebugTestPad() };
+      case 'rev_drc_dim_board_main':
+      case 'rev_drc_dim_board_ring':
+        return { label: "Fix board bounds", run: () => fixMissingDimensionsWithPlaceholder() };
+      case 'rev_bom_footprint_led':
+      case 'rev_bom_footprint_mcu':
+        return { label: "Auto-place layout", run: () => autoPlaceComponents() };
       default:
-        return { label: "Draft", variant: "neutral" };
+        return null;
     }
   };
 
-  const blueprintSheets = [
-    { num: 1, name: "Cover / Release Index" },
-    { num: 2, name: "Product Architecture" },
-    { num: 3, name: "Mechanical Outer Shell" },
-    { num: 4, name: "Internal Layout" },
-    { num: 5, name: "Exploded Assembly" },
-    { num: 6, name: "Board / PCB Outline" },
-    { num: 7, name: "Stackup & Constraints" },
-    { num: 8, name: "Component Placement" },
-    { num: 9, name: "Electrical Circuit Pack" },
-    { num: 10, name: "Net Routing" },
-    { num: 11, name: "Power Tree" },
-    { num: 12, name: "Pin Map MCU Interface" },
-    { num: 13, name: "Firmware Architecture" },
-    { num: 14, name: "Testing & Validation" },
-    { num: 15, name: "Manufacturing Handoff" },
-    { num: 16, name: "Missing Files Factory Check" }
-  ];
-
-  // Pipeline configuration
-  const pipelineStages = [
-    {
-      id: 'master',
-      name: 'Blueprint',
-      count: nodes.filter(n => n.type !== 'boundaryNode').length,
-      status: nodes.filter(n => n.type !== 'boundaryNode').length > 0 ? 'Configured' : 'Empty',
-      description: 'Logical system architecture blocks.',
-      actionLabel: null,
-      onAction: null
-    },
-    {
-      id: 'bom',
-      name: 'BOM',
-      count: bom.length,
-      status: bom.length > 0 ? (getSourcingRatio() === 100 ? 'Sourced' : 'In Sourcing') : 'Empty',
-      description: 'Sourcing component registry list.',
-      actionLabel: 'Generate BOM',
-      onAction: generateBOMFromMVP
-    },
-    {
-      id: 'power-budget',
-      name: 'Power',
-      count: powerBudget.length,
-      status: powerBudget.length > 0 ? 'Estimated' : 'Empty',
-      description: 'Duty cycle power loads budget.',
-      actionLabel: 'Generate Power',
-      onAction: generatePowerFromBlueprint
-    },
-    {
-      id: 'pin-map',
-      name: 'Pins',
-      count: pinMap.length,
-      status: pinMap.length > 0 ? 'Mapped' : 'Empty',
-      description: 'MCU signal pin assignments.',
-      actionLabel: 'Generate Pins',
-      onAction: generatePinMapFromBlueprint
-    },
-    {
-      id: 'firmware-plan',
-      name: 'Firmware',
-      count: firmwareTasks.length,
-      status: firmwareTasks.length > 0 ? 'Planned' : 'Empty',
-      description: 'Device state logic and driver tasks.',
-      actionLabel: 'Generate Firmware',
-      onAction: generateFirmwareTasksFromBlueprint
-    },
-    {
-      id: 'board-studio',
-      name: 'Boards',
-      count: boards.length,
-      status: boards.length > 0 ? 'Designed' : 'Empty',
-      description: 'Physical PCB outlines & substrates.',
-      actionLabel: 'Generate Boards',
-      onAction: generateBoardPlanFromProduct
-    },
-    {
-      id: 'circuit-planner',
-      name: 'Circuits',
-      count: circuitBlocks.length,
-      status: circuitBlocks.length > 0 ? 'Configured' : 'Empty',
-      description: 'Functional schematic module blocks.',
-      actionLabel: 'Generate Circuits',
-      onAction: generateCircuitsFromBlueprint
-    },
-    {
-      id: 'board-components',
-      name: 'Components',
-      count: boardComponents.length,
-      status: boardComponents.length > 0 ? 'Placed' : 'Empty',
-      description: 'PCB footprints reference mapping.',
-      actionLabel: 'Map Components',
-      onAction: generateBoardComponentsFromBOM
-    },
-    {
-      id: 'netlist-planner',
-      name: 'Nets',
-      count: nets.length,
-      status: nets.length > 0 ? 'Routed' : 'Empty',
-      description: 'Electronics signaling net connections.',
-      actionLabel: 'Generate Nets',
-      onAction: generateNetsFromPinMap
-    },
-    {
-      id: 'pcb-constraints',
-      name: 'Constraints',
-      count: pcbConstraints.length,
-      status: pcbConstraints.length > 0 ? 'Constrained' : 'Empty',
-      description: 'Trace widths, clearances and bend rules.',
-      actionLabel: 'Generate Rules',
-      onAction: generatePCBConstraintsFromBoard
-    },
-    {
-      id: 'testing',
-      name: 'Tests',
-      count: testing.length,
-      status: testing.length > 0 ? `${getTestPassRatio()}% Passed` : 'Empty',
-      description: 'EVT/DVT prototype testing protocols.',
-      actionLabel: 'Generate Tests',
-      onAction: generateTestsFromMVP
-    },
-    {
-      id: 'mfg-pack',
-      name: 'Checklist',
-      count: manufacturingChecklist.length,
-      status: manufacturingChecklist.length > 0 ? `${getChecklistRatio()}% Complete` : 'Empty',
-      description: 'Pre-layout factory handoff review check.',
-      actionLabel: 'Generate Checklist',
-      onAction: generateManufacturingChecklist
-    }
-  ];
+  const filteredReviews = reviewResults.filter(res => {
+    if (activeTab === 'blockers') return res.severity === 'Blocker' || res.severity === 'Error';
+    if (activeTab === 'warnings') return res.severity === 'Warning';
+    return true;
+  });
 
   return (
-    <div className="flex-1 bg-slate-50 overflow-y-auto p-6 space-y-6 select-none font-sans">
+    <div className="flex-1 bg-slate-950 overflow-y-auto p-6 space-y-6 select-none font-sans text-slate-100">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-slate-950 text-white rounded-lg px-4 py-3.5 shadow-xl max-w-md animate-fade-in flex items-start space-x-3">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-slate-800 text-white rounded-lg px-4 py-3.5 shadow-2xl max-w-md animate-fade-in flex items-start space-x-3 backdrop-blur-md">
           <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider block font-mono text-emerald-300">Plan Generation Successful</span>
-            <p className="text-[11px] font-sans font-medium text-slate-350 leading-relaxed">{toastMessage}</p>
+            <span className="text-[11px] font-bold uppercase tracking-wider block font-mono text-emerald-400">Database Action Triggered</span>
+            <p className="text-[11px] font-sans font-medium text-slate-300 leading-relaxed">{toastMessage}</p>
           </div>
         </div>
       )}
 
-      {/* Hero Header */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
+      {/* Builder Hero Section */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] from-indigo-900/10 via-transparent to-transparent pointer-events-none" />
+        
+        <div className="space-y-3 relative z-10">
           <div className="flex items-center space-x-2.5">
-            <h1 className="text-xl font-black text-slate-800 uppercase tracking-tight font-mono">{projectName}</h1>
-            <Badge variant="neutral" className="uppercase text-[9px] tracking-widest font-mono font-bold py-0.5">
+            <Badge className="bg-indigo-600/30 text-indigo-300 border border-indigo-500/20 uppercase text-[9px] tracking-widest font-mono font-bold py-0.5">
               {templateName || 'Custom Blueprint'}
             </Badge>
+            <span className="text-slate-500 font-mono text-[10px]">V{store.version || "3.0"}</span>
           </div>
-          <p className="text-xs text-slate-550 leading-relaxed max-w-2xl">{description || 'No description added to this project.'}</p>
-        </div>
-
-        <div className="shrink-0 flex space-x-3">
-          <Button
-            onClick={() => setActiveView('blueprint-sheets')}
-            variant="outline"
-            size="sm"
-            icon={<FileText className="w-4 h-4" />}
-          >
-            Open Blueprint Sheets
-          </Button>
-          <Button
-            onClick={() => setActiveView('blueprint-editor')}
-            variant="outline"
-            size="sm"
-            icon={<FileText className="w-4 h-4" />}
-          >
-            Open Blueprint Editor
-          </Button>
-          <Button
-            onClick={() => setActiveView('dossier')}
-            variant="outline"
-            size="sm"
-            icon={<FileText className="w-4 h-4" />}
-          >
-            Preview Dossier
-          </Button>
-          <Button
-            onClick={handleGenerateAll}
-            variant="primary"
-            size="sm"
-            disabled={isGenerating}
-            icon={<RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />}
-          >
-            {isGenerating ? 'Generating...' : 'Generate Full Product Plan'}
-          </Button>
-        </div>
-      </div>
-
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        {[
-          { label: 'Readiness Index', val: `${report.overallScore}/100`, sub: report.overallScore >= 80 ? 'Prototype Ready' : 'In Verification', color: report.overallScore >= 80 ? 'text-emerald-600' : 'text-slate-800' },
-          { label: 'Active PCBs', val: boards.length, sub: 'Board stackups', color: 'text-slate-800' },
-          { label: 'Circuit Modules', val: circuitBlocks.length, sub: 'Functional schematics', color: 'text-slate-800' },
-          { label: 'BOM Components', val: bom.length, sub: `$${bom.reduce((sum, b) => sum + (Number(b.costEstimate) || 0) * (b.quantity || 1), 0).toFixed(2)} Total Cost`, color: 'text-slate-800' },
-          { label: 'Firmware Tasks', val: `${firmwareTasks.filter(t => t.status === 'Done').length}/${firmwareTasks.length}`, sub: 'Completed drivers', color: 'text-slate-800' },
-          { label: 'Critical Blockers', val: report.blockers.length, sub: 'Requires immediate review', color: report.blockers.length > 0 ? 'text-rose-600 font-extrabold' : 'text-slate-800' }
-        ].map((m, idx) => (
-          <div key={idx} className="bg-white border border-slate-200 rounded-lg p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <span className="text-[9px] font-bold text-slate-455 uppercase tracking-widest block font-mono">{m.label}</span>
-            <span className={`text-2xl font-black mt-1.5 block font-mono ${m.color}`}>{m.val}</span>
-            <span className="text-[10px] text-slate-450 leading-relaxed block mt-1">{m.sub}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Gating Status Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        {[
-          { 
-            name: "Planning Gate", 
-            ready: report.isPlanningReady, 
-            desc: "Blueprints planning verification (BOM, Pin Map, Power, FW).", 
-            reqs: "BOM, Power, Pin Map, FW Tasks defined." 
-          },
-          { 
-            name: "Blueprint Pack", 
-            ready: report.isBlueprintPackReady, 
-            desc: "Blueprint drawing pack verification and schema locks.", 
-            reqs: "Planning gate passed and active boards configured." 
-          },
-          { 
-            name: "CAD Editor Layout", 
-            ready: report.isEditorLayoutReady, 
-            desc: "In-app layout placement editor coordinates generation.", 
-            reqs: "Active drawing components/routing in editor canvas." 
-          },
-          { 
-            name: "Prototype Spin", 
-            ready: report.canMoveToPrototype, 
-            desc: "Physical component procurement and sample verification run.",
-            reqs: "Drawing pack, layouts, testing configured, readiness >=70, 0 blockers."
-          },
-          { 
-            name: "Factory Handoff", 
-            ready: report.canMoveToFactoryHandoff, 
-            desc: "Final assembly and firmware manufacturing readiness sign-off.",
-            reqs: "Prototype gate passed, factory checklist items 100% completed, readiness >=85, 0 blockers."
-          },
-          { 
-            name: "Direct Fabrication", 
-            ready: report.canMoveToFabrication, 
-            desc: "Production Gerber artwork, NC drill files and assembly map release.", 
-            reqs: "Handoff gate passed, required external files verified (Gerber, Drill, Schematic, BOM, CPL, DFM), 0 blockers." 
-          }
-        ].map((gate, idx) => (
-          <div key={idx} className={`border rounded-xl p-4.5 shadow-sm flex flex-col justify-between space-y-3 bg-white hover:border-slate-350 transition-all ${
-            gate.ready 
-              ? 'border-emerald-250 bg-emerald-50/10' 
-              : 'border-slate-200'
-          }`}>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider font-mono text-slate-800 truncate" title={gate.name}>{gate.name}</span>
-                <span className={`px-1.5 py-0.25 rounded text-[8px] font-bold uppercase tracking-wider font-mono border ${
-                  gate.ready 
-                    ? 'bg-emerald-100 text-emerald-850 border-emerald-200' 
-                    : 'bg-slate-100 text-slate-455 border-slate-200'
-                }`}>
-                  {gate.ready ? 'PASSED' : 'LOCKED'}
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-550 leading-normal font-sans">{gate.desc}</p>
-            </div>
-            
-            <div className="bg-slate-50 border border-slate-150 p-2 rounded text-[8px] text-slate-400 leading-relaxed font-mono">
-              <strong>Check Criteria</strong>: {gate.reqs}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Blueprint Pack Readiness Check Grid */}
-      <Card className="bg-white border border-slate-200 shadow-sm font-mono text-xs">
-        <CardHeader className="bg-slate-50/50 border-b border-slate-150">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <CardTitle>Blueprint Pack Readiness Check</CardTitle>
-              <p className="text-[10px] text-slate-450">Review layout completion tags and statistics for all 16 engineering sheets.</p>
-            </div>
-            <Button
-              onClick={() => setActiveView('blueprint-sheets')}
-              variant="outline"
-              size="xs"
-            >
-              Open Drawing Pack
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            {blueprintSheets.map(s => {
-              const statusInfo = getSheetStatus(s.num);
-              return (
-                <div 
-                  key={s.num} 
-                  onClick={() => {
-                    setActiveView('blueprint-sheets');
-                  }}
-                  className="border border-slate-200 bg-white hover:bg-slate-50/50 p-2.5 rounded flex items-center justify-between transition-all cursor-pointer select-none"
-                >
-                  <span className="text-[9.5px] font-bold text-slate-700 truncate w-[70%]">
-                    SH {s.num.toString().padStart(2, '0')}: {s.name}
-                  </span>
-                  <Badge variant={statusInfo.variant} className="scale-75 shrink-0 -mr-1">
-                    {statusInfo.label}
-                  </Badge>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Coverage Overview Grid */}
-      {(() => {
-        const totalLayoutObjs = Object.values(editorLayouts || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0);
-        const exportCheck = [
-          { label: "Layouts Config", ready: totalLayoutObjs > 0 },
-          { label: "Placements CSV", ready: boardComponents.length > 0 },
-          { label: "Schematic JSON", ready: circuitBlocks.length > 0 },
-          { label: "Mechanical JSON", ready: (editorLayouts.mechanical?.length || 0) > 0 },
-          { label: "Signaling Nets", ready: nets.length > 0 },
-          { label: "MCU Pin Map", ready: pinMap.length > 0 },
-          { label: "Firmware Tasks", ready: firmwareTasks.length > 0 },
-          { label: "Testing Protocols", ready: testing.length > 0 },
-          { label: "Factory Check", ready: Object.keys(factoryFiles).length > 0 },
-          { label: "Handoff Manifest", ready: report.overallScore > 0 }
-        ];
-        const readyExportsCount = exportCheck.filter(e => e.ready).length;
-
-        const fileStatuses = Object.values(factoryFiles || {}) as { status: string }[];
-        const countsByStatus = {
-          'Verified': fileStatuses.filter(f => f.status === 'Verified').length,
-          'Needs Final Review': fileStatuses.filter(f => f.status === 'Needs Final Review').length,
-          'Generated In App': fileStatuses.filter(f => f.status === 'Generated In App').length,
-          'Conceptual': fileStatuses.filter(f => f.status === 'Conceptual').length,
-          'Not Generated': fileStatuses.filter(f => f.status === 'Not Generated').length,
-        };
-
-        const statusColors: Record<string, string> = {
-          'Verified': 'text-emerald-600 bg-emerald-50 border-emerald-100',
-          'Needs Final Review': 'text-amber-600 bg-amber-50 border-amber-100',
-          'Generated In App': 'text-indigo-655 bg-indigo-50 border-indigo-100',
-          'Conceptual': 'text-blue-600 bg-blue-50 border-blue-100',
-          'Not Generated': 'text-slate-450 bg-slate-50 border-slate-100'
-        };
-
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Editor Coverage Card */}
-            <Card className="bg-white border border-slate-200 shadow-sm flex flex-col justify-between font-mono text-xs">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-150 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <CardTitle className="text-xs font-bold text-slate-800">CAD Editor Coverage</CardTitle>
-                    <p className="text-[10px] text-slate-450">Object statistics across layout modes.</p>
-                  </div>
-                  <Badge variant={totalLayoutObjs > 0 ? 'success' : 'neutral'} className="scale-90 shrink-0">
-                    {totalLayoutObjs > 0 ? 'Draft Active' : 'Empty Canvas'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 flex-1 flex flex-col justify-between space-y-4">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] text-slate-650">
-                  {[
-                    { label: 'Product blocks', count: editorLayouts.product?.length || 0 },
-                    { label: 'Mechanical bounds', count: editorLayouts.mechanical?.length || 0 },
-                    { label: 'Assembly steps', count: editorLayouts.assembly?.length || 0 },
-                    { label: 'PCB Outlines', count: editorLayouts.board?.length || 0 },
-                    { label: 'Footprints mapped', count: editorLayouts.components?.length || 0 },
-                    { label: 'Schematic modules', count: editorLayouts.circuits?.length || 0 },
-                    { label: 'Net routing tracks', count: editorLayouts.nets?.length || 0 },
-                    { label: 'MCU Pin maps', count: editorLayouts.pins?.length || 0 },
-                  ].map((c, idx) => (
-                    <div key={idx} className="flex justify-between border-b border-slate-100 pb-1">
-                      <span className="truncate w-[75%] text-slate-500 font-sans">{c.label}</span>
-                      <span className="font-bold font-mono text-slate-800">{c.count}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between font-sans">
-                  <span className="text-[10px] font-bold text-slate-700">Total drafted: {totalLayoutObjs} objects</span>
-                  <button 
-                    onClick={() => setActiveView('blueprint-editor')}
-                    className="flex items-center space-x-1 px-2.5 py-1 bg-slate-900 hover:bg-slate-855 text-white rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
-                  >
-                    <span>Open Canvas</span>
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Native Export Coverage Card */}
-            <Card className="bg-white border border-slate-200 shadow-sm flex flex-col justify-between font-mono text-xs">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-150 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <CardTitle className="text-xs font-bold text-slate-800">Native Export Coverage</CardTitle>
-                    <p className="text-[10px] text-slate-450">Active serializers compile readiness.</p>
-                  </div>
-                  <Badge variant={readyExportsCount === 10 ? 'success' : 'neutral'} className="scale-90 shrink-0">
-                    {readyExportsCount}/10 Serializers
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 flex-1 flex flex-col justify-between space-y-4">
-                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[9.5px]">
-                  {exportCheck.map((e, idx) => (
-                    <div key={idx} className="flex items-center space-x-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${e.ready ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
-                      <span className="text-slate-600 truncate font-sans">{e.label}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between font-sans">
-                  <span className="text-[10px] font-bold text-slate-700">Serializers active</span>
-                  <button 
-                    onClick={() => setActiveView('exports')}
-                    className="flex items-center space-x-1 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-750 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
-                  >
-                    <Download className="w-3 h-3 text-slate-400 shrink-0" />
-                    <span>Export Center</span>
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Factory Production Files Checklist Card */}
-            <Card className="bg-white border border-slate-200 shadow-sm flex flex-col justify-between font-mono text-xs">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-150 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <CardTitle className="text-xs font-bold text-slate-800">Factory Files Status</CardTitle>
-                    <p className="text-[10px] text-slate-450">Review physical file check validations.</p>
-                  </div>
-                  <Badge variant={countsByStatus['Verified'] >= 5 ? 'success' : 'neutral'} className="scale-90 shrink-0">
-                    {countsByStatus['Verified']} Verified
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 flex-1 flex flex-col justify-between space-y-4">
-                <div className="space-y-2 text-[10px]">
-                  {[
-                    { label: 'Gerber ZIP Copper Artwork', status: factoryFiles.gerberZip?.status || 'Not Generated' },
-                    { label: 'Excellon Drill Hole Lists', status: factoryFiles.drillFiles?.status || 'Not Generated' },
-                    { label: 'Electrical Schematic PDF', status: factoryFiles.schematicPdf?.status || 'Not Generated' },
-                    { label: 'Bill of Materials (BOM) CSV', status: factoryFiles.bomCsv?.status || 'Not Generated' },
-                    { label: 'Pick & Place Coordinate CSV', status: factoryFiles.cplCsv?.status || 'Not Generated' },
-                    { label: 'DFM Assembly Review Report', status: factoryFiles.dfmReport?.status || 'Not Generated' },
-                  ].map((f, idx) => {
-                    const badgeStyle = statusColors[f.status] || 'text-slate-500 bg-slate-50 border-slate-100';
-                    return (
-                      <div key={idx} className="flex items-center justify-between border-b border-slate-50 pb-1">
-                        <span className="text-slate-550 truncate font-sans w-[60%]">{f.label}</span>
-                        <span className={`text-[8px] font-bold font-mono px-1.5 py-0.5 border rounded uppercase shrink-0 ${badgeStyle}`}>
-                          {f.status}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between font-sans">
-                  <span className="text-[9px] text-slate-450">Verification Gates release</span>
-                  <button 
-                    onClick={() => setActiveView('mfg-pack')}
-                    className="flex items-center space-x-1 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-750 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
-                  >
-                    <span>Handoff Pack</span>
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
-          </div>
-        );
-      })()}
-
-      {/* Engineering Pipeline & Disciplines */}
-      <Card className="bg-white border border-slate-200 shadow-sm">
-        <CardHeader className="bg-slate-50/50 border-b border-slate-150">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <CardTitle>Engineering Pipeline & Disciplines</CardTitle>
-              <p className="text-[10px] text-slate-450">Track, sync, and generate downstream planning lists from logical architectures.</p>
-            </div>
-            <span className="text-[9px] font-bold uppercase tracking-widest font-mono text-slate-450 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
-              12 Active Disciplines
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
+          <h1 className="text-2xl font-black text-white uppercase tracking-tight font-mono">{projectName}</h1>
+          <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">{description || 'No description added to this project.'}</p>
           
-          {/* Timeline Pipeline Graphic */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5">
-            {pipelineStages.map((stage, idx) => {
-              const isEmpty = stage.status === 'Empty';
-              
-              return (
-                <div key={idx} className="bg-slate-50/50 border border-slate-200 rounded-xl p-4.5 flex flex-col justify-between space-y-4 hover:border-slate-350 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.01)] group relative">
-                  
-                  {/* Arrow Indicator on Desktop */}
-                  {idx < pipelineStages.length - 1 && (
-                    <div className="hidden xl:block absolute -right-3.5 top-[50%] -translate-y-[50%] z-10 bg-slate-50 text-slate-350 p-0.5 rounded-full border border-slate-200">
-                      <ArrowRight className="w-3 h-3" />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1.5 text-[10.5px]">
+            <div className="flex items-center space-x-1.5 bg-slate-950/40 px-2.5 py-1 rounded border border-slate-850">
+              <span className="text-slate-500">Current Stage:</span>
+              <span className="text-indigo-400 font-bold uppercase font-mono">{stageInfo.stage}</span>
+            </div>
+            <div className="flex items-center space-x-1.5 bg-slate-950/40 px-2.5 py-1 rounded border border-slate-850">
+              <span className="text-slate-500">Readiness:</span>
+              <span className="text-emerald-450 font-black font-mono">{report.overallScore}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="shrink-0 flex flex-wrap gap-2.5 relative z-10 max-w-lg">
+          <button
+            onClick={handleGenerateAll}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] uppercase font-black tracking-wider transition-all cursor-pointer shadow-lg"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
+            <span>Generate Plan</span>
+          </button>
+          <button
+            onClick={handleGenerateLayouts}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded text-[10px] uppercase font-black tracking-wider transition-all cursor-pointer"
+          >
+            <Hammer className="w-3.5 h-3.5" />
+            <span>Gen Layouts</span>
+          </button>
+          <button
+            onClick={() => store.runFullDesignReview()}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded text-[10px] uppercase font-black tracking-wider transition-all cursor-pointer"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Design Review</span>
+          </button>
+          <button
+            onClick={() => setActiveView('blueprint-editor')}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] uppercase font-black tracking-wider transition-all cursor-pointer shadow-lg"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Canvas</span>
+          </button>
+          <button
+            onClick={() => setActiveView('blueprint-sheets')}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded text-[10px] uppercase font-black tracking-wider transition-all cursor-pointer"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Sheets</span>
+          </button>
+          <button
+            onClick={() => setActiveView('exports')}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded text-[10px] uppercase font-black tracking-wider transition-all cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Pack</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Inline Pipeline Visualizer */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl">
+        <h2 className="text-[8.5px] font-black uppercase tracking-widest text-slate-500 mb-3 px-1 font-mono">
+          Engineering Flow Pipeline
+        </h2>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-2 overflow-x-auto scrollbar-thin pb-1">
+          {[
+            { step: "Idea", desc: "Template pick", active: true },
+            { step: "Architecture", desc: "Subsystems block map", active: nodes.length > 0 },
+            { step: "Mechanical", desc: "Enclosure layout bounds", active: (editorLayouts.mechanical?.length || 0) > 0 },
+            { step: "Boards", desc: "PCB layer substrate config", active: boards.length > 0 },
+            { step: "Schematic", desc: "Logic graph and modules", active: circuitBlocks.length > 0 },
+            { step: "Layout", desc: "Component placement", active: boardComponents.length > 0 },
+            { step: "Routing", desc: "Signal net traces routing", active: traces.length > 0 },
+            { step: "Firmware", desc: "Event loop driver loops", active: firmwareTasks.length > 0 },
+            { step: "Testing", desc: "QA diagnosic checklists", active: testing.length > 0 },
+            { step: "Factory Package", desc: "Gerber drill release package", active: report.canMoveToFabrication }
+          ].map((item, idx) => {
+            const isCompleted = item.active;
+            return (
+              <React.Fragment key={idx}>
+                <div 
+                  onClick={() => {
+                    const viewMap: Record<string, string> = {
+                      "Idea": "dashboard",
+                      "Architecture": "electronics",
+                      "Mechanical": "outer",
+                      "Boards": "board-studio",
+                      "Schematic": "circuit-planner",
+                      "Layout": "board-components",
+                      "Routing": "netlist-planner",
+                      "Firmware": "firmware-plan",
+                      "Testing": "testing",
+                      "Factory Package": "exports"
+                    };
+                    setActiveView(viewMap[item.step] || "dashboard");
+                  }}
+                  className={`flex-1 min-w-[100px] border rounded-lg p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative ${
+                    isCompleted 
+                      ? 'border-indigo-800 bg-indigo-950/20 text-white hover:bg-indigo-950/40' 
+                      : 'border-slate-800 bg-slate-950/30 text-slate-500'
+                  }`}
+                >
+                  {isCompleted && (
+                    <div className="absolute -top-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow">
+                      <Check className="w-2 h-2 stroke-[3]" />
                     </div>
                   )}
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-black uppercase tracking-wider text-slate-800 font-mono">{idx + 1}. {stage.name}</span>
-                      <span className={`px-1.5 py-0.25 rounded text-[8px] font-bold uppercase font-mono ${
-                        isEmpty 
-                          ? 'bg-rose-100 text-rose-800 border border-rose-200' 
-                          : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                      }`}>
-                        {stage.status}
-                      </span>
-                    </div>
-                    <span className="text-xs font-black text-slate-650 font-mono block">
-                      {stage.count} {stage.count === 1 ? 'item' : 'items'}
-                    </span>
-                    <p className="text-[10px] text-slate-455 leading-relaxed font-sans">{stage.description}</p>
-                  </div>
-
-                  <div className="space-y-2 pt-2 border-t border-slate-150">
-                    <button
-                      onClick={() => setActiveView(stage.id)}
-                      className="w-full flex items-center justify-center space-x-1 py-1.5 bg-white border border-slate-200 hover:border-slate-450 hover:bg-slate-50 text-slate-650 rounded text-[10px] font-bold transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                    >
-                      <span>Open View</span>
-                    </button>
-                    
-                    {stage.onAction && isEmpty && (
-                      <button
-                        onClick={() => {
-                          stage.onAction!();
-                          setToastMessage(`Successfully generated ${stage.name} items from blueprints.`);
-                          setTimeout(() => setToastMessage(null), 5000);
-                        }}
-                        className="w-full flex items-center justify-center space-x-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition-all cursor-pointer border border-emerald-750 shadow-sm"
-                      >
-                        <RefreshCw className="w-3 h-3 shrink-0" />
-                        <span>{stage.actionLabel}</span>
-                      </button>
-                    )}
-                  </div>
+                  <span className="text-[9.5px] font-bold uppercase tracking-wider font-mono">{item.step}</span>
+                  <span className="text-[7.5px] text-slate-500 leading-none mt-1 truncate max-w-full font-sans">{item.desc}</span>
                 </div>
-              );
-            })}
-          </div>
+                {idx < 9 && (
+                  <ChevronRight className={`w-3.5 h-3.5 hidden md:block shrink-0 ${isCompleted ? 'text-indigo-800' : 'text-slate-850'}`} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
 
-        </CardContent>
-      </Card>
+      {/* 9 Pipeline Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4.5">
+        {pipelineCards.map((card, idx) => {
+          const isOk = card.status !== "Missing";
+          return (
+            <div key={idx} className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-4.5 flex flex-col justify-between space-y-4 shadow-xl transition-all group">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">
+                    {idx + 1}. {card.title}
+                  </span>
+                  <span className={`px-1.5 py-0.25 rounded text-[8px] font-bold uppercase font-mono border ${
+                    isOk 
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' 
+                      : 'bg-rose-500/10 text-rose-400 border-rose-500/25'
+                  }`}>
+                    {card.status}
+                  </span>
+                </div>
+                
+                <div className="flex items-baseline space-x-1.5">
+                  <span className="text-xl font-bold font-mono text-white">{card.count}</span>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wide font-mono">{card.unit}</span>
+                </div>
 
-      {/* Critical Warnings & Suggestions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {card.missing ? (
+                  <p className="text-[9.5px] text-amber-400/90 leading-relaxed font-mono flex items-center space-x-1">
+                    <AlertTriangle className="w-3 h-3 shrink-0 text-amber-500" />
+                    <span>Assumption: {card.missing}</span>
+                  </p>
+                ) : (
+                  <p className="text-[9.5px] text-slate-400 leading-relaxed font-sans">
+                    Fully configured database records.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-850">
+                <button
+                  onClick={() => setActiveView(card.viewKey)}
+                  className="w-full py-1.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 rounded text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                >
+                  Edit Model
+                </button>
+                <button
+                  onClick={() => {
+                    card.fixAction();
+                    setToastMessage(`Triggered automatic V3 builder routine: ${card.fixLabel}`);
+                  }}
+                  className="w-full py-1.5 bg-indigo-600/35 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-200 rounded text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center truncate px-1"
+                  title={card.fixLabel}
+                >
+                  {card.fixLabel.split(' ')[0]} Fix
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bottom Layout - Next Recommended Priority Actions & Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Next Gating Action List */}
-        <Card className="bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-150">
-            <div className="flex items-center space-x-2">
-              <CheckSquare className="w-4 h-4 text-emerald-600" />
-              <CardTitle>Next Recommended Priority Actions</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="p-4 space-y-2.5">
-            {report.nextActions.map((action, idx) => {
-              const isBlocker = action.startsWith('Blocker:');
-              const isWarning = action.startsWith('Warning:');
-              const view = getViewForAction(action);
-              
-              return (
-                <div key={idx} className="flex items-center justify-between bg-slate-50/50 p-2.5 rounded border border-slate-100 group/item hover:bg-slate-50 transition-all">
-                  <div className="flex items-start space-x-2.5">
-                    <Badge variant={isBlocker ? 'error' : isWarning ? 'warning' : 'neutral'} className="shrink-0 mt-0.5">
-                      {isBlocker ? 'Blocker' : isWarning ? 'Warning' : 'Info'}
-                    </Badge>
-                    <span className="text-[11px] text-slate-700 leading-normal font-sans font-medium">
-                      {action.replace(/^(Blocker|Warning|Suggestion):\s*/, '')}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setActiveView(view)}
-                    className="flex items-center space-x-1 px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-650 rounded text-[9px] font-bold font-mono transition-all opacity-70 group-hover/item:opacity-100 cursor-pointer"
-                  >
-                    <span>Fix</span>
-                    <ArrowRight className="w-2.5 h-2.5 shrink-0 text-slate-400" />
-                  </button>
+        {/* Next Gating Action List (7 columns) */}
+        <div className="lg:col-span-8 space-y-4">
+          <Card className="bg-slate-900 border border-slate-800 shadow-xl flex flex-col justify-between">
+            <CardHeader className="bg-slate-900/60 border-b border-slate-800 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center space-x-2">
+                  <CheckSquare className="w-4 h-4 text-emerald-500" />
+                  <CardTitle className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                    Live ERC/DRC Review Results ({filteredReviews.length})
+                  </CardTitle>
                 </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+                
+                {/* Severity tabs */}
+                <div className="flex space-x-1 bg-slate-950 p-1 rounded border border-slate-850 self-start">
+                  {(['all', 'blockers', 'warnings'] as const).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-2.5 py-1 rounded text-[8.5px] uppercase font-bold tracking-wider font-mono transition-all cursor-pointer ${
+                        activeTab === tab 
+                          ? 'bg-slate-800 text-white font-bold' 
+                          : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3 max-h-[400px] overflow-y-auto scrollbar-thin">
+              {filteredReviews.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 space-y-2">
+                  <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto opacity-70" />
+                  <p className="text-[10px] uppercase font-bold tracking-wider font-mono">0 review violations flagged</p>
+                  <p className="text-[10.5px] font-sans text-slate-450">ERC electrical parameters and layout DRC paths look safe.</p>
+                </div>
+              ) : (
+                filteredReviews.map((action, idx) => {
+                  const resolver = getActionResolver(action.id);
+                  const isError = action.severity === 'Error' || action.severity === 'Blocker';
+                  
+                  return (
+                    <div key={action.id || idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/60 p-3 rounded border border-slate-850 hover:bg-slate-950 transition-all">
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-1.5 py-0.25 rounded text-[8px] font-extrabold font-mono border uppercase tracking-wider ${
+                            isError
+                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/25'
+                              : 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+                          }`}>
+                            {action.severity}
+                          </span>
+                          <span className="text-[10.5px] font-bold text-slate-300 font-mono block">
+                            {action.title}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-450 leading-relaxed font-sans max-w-xl">
+                          {action.description}
+                        </p>
+                      </div>
 
-        {/* Workspace Position & Limitations */}
-        <Card className="bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-150">
-            <div className="flex items-center space-x-2">
-              <Info className="w-4 h-4 text-indigo-500" />
-              <CardTitle>Workspace Position & Limitations</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="p-5 space-y-3.5 font-sans leading-relaxed text-[11px] text-slate-600">
-            <p>
-              Hardware Studio acts as a **logical planning and ECAD preparation layer** before laying out copper or mechanical frames. It is designed to capture components, footprints, pins, nets, power, and testing protocols.
-            </p>
-            
-            <div className="space-y-1.5 border-t border-slate-100 pt-3">
-              <span className="font-bold text-slate-800 uppercase text-[9px] tracking-wider font-mono block">⚠️ Important Disclaimers:</span>
-              <ul className="list-disc pl-4 space-y-1 text-slate-500">
-                <li>This tool does **NOT** replace a certified hardware, electronics, or compliance safety engineer.</li>
-                <li>This tool does **NOT** output production Gerber files. Use exported netlists and constraints to guide KiCad/Altium routing.</li>
-                <li>Gating release locks are heuristics. Final mechanical, thermal, and electrical sign-offs require professional engineering reviews.</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+                      <div className="shrink-0 flex items-center space-x-2 self-end sm:self-center">
+                        <button
+                          onClick={() => {
+                            if (action.linkedObjectType) {
+                              const viewMap: Record<string, string> = {
+                                "node": "electronics",
+                                "mechanical-zone": "outer",
+                                "assembly-layer": "internal",
+                                "board": "board-studio",
+                                "component": "board-components",
+                                "circuit": "circuit-planner",
+                                "net": "netlist-planner",
+                                "pin": "pin-map",
+                                "power": "power-budget",
+                                "firmware": "firmware-plan",
+                                "test": "testing",
+                                "checklist": "mfg-pack",
+                                "factory-file": "exports",
+                                "trace": "netlist-planner"
+                              };
+                              setActiveView(viewMap[action.linkedObjectType] || "blueprint-editor");
+                            } else {
+                              setActiveView("blueprint-editor");
+                            }
+                          }}
+                          className="flex items-center space-x-1 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-850 text-slate-350 hover:text-white rounded text-[9.5px] font-bold transition-all cursor-pointer font-mono"
+                        >
+                          <span>Inspect</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                        
+                        {resolver && (
+                          <button
+                            onClick={() => {
+                              resolver.run();
+                              setToastMessage(`Auto-fix successfully applied: ${resolver.label}`);
+                            }}
+                            className="flex items-center space-x-1 px-2.5 py-1 bg-emerald-600/35 hover:bg-emerald-600/50 border border-emerald-500/30 text-emerald-250 rounded text-[9.5px] font-bold transition-all cursor-pointer font-mono"
+                          >
+                            <span>Fix</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Workspace Position & Limitations (4 columns) */}
+        <div className="lg:col-span-4 space-y-4">
+          <Card className="bg-slate-900 border border-slate-800 shadow-xl flex flex-col justify-between">
+            <CardHeader className="bg-slate-900/60 border-b border-slate-800 p-4">
+              <div className="flex items-center space-x-2">
+                <Info className="w-4 h-4 text-indigo-400" />
+                <CardTitle className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                  Hardware Studio Info
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4 font-sans leading-relaxed text-[11px] text-slate-400">
+              <p>
+                A native in-app hardware/product engineering workspace to draft subsystems, enclosure volumes, stackup orders, logical circuits, net widths, pin mappings, and testing protocols.
+              </p>
+              
+              <div className="space-y-2 bg-slate-950 p-3.5 rounded border border-slate-850 text-[10px] text-slate-500 font-mono">
+                <div className="flex justify-between border-b border-slate-900 pb-1">
+                  <span>WORKSPACE:</span>
+                  <span className="text-slate-300">Local-First</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-900 pb-1 mt-1">
+                  <span>COMPILER:</span>
+                  <span className="text-emerald-450 font-bold">READY</span>
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span>DFM SIGN-OFF:</span>
+                  <span className="text-amber-450 font-bold">REQUIRED</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t border-slate-850 pt-4 font-sans">
+                <span className="font-extrabold text-slate-300 uppercase text-[9.5px] tracking-wider block font-mono">⚠️ Integrity Safeguards:</span>
+                <ul className="list-disc pl-4 space-y-1.5 text-slate-455 text-[10.5px]">
+                  <li>Generated Gerber RS-274X, Excellon drill files, pick-and-place lists, and BOMs are drafts only.</li>
+                  <li><strong>Human review</strong> and fab-house DFM validation must be performed before ordering boards.</li>
+                  <li>Compliance (FCC/CE) and thermal profiles must be checked in physical layout tools.</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
       </div>
 
     </div>

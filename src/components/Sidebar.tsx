@@ -41,47 +41,48 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
       title: "Overview",
       items: [
         { id: 'dashboard', label: 'Project Dashboard', icon: LayoutDashboard },
-        { id: 'readiness', label: 'Readiness Review', icon: FileCheck2 },
-        { id: 'dossier', label: 'Blueprint Dossier', icon: FileText },
-        { id: 'blueprint-sheets', label: 'Blueprint Sheets', icon: FileText },
         { id: 'blueprint-editor', label: 'Blueprint Editor', icon: Palette },
+        { id: 'blueprint-sheets', label: 'Blueprint Sheets', icon: FileText },
+        { id: 'readiness', label: 'Readiness Review', icon: FileCheck2 },
+        { id: 'exports', label: 'Export Center', icon: Download },
       ]
     },
     {
-      title: "Product Blueprint",
+      title: "Product Definition",
       items: [
         { id: 'master', label: 'Master Blueprint', icon: Eye },
-        { id: 'outer', label: 'Outer Design', icon: Palette },
-        { id: 'internal', label: 'Internal Layout', icon: Layout },
-        { id: 'electronics', label: 'Electronics Architecture', icon: Cpu },
-        { id: 'system-alpha', label: 'System Alpha Integration', icon: Cloud },
+        { id: 'electronics', label: 'Architecture', icon: Cpu },
+        { id: 'outer', label: 'Mechanical Layout', icon: Palette },
+        { id: 'internal', label: 'Assembly Layout', icon: Layout },
       ]
     },
     {
-      title: "Engineering Prep",
-      items: [
-        { id: 'bom', label: 'BOM', icon: Table },
-        { id: 'power-budget', label: 'Power Budget', icon: Zap },
-        { id: 'pin-map', label: 'Pin Map', icon: Cpu },
-        { id: 'firmware-plan', label: 'Firmware Plan', icon: Binary },
-        { id: 'testing', label: 'Testing Plan', icon: CheckSquare },
-      ]
-    },
-    {
-      title: "Board Studio / ECAD Prep",
+      title: "Electronics",
       items: [
         { id: 'board-studio', label: 'Boards', icon: Layers },
-        { id: 'circuit-planner', label: 'Circuits', icon: Boxes },
         { id: 'board-components', label: 'Components', icon: Cpu },
+        { id: 'circuit-planner', label: 'Circuits', icon: Boxes },
         { id: 'netlist-planner', label: 'Nets', icon: Network },
-        { id: 'pcb-constraints', label: 'PCB Constraints', icon: Ruler },
+        { id: 'pin-map', label: 'Pin Map', icon: Cpu },
+        { id: 'power-budget', label: 'Power Budget', icon: Zap },
+        { id: 'pcb-constraints', label: 'PCB Rules', icon: Ruler },
+      ]
+    },
+    {
+      title: "Firmware & Validation",
+      items: [
+        { id: 'firmware-plan', label: 'Firmware Plan', icon: Binary },
+        { id: 'testing', label: 'Testing Plan', icon: CheckSquare },
         { id: 'mfg-pack', label: 'Manufacturing Checklist', icon: Package },
       ]
     },
     {
-      title: "Exports",
+      title: "Factory Package",
       items: [
-        { id: 'exports', label: 'Export Center', icon: Download },
+        { id: 'exports', label: 'Factory Files', icon: Download },
+        { id: 'exports', label: 'Handoff Manifest', icon: FileText },
+        { id: 'readiness', label: 'Missing Files', icon: FileCheck2 },
+        { id: 'readiness', label: 'Fabrication Review', icon: FileCheck2 },
       ]
     }
   ];

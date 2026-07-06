@@ -201,6 +201,152 @@ export interface ManufacturingChecklistItem {
   blockingReason?: string;
 }
 
+export interface MechanicalZone {
+  id: string;
+  name: string;
+  zoneType: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  material: string;
+  dimensionNote: string;
+  linkedBoardId?: string;
+  linkedComponentId?: string;
+  notes: string;
+  warnings?: string[];
+}
+
+export interface AssemblyLayer {
+  id: string;
+  name: string;
+  order: number;
+  layerType: string;
+  material: string;
+  fasteningMethod: string;
+  inspectionNote: string;
+  linkedObjects?: string[];
+  notes: string;
+}
+
+export interface SchematicSymbol {
+  id: string;
+  circuitId?: string;
+  componentId?: string;
+  symbolType: string;
+  referenceDesignator?: string;
+  label?: string;
+  x?: number;
+  y?: number;
+  pins?: { pinNum: string; label: string; direction: string; netId?: string }[];
+  rotation?: number;
+  notes?: string;
+}
+
+export interface SchematicConnection {
+  id: string;
+  sourceSymbolId: string;
+  sourcePin?: string;
+  targetSymbolId: string;
+  targetPin?: string;
+  netId?: string;
+  label?: string;
+  connectionType?: string;
+}
+
+export interface PcbLayer {
+  id: string;
+  boardId: string;
+  name: string;
+  type: 'Copper' | 'Prepreg' | 'Core' | 'Silkscreen' | 'SolderMask';
+  order: number;
+  copper?: boolean;
+  thicknessUm?: number;
+  visible?: boolean;
+  colorLabel?: string;
+}
+
+export interface BoardOutline {
+  id: string;
+  boardId: string;
+  points?: { x: number; y: number }[];
+  width?: number;
+  height?: number;
+  units?: 'mm' | 'mil';
+  cornerRadius?: number;
+  notes?: string;
+}
+
+export interface CopperShape {
+  id: string;
+  boardId: string;
+  layerId?: string;
+  netId?: string;
+  shapeType?: 'Polygon' | 'Rectangle' | 'Circle';
+  points?: { x: number; y: number }[];
+  width?: number;
+  clearance?: number;
+  notes?: string;
+}
+
+export interface Trace {
+  id: string;
+  boardId: string;
+  layerId?: string;
+  netId?: string;
+  points?: { x: number; y: number }[];
+  width?: number;
+  viaIds?: string[];
+  locked?: boolean;
+  lengthEstimate?: number;
+  impedanceNote?: string;
+}
+
+export interface Via {
+  id: string;
+  boardId: string;
+  x?: number;
+  y?: number;
+  drillDiameter?: number;
+  outerDiameter?: number;
+  netId?: string;
+  fromLayer?: string;
+  toLayer?: string;
+}
+
+export interface DrillHole {
+  id: string;
+  boardId: string;
+  x?: number;
+  y?: number;
+  diameter?: number;
+  plated?: boolean;
+  purpose?: string;
+}
+
+export interface PcbRule {
+  id: string;
+  boardId: string;
+  ruleType: string;
+  value?: string;
+  unit?: string;
+  severity?: 'Info' | 'Warning' | 'Critical';
+  description?: string;
+}
+
+export interface ReviewResult {
+  id: string;
+  category: string;
+  severity: 'Info' | 'Warning' | 'Error' | 'Blocker';
+  title: string;
+  description: string;
+  linkedObjectType: string;
+  linkedObjectId: string;
+  suggestedFix: string;
+  autoFixAvailable?: boolean;
+  status: 'Open' | 'Fixed' | 'Waived';
+}
+
 export interface Project {
   id: string;
   projectName: string;
@@ -256,6 +402,23 @@ export interface Project {
     firmwareHex?: FactoryFileStatus;
     flashingGuide?: FactoryFileStatus;
   };
+  
+  // V3 models
+  productType?: string;
+  targetUse?: string;
+  mechanicalZones?: MechanicalZone[];
+  assemblyLayers?: AssemblyLayer[];
+  schematicSymbols?: SchematicSymbol[];
+  schematicConnections?: SchematicConnection[];
+  pcbLayers?: PcbLayer[];
+  copperShapes?: CopperShape[];
+  traces?: Trace[];
+  vias?: Via[];
+  drillHoles?: DrillHole[];
+  boardOutlines?: BoardOutline[];
+  pcbRules?: PcbRule[];
+  reviewResults?: ReviewResult[];
+  exportHistory?: string[];
 }
 
 export type EditorMode =
@@ -329,6 +492,8 @@ export type FactoryFileStatus = {
   source?: "Hardware Studio" | "KiCad" | "Altium" | "EasyEDA" | "Fusion" | "Onshape" | "SolidWorks" | "External";
   fileName?: string;
   lastUpdated?: string;
+  key?: string;
+  label?: string;
+  generatedBy?: string;
+  requiresReview?: boolean;
 };
-
-

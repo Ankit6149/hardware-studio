@@ -649,6 +649,131 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
               );
             })()}
 
+            {/* MECHANICAL ZONE INSPECTOR */}
+            {obj.sourceType === 'mechanical-zone' && (() => {
+              const mz = (project.mechanicalZones || []).find(item => item.id === sourceId || item.id === obj.id.replace('obj_m_', ''));
+              if (!mz) return (
+                <div className="space-y-2">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Zone Name</label>
+                    <input
+                      type="text"
+                      value={obj.label}
+                      onChange={(e) => store.updateEditorObjectMetadata(obj.mode, obj.id, { label: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                    />
+                  </div>
+                </div>
+              );
+              return (
+                <div className="space-y-2.5">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Zone Name</label>
+                    <input
+                      type="text"
+                      value={mz.name}
+                      onChange={(e) => store.updateMechanicalZone(mz.id, { name: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Zone Type</label>
+                    <input
+                      type="text"
+                      value={mz.zoneType}
+                      onChange={(e) => store.updateMechanicalZone(mz.id, { zoneType: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Material</label>
+                    <input
+                      type="text"
+                      value={mz.material}
+                      placeholder="e.g. polycarbonate, silicone, epoxy potting"
+                      onChange={(e) => store.updateMechanicalZone(mz.id, { material: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Dimension Note</label>
+                    <input
+                      type="text"
+                      value={mz.dimensionNote}
+                      placeholder="e.g. Ø 18.5 mm"
+                      onChange={(e) => store.updateMechanicalZone(mz.id, { dimensionNote: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Notes</label>
+                    <textarea
+                      rows={2}
+                      value={mz.notes}
+                      onChange={(e) => store.updateMechanicalZone(mz.id, { notes: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none text-[10px]"
+                    />
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ASSEMBLY LAYER INSPECTOR */}
+            {obj.sourceType === 'assembly-layer' && (() => {
+              const al = (project.assemblyLayers || []).find(item => item.id === sourceId || item.id === obj.id.replace('obj_a_', ''));
+              if (!al) return null;
+              return (
+                <div className="space-y-2.5">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Layer Name</label>
+                    <input
+                      type="text"
+                      value={al.name}
+                      onChange={(e) => store.updateAssemblyLayer(al.id, { name: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Layer Type</label>
+                    <input
+                      type="text"
+                      value={al.layerType}
+                      onChange={(e) => store.updateAssemblyLayer(al.id, { layerType: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Fastening Method</label>
+                    <input
+                      type="text"
+                      value={al.fasteningMethod}
+                      placeholder="e.g. screws, adhesives, ultrasonic"
+                      onChange={(e) => store.updateAssemblyLayer(al.id, { fasteningMethod: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Inspection Note</label>
+                    <input
+                      type="text"
+                      value={al.inspectionNote}
+                      onChange={(e) => store.updateAssemblyLayer(al.id, { inspectionNote: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold">Material</label>
+                    <input
+                      type="text"
+                      value={al.material}
+                      onChange={(e) => store.updateAssemblyLayer(al.id, { material: e.target.value })}
+                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                    />
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* MANUFACTURING CHECKLIST ITEM INSPECTOR */}
             {obj.sourceType === 'checklist' && (() => {
               const ch = (project.manufacturingChecklist || []).find(item => item.id === sourceId);

@@ -101,15 +101,19 @@ export const ReadinessDashboard: React.FC = () => {
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Gateway Verification Status</span>
               <div className="grid grid-cols-1 gap-1">
                 {[
-                  { name: "Planning Gate", status: report.isPlanningReady },
-                  { name: "Blueprint Pack Gate", status: report.isBlueprintPackReady },
-                  { name: "CAD Editor Layout Gate", status: report.isEditorLayoutReady },
-                  { name: "Prototype Spin Gate", status: report.canMoveToPrototype },
-                  { name: "Factory Handoff Gate", status: report.canMoveToFactoryHandoff },
-                  { name: "Direct Fabrication Gate", status: report.canMoveToFabrication }
+                  { name: "Planning Ready", status: report.isPlanningReady },
+                  { name: "Blueprint Pack Ready", status: report.isBlueprintPackReady },
+                  { name: "Editor Layout Ready", status: report.isEditorLayoutReady },
+                  { name: "Schematic Draft Ready", status: report.isSchematicDraftReady },
+                  { name: "PCB Layout Draft Ready", status: report.isPcbLayoutDraftReady },
+                  { name: "Routing Draft Ready", status: report.isRoutingDraftReady },
+                  { name: "Prototype Prep Ready", status: report.canMoveToPrototype },
+                  { name: "Factory Review Package Ready", status: report.canMoveToFactoryHandoff },
+                  { name: "Direct Fabrication Review Required", status: report.isDirectFabReviewRequired },
+                  { name: "Direct Fabrication Ready", status: report.canMoveToFabrication }
                 ].map((gate, i) => (
                   <div key={i} className="flex items-center justify-between text-[10px] font-sans font-semibold bg-slate-50 border border-slate-100 rounded px-2.5 py-1">
-                    <span className="text-slate-650">{gate.name}</span>
+                    <span className="text-slate-655">{gate.name}</span>
                     <span className={`text-[8px] font-bold uppercase tracking-wider ${
                       gate.status ? 'text-emerald-600' : 'text-slate-400'
                     }`}>

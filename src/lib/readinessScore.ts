@@ -26,8 +26,12 @@ export interface ReadinessReport {
   isPlanningReady: boolean;
   isBlueprintPackReady: boolean;
   isEditorLayoutReady: boolean;
+  isSchematicDraftReady: boolean;
+  isPcbLayoutDraftReady: boolean;
+  isRoutingDraftReady: boolean;
   canMoveToPrototype: boolean;
   canMoveToFactoryHandoff: boolean;
+  isDirectFabReviewRequired: boolean;
   canMoveToFabrication: boolean;
 }
 
@@ -49,6 +53,9 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   const nets = project.nets || [];
   const mfgChecklist = project.manufacturingChecklist || [];
   const fFiles = project.factoryFiles || {};
+  const schematicSymbols = project.schematicSymbols || [];
+  const boardOutlines = project.boardOutlines || [];
+  const traces = project.traces || [];
 
   const isRing = project.projectName.toLowerCase().includes("ring") || project.templateName?.toLowerCase().includes("ring");
 
@@ -253,22 +260,29 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
     safetyScore * 0.16
   );
 
-  // Gates logic computation
+  // V3 10 Gates logic computation
   const isPlanningReady = nodes.length > 0 && bom.length > 0 && powerBudget.length > 0 && pinMap.length > 0 && fwTasks.length > 0;
   const isBlueprintPackReady = isPlanningReady && boards.length > 0;
   const isEditorLayoutReady = totalLayoutObjs > 0;
+  
+  const isSchematicDraftReady = circuitBlocks.length > 0 && (schematicSymbols.length > 0 || project.editorLayouts?.circuits?.length ? true : false);
+  const isPcbLayoutDraftReady = boards.length > 0 && (boardOutlines.length > 0 || project.editorLayouts?.board?.length ? true : false);
+  const isRoutingDraftReady = traces.length > 0 || project.editorLayouts?.nets?.length ? true : false;
+  
   const canMoveToPrototype = isBlueprintPackReady && isEditorLayoutReady && testing.length > 0 && overallScore >= 70 && blockers.length === 0;
   const canMoveToFactoryHandoff = canMoveToPrototype && mfgChecklist.length > 0 && mfgChecklist.every(m => m.status === 'Done') && overallScore >= 85 && blockers.length === 0;
 
-  // Strict honest direct fabrication checks
-  const gerberOk = fFiles.gerberZip?.status === 'Verified' || fFiles.gerberZip?.status === 'Needs Final Review';
-  const drillOk = fFiles.drillFiles?.status === 'Verified' || fFiles.drillFiles?.status === 'Needs Final Review';
-  const schematicOk = fFiles.schematicPdf?.status === 'Verified' || fFiles.schematicPdf?.status === 'Needs Final Review';
-  const bomOk = fFiles.bomCsv?.status === 'Verified' || fFiles.bomCsv?.status === 'Generated In App';
-  const cplOk = fFiles.cplCsv?.status === 'Verified' || fFiles.cplCsv?.status === 'Generated In App';
-  const dfmOk = fFiles.dfmReport?.status === 'Verified' || fFiles.dfmReport?.status === 'Needs Final Review';
+  // Strict fabrication release verification checks
+  const gerberOk = fFiles.gerberZip?.status === 'Verified';
+  const drillOk = fFiles.drillFiles?.status === 'Verified';
+  const bomOk = fFiles.bomCsv?.status === 'Verified';
+  const cplOk = fFiles.cplCsv?.status === 'Verified';
+  
+  const canMoveToFabrication = canMoveToFactoryHandoff && gerberOk && drillOk && bomOk && cplOk && blockers.length === 0;
 
-  const canMoveToFabrication = canMoveToFactoryHandoff && gerberOk && drillOk && schematicOk && bomOk && cplOk && dfmOk && blockers.length === 0;
+  // Review package requirements checks
+  const hasAppGeneratedFiles = fFiles.gerberZip?.status === 'Generated In App' || fFiles.drillFiles?.status === 'Generated In App';
+  const isDirectFabReviewRequired = canMoveToFactoryHandoff && hasAppGeneratedFiles && !canMoveToFabrication;
 
   // Next Priority Actions builder
   if (blockers.length > 0) {
@@ -310,8 +324,12 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
     isPlanningReady,
     isBlueprintPackReady,
     isEditorLayoutReady,
+    isSchematicDraftReady,
+    isPcbLayoutDraftReady,
+    isRoutingDraftReady,
     canMoveToPrototype,
     canMoveToFactoryHandoff,
+    isDirectFabReviewRequired,
     canMoveToFabrication
   };
 };

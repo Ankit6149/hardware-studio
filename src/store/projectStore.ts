@@ -18,7 +18,18 @@ import {
   EditorMode,
   EditorObject,
   EditorConnection,
-  FactoryFileStatus
+  FactoryFileStatus,
+  MechanicalZone,
+  AssemblyLayer,
+  SchematicSymbol,
+  SchematicConnection,
+  PcbLayer,
+  CopperShape,
+  Trace,
+  Via,
+  DrillHole,
+  PcbRule,
+  ReviewResult
 } from '../types';
 import { templates } from '../data/templates';
 import {
@@ -32,6 +43,7 @@ import {
   fixMissingDimensionsWithPlaceholder,
   getInitialFactoryFiles
 } from '../lib/editorLayoutGenerators';
+import { runDesignReview } from '../lib/designReview';
 
 interface ProjectState extends Project {
   selectedNodeId: string | null;
@@ -154,6 +166,47 @@ interface ProjectState extends Project {
   fixMissingDimensionsWithPlaceholder: () => void;
   addRequiredFactoryFileChecklist: () => void;
   updateFactoryFileStatus: (fileKey: string, status?: FactoryFileStatus['status'], notes?: string, source?: FactoryFileStatus['source'], fileName?: string) => void;
+
+  addMechanicalZone: (item: Omit<MechanicalZone, 'id'>) => void;
+  updateMechanicalZone: (id: string, data: Partial<MechanicalZone>) => void;
+  deleteMechanicalZone: (id: string) => void;
+
+  addAssemblyLayer: (item: Omit<AssemblyLayer, 'id'>) => void;
+  updateAssemblyLayer: (id: string, data: Partial<AssemblyLayer>) => void;
+  deleteAssemblyLayer: (id: string) => void;
+
+  addSchematicSymbol: (item: Omit<SchematicSymbol, 'id'>) => void;
+  updateSchematicSymbol: (id: string, data: Partial<SchematicSymbol>) => void;
+  deleteSchematicSymbol: (id: string) => void;
+
+  addSchematicConnection: (item: Omit<SchematicConnection, 'id'>) => void;
+  updateSchematicConnection: (id: string, data: Partial<SchematicConnection>) => void;
+  deleteSchematicConnection: (id: string) => void;
+
+  addTrace: (item: Omit<Trace, 'id'>) => void;
+  updateTrace: (id: string, data: Partial<Trace>) => void;
+  deleteTrace: (id: string) => void;
+
+  addVia: (item: Omit<Via, 'id'>) => void;
+  updateVia: (id: string, data: Partial<Via>) => void;
+  deleteVia: (id: string) => void;
+
+  addDrillHole: (item: Omit<DrillHole, 'id'>) => void;
+  updateDrillHole: (id: string, data: Partial<DrillHole>) => void;
+  deleteDrillHole: (id: string) => void;
+
+  addPcbRule: (item: Omit<PcbRule, 'id'>) => void;
+  updatePcbRule: (id: string, data: Partial<PcbRule>) => void;
+  deletePcbRule: (id: string) => void;
+
+  runFullDesignReview: () => void;
+  
+  addGndNet: () => void;
+  addVbatNet: () => void;
+  add3v3Net: () => void;
+  addI2cPullupResistor: () => void;
+  addFlybackDiode: () => void;
+  addDebugTestPad: () => void;
 }
 
 const PROJECTS_KEY = 'hardware_studio_projects_v1';
@@ -347,7 +400,24 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       manufacturingChecklist: state.manufacturingChecklist || [],
       editorLayouts: state.editorLayouts || {},
       editorConnections: state.editorConnections || [],
-      factoryFiles: state.factoryFiles || {}
+      factoryFiles: state.factoryFiles || {},
+
+      // V3 models
+      productType: state.productType || "",
+      targetUse: state.targetUse || "",
+      mechanicalZones: state.mechanicalZones || [],
+      assemblyLayers: state.assemblyLayers || [],
+      schematicSymbols: state.schematicSymbols || [],
+      schematicConnections: state.schematicConnections || [],
+      pcbLayers: state.pcbLayers || [],
+      copperShapes: state.copperShapes || [],
+      traces: state.traces || [],
+      vias: state.vias || [],
+      drillHoles: state.drillHoles || [],
+      boardOutlines: state.boardOutlines || [],
+      pcbRules: state.pcbRules || [],
+      reviewResults: state.reviewResults || [],
+      exportHistory: state.exportHistory || []
     };
   };
 
@@ -376,6 +446,24 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     editorLayouts: initialProject.editorLayouts || {},
     editorConnections: initialProject.editorConnections || [],
     factoryFiles: initialProject.factoryFiles || {},
+
+    // V3 initial values
+    productType: initialProject.productType || "Wearable Device",
+    targetUse: initialProject.targetUse || "Early-stage Prototype",
+    mechanicalZones: initialProject.mechanicalZones || [],
+    assemblyLayers: initialProject.assemblyLayers || [],
+    schematicSymbols: initialProject.schematicSymbols || [],
+    schematicConnections: initialProject.schematicConnections || [],
+    pcbLayers: initialProject.pcbLayers || [],
+    copperShapes: initialProject.copperShapes || [],
+    traces: initialProject.traces || [],
+    vias: initialProject.vias || [],
+    drillHoles: initialProject.drillHoles || [],
+    boardOutlines: initialProject.boardOutlines || [],
+    pcbRules: initialProject.pcbRules || [],
+    reviewResults: initialProject.reviewResults || [],
+    exportHistory: initialProject.exportHistory || [],
+
     selectedNodeId: null,
     projectsList: [],
 
@@ -1281,7 +1369,22 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         })),
         editorLayouts: json.editorLayouts || {},
         editorConnections: json.editorConnections || [],
-        factoryFiles: json.factoryFiles || {}
+        factoryFiles: json.factoryFiles || {},
+        productType: json.productType || "Wearable Device",
+        targetUse: json.targetUse || "Early-stage Prototype",
+        mechanicalZones: json.mechanicalZones || [],
+        assemblyLayers: json.assemblyLayers || [],
+        schematicSymbols: json.schematicSymbols || [],
+        schematicConnections: json.schematicConnections || [],
+        pcbLayers: json.pcbLayers || [],
+        copperShapes: json.copperShapes || [],
+        traces: json.traces || [],
+        vias: json.vias || [],
+        drillHoles: json.drillHoles || [],
+        boardOutlines: json.boardOutlines || [],
+        pcbRules: json.pcbRules || [],
+        reviewResults: json.reviewResults || [],
+        exportHistory: json.exportHistory || []
       };
 
       const saved = getSavedProjects();
@@ -2332,6 +2435,312 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       };
       persistChange({ factoryFiles });
       get().generateEditorLayouts();
+    },
+
+    addMechanicalZone: (item) => {
+      const id = `zone_${Date.now()}_${Math.random()}`;
+      const zones = [...(get().mechanicalZones || []), { ...item, id }];
+      persistChange({ mechanicalZones: zones });
+    },
+    updateMechanicalZone: (id, fields) => {
+      const zones = (get().mechanicalZones || []).map(z => z.id === id ? { ...z, ...fields } : z);
+      persistChange({ mechanicalZones: zones });
+    },
+    deleteMechanicalZone: (id) => {
+      const zones = (get().mechanicalZones || []).filter(z => z.id !== id);
+      persistChange({ mechanicalZones: zones });
+    },
+
+    addAssemblyLayer: (item) => {
+      const id = `layer_${Date.now()}_${Math.random()}`;
+      const layers = [...(get().assemblyLayers || []), { ...item, id }];
+      persistChange({ assemblyLayers: layers });
+    },
+    updateAssemblyLayer: (id, fields) => {
+      const layers = (get().assemblyLayers || []).map(l => l.id === id ? { ...l, ...fields } : l);
+      persistChange({ assemblyLayers: layers });
+    },
+    deleteAssemblyLayer: (id) => {
+      const layers = (get().assemblyLayers || []).filter(l => l.id !== id);
+      persistChange({ assemblyLayers: layers });
+    },
+
+    addSchematicSymbol: (item) => {
+      const id = `sym_${Date.now()}_${Math.random()}`;
+      const symbols = [...(get().schematicSymbols || []), { ...item, id }];
+      persistChange({ schematicSymbols: symbols });
+    },
+    updateSchematicSymbol: (id, fields) => {
+      const symbols = (get().schematicSymbols || []).map(s => s.id === id ? { ...s, ...fields } : s);
+      persistChange({ schematicSymbols: symbols });
+    },
+    deleteSchematicSymbol: (id) => {
+      const symbols = (get().schematicSymbols || []).filter(s => s.id !== id);
+      persistChange({ schematicSymbols: symbols });
+    },
+
+    addSchematicConnection: (item) => {
+      const id = `conn_sch_${Date.now()}_${Math.random()}`;
+      const conns = [...(get().schematicConnections || []), { ...item, id }];
+      persistChange({ schematicConnections: conns });
+    },
+    updateSchematicConnection: (id, fields) => {
+      const conns = (get().schematicConnections || []).map(c => c.id === id ? { ...c, ...fields } : c);
+      persistChange({ schematicConnections: conns });
+    },
+    deleteSchematicConnection: (id) => {
+      const conns = (get().schematicConnections || []).filter(c => c.id !== id);
+      persistChange({ schematicConnections: conns });
+    },
+
+    addTrace: (item) => {
+      const id = `trace_${Date.now()}_${Math.random()}`;
+      const traces = [...(get().traces || []), { ...item, id }];
+      persistChange({ traces });
+    },
+    updateTrace: (id, fields) => {
+      const traces = (get().traces || []).map(t => t.id === id ? { ...t, ...fields } : t);
+      persistChange({ traces });
+    },
+    deleteTrace: (id) => {
+      const traces = (get().traces || []).filter(t => t.id !== id);
+      persistChange({ traces });
+    },
+
+    addVia: (item) => {
+      const id = `via_${Date.now()}_${Math.random()}`;
+      const vias = [...(get().vias || []), { ...item, id }];
+      persistChange({ vias });
+    },
+    updateVia: (id, fields) => {
+      const vias = (get().vias || []).map(v => v.id === id ? { ...v, ...fields } : v);
+      persistChange({ vias });
+    },
+    deleteVia: (id) => {
+      const vias = (get().vias || []).filter(v => v.id !== id);
+      persistChange({ vias });
+    },
+
+    addDrillHole: (item) => {
+      const id = `drill_${Date.now()}_${Math.random()}`;
+      const holes = [...(get().drillHoles || []), { ...item, id }];
+      persistChange({ drillHoles: holes });
+    },
+    updateDrillHole: (id, fields) => {
+      const holes = (get().drillHoles || []).map(h => h.id === id ? { ...h, ...fields } : h);
+      persistChange({ drillHoles: holes });
+    },
+    deleteDrillHole: (id) => {
+      const holes = (get().drillHoles || []).filter(h => h.id !== id);
+      persistChange({ drillHoles: holes });
+    },
+
+    addPcbRule: (item) => {
+      const id = `rule_${Date.now()}_${Math.random()}`;
+      const pcbRules = [...(get().pcbRules || []), { ...item, id }];
+      persistChange({ pcbRules });
+    },
+    updatePcbRule: (id, fields) => {
+      const pcbRules = (get().pcbRules || []).map(r => r.id === id ? { ...r, ...fields } : r);
+      persistChange({ pcbRules });
+    },
+    deletePcbRule: (id) => {
+      const pcbRules = (get().pcbRules || []).filter(r => r.id !== id);
+      persistChange({ pcbRules });
+    },
+
+    runFullDesignReview: () => {
+      const project = getCleanProjectData(get());
+      const reviewResults = runDesignReview(project);
+      persistChange({ reviewResults });
+    },
+
+    addGndNet: () => {
+      const nets = [...(get().nets || [])];
+      if (!nets.some(n => n.netName.toUpperCase() === 'GND')) {
+        nets.push({
+          id: `net_gnd_${Date.now()}`,
+          netName: "GND",
+          netType: "Ground",
+          voltage: "0V",
+          sourceComponent: "BATT_CONN",
+          sourcePin: "PIN_2",
+          targetComponent: "U1_MCU",
+          targetPin: "GND",
+          protocol: "Ground reference",
+          currentEstimate: "120mA",
+          impedanceRequirement: "None",
+          notes: "Auto-generated return ground path"
+        });
+        persistChange({ nets });
+        get().runFullDesignReview();
+      }
+    },
+
+    addVbatNet: () => {
+      const nets = [...(get().nets || [])];
+      if (!nets.some(n => n.netName.toUpperCase() === 'VBAT')) {
+        nets.push({
+          id: `net_vbat_${Date.now()}`,
+          netName: "VBAT",
+          netType: "Power",
+          voltage: "3.7V",
+          sourceComponent: "BATT_CONN",
+          sourcePin: "PIN_1",
+          targetComponent: "U2_CHARGER",
+          targetPin: "VBAT",
+          protocol: "Battery load path",
+          currentEstimate: "150mA",
+          impedanceRequirement: "None",
+          notes: "Auto-generated primary cell rail"
+        });
+        persistChange({ nets });
+        get().runFullDesignReview();
+      }
+    },
+
+    add3v3Net: () => {
+      const nets = [...(get().nets || [])];
+      if (!nets.some(n => n.netName.toUpperCase() === '3V3')) {
+        nets.push({
+          id: `net_3v3_${Date.now()}`,
+          netName: "3V3",
+          netType: "Power",
+          voltage: "3.3V",
+          sourceComponent: "U3_LDO",
+          sourcePin: "VOUT",
+          targetComponent: "U1_MCU",
+          targetPin: "VDD",
+          protocol: "MCU regulated supply",
+          currentEstimate: "80mA",
+          impedanceRequirement: "None",
+          notes: "Auto-generated regulated logic rail"
+        });
+        persistChange({ nets });
+        get().runFullDesignReview();
+      }
+    },
+
+    addI2cPullupResistor: () => {
+      const components = [...(get().boardComponents || [])];
+      const nextIdx = components.length + 1;
+      
+      const r1: BoardComponent = {
+        id: `cmp_r_pull1_${Date.now()}`,
+        boardId: "board_main",
+        circuitBlockId: "circuit_mcu",
+        referenceDesignator: `R${nextIdx}`,
+        componentName: "Resistor 10kΩ 0603",
+        componentType: "Resistor",
+        value: "10k",
+        packageName: "R_0603",
+        footprint: "R_0603",
+        partNumber: "RC0603FR-0710KL",
+        quantity: 1,
+        side: "Top",
+        placementCriticality: "Medium",
+        placementX: 200,
+        placementY: 90,
+        notes: "I2C SDA pullup"
+      };
+
+      const r2: BoardComponent = {
+        id: `cmp_r_pull2_${Date.now()}`,
+        boardId: "board_main",
+        circuitBlockId: "circuit_mcu",
+        referenceDesignator: `R${nextIdx + 1}`,
+        componentName: "Resistor 10kΩ 0603",
+        componentType: "Resistor",
+        value: "10k",
+        packageName: "R_0603",
+        footprint: "R_0603",
+        partNumber: "RC0603FR-0710KL",
+        quantity: 1,
+        side: "Top",
+        placementCriticality: "Medium",
+        placementX: 200,
+        placementY: 100,
+        notes: "I2C SCL pullup"
+      };
+
+      persistChange({ boardComponents: [...components, r1, r2] });
+      get().generateEditorLayouts();
+      get().runFullDesignReview();
+    },
+
+    addFlybackDiode: () => {
+      const components = [...(get().boardComponents || [])];
+      const nextIdx = components.length + 1;
+      
+      const d: BoardComponent = {
+        id: `cmp_d_fly_${Date.now()}`,
+        boardId: "board_main",
+        circuitBlockId: "circuit_haptic",
+        referenceDesignator: `D${nextIdx}`,
+        componentName: "Schottky Diode SOD123",
+        componentType: "Diode",
+        value: "Schottky",
+        packageName: "SOD123",
+        footprint: "SOD123",
+        partNumber: "B130-13-F",
+        quantity: 1,
+        side: "Top",
+        placementCriticality: "High",
+        placementX: 180,
+        placementY: 160,
+        notes: "Motor flyback clamp protection"
+      };
+
+      persistChange({ boardComponents: [...components, d] });
+      get().generateEditorLayouts();
+      get().runFullDesignReview();
+    },
+
+    addDebugTestPad: () => {
+      const components = [...(get().boardComponents || [])];
+      const nextIdx = components.length + 1;
+      
+      const tp1: BoardComponent = {
+        id: `cmp_tp_swdio_${Date.now()}`,
+        boardId: "board_main",
+        circuitBlockId: "circuit_debug",
+        referenceDesignator: `TP${nextIdx}`,
+        componentName: "Programming Pad SWDIO",
+        componentType: "Connector",
+        value: "SWDIO",
+        packageName: "TEST_PAD",
+        footprint: "TEST_PAD",
+        partNumber: "TP_1MM_ROUND",
+        quantity: 1,
+        side: "Bottom",
+        placementCriticality: "High",
+        placementX: 280,
+        placementY: 50,
+        notes: "MCU SWDIO target interface point"
+      };
+
+      const tp2: BoardComponent = {
+        id: `cmp_tp_swclk_${Date.now()}`,
+        boardId: "board_main",
+        circuitBlockId: "circuit_debug",
+        referenceDesignator: `TP${nextIdx + 1}`,
+        componentName: "Programming Pad SWCLK",
+        componentType: "Connector",
+        value: "SWCLK",
+        packageName: "TEST_PAD",
+        footprint: "TEST_PAD",
+        partNumber: "TP_1MM_ROUND",
+        quantity: 1,
+        side: "Bottom",
+        placementCriticality: "High",
+        placementX: 280,
+        placementY: 60,
+        notes: "MCU SWCLK target interface point"
+      };
+
+      persistChange({ boardComponents: [...components, tp1, tp2] });
+      get().generateEditorLayouts();
+      get().runFullDesignReview();
     }
   };
 });

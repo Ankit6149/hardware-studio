@@ -25,7 +25,10 @@ import {
   exportTestingPlanJson,
   exportFactoryReadinessJson,
   exportMissingFactoryFilesMarkdown,
-  exportHandoffManifestJson
+  exportHandoffManifestJson,
+  generateNativeGerberCopperTop,
+  generateNativeGerberCopperBottom,
+  generateNativeExcellonDrills
 } from '../lib/nativeExports';
 
 export const ExportCenter: React.FC = () => {
@@ -358,56 +361,84 @@ export const ExportCenter: React.FC = () => {
             <p className="text-[10px] text-slate-500">Visual mapping and parameters exported directly from the active Blueprint Editor. Pre-layout conceptual data.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {[
+             {[
               {
                 name: "Editor Layout JSON",
                 desc: "Export absolute coordinates and sizes of all active visual objects.",
-                action: () => downloadTextFile("blueprint_editor_layout.json", exportEditorLayoutsJson(project), "application/json")
+                action: () => downloadTextFile("blueprint_editor_layout.json", exportEditorLayoutsJson(project), "application/json"),
+                conceptual: true
+              },
+              {
+                name: "Top Copper Gerber (RS-274X)",
+                desc: "Valid RS-274X layout Gerber artwork format top copper trace lines and apertures.",
+                action: () => downloadTextFile("top_copper.gbr", generateNativeGerberCopperTop(project)),
+                conceptual: false
+              },
+              {
+                name: "Bottom Copper Gerber (RS-274X)",
+                desc: "Valid RS-274X layout Gerber artwork format bottom copper trace lines and apertures.",
+                action: () => downloadTextFile("bottom_copper.gbr", generateNativeGerberCopperBottom(project)),
+                conceptual: false
+              },
+              {
+                name: "NC Excellon Drill (DRL)",
+                desc: "Valid Excellon NC drill format specifying tool hole diameters and coordinates list.",
+                action: () => downloadTextFile("drills.drl", generateNativeExcellonDrills(project)),
+                conceptual: false
               },
               {
                 name: "Conceptual Placement CSV",
                 desc: "SMT pick-and-place centroid placements (RefDes, footprint, XY positions, mount side).",
-                action: () => downloadTextFile("conceptual_cpl.csv", exportConceptualPlacementCsv(project))
+                action: () => downloadTextFile("conceptual_cpl.csv", exportConceptualPlacementCsv(project)),
+                conceptual: true
               },
               {
                 name: "Schematic Prep JSON",
                 desc: "Circuit blocks logic, reference designators mappings, and electrical ports.",
-                action: () => downloadTextFile("schematic_prep.json", exportConceptualSchematicJson(project), "application/json")
+                action: () => downloadTextFile("schematic_prep.json", exportConceptualSchematicJson(project), "application/json"),
+                conceptual: true
               },
               {
                 name: "Mechanical Layout JSON",
                 desc: "Mechanical casing bounds, diameters, mounting slots, and resin notes.",
-                action: () => downloadTextFile("mechanical_layout.json", exportConceptualMechanicalLayoutJson(project), "application/json")
+                action: () => downloadTextFile("mechanical_layout.json", exportConceptualMechanicalLayoutJson(project), "application/json"),
+                conceptual: true
               },
               {
                 name: "Net Routing JSON",
                 desc: "Traces voltage ratings, current estimations, and microstrip matching rules.",
-                action: () => downloadTextFile("nets_routing.json", exportConceptualNetRoutingJson(project), "application/json")
+                action: () => downloadTextFile("nets_routing.json", exportConceptualNetRoutingJson(project), "application/json"),
+                conceptual: true
               },
               {
                 name: "Firmware Architecture JSON",
                 desc: "State machine transitions, scheduler task loops, and physical pin drivers.",
-                action: () => downloadTextFile("firmware_architecture.json", exportFirmwareArchitectureJson(project), "application/json")
+                action: () => downloadTextFile("firmware_architecture.json", exportFirmwareArchitectureJson(project), "application/json"),
+                conceptual: true
               },
               {
                 name: "Testing Plan JSON",
                 desc: "Verification stages breakdown (EVT, DVT, PVT) and pass evidence logs.",
-                action: () => downloadTextFile("testing_plan.json", exportTestingPlanJson(project), "application/json")
+                action: () => downloadTextFile("testing_plan.json", exportTestingPlanJson(project), "application/json"),
+                conceptual: true
               },
               {
                 name: "Factory Readiness JSON",
                 desc: "Readiness categories calculation, open blockers count, and gateway release flags.",
-                action: () => downloadTextFile("factory_readiness_report.json", exportFactoryReadinessJson(project), "application/json")
+                action: () => downloadTextFile("factory_readiness_report.json", exportFactoryReadinessJson(project), "application/json"),
+                conceptual: true
               },
               {
                 name: "Missing Factory Files MD",
                 desc: "Checklist report highlighting CAD source gaps and guidelines to resolve them.",
-                action: () => downloadTextFile("missing_factory_files.md", exportMissingFactoryFilesMarkdown(project))
+                action: () => downloadTextFile("missing_factory_files.md", exportMissingFactoryFilesMarkdown(project)),
+                conceptual: true
               },
               {
                 name: "Handoff Manifest JSON",
                 desc: "Release manifest compile detailing metadata, completed checkers, and revision stamps.",
-                action: () => downloadTextFile("handoff_manifest.json", exportHandoffManifestJson(project), "application/json")
+                action: () => downloadTextFile("handoff_manifest.json", exportHandoffManifestJson(project), "application/json"),
+                conceptual: true
               }
             ].map((exp, idx) => (
               <div key={idx} className="bg-slate-50 border border-slate-200 rounded p-3 flex flex-col justify-between hover:border-slate-350 transition-all">
@@ -417,10 +448,10 @@ export const ExportCenter: React.FC = () => {
                 </div>
                 <button
                   onClick={exp.action}
-                  className="mt-3 w-full flex items-center justify-center space-x-1 bg-white hover:bg-slate-100 text-slate-650 border border-slate-250 py-1 rounded text-[9px] font-bold cursor-pointer"
+                  className="mt-3 w-full flex items-center justify-center space-x-1 bg-white hover:bg-slate-100 text-slate-655 border border-slate-250 py-1 rounded text-[9px] font-bold cursor-pointer"
                 >
                   <Download className="w-3 h-3 text-slate-400" />
-                  <span>Download (Conceptual)</span>
+                  <span>Download{exp.conceptual ? " (Conceptual)" : ""}</span>
                 </button>
               </div>
             ))}

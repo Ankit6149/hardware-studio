@@ -302,3 +302,146 @@ export const exportHandoffManifestJson = (project: Project): string => {
 
   return JSON.stringify(manifest, null, 2);
 };
+
+// 11. generateNativeGerberCopperTop
+export const generateNativeGerberCopperTop = (project: Project): string => {
+  const b = project.boards?.[0] || { dimensionsMm: "50 x 50" };
+  const dimStr = b.dimensionsMm || "50 x 50";
+  const [wMm, hMm] = dimStr.split('x').map(s => parseFloat(s.trim()) || 50);
+
+  // Convert mm to inch
+  const mmToInch = 0.0393701;
+  const wInch = wMm * mmToInch;
+  const hInch = hMm * mmToInch;
+
+  // Scale by 10000 for 3.4 coordinate formats
+  const scale = (val: number) => Math.round(val * 10000).toString();
+
+  let gbr = "";
+  gbr += "G04 Gerber RS-274X Top Copper Layer - Exported by Hardware Studio v3*\n";
+  gbr += "G04 WARNING: Generated manufacturing files require engineer review and fab-house DFM validation before production.*\n";
+  gbr += "%FSLAX34Y34*%\n"; // Format statement: Leading zeros omitted, Absolute, 3 integer, 4 decimal
+  gbr += "%MOIN*%\n";     // Mode: Inches
+  gbr += "%ADD10C,0.0080*%\n"; // Aperture D10: Trace width 8 mils (0.008 inch)
+  gbr += "%ADD11C,0.0400*%\n"; // Aperture D11: Via pad 40 mils
+  gbr += "%ADD12C,0.0600*%\n"; // Aperture D12: SMD Pad 60 mils
+  gbr += "%ADD13R,0.0100X0.0100*%\n"; // Aperture D13: Board boundary outline draw
+  
+  // Draw Board Outline (D13)
+  gbr += "G54D13*\n";
+  gbr += "X0Y0D02*\n";
+  gbr += `X${scale(wInch)}Y0D01*\n`;
+  gbr += `X${scale(wInch)}Y${scale(hInch)}D01*\n`;
+  gbr += `X0Y${scale(hInch)}D01*\n`;
+  gbr += "X0Y0D01*\n";
+
+  // Draw Traces (D10)
+  gbr += "G54D10*\n";
+  const traceObjects = project.editorLayouts?.nets || [];
+  traceObjects.forEach((tr) => {
+    const sx = (tr.x / 10) * mmToInch;
+    const sy = (tr.y / 10) * mmToInch;
+    const ex = ((tr.x + 40) / 10) * mmToInch;
+    const ey = ((tr.y + 40) / 10) * mmToInch;
+    gbr += `X${scale(sx)}Y${scale(sy)}D02*\n`;
+    gbr += `X${scale(ex)}Y${scale(ey)}D01*\n`;
+  });
+
+  // Draw Component Pads (D12)
+  gbr += "G54D12*\n";
+  const compObjects = project.editorLayouts?.components || [];
+  compObjects.forEach((c) => {
+    const cx = ((c.x + c.width / 2) / 10) * mmToInch;
+    const cy = ((c.y + c.height / 2) / 10) * mmToInch;
+    gbr += `X${scale(cx)}Y${scale(cy)}D03*\n`; // Flash pad
+  });
+
+  gbr += "M02*\n";
+  return gbr;
+};
+
+// 12. generateNativeGerberCopperBottom
+export const generateNativeGerberCopperBottom = (project: Project): string => {
+  const b = project.boards?.[0] || { dimensionsMm: "50 x 50" };
+  const dimStr = b.dimensionsMm || "50 x 50";
+  const [wMm, hMm] = dimStr.split('x').map(s => parseFloat(s.trim()) || 50);
+
+  const mmToInch = 0.0393701;
+  const wInch = wMm * mmToInch;
+  const hInch = hMm * mmToInch;
+
+  const scale = (val: number) => Math.round(val * 10000).toString();
+
+  let gbr = "";
+  gbr += "G04 Gerber RS-274X Bottom Copper Layer - Exported by Hardware Studio v3*\n";
+  gbr += "G04 WARNING: Generated manufacturing files require engineer review and fab-house DFM validation before production.*\n";
+  gbr += "%FSLAX34Y34*%\n";
+  gbr += "%MOIN*%\n";
+  gbr += "%ADD10C,0.0120*%\n"; // Aperture D10: Ground return traces width 12 mils
+  gbr += "%ADD11C,0.0405*%\n"; // Aperture D11: Via pad 40.5 mils
+  gbr += "%ADD13R,0.0100X0.0100*%\n"; // Aperture D13: Board outline
+
+  // Draw Board Outline (D13)
+  gbr += "G54D13*\n";
+  gbr += "X0Y0D02*\n";
+  gbr += `X${scale(wInch)}Y0D01*\n`;
+  gbr += `X${scale(wInch)}Y${scale(hInch)}D01*\n`;
+  gbr += `X0Y${scale(hInch)}D01*\n`;
+  gbr += "X0Y0D01*\n";
+
+  // Draw Bottom GND Trace line references
+  gbr += "G54D10*\n";
+  const gndNets = (project.nets || []).filter(n => n.netName.toUpperCase() === 'GND');
+  gndNets.forEach((gn, i) => {
+    const sx = (20 + i * 15) * mmToInch;
+    const sy = 10 * mmToInch;
+    const ex = (20 + i * 15) * mmToInch;
+    const ey = (hMm - 10) * mmToInch;
+    gbr += `X${scale(sx)}Y${scale(sy)}D02*\n`;
+    gbr += `X${scale(ex)}Y${scale(ey)}D01*\n`;
+  });
+
+  gbr += "M02*\n";
+  return gbr;
+};
+
+// 13. generateNativeExcellonDrills
+export const generateNativeExcellonDrills = (project: Project): string => {
+  const isRing = project.projectName?.toLowerCase().includes("ring") || project.templateName?.toLowerCase().includes("ring");
+  
+  const scale = (val: number) => {
+    const v = Math.round(val * 100);
+    return v.toString().padStart(5, '0');
+  };
+
+  let drl = "";
+  drl += "; Excellon NC Drill File - Exported by Hardware Studio v3\n";
+  drl += "; WARNING: Generated manufacturing files require engineer review and fab-house DFM validation before production.\n";
+  drl += "M48\n";
+  drl += "METRIC,LZ\n";
+  drl += "T01C0.300\n"; // Tool 01: 0.3mm vias
+  drl += "T02C1.000\n"; // Tool 02: 1.0mm alignment holes
+  drl += "%\n";
+
+  // Drill Vias (T01)
+  drl += "T01\n";
+  const viaPins = project.editorLayouts?.pins || [];
+  viaPins.forEach((v) => {
+    const vx = v.x / 10;
+    const vy = v.y / 10;
+    drl += `X${scale(vx)}Y${scale(vy)}\n`;
+  });
+
+  // Drill Holes (T02)
+  drl += "T02\n";
+  if (isRing) {
+    drl += `X${scale(38.0)}Y${scale(20.0)}\n`;
+    drl += `X${scale(42.0)}Y${scale(20.0)}\n`;
+  } else {
+    drl += `X${scale(5.0)}Y${scale(5.0)}\n`;
+    drl += `X${scale(45.0)}Y${scale(5.0)}\n`;
+  }
+
+  drl += "M30\n";
+  return drl;
+};

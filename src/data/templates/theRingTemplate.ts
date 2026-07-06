@@ -2067,5 +2067,179 @@ export const theRingTemplate: Project = {
       ownerNotes: "Need to order medical grade polyurethane coating samples.",
       blockingReason: ""
     }
+  ],
+  mechanicalZones: [
+    {
+      id: "mz_ring_shell",
+      name: "Outer Ceramic Shell",
+      zoneType: "Casing",
+      material: "Zirconia ZrO2",
+      dimensionNote: "Thickness 0.8mm",
+      notes: "Protective outer body ring shell casing."
+    },
+    {
+      id: "mz_ring_flex",
+      name: "FPC Flex Channel",
+      zoneType: "Substrate Channel",
+      material: "Polyimide Film",
+      dimensionNote: "Width 6mm",
+      notes: "Internal channel pocket for flex PCBA."
+    },
+    {
+      id: "mz_ring_battery",
+      name: "Battery Compartment",
+      zoneType: "Power Pocket",
+      material: "Rigid Titanium Vault",
+      dimensionNote: "8 x 2mm arc slot",
+      notes: "Bottom capsule segment compartment."
+    }
+  ],
+  assemblyLayers: [
+    {
+      id: "al_ring_shell",
+      name: "Outer Casing Shell Assembly",
+      order: 1,
+      layerType: "Enclosure",
+      material: "ZrO2 Ceramic",
+      fasteningMethod: "Press-fit & Epoxy",
+      inspectionNote: "Verify gap clearance & aesthetic concentricity.",
+      notes: "Outer cosmetic band."
+    },
+    {
+      id: "al_ring_pcb",
+      name: "Flexible PCBA Installation",
+      order: 2,
+      layerType: "PCBA",
+      material: "Rigid-Flex PCB",
+      fasteningMethod: "Double-sided conductive tape",
+      inspectionNote: "Verify antenna keeping clearance.",
+      notes: "Main electronic assembly."
+    },
+    {
+      id: "al_ring_battery",
+      name: "Micro Cell Battery Integration",
+      order: 3,
+      layerType: "Battery",
+      material: "Lithium Polymer Cell",
+      fasteningMethod: "Solder tabs & Epoxy potting",
+      inspectionNote: "Perform voltage leakage check.",
+      notes: "Power source integration."
+    }
+  ],
+  schematicSymbols: [
+    {
+      id: "sym_ring_mcu",
+      circuitId: "ble-mcu",
+      symbolType: "IC",
+      referenceDesignator: "U1",
+      label: "nRF52832 MCU",
+      x: 300,
+      y: 180,
+      rotation: 0,
+      notes: "Main MCU BLE controller",
+      pins: [
+        { pinNum: "1", label: "TOUCH_SENSE", direction: "Input" },
+        { pinNum: "2", label: "HAPTIC_PWM", direction: "Output" },
+        { pinNum: "3", label: "DEBUG_TX", direction: "Output" },
+        { pinNum: "4", label: "VDD", direction: "Power" },
+        { pinNum: "5", label: "GND", direction: "Passive" }
+      ]
+    },
+    {
+      id: "sym_ring_motor",
+      circuitId: "haptic-motor-output",
+      symbolType: "Motor",
+      referenceDesignator: "M1",
+      label: "LRA Haptic",
+      x: 550,
+      y: 180,
+      rotation: 0,
+      notes: "Haptic actuator",
+      pins: [
+        { pinNum: "1", label: "PWM_DRIVE", direction: "Input" },
+        { pinNum: "2", label: "GND", direction: "Passive" }
+      ]
+    }
+  ],
+  schematicConnections: [
+    {
+      id: "conn_schem_1",
+      sourceSymbolId: "sym_ring_mcu",
+      sourcePin: "2",
+      targetSymbolId: "sym_ring_motor",
+      targetPin: "1",
+      netId: "net_pwm",
+      label: "PWM_DRIVE",
+      connectionType: "Signal"
+    }
+  ],
+  boardOutlines: [
+    {
+      id: "out_ring_main",
+      boardId: "board_ring_main",
+      points: [
+        { x: 50, y: 50 },
+        { x: 750, y: 50 },
+        { x: 750, y: 550 },
+        { x: 50, y: 550 }
+      ]
+    }
+  ],
+  copperShapes: [
+    {
+      id: "shape_ring_gnd",
+      boardId: "board_ring_main",
+      netId: "net_gnd",
+      layerId: "Bottom",
+      points: [
+        { x: 60, y: 60 },
+        { x: 740, y: 60 },
+        { x: 740, y: 540 },
+        { x: 60, y: 540 }
+      ]
+    }
+  ],
+  traces: [
+    {
+      id: "trace_ring_pwm",
+      boardId: "board_ring_main",
+      netId: "net_pwm",
+      layerId: "Top",
+      width: 0.2,
+      points: [
+        { x: 300, y: 180 },
+        { x: 550, y: 180 }
+      ]
+    }
+  ],
+  vias: [
+    {
+      id: "via_ring_gnd",
+      boardId: "board_ring_main",
+      netId: "net_gnd",
+      x: 350,
+      y: 200,
+      drillDiameter: 0.3,
+      outerDiameter: 0.6
+    }
+  ],
+  drillHoles: [
+    {
+      id: "drill_ring_align",
+      boardId: "board_ring_main",
+      x: 400,
+      y: 300,
+      diameter: 1.0,
+      plated: false
+    }
+  ],
+  pcbRules: [
+    {
+      id: "rule_ring_spacing",
+      boardId: "board_ring_main",
+      ruleType: "Clearance",
+      value: "0.15",
+      description: "Minimum spacing clearance allowed between parallel trace lanes."
+    }
   ]
 };
