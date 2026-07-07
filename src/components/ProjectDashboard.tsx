@@ -236,67 +236,67 @@ export const ProjectDashboard: React.FC = () => {
   });
 
   return (
-    <div className="flex-1 bg-slate-950 overflow-y-auto p-6 space-y-6 select-none font-sans text-slate-100 h-full">
+    <div className="flex-1 bg-slate-50 overflow-y-auto p-6 space-y-6 select-none font-sans text-slate-800 h-full">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-slate-850 text-white rounded-lg px-4 py-3.5 shadow-2xl max-w-md flex items-start space-x-3 backdrop-blur-md">
-          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+        <div className="fixed bottom-6 right-6 z-50 bg-white border border-slate-200 text-slate-900 rounded-lg px-4 py-3.5 shadow-xl max-w-md flex items-start space-x-3">
+          <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider block font-mono text-emerald-450">Store Action Confirmed</span>
-            <p className="text-[11px] font-sans font-medium text-slate-350 leading-relaxed">{toastMessage}</p>
+            <span className="text-[10px] font-bold uppercase tracking-wider block font-mono text-emerald-700">Store Action Confirmed</span>
+            <p className="text-[11px] font-sans font-medium text-slate-600 leading-relaxed">{toastMessage}</p>
           </div>
         </div>
       )}
 
       {/* Hero Header */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 border border-slate-800/80 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] from-indigo-900/15 via-transparent to-transparent pointer-events-none" />
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] from-indigo-50/50 via-transparent to-transparent pointer-events-none" />
         
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <Badge className="bg-indigo-655/20 text-indigo-300 border border-indigo-500/20 uppercase text-[9px] tracking-widest font-mono font-bold py-0.5">
+              <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200/50 uppercase text-[9px] tracking-widest font-mono font-bold py-0.5">
                 {templateName || 'Custom Blueprint'}
               </Badge>
-              <span className="text-slate-500 font-mono text-[10px]">V{version || "3.0"}</span>
+              <span className="text-slate-400 font-mono text-[10px]">V{version || "3.0"}</span>
             </div>
-            <h1 className="text-2xl font-black text-white uppercase tracking-tight font-mono">{projectName}</h1>
-            <p className="text-xs text-slate-455 max-w-2xl">{description || 'No project description mapped.'}</p>
+            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight font-mono">{projectName}</h1>
+            <p className="text-xs text-slate-500 max-w-2xl">{description || 'No project description mapped.'}</p>
             
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2 text-[10.5px]">
-              <div className="flex items-center space-x-1.5 bg-slate-950/40 px-2.5 py-1 rounded border border-slate-850">
-                <span className="text-slate-500">Pipeline Stage:</span>
-                <span className="text-indigo-400 font-bold uppercase font-mono">{stageInfo.stage}</span>
+              <div className="flex items-center space-x-1.5 bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
+                <span className="text-slate-450">Pipeline Stage:</span>
+                <span className="text-indigo-650 font-bold uppercase font-mono">{stageInfo.stage}</span>
               </div>
-              <div className="flex items-center space-x-1.5 bg-slate-950/40 px-2.5 py-1 rounded border border-slate-850">
-                <span className="text-slate-500">Readiness Score:</span>
-                <span className="text-emerald-450 font-black font-mono">{report.overallScore}%</span>
+              <div className="flex items-center space-x-1.5 bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
+                <span className="text-slate-455">Readiness Score:</span>
+                <span className="text-emerald-600 font-black font-mono">{report.overallScore}%</span>
               </div>
-              <div className="flex items-center space-x-1.5 bg-slate-950/40 px-2.5 py-1 rounded border border-slate-850">
-                <span className="text-slate-500">Package Status:</span>
-                <span className="text-emerald-450 font-bold font-mono">{factoryPackageStatus}</span>
+              <div className="flex items-center space-x-1.5 bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
+                <span className="text-slate-455">Package Status:</span>
+                <span className="text-emerald-600 font-bold font-mono">{factoryPackageStatus}</span>
               </div>
             </div>
           </div>
 
           <div className="shrink-0 flex flex-wrap gap-2 lg:max-w-md">
-            <Button onClick={handleGenerateAll} disabled={isGenerating} className="h-8 text-[10.5px] uppercase font-bold bg-indigo-600 hover:bg-indigo-500 text-white">
+            <Button onClick={handleGenerateAll} disabled={isGenerating} className="h-8 text-[10.5px] uppercase font-bold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer shadow-sm">
               <RefreshCw className={`w-3.5 h-3.5 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
               Generate Product Plan
             </Button>
-            <Button onClick={handleGenerateLayouts} variant="outline" className="h-8 text-[10.5px] border-slate-700 bg-slate-900 hover:bg-slate-805 text-slate-200">
+            <Button onClick={handleGenerateLayouts} variant="outline" className="h-8 text-[10.5px] border-slate-250 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer shadow-sm">
               <Hammer className="w-3.5 h-3.5 mr-1" />
               Generate Layouts
             </Button>
-            <Button onClick={() => store.runFullDesignReview()} variant="outline" className="h-8 text-[10.5px] border-slate-700 bg-slate-900 hover:bg-slate-805 text-slate-200">
+            <Button onClick={() => store.runFullDesignReview()} variant="outline" className="h-8 text-[10.5px] border-slate-250 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer shadow-sm">
               <ShieldCheck className="w-3.5 h-3.5 mr-1" />
               Run Design Review
             </Button>
-            <Button onClick={() => setActiveView('blueprint-editor')} className="h-8 text-[10.5px] uppercase font-bold bg-emerald-600 hover:bg-emerald-555 text-white">
+            <Button onClick={() => setActiveView('blueprint-editor')} className="h-8 text-[10.5px] uppercase font-bold bg-emerald-600 hover:bg-emerald-555 text-white cursor-pointer shadow-sm">
               <Play className="w-3.5 h-3.5 mr-1 fill-current" />
               Open Canvas
             </Button>
-            <Button onClick={() => setActiveView('factory-builder')} variant="outline" className="h-8 text-[10.5px] border-slate-700 bg-slate-900 hover:bg-slate-805 text-slate-200">
+            <Button onClick={() => setActiveView('factory-builder')} variant="outline" className="h-8 text-[10.5px] border-slate-250 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer shadow-sm">
               <Download className="w-3.5 h-3.5 mr-1" />
               Export Factory Package
             </Button>
@@ -305,22 +305,22 @@ export const ProjectDashboard: React.FC = () => {
       </div>
 
       {/* Main Recommended Action Callout */}
-      <div className="bg-amber-955/20 border border-amber-900/50 rounded-xl p-4 flex items-center justify-between gap-4">
-        <div className="flex items-start space-x-3 text-amber-250">
-          <AlertTriangle className="w-4.5 h-4.5 text-amber-500 shrink-0 mt-0.5" />
+      <div className="bg-amber-50 border border-amber-250/60 rounded-xl p-4 flex items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-start space-x-3 text-amber-850">
+          <AlertTriangle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <div className="text-[10px] uppercase font-black tracking-wider text-slate-400 font-mono">Next Recommended Action</div>
+            <div className="text-[10px] uppercase font-black tracking-wider text-slate-500 font-mono">Next Recommended Action</div>
             <p className="text-[11px] leading-relaxed mt-0.5">{mainNextActionLabel}</p>
           </div>
         </div>
-        <Button onClick={mainNextActionTrigger} className="shrink-0 h-7 text-[10px] bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold border-none">
+        <Button onClick={mainNextActionTrigger} className="shrink-0 h-7 text-[10px] bg-amber-600 hover:bg-amber-700 text-white font-bold border-none shadow-sm">
           {mainNextActionButton}
         </Button>
       </div>
 
       {/* End-to-End Pipeline visual flowchart */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
-        <h2 className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-3 px-1 font-mono">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <h2 className="text-[10px] font-black uppercase tracking-wider text-slate-600 mb-3 px-1 font-mono">
           Engineering Flow Pipeline
         </h2>
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-thin">
@@ -331,10 +331,10 @@ export const ProjectDashboard: React.FC = () => {
               <React.Fragment key={idx}>
                 <div 
                   onClick={() => setActiveView(stage.view)}
-                  className={`flex-1 min-w-[125px] border rounded-lg p-2.5 flex flex-col justify-between text-left transition-all cursor-pointer relative hover:border-slate-655 ${
+                  className={`flex-1 min-w-[125px] border rounded-lg p-2.5 flex flex-col justify-between text-left transition-all cursor-pointer relative hover:border-slate-350 ${
                     isCompleted 
-                      ? 'border-indigo-850 bg-indigo-950/20 text-white hover:bg-indigo-950/40' 
-                      : 'border-slate-800/80 bg-slate-950/30 text-slate-500'
+                      ? 'border-indigo-200 bg-indigo-50/40 text-slate-900 hover:bg-indigo-50/70' 
+                      : 'border-slate-150 bg-slate-50/50 text-slate-400'
                   }`}
                 >
                   {isCompleted && (
@@ -345,20 +345,20 @@ export const ProjectDashboard: React.FC = () => {
                   
                   <div>
                     <span className="text-[9.5px] font-bold uppercase tracking-wider font-mono block">{stage.step}</span>
-                    <span className="text-[7.5px] text-slate-500 mt-0.5 leading-none block font-sans truncate">{stage.label}</span>
+                    <span className="text-[7.5px] text-slate-450 mt-0.5 leading-none block font-sans truncate">{stage.label}</span>
                   </div>
 
-                  <div className="flex items-center justify-between mt-2.5 pt-1 border-t border-slate-900/60 text-[9px] font-mono">
-                    <span className="text-slate-400 font-bold">{stage.count} {stage.unit}</span>
+                  <div className="flex items-center justify-between mt-2.5 pt-1 border-t border-slate-100 text-[9px] font-mono">
+                    <span className="text-slate-655 font-bold">{stage.count} {stage.unit}</span>
                     {wCount > 0 && (
-                      <span className="text-amber-400 font-bold bg-amber-950/30 px-1 rounded">
+                      <span className="text-amber-700 font-bold bg-amber-50 px-1 rounded">
                         {wCount} ⚠️
                       </span>
                     )}
                   </div>
                 </div>
                 {idx < 9 && (
-                  <ChevronRight className={`w-3.5 h-3.5 hidden md:block shrink-0 ${isCompleted ? 'text-indigo-800' : 'text-slate-850'}`} />
+                  <ChevronRight className={`w-3.5 h-3.5 hidden md:block shrink-0 ${isCompleted ? 'text-indigo-300' : 'text-slate-200'}`} />
                 )}
               </React.Fragment>
             );
@@ -370,25 +370,25 @@ export const ProjectDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Design Review (7 columns) */}
         <div className="lg:col-span-7 space-y-4">
-          <Card className="bg-slate-900 border border-slate-800/80 shadow-sm">
-            <CardHeader className="bg-slate-900/50 border-b border-slate-800 p-4">
+          <Card className="bg-white border border-slate-200 shadow-sm">
+            <CardHeader className="bg-slate-50/60 border-b border-slate-150 p-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center space-x-2">
-                  <ShieldCheck className="w-4.5 h-4.5 text-emerald-450 animate-pulse" />
-                  <CardTitle className="text-xs font-black text-white uppercase tracking-wider font-mono">
+                  <ShieldCheck className="w-4.5 h-4.5 text-emerald-600" />
+                  <CardTitle className="text-xs font-black text-slate-900 uppercase tracking-wider font-mono">
                     Design Review Summary
                   </CardTitle>
                 </div>
                 <div className="flex space-x-2">
-                  <div className="flex space-x-1 bg-slate-950 p-0.5 rounded border border-slate-850 self-start">
+                  <div className="flex space-x-1 bg-slate-50 p-0.5 rounded border border-slate-150 self-start">
                     {(['all', 'blockers', 'warnings'] as const).map(tab => (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`px-2.5 py-1 rounded text-[8.5px] uppercase font-bold tracking-wider font-mono transition-all cursor-pointer ${
                           activeTab === tab 
-                            ? 'bg-slate-800 text-white font-bold' 
-                            : 'text-slate-500 hover:text-slate-300'
+                            ? 'bg-white text-slate-900 font-bold shadow-sm border border-slate-200/50' 
+                            : 'text-slate-500 hover:text-slate-705'
                         }`}
                       >
                         {tab}
@@ -402,20 +402,20 @@ export const ProjectDashboard: React.FC = () => {
               
               {/* Severity Summary Counter */}
               <div className="grid grid-cols-4 gap-2 mb-2 text-center text-[10px] font-mono">
-                <div className="bg-slate-950 p-2 rounded border border-slate-850">
-                  <div className="text-rose-500 font-bold text-sm">{reviewSummary.blockers}</div>
+                <div className="bg-slate-50 p-2 rounded border border-slate-150">
+                  <div className="text-rose-600 font-bold text-sm">{reviewSummary.blockers}</div>
                   <div className="text-slate-500 uppercase tracking-widest text-[7px] mt-0.5">Blockers</div>
                 </div>
-                <div className="bg-slate-950 p-2 rounded border border-slate-850">
-                  <div className="text-rose-400 font-bold text-sm">{reviewSummary.errors}</div>
+                <div className="bg-slate-50 p-2 rounded border border-slate-150">
+                  <div className="text-rose-500 font-bold text-sm">{reviewSummary.errors}</div>
                   <div className="text-slate-500 uppercase tracking-widest text-[7px] mt-0.5">Errors</div>
                 </div>
-                <div className="bg-slate-950 p-2 rounded border border-slate-850">
-                  <div className="text-amber-450 font-bold text-sm">{reviewSummary.warnings}</div>
+                <div className="bg-slate-50 p-2 rounded border border-slate-150">
+                  <div className="text-amber-600 font-bold text-sm">{reviewSummary.warnings}</div>
                   <div className="text-slate-500 uppercase tracking-widest text-[7px] mt-0.5">Warnings</div>
                 </div>
-                <div className="bg-slate-950 p-2 rounded border border-slate-850">
-                  <div className="text-indigo-400 font-bold text-sm">{reviewSummary.infos}</div>
+                <div className="bg-slate-50 p-2 rounded border border-slate-150">
+                  <div className="text-indigo-600 font-bold text-sm">{reviewSummary.infos}</div>
                   <div className="text-slate-500 uppercase tracking-widest text-[7px] mt-0.5">Info</div>
                 </div>
               </div>
@@ -424,7 +424,7 @@ export const ProjectDashboard: React.FC = () => {
                 <div className="text-center py-6 text-slate-500 space-y-2">
                   <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto opacity-70" />
                   <p className="text-[10px] uppercase font-bold tracking-wider font-mono">0 review violations flagged</p>
-                  <p className="text-[10px] font-sans text-slate-450">ERC parameters and layout DRC paths look safe.</p>
+                  <p className="text-[10px] font-sans text-slate-500">ERC parameters and layout DRC paths look safe.</p>
                 </div>
               ) : (
                 filteredReviews.slice(0, 5).map((action, idx) => {
@@ -432,21 +432,21 @@ export const ProjectDashboard: React.FC = () => {
                   const isError = action.severity === 'Error' || action.severity === 'Blocker';
                   
                   return (
-                    <div key={action.id || idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/60 p-3 rounded border border-slate-850 hover:bg-slate-950 transition-all">
+                    <div key={action.id || idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 p-3 rounded border border-slate-150 hover:bg-slate-50 transition-all">
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
                           <span className={`px-1.5 py-0.25 rounded text-[8px] font-extrabold font-mono border uppercase tracking-wider ${
                             isError
-                              ? 'bg-rose-500/10 text-rose-455 border-rose-500/25'
-                              : 'bg-amber-500/10 text-amber-450 border-amber-500/25'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
                           }`}>
                             {action.severity}
                           </span>
-                          <span className="text-[10.5px] font-bold text-slate-350 font-mono block">
+                          <span className="text-[10.5px] font-bold text-slate-800 font-mono block">
                             {action.title}
                           </span>
                         </div>
-                        <p className="text-[10px] text-slate-455 leading-relaxed font-sans max-w-xl">
+                        <p className="text-[10px] text-slate-500 leading-relaxed font-sans max-w-xl">
                           {action.description}
                         </p>
                       </div>
@@ -476,7 +476,7 @@ export const ProjectDashboard: React.FC = () => {
                               setActiveView("blueprint-editor");
                             }
                           }}
-                          className="flex items-center space-x-1 px-2.5 py-1 bg-slate-905 hover:bg-slate-800 border border-slate-850 text-slate-350 hover:text-white rounded text-[9px] font-bold transition-all cursor-pointer font-mono"
+                          className="flex items-center space-x-1 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-655 hover:text-slate-800 rounded text-[9px] font-bold transition-all cursor-pointer font-mono"
                         >
                           <span>Inspect</span>
                           <ChevronRight className="w-3 h-3" />
@@ -489,7 +489,7 @@ export const ProjectDashboard: React.FC = () => {
                               setToastMessage(`Auto-fix applied successfully: ${resolver.label}`);
                               runFullDesignReview();
                             }}
-                            className="flex items-center space-x-1 px-2.5 py-1 bg-emerald-600/35 hover:bg-emerald-600/50 border border-emerald-500/30 text-emerald-250 rounded text-[9px] font-bold transition-all cursor-pointer font-mono"
+                            className="flex items-center space-x-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-250 text-emerald-700 rounded text-[9px] font-bold transition-all cursor-pointer font-mono"
                           >
                             <span>Fix</span>
                           </button>
@@ -505,59 +505,59 @@ export const ProjectDashboard: React.FC = () => {
 
         {/* Factory Package Summary (5 columns) */}
         <div className="lg:col-span-5 space-y-4">
-          <Card className="bg-slate-900 border border-slate-800/80 shadow-sm">
-            <CardHeader className="bg-slate-900/50 border-b border-slate-800 p-4">
+          <Card className="bg-white border border-slate-200 shadow-sm">
+            <CardHeader className="bg-slate-50/60 border-b border-slate-150 p-4">
               <div className="flex items-center space-x-2">
-                <Package className="w-4.5 h-4.5 text-indigo-400" />
-                <CardTitle className="text-xs font-black text-white uppercase tracking-wider font-mono">
+                <Package className="w-4.5 h-4.5 text-indigo-650" />
+                <CardTitle className="text-xs font-black text-slate-900 uppercase tracking-wider font-mono">
                   Factory Package Summary
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-4 space-y-3.5 text-[10.5px]">
               
-              <div className="space-y-2 bg-slate-950 p-3 rounded border border-slate-850 font-mono text-[9.5px]">
-                <div className="flex justify-between border-b border-slate-900 pb-1">
-                  <span className="text-slate-500">Gerbers status:</span>
-                  <span className={factoryFiles.gerberZip?.status === 'Verified' ? "text-emerald-400 font-bold" : "text-slate-400"}>
+              <div className="space-y-2 bg-slate-50 p-3 rounded border border-slate-150 font-mono text-[9.5px]">
+                <div className="flex justify-between border-b border-slate-200/60 pb-1">
+                  <span className="text-slate-450">Gerbers status:</span>
+                  <span className={factoryFiles.gerberZip?.status === 'Verified' ? "text-emerald-600 font-bold" : "text-slate-500"}>
                     {factoryFiles.gerberZip?.status || 'Not Generated'}
                   </span>
                 </div>
-                <div className="flex justify-between border-b border-slate-900 pb-1 mt-1">
-                  <span className="text-slate-500">Drill status:</span>
-                  <span className={factoryFiles.drillFiles?.status === 'Verified' ? "text-emerald-400 font-bold" : "text-slate-400"}>
+                <div className="flex justify-between border-b border-slate-200/60 pb-1 mt-1">
+                  <span className="text-slate-455">Drill status:</span>
+                  <span className={factoryFiles.drillFiles?.status === 'Verified' ? "text-emerald-600 font-bold" : "text-slate-500"}>
                     {factoryFiles.drillFiles?.status || 'Not Generated'}
                   </span>
                 </div>
-                <div className="flex justify-between border-b border-slate-900 pb-1 mt-1">
-                  <span className="text-slate-500">BOM status:</span>
-                  <span className={factoryFiles.bomCsv?.status === 'Verified' ? "text-emerald-400 font-bold" : "text-slate-400"}>
+                <div className="flex justify-between border-b border-slate-200/60 pb-1 mt-1">
+                  <span className="text-slate-455">BOM status:</span>
+                  <span className={factoryFiles.bomCsv?.status === 'Verified' ? "text-emerald-600 font-bold" : "text-slate-500"}>
                     {factoryFiles.bomCsv?.status || 'Not Generated'}
                   </span>
                 </div>
-                <div className="flex justify-between border-b border-slate-900 pb-1 mt-1">
-                  <span className="text-slate-500">CPL status:</span>
-                  <span className={factoryFiles.cplCsv?.status === 'Verified' ? "text-emerald-400 font-bold" : "text-slate-400"}>
+                <div className="flex justify-between border-b border-slate-200/60 pb-1 mt-1">
+                  <span className="text-slate-455">CPL status:</span>
+                  <span className={factoryFiles.cplCsv?.status === 'Verified' ? "text-emerald-600 font-bold" : "text-slate-500"}>
                     {factoryFiles.cplCsv?.status || 'Not Generated'}
                   </span>
                 </div>
-                <div className="flex justify-between border-b border-slate-900 pb-1 mt-1">
-                  <span className="text-slate-500">Handoff Manifest:</span>
-                  <span className={checkedCount === checklistItemsCount ? "text-emerald-400 font-bold" : "text-slate-400"}>
+                <div className="flex justify-between border-b border-slate-200/60 pb-1 mt-1">
+                  <span className="text-slate-455">Handoff Manifest:</span>
+                  <span className={checkedCount === checklistItemsCount ? "text-emerald-600 font-bold" : "text-slate-500"}>
                     {factoryPackageStatus}
                   </span>
                 </div>
                 <div className="flex justify-between mt-1">
-                  <span className="text-slate-500">FABRICATION RELEASE:</span>
-                  <span className={report.canMoveToFabrication ? "text-emerald-450 font-black animate-pulse" : "text-slate-500 font-bold"}>
+                  <span className="text-slate-455">FABRICATION RELEASE:</span>
+                  <span className={report.canMoveToFabrication ? "text-emerald-600 font-black animate-pulse" : "text-slate-450 font-bold"}>
                     {report.canMoveToFabrication ? "RELEASE READY" : "LOCKED"}
                   </span>
                 </div>
               </div>
 
-              <div className="border-t border-slate-850 pt-3 space-y-1 text-slate-400 leading-normal">
-                <span className="font-extrabold text-slate-300 uppercase text-[9px] tracking-wider block font-mono">⚠️ Verification Status Notice:</span>
-                <p className="text-[10px] text-slate-500 font-sans">
+              <div className="border-t border-slate-150 pt-3 space-y-1 text-slate-500 leading-normal">
+                <span className="font-extrabold text-slate-800 uppercase text-[9px] tracking-wider block font-mono">⚠️ Verification Status Notice:</span>
+                <p className="text-[10px] text-slate-400 font-sans">
                   The package is configured as <strong>{factoryPackageStatus}</strong>. It requires checking off the 10 manual verification guidelines inside the Factory Package Builder before release confirmation is unlocked.
                 </p>
               </div>
