@@ -1,87 +1,59 @@
-# Hardware Studio - Product Status Report (V3 Release)
+# Hardware Studio - Product Status Report (V4 Release)
 
 This document provides a high-level summary of the final state, features, architecture, and validation gates of the **Hardware Studio** local-first product engineering workspace.
 
 ---
 
 ## 1. Project Goal & Overview
-Hardware Studio is a native, local-first product planning and ECAD preparation layer. It is designed to bridge the gap between initial high-level system concept mapping and detailed layout routing in external CAD tools (KiCad, Altium, SolidWorks). 
+Hardware Studio is a native, local-first product planning and ECAD preparation layer. It is designed to bridge the gap between initial high-level system concept mapping and detailed layout routing in external layout tools.
 
-With the V3 release, the studio has been upgraded into a professional hardware workspace with in-app drawing validation, 10-gate quality checklists, direct quick-fixes, and native fabrication file generation.
-
----
-
-## 2. Completed Feature Matrix
-
-### A. Dark Premium App Home & Dashboard
-- **Builder Hero Section**: Renders the current stage, active project name, template tags, overall readiness score, and quick-action tool buttons.
-- **Horizontal Pipeline Flow**: Visualizes project transitions from `Idea → Architecture → Mechanical → Boards → Schematic → Layout → Firmware → Testing → Factory Package`.
-- **9 Discipline Cards**:
-  1. Product Architecture
-  2. Mechanical Design
-  3. PCB / Board Design
-  4. Circuit / Schematic
-  5. Component Placement
-  6. Net Routing
-  7. Firmware
-  8. Testing
-  9. Manufacturing Package
-  Each card includes database metrics, check statuses, and auto-fix buttons.
-- **Interactive ERC/DRC Warn List**: Displays design violations with direct quick-fix triggers.
-
-### B. Upgraded Blueprint Canvas Editor
-- **12 CAD Modes**: Mode selectors for Architecture, Mechanical, Assembly, Schematic, Board Layout, Component Placement, Routing, Power, Pin Map, Firmware, Testing, and Factory Package.
-- **Schematic SVG Draw Symbols**: Renders resistors, capacitors, LEDs, GND blocks, and ICs inside the editor workspace.
-- **Ratsnest Overlay**: Dashed unrouted guidelines connecting logical pinout connections.
-- **Wearable Mechanical Profiles**: Draws circular outer casing contours for ring projects.
-- **Advanced Hotkeys**: Nudge elements with arrow keys, duplicate with `Ctrl+D`, delete with `Backspace`, and deselect with `Escape`.
-
-### C. ERC/DRC Design Review Engine
-- **Electrical Rules Checking (ERC)**:
-  - Missing ground (GND) return path detection.
-  - Floating pins alert warnings.
-  - Led current limit verification.
-  - I2C signal pull-ups check.
-  - Inductive loads kickback protection check.
-  - Programming test point mapping checks.
-- **Design Rules Checking (DRC)**:
-  - Minimum trace spacing and layout width bounds check.
-  - Board physical bounds matching substrate coordinates.
-
-### D. Native Fabrications Export
-- **Gerber Top Copper (`top_copper.gbr`)**: Serializes layout components, trace paths, and coordinates to standard RS-274X inches statement syntax.
-- **Gerber Bottom Copper (`bottom_copper.gbr`)**: Serializes bottom copper ground plane trace runs.
-- **NC Excellon Drills (`drills.drl`)**: Emits drill tools lists and coordinates using metric Excellon format.
-
-### E. Flagship Wearable Template
-- **The Ring Template**: Pre-seeded with V3 mechanical zones, assembly layers, schematic symbols, net connections, and board dimensions.
+With the V4 release, the studio integrates a complete **Factory Package Builder** allowing engineers to review, checkbox-verify, and download draft fabrication stencils generated directly in-app.
 
 ---
 
-## 3. Technology Stack & Architecture
-- **Framework**: Next.js (React client-side SPA model).
-- **Styling**: Vanilla CSS classes tailored with HSL colors, slate-950 layouts, and backdrop blur filters.
-- **State Management**: Zustand store (`src/store/projectStore.ts`) synced to local storage backup (`hardware_studio_projects_v1`).
-- **Graphics Rendering**: SVG viewport with mouse transform panning and zoom matrices.
+## 2. Feature & Implementations Matrix
+
+### A. Dedicated Factory Package Builder View
+- **Status Indicator**: Renders current status state (`Draft`, `Generated`, `Needs Review`, `Verified`, `Blocked`).
+- **Checklist Audit**: Interactive 10-point manual inspection list ( Gerber viewer verification, pad clearance checks, drill void alignments, rotations checks).
+- **In-App File Generation**: Compiles trace layouts and package pads coordinates to 11 download outputs.
+- **Missing Gaps Tracker**: Explicitly flags 7 missing/non-app-generated stencils (e.g., solder paste stencils, bottom silkscreen, 3D casing STEP files).
+
+### B. Footprints Library (`src/lib/footprints.ts`)
+- Features 18 pre-defined SMT component footprints (e.g. `R_0603`, `C_0805`, `SOIC_8`, `QFN_32`, `USB_C_RECEPTACLE`, `POGO_PAD`).
+- Used to calculate pad vector coordinate centers, CPL centroid CSV offsets, and component collision warnings.
+
+### C. Advanced CAD Exporters
+- **RS-274X Gerber Layers**: Formats top/bottom copper, physical outline, silkscreen top, and top/bottom solder masks.
+- **Excellon Drill File**: Groups tool holes dynamically by drill diameter.
+- **CSV Data Tables**: Pick-and-Place CPL centroids and parts procurement BOM lists.
+- **JSON Maps**: Netlist connectivity nodes and layout geometry parameters.
+
+### D. Hardened ERC/DRC Design Review Engine
+- **Schematic ERC**: Triggers warnings for missing power/GND nets, LED limiting resistors, I2C pull-ups, haptic flyback protection diodes, SWD debug test pads, RF net impedance specs, PMIC reverse protections, and empty circuit blocks.
+- **PCB DRC**: Identifies board dimension omissions, overlapping footprints, out-of-bounds trace routing segments/vias, thin power net routes, and unrouted net lines.
 
 ---
 
-## 4. Verification Gating Rules (10 Gates)
+## 3. Engineering Disclaimers & Limits
+
+> [!CAUTION]
+> **No Mass-Production Safe Guarantee**
+> - In-app generated Gerber, Excellon, and CPL files are layout drafts.
+> - **Final engineering review is required** before submitting files to fabricators.
+> - **Fab-house DFM validation is required** to verify drill tolerances and copper trace clearance spacing.
+> - **Independent Gerber viewer review is required** using independent rendering software to inspect artwork alignment.
+
+---
+
+## 4. Gating Verification Rules (10 Gates)
 1. **Planning Ready**: Subsystems block map, BOM, power load tree, pinouts, and code tasks initialized.
-2. **Blueprint Pack Ready**: Active boards substrates configured in the layout dossier.
+2. **Blueprint Pack Ready**: Active boards substrates configured.
 3. **Editor Layout Ready**: Layout objects drafted on the editor canvas.
-4. **Schematic Draft Ready**: Schematic symbols configured for functional circuits.
-5. **PCB Layout Draft Ready**: Active boards outline objects drafted.
-6. **Routing Draft Ready**: Electrical trace routing paths established.
-7. **Prototype Prep Ready**: Readiness index >= 70%, 0 blocker errors.
-8. **Factory Review Package Ready**: Checklist tasks 100% completed, readiness >= 85%.
-9. **Direct Fabrication Review Required**: In-app generated Gerber/NC drills require final manual verify approval.
-10. **Direct Fabrication Ready**: All files verified by a human engineer, all ERC/DRC checks passed.
-
----
-
-## 5. Next Steps / Future Roadmap
-- Integration with local file storage systems.
-- Dynamic thermal dissipation solver on layout grids.
-- 3D STEP MCAD viewer render viewport.
-- Compliance checklist generators for FCC/CE pre-screening.
+4. **Schematic Draft Ready**: Schematic symbols configured for functional circuits with zero active ERC blocker errors.
+5. **PCB Layout Draft Ready**: Active board outline shape and dimensions specified with all SMT component footprints placed and zero DRC blockers.
+6. **Routing Draft Ready**: Traces drafted or simple nets mapped.
+7. **Prototype Prep Ready**: Overall readiness rating >= 70% with 0 active blocker errors.
+8. **Factory Review Package Ready**: Checklist tasks 100% completed and all in-app fabrication drafts generated.
+9. **Direct Fabrication Review Required**: Active when draft package is compiled but has not yet completed the 10-point checklist review.
+10. **Direct Fabrication Ready**: All release files marked **Verified** with zero open blocker warnings.

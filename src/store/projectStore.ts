@@ -166,6 +166,9 @@ interface ProjectState extends Project {
   fixMissingDimensionsWithPlaceholder: () => void;
   addRequiredFactoryFileChecklist: () => void;
   updateFactoryFileStatus: (fileKey: string, status?: FactoryFileStatus['status'], notes?: string, source?: FactoryFileStatus['source'], fileName?: string) => void;
+  setFactoryPackageStatus: (status: 'Draft' | 'Generated' | 'Needs Review' | 'Verified' | 'Blocked') => void;
+  setFactoryReviewCheck: (key: string, checked: boolean) => void;
+  resetFactoryReview: () => void;
 
   addMechanicalZone: (item: Omit<MechanicalZone, 'id'>) => void;
   updateMechanicalZone: (id: string, data: Partial<MechanicalZone>) => void;
@@ -463,6 +466,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     pcbRules: initialProject.pcbRules || [],
     reviewResults: initialProject.reviewResults || [],
     exportHistory: initialProject.exportHistory || [],
+    factoryPackageStatus: initialProject.factoryPackageStatus || "Draft",
+    factoryReviewChecks: initialProject.factoryReviewChecks || {},
 
     selectedNodeId: null,
     projectsList: [],
@@ -1384,7 +1389,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         boardOutlines: json.boardOutlines || [],
         pcbRules: json.pcbRules || [],
         reviewResults: json.reviewResults || [],
-        exportHistory: json.exportHistory || []
+        exportHistory: json.exportHistory || [],
+        factoryPackageStatus: json.factoryPackageStatus || "Draft",
+        factoryReviewChecks: json.factoryReviewChecks || {}
       };
 
       const saved = getSavedProjects();
@@ -2435,6 +2442,21 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       };
       persistChange({ factoryFiles });
       get().generateEditorLayouts();
+    },
+
+    setFactoryPackageStatus: (status) => {
+      persistChange({ factoryPackageStatus: status });
+    },
+    setFactoryReviewCheck: (key, checked) => {
+      const checks = { ...(get().factoryReviewChecks || {}) };
+      checks[key] = checked;
+      persistChange({ factoryReviewChecks: checks });
+    },
+    resetFactoryReview: () => {
+      persistChange({
+        factoryReviewChecks: {},
+        factoryPackageStatus: "Draft"
+      });
     },
 
     addMechanicalZone: (item) => {

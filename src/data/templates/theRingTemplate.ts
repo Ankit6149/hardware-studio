@@ -2225,12 +2225,31 @@ export const theRingTemplate: Project = {
   ],
   drillHoles: [
     {
-      id: "drill_ring_align",
+      id: "drill_ring_align_1",
       boardId: "board_ring_main",
-      x: 400,
-      y: 300,
+      x: 380,
+      y: 200,
       diameter: 1.0,
-      plated: false
+      plated: false,
+      purpose: "Mechanical Casing Alignment Pin A"
+    },
+    {
+      id: "drill_ring_align_2",
+      boardId: "board_ring_main",
+      x: 420,
+      y: 200,
+      diameter: 1.0,
+      plated: false,
+      purpose: "Mechanical Casing Alignment Pin B"
+    },
+    {
+      id: "drill_ring_via_hole_1",
+      boardId: "board_ring_main",
+      x: 350,
+      y: 200,
+      diameter: 0.3,
+      plated: true,
+      purpose: "GND Signal Via Connection Void"
     }
   ],
   pcbRules: [

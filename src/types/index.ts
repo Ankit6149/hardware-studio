@@ -387,6 +387,8 @@ export interface Project {
     handoff?: EditorObject[];
   };
   editorConnections?: EditorConnection[];
+  factoryPackageStatus?: 'Draft' | 'Generated' | 'Needs Review' | 'Verified' | 'Blocked';
+  factoryReviewChecks?: Record<string, boolean>;
   factoryFiles?: {
     gerberZip?: FactoryFileStatus;
     drillFiles?: FactoryFileStatus;

@@ -20,6 +20,8 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
   const traces = project.traces || [];
   const vias = project.vias || [];
   const rules = project.pcbRules || [];
+  const drillHoles = project.drillHoles || [];
+  const boardOutlines = project.boardOutlines || [];
 
   const isRing = project.projectName?.toLowerCase().includes("ring") || project.templateName?.toLowerCase().includes("ring");
 
@@ -621,6 +623,267 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
       });
     }
   });
+
+  // Schematic Power Net Check
+  const hasPowerNet = nets.some(n => n.netName.toUpperCase().includes("VCC") || n.netName.toUpperCase().includes("VDD") || n.netName.toUpperCase().includes("3V3") || n.netName.toUpperCase().includes("VBAT") || n.netType === 'Power');
+  if (!hasPowerNet) {
+    results.push({
+      id: "rev_erc_power_net",
+      category: "Schematic ERC",
+      severity: "Error",
+      title: "Missing Primary Power Net",
+      description: "No dedicated power rail (VCC, VDD, 3V3, or VBAT) is defined in the project nets.",
+      linkedObjectType: "net",
+      linkedObjectId: "nets",
+      suggestedFix: "Define a 3.3V or battery voltage net connected to the active PMIC/MCU pins.",
+      status: "Open"
+    });
+  }
+
+  // RF Net Impedance checks
+  nets.forEach(n => {
+    if ((n.netType === 'RF' || n.netName.toUpperCase().includes("RF") || n.netName.toUpperCase().includes("ANT")) && 
+        (!n.impedanceRequirement || n.impedanceRequirement.trim() === "" || n.impedanceRequirement.toLowerCase().includes("tbd"))) {
+      results.push({
+        id: `rev_erc_rf_imp_${n.id}`,
+        category: "Schematic ERC",
+        severity: "Warning",
+        title: `RF Net Missing Impedance Spec: ${n.netName}`,
+        description: `High-frequency RF net [${n.netName}] requires controlled transmission line impedance (typically 50Ω).`,
+        linkedObjectType: "net",
+        linkedObjectId: n.id,
+        suggestedFix: "Specify '50 Ohm microstrip controlled impedance' in net rules.",
+        status: "Open"
+      });
+    }
+  });
+
+  // Charger PMIC input reverse protection check
+  const hasCharger = circuits.some(c => c.circuitType === 'Charger' || c.name.toLowerCase().includes("charger") || c.name.toLowerCase().includes("pmic"));
+  if (hasCharger) {
+    const hasFuseOrDiode = components.some(c => 
+      c.componentType?.toLowerCase() === 'diode' || 
+      c.componentType?.toLowerCase() === 'fuse' ||
+      (c.notes && (c.notes.toLowerCase().includes("protect") || c.notes.toLowerCase().includes("reverse")))
+    );
+    if (!hasFuseOrDiode) {
+      results.push({
+        id: "rev_erc_charger_protection",
+        category: "Schematic ERC",
+        severity: "Warning",
+        title: "Charger PMIC Lacks Input Protection",
+        description: "USB charger inputs lack transient TVS diodes or reverse polarity protection components.",
+        linkedObjectType: "circuit",
+        linkedObjectId: "charger",
+        suggestedFix: "Place a TVS diode on the VBUS pin of the USB connector.",
+        status: "Open"
+      });
+    }
+  }
+
+  // Circuit blocks missing required components check
+  circuits.forEach(cb => {
+    const blockComps = components.filter(c => c.circuitBlockId === cb.id);
+    if (blockComps.length === 0) {
+      results.push({
+        id: `rev_erc_block_empty_${cb.id}`,
+        category: "Schematic ERC",
+        severity: "Warning",
+        title: `Empty Circuit Block: ${cb.name}`,
+        description: `Circuit block [${cb.name}] is mapped but has 0 associated BOM component footprints assigned.`,
+        linkedObjectType: "circuit",
+        linkedObjectId: cb.id,
+        suggestedFix: "Assign components to this circuit block using references designators list.",
+        status: "Open"
+      });
+    }
+  });
+
+  // Board outlines exists check
+  if (boardOutlines.length === 0) {
+    results.push({
+      id: "rev_drc_outline_missing",
+      category: "PCB DRC",
+      severity: "Error",
+      title: "Missing Board Outline Geometry",
+      description: "No physical layout contour shape boardOutlines are defined for fabrication routing.",
+      linkedObjectType: "board",
+      linkedObjectId: "outline",
+      suggestedFix: "Define circular concentric or rectangular board bounds in the outline model.",
+      status: "Open"
+    });
+  }
+
+  // Component placements missing XY / unknown side check
+  components.forEach(c => {
+    if (c.placementX === undefined || c.placementY === undefined || c.placementX === 0 || c.placementY === 0) {
+      results.push({
+        id: `rev_drc_placement_missing_${c.id}`,
+        category: "PCB DRC",
+        severity: "Error",
+        title: `Component Not Placed: ${c.referenceDesignator}`,
+        description: `SMT component [${c.referenceDesignator}] is defined in the BOM but lacks physical board coordinates.`,
+        linkedObjectType: "component",
+        linkedObjectId: c.id,
+        suggestedFix: "Open the Blueprint Editor to drag/place the footprint or click Auto-place.",
+        status: "Open",
+        autoFixAvailable: true
+      });
+    }
+    if (!c.side || c.side === 'Unknown') {
+      results.push({
+        id: `rev_drc_side_unknown_${c.id}`,
+        category: "PCB DRC",
+        severity: "Warning",
+        title: `Unknown Solder Side: ${c.referenceDesignator}`,
+        description: `Mounting side is not designated ('Top' or 'Bottom') for component [${c.referenceDesignator}].`,
+        linkedObjectType: "component",
+        linkedObjectId: c.id,
+        suggestedFix: "Select Top or Bottom layer placement side in Properties Inspector.",
+        status: "Open"
+      });
+    }
+  });
+
+  // Component overlapping check (using 15px proximity threshold)
+  for (let i = 0; i < components.length; i++) {
+    for (let j = i + 1; j < components.length; j++) {
+      const c1 = components[i];
+      const c2 = components[j];
+      if (c1.placementX !== undefined && c1.placementY !== undefined && 
+          c2.placementX !== undefined && c2.placementY !== undefined &&
+          c1.placementX !== 0 && c1.placementY !== 0 &&
+          c2.placementX !== 0 && c2.placementY !== 0) {
+        const dx = c1.placementX - c2.placementX;
+        const dy = c1.placementY - c2.placementY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 15) {
+          results.push({
+            id: `rev_drc_overlap_${c1.id}_${c2.id}`,
+            category: "PCB DRC",
+            severity: "Error",
+            title: `Component Collision: ${c1.referenceDesignator} & ${c2.referenceDesignator}`,
+            description: `Layout collision detected. Footprints of ${c1.referenceDesignator} and ${c2.referenceDesignator} are overlapping.`,
+            linkedObjectType: "component",
+            linkedObjectId: c1.id,
+            suggestedFix: "Reposition components on the canvas to maintain spacing clearance.",
+            status: "Open"
+          });
+        }
+      }
+    }
+  }
+
+  // Trace / Via / Drill out of bounds checks
+  traces.forEach(t => {
+    if (t.points) {
+      t.points.forEach((pt, idx) => {
+        if (pt.x < 40 || pt.x > 760 || pt.y < 40 || pt.y > 560) {
+          results.push({
+            id: `rev_drc_trace_oob_${t.id}_${idx}`,
+            category: "PCB DRC",
+            severity: "Error",
+            title: `Trace Segment Out of Bounds: ${t.id}`,
+            description: `Routing segment index ${idx} falls outside the maximum outline grid safety zones.`,
+            linkedObjectType: "trace",
+            linkedObjectId: t.id,
+            suggestedFix: "Reroute trace segments inside board outlines.",
+            status: "Open"
+          });
+        }
+      });
+    }
+  });
+
+  vias.forEach(v => {
+    if (v.x !== undefined && v.y !== undefined) {
+      if (v.x < 40 || v.x > 760 || v.y < 40 || v.y > 560) {
+        results.push({
+          id: `rev_drc_via_oob_${v.id}`,
+          category: "PCB DRC",
+          severity: "Error",
+          title: `Via Out of Bounds: ${v.id}`,
+          description: `Plated via at (${v.x}, ${v.y}) falls outside the layout substrate bounds.`,
+          linkedObjectType: "via",
+          linkedObjectId: v.id,
+          suggestedFix: "Shift via pad into board contour bounds.",
+          status: "Open"
+        });
+      }
+    }
+  });
+
+  drillHoles.forEach(dh => {
+    if (dh.x !== undefined && dh.y !== undefined) {
+      if (dh.x < 40 || dh.x > 760 || dh.y < 40 || dh.y > 560) {
+        results.push({
+          id: `rev_drc_drill_oob_${dh.id}`,
+          category: "PCB DRC",
+          severity: "Error",
+          title: `Drill Hole Out of Bounds: ${dh.id}`,
+          description: `Drill hole at (${dh.x}, ${dh.y}) falls outside the substrate bounds.`,
+          linkedObjectType: "drill-hole",
+          linkedObjectId: dh.id,
+          suggestedFix: "Reposition drill coordinate within outlines.",
+          status: "Open"
+        });
+      }
+    }
+  });
+
+  // Power net trace width checks
+  traces.forEach(t => {
+    const isPowerNet = nets.some(n => n.id === t.netId && (n.netType === 'Power' || n.netName.toUpperCase().includes("VCC") || n.netName.toUpperCase().includes("3V3") || n.netName.toUpperCase().includes("VBAT")));
+    if (isPowerNet && t.width !== undefined && t.width < 0.25) {
+      results.push({
+        id: `rev_drc_power_thin_${t.id}`,
+        category: "PCB DRC",
+        severity: "Warning",
+        title: `Thin Power Net Trace Width: ${t.id}`,
+        description: `Power trace width (${t.width}mm) is thin (requires minimum 0.25mm / 10mil for heat dissipation).`,
+        linkedObjectType: "trace",
+        linkedObjectId: t.id,
+        suggestedFix: "Increase power net trace width to 0.3mm in the properties panel.",
+        status: "Open"
+      });
+    }
+  });
+
+  // Factory Package Checklist & Verification reviews
+  const reviewChecks = project.factoryReviewChecks || {};
+  const requiredChecks = [
+    "gerber_viewer", "board_dims", "pad_positions", "drill_align", 
+    "rotations", "bom_quantities", "cpl_rotations", "dfm_run", "drc_erc", "verified"
+  ];
+  const allChecked = requiredChecks.every(k => reviewChecks[k] === true);
+  
+  if (!allChecked) {
+    results.push({
+      id: "rev_factory_dfm_checklist",
+      category: "Factory Package",
+      severity: "Warning",
+      title: "Design for Manufacturing Checks Incomplete",
+      description: "Multiple checkpoints in the Factory Package Builder review checklist have not been signed off.",
+      linkedObjectType: "checklist",
+      linkedObjectId: "factory-package",
+      suggestedFix: "Open Factory Package Builder and sign off all 10 review checkpoints.",
+      status: "Open"
+    });
+  }
+
+  if (project.factoryPackageStatus !== 'Verified') {
+    results.push({
+      id: "rev_factory_unverified",
+      category: "Factory Package",
+      severity: "Warning",
+      title: "Factory Release Package Unverified",
+      description: "The generated manufacturing package is marked Draft or Needs Review. Final release approval is required.",
+      linkedObjectType: "checklist",
+      linkedObjectId: "factory-package",
+      suggestedFix: "Validate fabrication checklist and set package release state to Verified.",
+      status: "Open"
+    });
+  }
 
   return results;
 };

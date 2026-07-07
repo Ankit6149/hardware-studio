@@ -1,4 +1,5 @@
 import { Project } from '../types';
+import { runDesignReview } from './designReview';
 
 export interface ReadinessReport {
   overallScore: number;
@@ -260,17 +261,24 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
     safetyScore * 0.16
   );
 
-  // V3 10 Gates logic computation
+  // ERC / DRC blockers checks for schematic and pcb
+  const reviewRes = runDesignReview(project);
+  const schemBlockers = reviewRes.filter(r => r.category === 'Schematic ERC' && (r.severity === 'Error' || r.severity === 'Blocker'));
+  const pcbBlockers = reviewRes.filter(r => r.category === 'PCB DRC' && (r.severity === 'Error' || r.severity === 'Blocker'));
+
+  // V4 10 Gates logic computation
   const isPlanningReady = nodes.length > 0 && bom.length > 0 && powerBudget.length > 0 && pinMap.length > 0 && fwTasks.length > 0;
   const isBlueprintPackReady = isPlanningReady && boards.length > 0;
   const isEditorLayoutReady = totalLayoutObjs > 0;
   
-  const isSchematicDraftReady = circuitBlocks.length > 0 && (schematicSymbols.length > 0 || project.editorLayouts?.circuits?.length ? true : false);
-  const isPcbLayoutDraftReady = boards.length > 0 && (boardOutlines.length > 0 || project.editorLayouts?.board?.length ? true : false);
+  const isSchematicDraftReady = (circuitBlocks.length > 0 || schematicSymbols.length > 0 || project.editorLayouts?.circuits?.length ? true : false) && schemBlockers.length === 0;
+  const isPcbLayoutDraftReady = boards.length > 0 && boardOutlines.length > 0 && boardComponents.length > 0 && pcbBlockers.length === 0;
   const isRoutingDraftReady = traces.length > 0 || project.editorLayouts?.nets?.length ? true : false;
   
   const canMoveToPrototype = isBlueprintPackReady && isEditorLayoutReady && testing.length > 0 && overallScore >= 70 && blockers.length === 0;
-  const canMoveToFactoryHandoff = canMoveToPrototype && mfgChecklist.length > 0 && mfgChecklist.every(m => m.status === 'Done') && overallScore >= 85 && blockers.length === 0;
+  
+  const factoryGenerated = fFiles.gerberZip?.status !== 'Not Generated' && fFiles.drillFiles?.status !== 'Not Generated' && fFiles.bomCsv?.status !== 'Not Generated' && fFiles.cplCsv?.status !== 'Not Generated';
+  const canMoveToFactoryHandoff = canMoveToPrototype && mfgChecklist.length > 0 && mfgChecklist.every(m => m.status === 'Done') && factoryGenerated && overallScore >= 80;
 
   // Strict fabrication release verification checks
   const gerberOk = fFiles.gerberZip?.status === 'Verified';
@@ -278,11 +286,11 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   const bomOk = fFiles.bomCsv?.status === 'Verified';
   const cplOk = fFiles.cplCsv?.status === 'Verified';
   
-  const canMoveToFabrication = canMoveToFactoryHandoff && gerberOk && drillOk && bomOk && cplOk && blockers.length === 0;
+  const isPackageVerified = project.factoryPackageStatus === 'Verified';
+  const canMoveToFabrication = canMoveToFactoryHandoff && isPackageVerified && gerberOk && drillOk && bomOk && cplOk && blockers.length === 0;
 
   // Review package requirements checks
-  const hasAppGeneratedFiles = fFiles.gerberZip?.status === 'Generated In App' || fFiles.drillFiles?.status === 'Generated In App';
-  const isDirectFabReviewRequired = canMoveToFactoryHandoff && hasAppGeneratedFiles && !canMoveToFabrication;
+  const isDirectFabReviewRequired = (project.factoryPackageStatus === 'Generated' || project.factoryPackageStatus === 'Needs Review') && !canMoveToFabrication;
 
   // Next Priority Actions builder
   if (blockers.length > 0) {

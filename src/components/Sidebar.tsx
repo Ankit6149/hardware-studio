@@ -79,6 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     {
       title: "Factory Package",
       items: [
+        { id: 'factory-builder', label: 'Factory Package Builder', icon: Package },
         { id: 'exports', label: 'Factory Files', icon: Download },
         { id: 'exports', label: 'Handoff Manifest', icon: FileText },
         { id: 'readiness', label: 'Missing Files', icon: FileCheck2 },
@@ -143,7 +144,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     'pcb-constraints',
     'mfg-pack',
     'blueprint-sheets',
-    'blueprint-editor'
+    'blueprint-editor',
+    'factory-builder'
   ];
   const isCanvasView = !tabularViews.includes(activeView);
 
