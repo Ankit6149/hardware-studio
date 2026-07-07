@@ -8,7 +8,7 @@ export const theRingTemplate: Project = {
   updatedAt: "2026-07-04T12:00:00Z",
   templateName: "The Ring",
   version: "1.0",
-  activeView: "master",
+  activeView: "dashboard",
   batteryCapacityMah: 18,
   powerBudget: [
     { id: "pb-mcu", blockName: "BLE MCU / Controller", voltage: "3.3", activeCurrentMa: 15.0, sleepCurrentUa: 15.0, dutyCyclePercent: 5.0, quantity: 1, notes: "Nordic/ESP32 processing cycles." },

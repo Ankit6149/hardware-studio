@@ -1,4 +1,4 @@
-# Hardware Studio - V4 QA Verification Checklist
+# Hardware Studio - V5 QA Verification Checklist
 
 This checklist documents the quality assurance and verification protocols used to test the local-first Hardware Studio Factory Package Builder.
 

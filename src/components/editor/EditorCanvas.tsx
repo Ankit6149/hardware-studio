@@ -12,7 +12,6 @@ interface EditorCanvasProps {
   onUpdatePosition: (id: string, x: number, y: number) => void;
   project: Project;
   onGenerateLayouts?: () => void;
-  onAutoAction?: (action: string) => void;
 }
 
 export const EditorCanvas: React.FC<EditorCanvasProps> = ({
@@ -22,8 +21,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
   connections,
   onUpdatePosition,
   project,
-  onGenerateLayouts,
-  onAutoAction
+  onGenerateLayouts
 }) => {
   const store = useProjectStore();
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -92,7 +90,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [uiState.selectedObjectId, uiState.activeMode, objects, GRID_SIZE, onUpdatePosition, project]);
+  }, [uiState.selectedObjectId, uiState.activeMode, objects, GRID_SIZE, onUpdatePosition, project, setUiState, store]);
 
   // Pointer events for Canvas Panning and Dragging
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {

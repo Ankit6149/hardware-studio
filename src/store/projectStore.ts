@@ -23,13 +23,10 @@ import {
   AssemblyLayer,
   SchematicSymbol,
   SchematicConnection,
-  PcbLayer,
-  CopperShape,
   Trace,
   Via,
   DrillHole,
-  PcbRule,
-  ReviewResult
+  PcbRule
 } from '../types';
 import { templates } from '../data/templates';
 import {

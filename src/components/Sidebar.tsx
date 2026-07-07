@@ -8,7 +8,6 @@ import {
   Cpu, 
   Binary, 
   Zap, 
-  Cloud, 
   Table, 
   CheckSquare, 
   Download,
@@ -50,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     {
       title: "Product Definition",
       items: [
-        { id: 'master', label: 'Master Blueprint', icon: Eye },
+        { id: 'dossier', label: 'Master Blueprint', icon: Eye },
         { id: 'electronics', label: 'Architecture', icon: Cpu },
         { id: 'outer', label: 'Mechanical Layout', icon: Palette },
         { id: 'internal', label: 'Assembly Layout', icon: Layout },
@@ -61,8 +60,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
       items: [
         { id: 'board-studio', label: 'Boards', icon: Layers },
         { id: 'board-components', label: 'Components', icon: Cpu },
-        { id: 'circuit-planner', label: 'Circuits', icon: Boxes },
-        { id: 'netlist-planner', label: 'Nets', icon: Network },
+        { id: 'circuit-planner', label: 'Circuits / Schematic', icon: Boxes },
+        { id: 'netlist-planner', label: 'Nets / Routing', icon: Network },
         { id: 'pin-map', label: 'Pin Map', icon: Cpu },
         { id: 'power-budget', label: 'Power Budget', icon: Zap },
         { id: 'pcb-constraints', label: 'PCB Rules', icon: Ruler },

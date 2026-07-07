@@ -19,12 +19,10 @@ import {
 import { 
   ShieldAlert, 
   CheckCircle2, 
-  FileText, 
   Hammer, 
   Download, 
   RotateCcw, 
   AlertOctagon,
-  FileCheck2,
   ListTodo
 } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -55,7 +53,6 @@ export const FactoryPackageBuilder: React.FC = () => {
     projectName,
     factoryPackageStatus = "Draft",
     factoryReviewChecks = {},
-    factoryFiles = {},
     setFactoryPackageStatus,
     setFactoryReviewCheck,
     resetFactoryReview,

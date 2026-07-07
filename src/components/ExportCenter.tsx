@@ -4,26 +4,17 @@ import { exportProjectJson } from '../lib/exportJson';
 import { exportProjectMarkdown } from '../lib/exportMarkdown';
 import { exportBlueprintDossierMarkdown, exportBlueprintDossierJson } from '../lib/exportDossier';
 import { generateFirmwareSkeleton } from '../lib/exportFirmware';
-import { exportToCSV } from '../lib/exportCsv';
 import { 
   Download, 
   Cpu, 
-  Table, 
-  ShieldAlert, 
-  FolderLock, 
-  AlertTriangle,
-  FileText,
-  FileCheck2,
-  Package
+  AlertTriangle
 } from 'lucide-react';
-import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
 import { exportBlueprintSheetsMarkdown, exportBlueprintSheetsJson, exportBlueprintSheetsHtml } from '../lib/exportBlueprintSheets';
 import {
   exportEditorLayoutsJson,
   exportConceptualSchematicJson,
   exportConceptualMechanicalLayoutJson,
   exportFirmwareArchitectureJson,
-  exportTestingPlanJson,
   exportFactoryReadinessJson,
   exportMissingFactoryFilesMarkdown,
   exportHandoffManifestJson,
@@ -46,10 +37,7 @@ export const ExportCenter: React.FC = () => {
   const project = useProjectStore();
   const { 
     bom = [], 
-    powerBudget = [],
-    pinMap = [],
     boards = [],
-    circuitBlocks = [],
     boardComponents = [],
     nets = [],
     pcbConstraints = [],
@@ -264,6 +252,8 @@ export const ExportCenter: React.FC = () => {
               { label: "Top Silkscreen Gerber", key: "top_silkscreen", fn: "top_silkscreen.gbr" },
               { label: "Top Mask Gerber", key: "top_mask", fn: "top_mask.gbr" },
               { label: "Bottom Mask Gerber", key: "bottom_mask", fn: "bottom_mask.gbr" },
+              { label: "Top Solder Paste Gerber", key: "top_paste", fn: "top_paste.gbr" },
+              { label: "Bottom Solder Paste Gerber", key: "bottom_paste", fn: "bottom_paste.gbr" },
               { label: "Excellon Drill File", key: "drill", fn: "drills.drl" },
               { label: "BOM Sourcing CSV", key: "bom", fn: "bom.csv" },
               { label: "CPL Draft CSV", key: "cpl", fn: "cpl.csv" },

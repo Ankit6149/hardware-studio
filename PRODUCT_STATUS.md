@@ -1,4 +1,4 @@
-# Hardware Studio - Product Status Report (V4 Release)
+# Hardware Studio - Product Status Report (V5 Release Candidate)
 
 This document provides a high-level summary of the final state, features, architecture, and validation gates of the **Hardware Studio** local-first product engineering workspace.
 
@@ -7,7 +7,7 @@ This document provides a high-level summary of the final state, features, archit
 ## 1. Project Goal & Overview
 Hardware Studio is a native, local-first product planning and ECAD preparation layer. It is designed to bridge the gap between initial high-level system concept mapping and detailed layout routing in external layout tools.
 
-With the V4 release, the studio integrates a complete **Factory Package Builder** allowing engineers to review, checkbox-verify, and download draft fabrication stencils generated directly in-app.
+With the V5 release candidate, the studio integrates a complete **Factory Package Builder** allowing engineers to review, checkbox-verify, and download draft fabrication stencils generated directly in-app.
 
 ---
 

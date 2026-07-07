@@ -10,7 +10,6 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
   const circuits = project.circuitBlocks || [];
   const nets = project.nets || [];
   const pins = project.pinMap || [];
-  const power = project.powerBudget || [];
   const firmware = project.firmwareTasks || [];
   const testing = project.testing || [];
   const checklist = project.manufacturingChecklist || [];
@@ -19,7 +18,6 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
   const assemblyLayers = project.assemblyLayers || [];
   const traces = project.traces || [];
   const vias = project.vias || [];
-  const rules = project.pcbRules || [];
   const drillHoles = project.drillHoles || [];
   const boardOutlines = project.boardOutlines || [];
 

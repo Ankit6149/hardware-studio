@@ -324,3 +324,24 @@ export const FOOTPRINT_LIBRARY: Record<string, FootprintPreset> = {
 export const getFootprint = (name: string): FootprintPreset => {
   return FOOTPRINT_LIBRARY[name] || FOOTPRINT_LIBRARY.CUSTOM_RECT;
 };
+
+export const validateFootprintLibrary = (): { valid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+  Object.entries(FOOTPRINT_LIBRARY).forEach(([key, fp]) => {
+    if (!fp.pads || fp.pads.length === 0) {
+      errors.push(`Footprint [${key}] has no pads configured.`);
+    }
+    fp.pads.forEach(pad => {
+      if (isNaN(pad.xMm) || isNaN(pad.yMm) || isNaN(pad.widthMm) || isNaN(pad.heightMm)) {
+        errors.push(`Footprint [${key}] pad [${pad.name}] has invalid coordinates.`);
+      }
+    });
+    if (isNaN(fp.bodyWidthMm) || isNaN(fp.bodyHeightMm) || fp.bodyWidthMm <= 0 || fp.bodyHeightMm <= 0) {
+      errors.push(`Footprint [${key}] has invalid body dimensions.`);
+    }
+  });
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+};
