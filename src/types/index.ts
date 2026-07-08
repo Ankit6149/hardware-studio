@@ -1,4 +1,5 @@
 import { Node, Edge } from '@xyflow/react';
+import type { BlueprintPack, BlueprintPackStatusType } from '../lib/blueprintSheetTypes';
 
 export type NodeData = {
   name: string;
@@ -421,6 +422,11 @@ export interface Project {
   pcbRules?: PcbRule[];
   reviewResults?: ReviewResult[];
   exportHistory?: string[];
+
+  // Blueprint Generation System
+  blueprintPack?: BlueprintPack;
+  blueprintPackStatus?: BlueprintPackStatusType;
+  blueprintPackGeneratedAt?: string;
 }
 
 export type EditorMode =

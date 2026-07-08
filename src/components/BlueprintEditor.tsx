@@ -241,6 +241,12 @@ export const BlueprintEditor: React.FC = () => {
     store.updateEditorObjectPosition(uiState.activeMode, id, x, y);
   };
 
+  const handleGenerateBlueprintPack = () => {
+    const result = store.generateBlueprintPack();
+    setCopiedAlert(`Blueprint Pack generated: ${result.sheetCount} sheets, ${result.warnings} warnings, ${result.blockers} blockers.`);
+    setTimeout(() => setCopiedAlert(null), 5000);
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-950 text-slate-100 select-none">
       
@@ -248,6 +254,16 @@ export const BlueprintEditor: React.FC = () => {
       {copiedAlert && (
         <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-600 border border-emerald-500 text-white text-[10px] uppercase font-black tracking-widest px-4 py-2 rounded shadow-2xl transition-all animate-bounce">
           {copiedAlert}
+        </div>
+      )}
+
+      {/* Stale Blueprint Pack Banner */}
+      {store.blueprintPackStatus === 'Stale' && (
+        <div className="bg-amber-900/80 border-b border-amber-700 px-4 py-1.5 flex items-center justify-between shrink-0">
+          <span className="text-[10px] text-amber-200 font-medium">⚠ Blueprint Pack is out of date. Regenerate to include latest edits.</span>
+          <button onClick={handleGenerateBlueprintPack} className="text-[9px] font-bold bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded cursor-pointer transition-colors">
+            Regenerate
+          </button>
         </div>
       )}
 
@@ -261,6 +277,8 @@ export const BlueprintEditor: React.FC = () => {
         onOpenSheets={() => store.setActiveView('blueprint-sheets')}
         onOpenExports={() => store.setActiveView('exports')}
         onAutoAction={handleAutoAction}
+        onGenerateBlueprintPack={handleGenerateBlueprintPack}
+        blueprintPackStatus={store.blueprintPackStatus}
       />
 
       {/* Editor Body Area */}

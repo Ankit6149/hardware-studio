@@ -7,8 +7,10 @@ import { generateFirmwareSkeleton } from '../lib/exportFirmware';
 import { 
   Download, 
   Cpu, 
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
+import { exportBlueprintPackJson, exportBlueprintPackMarkdown, exportBlueprintPackHtml } from '../lib/blueprintPackExport';
 import { exportBlueprintSheetsMarkdown, exportBlueprintSheetsJson, exportBlueprintSheetsHtml } from '../lib/exportBlueprintSheets';
 import {
   exportEditorLayoutsJson,
@@ -150,10 +152,105 @@ export const ExportCenter: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. BLUEPRINT DOCUMENTS */}
+        {/* 2. GENERATED BLUEPRINT PACK */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">2. Generated Blueprint Pack</h2>
+              <p className="text-[10px] text-slate-500 mt-0.5">16-sheet blueprint pack generated from live project data with drawings, tables, and warnings.</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              {project.blueprintPackStatus && (
+                <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                  project.blueprintPackStatus === 'Generated' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  project.blueprintPackStatus === 'Stale' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                  project.blueprintPackStatus === 'Verified' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                  'bg-slate-50 text-slate-600 border-slate-200'
+                }`}>
+                  {project.blueprintPackStatus}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {project.blueprintPackStatus === 'Stale' && (
+            <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2 flex items-center space-x-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span className="text-[10px] text-amber-700 font-medium">Blueprint pack is stale. Project data changed since last generation.</span>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2.5">
+            <button
+              onClick={() => {
+                project.generateBlueprintPack();
+              }}
+              className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>{project.blueprintPack ? 'Regenerate' : 'Generate'} Blueprint Pack</span>
+            </button>
+
+            {project.blueprintPack && (
+              <>
+                <button
+                  onClick={() => {
+                    downloadTextFile('blueprint_pack.json', exportBlueprintPackJson(project.blueprintPack!), 'application/json');
+                  }}
+                  className="flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded text-[10px] font-bold transition-all border border-slate-200 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Pack JSON</span>
+                </button>
+                <button
+                  onClick={() => {
+                    downloadTextFile('blueprint_pack.md', exportBlueprintPackMarkdown(project.blueprintPack!));
+                  }}
+                  className="flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded text-[10px] font-bold transition-all border border-slate-200 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Pack Markdown</span>
+                </button>
+                <button
+                  onClick={() => {
+                    downloadTextFile('blueprint_pack.html', exportBlueprintPackHtml(project.blueprintPack!), 'text/html');
+                  }}
+                  className="flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded text-[10px] font-bold transition-all border border-slate-200 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Pack HTML</span>
+                </button>
+              </>
+            )}
+          </div>
+
+          {project.blueprintPack && (
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {[
+                { label: 'Sheets', val: project.blueprintPack.summary.totalSheets },
+                { label: 'Generated', val: project.blueprintPack.summary.generatedSheets },
+                { label: 'Missing', val: project.blueprintPack.summary.missingDataSheets },
+                { label: 'Warnings', val: project.blueprintPack.summary.warnings },
+                { label: 'Errors', val: project.blueprintPack.summary.errors },
+                { label: 'Blockers', val: project.blueprintPack.summary.blockers },
+              ].map((s, i) => (
+                <div key={i} className="bg-slate-50 border border-slate-150 rounded p-2 text-center">
+                  <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest block">{s.label}</span>
+                  <span className={`text-sm font-black block mt-0.5 ${
+                    s.label === 'Blockers' && s.val > 0 ? 'text-rose-600' :
+                    s.label === 'Errors' && s.val > 0 ? 'text-rose-500' :
+                    s.label === 'Missing' && s.val > 0 ? 'text-amber-600' : 'text-slate-800'
+                  }`}>{s.val}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 3. BLUEPRINT DOCUMENTS */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
           <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">2. Blueprint Documents</h2>
+            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">3. Blueprint Documents</h2>
             <p className="text-[10px] text-slate-500">Download consolidated blueprint layouts and design packs.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -207,10 +304,10 @@ export const ExportCenter: React.FC = () => {
           </div>
         </div>
 
-        {/* 3. NATIVE EDITOR DATA */}
+        {/* 4. NATIVE EDITOR DATA */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
           <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">3. Native Editor Data</h2>
+            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">4. Native Editor Data</h2>
             <p className="text-[10px] text-slate-500">Structured layout databases mapping absolute grid geometries.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -238,10 +335,10 @@ export const ExportCenter: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. MANUFACTURING DRAFT FILES */}
+        {/* 5. MANUFACTURING DRAFT FILES */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
           <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">4. Manufacturing Draft Files</h2>
+            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">5. Manufacturing Draft Files</h2>
             <p className="text-[10px] text-slate-500">Draft manufacturing stencils generated in-app. Requires final review check before submit.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -278,10 +375,10 @@ export const ExportCenter: React.FC = () => {
           </div>
         </div>
 
-        {/* 5. REVIEW & READINESS */}
+        {/* 6. REVIEW & READINESS */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
           <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">5. Review & Readiness</h2>
+            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">6. Review & Readiness</h2>
             <p className="text-[10px] text-slate-550">Validate system integration indexes and compliance check sheets.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -329,10 +426,10 @@ export const ExportCenter: React.FC = () => {
           </div>
         </div>
 
-        {/* 6. FIRMWARE */}
+        {/* 7. FIRMWARE */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
           <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">6. Firmware</h2>
+            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">7. Firmware</h2>
             <p className="text-[10px] text-slate-550">Dynamic driver code templates based on pinouts mapping.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

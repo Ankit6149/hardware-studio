@@ -1,5 +1,6 @@
 import React from 'react';
 import { EditorMode } from '../../types';
+import { BlueprintPackStatusType } from '../../lib/blueprintSheetTypes';
 import { EditorUIState } from './editorTypes';
 import { 
   Play, 
@@ -32,6 +33,8 @@ interface EditorToolbarProps {
   onOpenSheets: () => void;
   onOpenExports: () => void;
   onAutoAction: (actionKey: string) => void;
+  onGenerateBlueprintPack?: () => void;
+  blueprintPackStatus?: BlueprintPackStatusType;
 }
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
@@ -42,7 +45,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   onExportJSON,
   onOpenSheets,
   onOpenExports,
-  onAutoAction
+  onAutoAction,
+  onGenerateBlueprintPack,
+  blueprintPackStatus
 }) => {
   const modesList: { id: EditorMode; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'product', label: '1. Architecture', icon: Compass },
@@ -175,6 +180,22 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
         {/* View / Export actions */}
         <div className="flex items-center space-x-1 border-l border-slate-800 pl-2">
+          {onGenerateBlueprintPack && (
+            <button
+              onClick={onGenerateBlueprintPack}
+              className="flex items-center space-x-1 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer"
+              title="Generate Blueprint Pack from project data"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Blueprint Pack</span>
+              {blueprintPackStatus === 'Stale' && (
+                <span className="ml-1 w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+              )}
+              {blueprintPackStatus === 'Generated' && (
+                <span className="ml-1 w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+              )}
+            </button>
+          )}
           <button
             onClick={onExportJSON}
             className="p-1.5 bg-slate-800 hover:bg-slate-750 hover:text-white text-slate-400 rounded cursor-pointer"

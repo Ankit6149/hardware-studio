@@ -41,6 +41,7 @@ import {
   getInitialFactoryFiles
 } from '../lib/editorLayoutGenerators';
 import { runDesignReview } from '../lib/designReview';
+import { generateBlueprintPack as generateBlueprintPackFn } from '../lib/blueprintGenerator';
 
 interface ProjectState extends Project {
   selectedNodeId: string | null;
@@ -200,6 +201,12 @@ interface ProjectState extends Project {
   deletePcbRule: (id: string) => void;
 
   runFullDesignReview: () => void;
+
+  // Blueprint Pack Actions
+  generateBlueprintPack: () => { sheetCount: number; warnings: number; blockers: number };
+  clearBlueprintPack: () => void;
+  markBlueprintPackStale: () => void;
+  markBlueprintPackVerified: () => void;
   
   addGndNet: () => void;
   addVbatNet: () => void;
@@ -2572,6 +2579,42 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const project = getCleanProjectData(get());
       const reviewResults = runDesignReview(project);
       persistChange({ reviewResults });
+    },
+
+    // Blueprint Pack Actions
+    generateBlueprintPack: () => {
+      const project = getCleanProjectData(get());
+      const pack = generateBlueprintPackFn(project);
+      persistChange({
+        blueprintPack: pack,
+        blueprintPackStatus: pack.summary.blockers > 0 ? 'Generated' : 'Generated',
+        blueprintPackGeneratedAt: pack.generatedAt,
+      });
+      return {
+        sheetCount: pack.summary.totalSheets,
+        warnings: pack.summary.warnings,
+        blockers: pack.summary.blockers,
+      };
+    },
+
+    clearBlueprintPack: () => {
+      persistChange({
+        blueprintPack: undefined,
+        blueprintPackStatus: 'Not Generated',
+        blueprintPackGeneratedAt: undefined,
+      });
+    },
+
+    markBlueprintPackStale: () => {
+      if (get().blueprintPack) {
+        persistChange({ blueprintPackStatus: 'Stale' });
+      }
+    },
+
+    markBlueprintPackVerified: () => {
+      if (get().blueprintPack) {
+        persistChange({ blueprintPackStatus: 'Verified' });
+      }
     },
 
     addGndNet: () => {
