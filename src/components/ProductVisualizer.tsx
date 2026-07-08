@@ -27,16 +27,16 @@ export const ProductVisualizer: React.FC = () => {
   };
 
   return (
-    <div className="w-[380px] border-r border-slate-200 bg-slate-900 text-white flex flex-col h-full shrink-0 shadow-lg relative select-none">
+    <div className="w-[380px] border-r border-slate-200 bg-white text-slate-800 flex flex-col h-full shrink-0 shadow-lg relative select-none">
       {/* Visualizer Header */}
-      <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+      <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Layers className="w-4 h-4 text-cyan-400" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-100">
+          <Layers className="w-4 h-4 text-indigo-650" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-800">
             {isOuter ? 'Mechanical Shell View' : 'Internal Component Stackup'}
           </span>
         </div>
-        <span className="text-[9px] text-slate-400 bg-slate-850 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+        <span className="text-[9px] text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
           Interactive CAD
         </span>
       </div>
@@ -47,7 +47,7 @@ export const ProductVisualizer: React.FC = () => {
         {/* Outer Shell SVG */}
         {isOuter && (
           <div className="w-full flex flex-col items-center space-y-6">
-            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest text-center px-4 leading-relaxed">
+            <span className="text-[9px] text-slate-600 font-bold uppercase tracking-widest text-center px-4 leading-relaxed">
               Click a zone below to inspect casing specs
             </span>
             
@@ -137,17 +137,17 @@ export const ProductVisualizer: React.FC = () => {
             </svg>
 
             {/* Legend info panel */}
-            <div className="w-full bg-slate-950/60 border border-slate-800 rounded-lg p-3 space-y-1.5 text-[10px]">
+            <div className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5 text-[10px]">
               <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block">Outer Assembly Checklist</span>
-              <div className="flex items-center justify-between text-slate-350">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Exterior Style Strategy</span>
-                <span className="font-semibold text-emerald-400">Stealth Matte</span>
+                <span className="font-semibold text-emerald-750">Stealth Matte</span>
               </div>
-              <div className="flex items-center justify-between text-slate-350">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Main Band Diameter</span>
                 <span className="font-semibold">22mm (Size 10)</span>
               </div>
-              <div className="flex items-center justify-between text-slate-350">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Thickness Constraint</span>
                 <span className="font-semibold">&lt; 2.2mm limit</span>
               </div>
@@ -158,7 +158,7 @@ export const ProductVisualizer: React.FC = () => {
         {/* Internal Cross Section SVG */}
         {isInternal && (
           <div className="w-full flex flex-col items-center space-y-6">
-            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest text-center px-4 leading-relaxed">
+            <span className="text-[9px] text-slate-600 font-bold uppercase tracking-widest text-center px-4 leading-relaxed">
               Click internal layout layer to configure
             </span>
 
@@ -265,17 +265,17 @@ export const ProductVisualizer: React.FC = () => {
             </svg>
 
             {/* Legend info panel */}
-            <div className="w-full bg-slate-950/60 border border-slate-800 rounded-lg p-3 space-y-1.5 text-[10px]">
+            <div className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5 text-[10px]">
               <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block">Internal Stackup Metrics</span>
-              <div className="flex items-center justify-between text-slate-350">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Flexible FPC Radius</span>
-                <span className="font-semibold text-emerald-400">R 10.5mm</span>
+                <span className="font-semibold text-emerald-750">R 10.5mm</span>
               </div>
-              <div className="flex items-center justify-between text-slate-350">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Vibration Coupling</span>
-                <span className="font-semibold text-cyan-400">Direct Metal Contact</span>
+                <span className="font-semibold text-indigo-650">Direct Metal Contact</span>
               </div>
-              <div className="flex items-center justify-between text-slate-350">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Battery Vault Thickness</span>
                 <span className="font-semibold">0.3mm Titanium shield</span>
               </div>
@@ -286,10 +286,11 @@ export const ProductVisualizer: React.FC = () => {
       </div>
 
       {/* Visualizer Footer */}
-      <div className="p-3 bg-slate-950 border-t border-slate-800 text-[10px] text-slate-400 flex items-center space-x-2 justify-center">
-        <Info className="w-3.5 h-3.5 text-cyan-500" />
+      <div className="p-3 bg-slate-50 border-t border-slate-200 text-[10px] text-slate-600 flex items-center space-x-2 justify-center">
+        <Info className="w-3.5 h-3.5 text-indigo-650" />
         <span>Linked with workspace state parameters</span>
       </div>
     </div>
   );
 };
+

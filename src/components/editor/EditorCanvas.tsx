@@ -335,12 +335,12 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
   const activeLayoutObjects = objects.filter(obj => obj.mode === uiState.activeMode && uiState.visibleLayers[obj.layer || ''] !== false);
 
   return (
-    <div ref={canvasRef} className="flex-1 bg-slate-950 overflow-hidden relative select-none">
+    <div ref={canvasRef} className="flex-1 bg-slate-50 overflow-hidden relative select-none">
       
       {/* Toast Save indicator */}
       {showSaveIndicator && (
-        <div className="absolute top-4 left-4 z-40 bg-slate-900 border border-indigo-500/30 text-white text-[10px] uppercase font-mono px-3 py-1.5 rounded shadow-2xl flex items-center space-x-2 animate-bounce">
-          <Save className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="absolute top-4 left-4 z-40 bg-white border border-indigo-200 text-slate-850 text-[10px] uppercase font-mono px-3 py-1.5 rounded shadow-lg flex items-center space-x-2 animate-bounce">
+          <Save className="w-3.5 h-3.5 text-indigo-650" />
           <span>Local backup file state saved to local storage</span>
         </div>
       )}
@@ -355,7 +355,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
       >
         <defs>
           <pattern id="canvas-grid-v3" width={20} height={20} patternUnits="userSpaceOnUse">
-            <circle cx="10" cy="10" r="0.8" fill="#334155" opacity="0.6" />
+            <circle cx="10" cy="10" r="0.8" fill="#cbd5e1" opacity="0.8" />
           </pattern>
           <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
             <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#475569" />
@@ -595,32 +595,32 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
       </svg>
 
       {/* Honesty Stamp disclaimer banner */}
-      <div className="absolute bottom-3 left-3 bg-slate-900/90 border border-slate-800 rounded px-3 py-1.5 backdrop-blur shadow-md flex items-center space-x-2 select-none z-10 max-w-[95%] pointer-events-none">
+      <div className="absolute bottom-3 left-3 bg-white/95 border border-slate-200 rounded px-3 py-1.5 backdrop-blur shadow-md flex items-center space-x-2 select-none z-10 max-w-[95%] pointer-events-none">
         <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-ping"></span>
-        <span className="text-[9px] font-bold font-mono tracking-wider text-slate-400 uppercase">
+        <span className="text-[9px] font-bold font-mono tracking-wider text-slate-650 uppercase">
           {getEditorDisclaimer(uiState.activeMode)}
         </span>
       </div>
 
       {/* Canvas Zoom Widget Panel */}
-      <div className="absolute top-3 right-3 flex flex-col bg-slate-900 border border-slate-800 rounded shadow-lg overflow-hidden select-none z-10">
+      <div className="absolute top-3 right-3 flex flex-col bg-white border border-slate-200 rounded shadow-md overflow-hidden select-none z-10">
         <button
           onClick={handleZoomIn}
-          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-b border-slate-800 cursor-pointer"
+          className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors border-b border-slate-200 cursor-pointer"
           title="Zoom In (Ctrl+)"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
           onClick={handleZoomOut}
-          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-b border-slate-800 cursor-pointer"
+          className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors border-b border-slate-200 cursor-pointer"
           title="Zoom Out (Ctrl-)"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           onClick={handleZoomReset}
-          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+          className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
           title="Fit Canvas Center"
         >
           <Maximize className="w-4 h-4" />
@@ -629,12 +629,12 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
 
       {/* Empty State Overlay */}
       {activeLayoutObjects.length === 0 && (
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 z-20 pointer-events-auto">
-          <div className="max-w-md bg-slate-900 border border-slate-800 rounded-lg p-6 space-y-4 shadow-2xl">
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-widest font-mono">
+        <div className="absolute inset-0 bg-slate-100/70 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 z-20 pointer-events-auto">
+          <div className="max-w-md bg-white border border-slate-200 rounded-lg p-6 space-y-4 shadow-xl">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest font-mono">
               Drawing Layout Empty
             </h3>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
+            <p className="text-[11px] text-slate-500 leading-relaxed">
               No canvas objects exist for **{uiState.activeMode.toUpperCase()}** mode yet. 
             </p>
             <div className="flex flex-col space-y-2 pt-2">
@@ -642,7 +642,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
                 onClick={() => {
                   if (onGenerateLayouts) onGenerateLayouts();
                 }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold font-mono tracking-widest text-[9.5px] uppercase py-2 px-4 rounded transition-colors cursor-pointer"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold font-mono tracking-widest text-[9.5px] uppercase py-2 px-4 rounded transition-colors cursor-pointer shadow-sm animate-pulse"
               >
                 Generate Drawing Layouts
               </button>

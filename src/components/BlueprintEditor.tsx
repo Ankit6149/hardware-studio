@@ -248,7 +248,7 @@ export const BlueprintEditor: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 text-slate-100 select-none">
+    <div className="flex flex-col h-full bg-slate-50 text-slate-800 select-none">
       
       {/* Toast feedback alerts */}
       {copiedAlert && (
@@ -259,9 +259,9 @@ export const BlueprintEditor: React.FC = () => {
 
       {/* Stale Blueprint Pack Banner */}
       {store.blueprintPackStatus === 'Stale' && (
-        <div className="bg-amber-900/80 border-b border-amber-700 px-4 py-1.5 flex items-center justify-between shrink-0">
-          <span className="text-[10px] text-amber-200 font-medium">⚠ Blueprint Pack is out of date. Regenerate to include latest edits.</span>
-          <button onClick={handleGenerateBlueprintPack} className="text-[9px] font-bold bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded cursor-pointer transition-colors">
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-1.5 flex items-center justify-between shrink-0">
+          <span className="text-[10px] text-amber-800 font-medium">⚠ Blueprint Pack is out of date. Regenerate to include latest edits.</span>
+          <button onClick={handleGenerateBlueprintPack} className="text-[9px] font-bold bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded cursor-pointer transition-colors shadow-sm">
             Regenerate
           </button>
         </div>

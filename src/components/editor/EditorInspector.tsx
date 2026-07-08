@@ -23,21 +23,21 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
 
   if (!obj) {
     return (
-      <div className="w-80 bg-slate-900 border-l border-slate-800 text-slate-350 p-4 select-none text-[11px] font-sans flex flex-col justify-between h-full">
+      <div className="w-80 bg-slate-900 border-l border-slate-200 text-slate-350 p-4 select-none text-[11px] font-sans flex flex-col justify-between h-full">
         <div className="space-y-4">
-          <div className="text-slate-100 font-bold uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center space-x-1.5">
-            <HelpCircle className="w-4 h-4 text-emerald-450" />
+          <div className="text-slate-900 font-bold uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center space-x-1.5">
+            <HelpCircle className="w-4 h-4 text-indigo-650" />
             <span>Inspector Panel</span>
           </div>
-          <div className="bg-slate-950/40 p-4 border border-slate-800 rounded leading-relaxed space-y-2">
-            <p className="text-slate-200 font-bold">Workspace Guidelines:</p>
+          <div className="bg-slate-50/40 p-4 border border-slate-200 rounded leading-relaxed space-y-2">
+            <p className="text-slate-800 font-bold">Workspace Guidelines:</p>
             <p>1. Double-click or click any outline element inside the editor grid canvas to select and inspect its properties.</p>
             <p>2. Drag blocks around the screen to arrange and lay out components, board outlines, or firmware flows visually.</p>
             <p>3. Changing parameters inside this Inspector panel instantly updates the underlying project database (e.g. BOM, Pin Map, Nets, Power).</p>
             <p>4. Layout positions are saved locally in `localStorage` and will persist across browser reloads.</p>
           </div>
         </div>
-        <div className="bg-slate-950 p-3 border border-slate-855 rounded text-[10px] text-slate-450 leading-relaxed font-mono">
+        <div className="bg-slate-50 p-3 border border-slate-200 rounded text-[10px] text-slate-450 leading-relaxed font-mono">
           STATUS: Workspace Idle<br />
           CAD STAMP: Conceptual Layout Prep<br />
           COMPILER: Active (Ready)
@@ -88,39 +88,68 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
     }
   };
 
+  if (!obj) {
+    return (
+      <div className="w-80 bg-white border-l border-slate-200 text-slate-600 p-4 select-none text-[11px] font-sans flex flex-col justify-between h-full shadow-sm">
+        <div className="space-y-4">
+          <div className="text-slate-800 font-bold uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center space-x-1.5">
+            <HelpCircle className="w-4 h-4 text-indigo-600" />
+            <span>Inspector Panel</span>
+          </div>
+          <div className="bg-slate-50 p-4 border border-slate-200 rounded leading-relaxed space-y-2">
+            <p className="text-slate-800 font-bold">Workspace Guidelines:</p>
+            <p>1. Double-click or click any outline element inside the editor grid canvas to select and inspect its properties.</p>
+            <p>2. Drag blocks around the screen to arrange and lay out components, board outlines, or firmware flows visually.</p>
+            <p>3. Changing parameters inside this Inspector panel instantly updates the underlying project database (e.g. BOM, Pin Map, Nets, Power).</p>
+            <p>4. Layout positions are saved locally in `localStorage` and will persist across browser reloads.</p>
+          </div>
+        </div>
+        <div className="bg-slate-50 p-3 border border-slate-200 rounded text-[10px] text-slate-500 leading-relaxed font-mono">
+          STATUS: Workspace Idle<br />
+          CAD STAMP: Conceptual Layout Prep<br />
+          COMPILER: Active (Ready)
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // HANDLERS TO SYNC SOURCE DATA BACK TO STORE
+  // ----------------------------------------------------
+
   // Find linked model details
   const sourceId = obj.sourceId || '';
   const isLocked = obj.locked || false;
 
   return (
-    <div className="w-80 bg-slate-900 border-l border-slate-800 text-slate-350 p-4 select-none text-[11px] font-sans flex flex-col h-full scrollbar-thin overflow-y-auto">
+    <div className="w-80 bg-white border-l border-slate-200 text-slate-600 p-4 select-none text-[11px] font-sans flex flex-col h-full scrollbar-thin overflow-y-auto shadow-sm">
       
       {/* Selection Header */}
-      <div className="border-b border-slate-800 pb-3 mb-4 flex items-center justify-between">
+      <div className="border-b border-slate-200 pb-3 mb-4 flex items-center justify-between">
         <div className="min-w-0 pr-2">
-          <span className="font-mono text-[9px] bg-slate-800 text-slate-350 px-1 py-0.2 rounded uppercase block w-max mb-1">
+          <span className="font-mono text-[9px] bg-slate-100 text-slate-600 px-1 py-0.2 rounded uppercase block w-max mb-1 border border-slate-200">
             {obj.sourceType} Node
           </span>
-          <h2 className="text-slate-100 font-bold text-xs truncate w-[160px]">{obj.label}</h2>
+          <h2 className="text-slate-850 font-bold text-xs truncate w-[160px]">{obj.label}</h2>
         </div>
         <div className="flex items-center space-x-1 shrink-0">
           <button
             onClick={() => handleUpdateLayoutValue('locked', !isLocked)}
-            className={`p-1.5 rounded bg-slate-850 hover:bg-slate-800 cursor-pointer ${isLocked ? 'text-rose-400' : 'text-slate-450'}`}
+            className={`p-1.5 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 cursor-pointer ${isLocked ? 'text-rose-600' : 'text-slate-500'}`}
             title={isLocked ? "Unlock Object positions" : "Lock Object position"}
           >
             {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={() => onDuplicateObject(obj.id)}
-            className="p-1.5 rounded bg-slate-850 hover:bg-slate-800 text-slate-400 cursor-pointer"
+            className="p-1.5 rounded bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200 cursor-pointer"
             title="Duplicate Object"
           >
             <Copy className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => onDeleteObject(obj.id)}
-            className="p-1.5 rounded bg-slate-850 hover:bg-rose-900 hover:text-white text-slate-400 cursor-pointer"
+            className="p-1.5 rounded bg-slate-50 hover:bg-rose-50 hover:text-rose-700 text-slate-500 border border-slate-200 cursor-pointer transition-colors"
             title="Delete Object"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -130,58 +159,58 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
 
       <div className="space-y-4 flex-1">
         {/* 1. COORDINATES BLOCK */}
-        <div className="space-y-2 bg-slate-950/40 p-2.5 border border-slate-850 rounded">
-          <div className="text-slate-200 font-bold uppercase tracking-wider text-[9px] mb-1">Layout Position & Size</div>
+        <div className="space-y-2 bg-slate-50 p-2.5 border border-slate-200 rounded">
+          <div className="text-slate-800 font-extrabold uppercase tracking-wider text-[9px] mb-1">Layout Position & Size</div>
           <div className="grid grid-cols-2 gap-2 font-mono text-[10px]">
-            <div className="flex items-center space-x-1 bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
-              <span className="text-slate-500 font-bold">X</span>
+            <div className="flex items-center space-x-1 bg-white border border-slate-200 rounded px-1.5 py-1">
+              <span className="text-slate-400 font-bold">X</span>
               <input
                 type="number"
                 disabled={isLocked}
                 value={obj.x}
                 onChange={(e) => handleUpdateLayoutValue('x', e.target.value)}
-                className="bg-transparent text-slate-200 w-full focus:outline-none text-right font-bold"
+                className="bg-transparent text-slate-800 w-full focus:outline-none text-right font-bold"
               />
             </div>
-            <div className="flex items-center space-x-1 bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
-              <span className="text-slate-500 font-bold">Y</span>
+            <div className="flex items-center space-x-1 bg-white border border-slate-200 rounded px-1.5 py-1">
+              <span className="text-slate-400 font-bold">Y</span>
               <input
                 type="number"
                 disabled={isLocked}
                 value={obj.y}
                 onChange={(e) => handleUpdateLayoutValue('y', e.target.value)}
-                className="bg-transparent text-slate-200 w-full focus:outline-none text-right font-bold"
+                className="bg-transparent text-slate-800 w-full focus:outline-none text-right font-bold"
               />
             </div>
-            <div className="flex items-center space-x-1 bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
-              <span className="text-slate-500 font-bold">W</span>
+            <div className="flex items-center space-x-1 bg-white border border-slate-200 rounded px-1.5 py-1">
+              <span className="text-slate-400 font-bold">W</span>
               <input
                 type="number"
                 disabled={isLocked}
                 value={obj.width}
                 onChange={(e) => handleUpdateLayoutValue('width', e.target.value)}
-                className="bg-transparent text-slate-200 w-full focus:outline-none text-right font-bold"
+                className="bg-transparent text-slate-800 w-full focus:outline-none text-right font-bold"
               />
             </div>
-            <div className="flex items-center space-x-1 bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
-              <span className="text-slate-500 font-bold">H</span>
+            <div className="flex items-center space-x-1 bg-white border border-slate-200 rounded px-1.5 py-1">
+              <span className="text-slate-400 font-bold">H</span>
               <input
                 type="number"
                 disabled={isLocked}
                 value={obj.height}
                 onChange={(e) => handleUpdateLayoutValue('height', e.target.value)}
-                className="bg-transparent text-slate-200 w-full focus:outline-none text-right font-bold"
+                className="bg-transparent text-slate-800 w-full focus:outline-none text-right font-bold"
               />
             </div>
           </div>
           {obj.sourceType === 'component' && (
-            <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded px-2 py-1 font-mono text-[10px]">
+            <div className="flex items-center justify-between bg-white border border-slate-200 rounded px-2 py-1 font-mono text-[10px] mt-2">
               <span className="text-slate-500 font-bold">ROTATION </span>
               <select
                 disabled={isLocked}
                 value={obj.rotation || 0}
                 onChange={(e) => handleUpdateLayoutValue('rotation', e.target.value)}
-                className="bg-transparent border-none text-slate-200 focus:outline-none text-right font-bold w-16 cursor-pointer"
+                className="bg-transparent border-none text-slate-850 focus:outline-none text-right font-bold w-16 cursor-pointer"
               >
                 <option value="0">0°</option>
                 <option value="90">90°</option>
@@ -194,9 +223,9 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
 
         {/* 2. DYNAMIC LINKED SOURCE ATTRIBUTES FIELDS */}
         {obj.sourceId && (
-          <div className="space-y-3 border-t border-slate-800 pt-4">
-            <div className="text-emerald-400 font-extrabold uppercase tracking-widest text-[9px] flex items-center space-x-1.5 mb-2">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+          <div className="space-y-3 border-t border-slate-200 pt-4">
+            <div className="text-indigo-650 font-extrabold uppercase tracking-widest text-[9px] flex items-center space-x-1.5 mb-2">
+              <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-pulse"></span>
               <span>Project Database Fields</span>
             </div>
 
@@ -211,7 +240,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     <select
                       value={b.substrate}
                       onChange={(e) => handleUpdateSourceField('board', sourceId, 'substrate', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none"
                     >
                       <option value="FR4">FR4 Rigid</option>
                       <option value="Polyimide Flex">Polyimide Flex</option>
@@ -225,7 +254,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="number"
                       value={b.layerCount}
                       onChange={(e) => handleUpdateSourceField('board', sourceId, 'layerCount', Number(e.target.value))}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -234,7 +263,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={b.dimensionsMm}
                       onChange={(e) => handleUpdateSourceField('board', sourceId, 'dimensionsMm', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -243,7 +272,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       rows={2}
                       value={b.mountingNotes}
                       onChange={(e) => handleUpdateSourceField('board', sourceId, 'mountingNotes', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none text-[10px]"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none text-[10px]"
                     />
                   </div>
                 </div>
@@ -262,7 +291,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={c.componentName}
                       onChange={(e) => handleUpdateSourceField('component', sourceId, 'componentName', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -272,7 +301,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                         type="text"
                         value={c.referenceDesignator}
                         onChange={(e) => handleUpdateSourceField('component', sourceId, 'referenceDesignator', e.target.value)}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                       />
                     </div>
                     <div className="flex flex-col space-y-1">
@@ -280,7 +309,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       <select
                         value={c.side}
                         onChange={(e) => handleUpdateSourceField('component', sourceId, 'side', e.target.value)}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none"
                       >
                         <option value="Top">Top Side</option>
                         <option value="Bottom">Bottom Side</option>
@@ -295,7 +324,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={c.footprint}
                       onChange={(e) => handleUpdateSourceField('component', sourceId, 'footprint', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -303,7 +332,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     <select
                       value={c.placementCriticality}
                       onChange={(e) => handleUpdateSourceField('component', sourceId, 'placementCriticality', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none"
                     >
                       <option value="Low">Low Priority</option>
                       <option value="Medium">Medium</option>
@@ -327,7 +356,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     <select
                       value={cb.circuitType}
                       onChange={(e) => handleUpdateSourceField('circuit', sourceId, 'circuitType', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none"
                     >
                       <option value="MCU">MCU Controller</option>
                       <option value="Power">Power Regulation</option>
@@ -344,7 +373,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={cb.requiredComponents}
                       onChange={(e) => handleUpdateSourceField('circuit', sourceId, 'requiredComponents', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -353,7 +382,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={cb.powerNets}
                       onChange={(e) => handleUpdateSourceField('circuit', sourceId, 'powerNets', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -362,7 +391,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={cb.signalNets}
                       onChange={(e) => handleUpdateSourceField('circuit', sourceId, 'signalNets', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                     />
                   </div>
                 </div>
@@ -380,7 +409,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     <select
                       value={n.netType}
                       onChange={(e) => handleUpdateSourceField('net', sourceId, 'netType', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none font-bold"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none font-bold"
                     >
                       <option value="Power">Power Rail</option>
                       <option value="Ground">Ground Return</option>
@@ -398,7 +427,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                         type="text"
                         value={n.voltage}
                         onChange={(e) => handleUpdateSourceField('net', sourceId, 'voltage', e.target.value)}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                       />
                     </div>
                     <div className="flex flex-col space-y-1">
@@ -407,7 +436,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                         type="text"
                         value={n.impedanceRequirement}
                         onChange={(e) => handleUpdateSourceField('net', sourceId, 'impedanceRequirement', e.target.value)}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                       />
                     </div>
                   </div>
@@ -419,14 +448,14 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                         value={n.sourceComponent}
                         placeholder="RefDes"
                         onChange={(e) => handleUpdateSourceField('net', sourceId, 'sourceComponent', e.target.value)}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-1/2 focus:outline-none font-mono"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-1/2 focus:outline-none font-mono"
                       />
                       <input
                         type="text"
                         value={n.sourcePin}
                         placeholder="Pin #"
                         onChange={(e) => handleUpdateSourceField('net', sourceId, 'sourcePin', e.target.value)}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-1/2 focus:outline-none font-mono"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-1/2 focus:outline-none font-mono"
                       />
                     </div>
                   </div>
@@ -438,14 +467,14 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                         value={n.targetComponent}
                         placeholder="RefDes"
                         onChange={(e) => handleUpdateSourceField('net', sourceId, 'targetComponent', e.target.value)}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-1/2 focus:outline-none font-mono"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-1/2 focus:outline-none font-mono"
                       />
                       <input
                         type="text"
                         value={n.targetPin}
                         placeholder="Pin #"
                         onChange={(e) => handleUpdateSourceField('net', sourceId, 'targetPin', e.target.value)}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-1/2 focus:outline-none font-mono"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-1/2 focus:outline-none font-mono"
                       />
                     </div>
                   </div>
@@ -465,7 +494,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={p.blockName}
                       onChange={(e) => handleUpdateSourceField('power', sourceId, 'blockName', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -475,7 +504,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                         type="number"
                         value={p.activeCurrentMa}
                         onChange={(e) => handleUpdateSourceField('power', sourceId, 'activeCurrentMa', Number(e.target.value))}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                       />
                     </div>
                     <div className="flex flex-col space-y-1">
@@ -486,7 +515,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                         max="100"
                         value={p.dutyCyclePercent}
                         onChange={(e) => handleUpdateSourceField('power', sourceId, 'dutyCyclePercent', Number(e.target.value))}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                       />
                     </div>
                   </div>
@@ -506,7 +535,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={pinObj.mcuPin}
                       onChange={(e) => handleUpdateSourceField('pin', sourceId, 'mcuPin', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono font-bold"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono font-bold"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -515,7 +544,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={pinObj.connectedBlock}
                       onChange={(e) => handleUpdateSourceField('pin', sourceId, 'connectedBlock', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -523,7 +552,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     <select
                       value={pinObj.protocol}
                       onChange={(e) => handleUpdateSourceField('pin', sourceId, 'protocol', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none"
                     >
                       <option value="GPIO">General GPIO</option>
                       <option value="I2C">I2C (SDA/SCL)</option>
@@ -551,7 +580,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={f.name}
                       onChange={(e) => handleUpdateSourceField('firmware', sourceId, 'name', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -560,7 +589,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       <select
                         value={f.priority}
                         onChange={(e) => handleUpdateSourceField('firmware', sourceId, 'priority', e.target.value)}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none"
                       >
                         <option value="MVP">MVP (Core)</option>
                         <option value="Later">Later release</option>
@@ -572,7 +601,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       <select
                         value={f.status}
                         onChange={(e) => handleUpdateSourceField('firmware', sourceId, 'status', e.target.value)}
-                        className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none font-bold"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none font-bold"
                       >
                         <option value="Not Started">Not Started</option>
                         <option value="In Progress">In Progress</option>
@@ -587,7 +616,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       rows={2}
                       value={f.acceptanceCriteria}
                       onChange={(e) => handleUpdateSourceField('firmware', sourceId, 'acceptanceCriteria', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none text-[10px]"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none text-[10px]"
                     />
                   </div>
                 </div>
@@ -606,7 +635,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={t.name}
                       onChange={(e) => handleUpdateSourceField('test', sourceId, 'name', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-bold"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-bold"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -614,7 +643,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     <select
                       value={t.category || "EVT"}
                       onChange={(e) => handleUpdateSourceField('test', sourceId, 'category', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none"
                     >
                       <option value="EVT">EVT (Engineering Verification)</option>
                       <option value="DVT">DVT (Design Verification)</option>
@@ -627,7 +656,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     <select
                       value={t.status}
                       onChange={(e) => handleUpdateSourceField('test', sourceId, 'status', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none font-bold"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none font-bold"
                     >
                       <option value="Not Started">Not Started</option>
                       <option value="In Progress">In Progress</option>
@@ -642,7 +671,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={t.passCriteria}
                       onChange={(e) => handleUpdateSourceField('test', sourceId, 'passCriteria', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                 </div>
@@ -660,7 +689,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={obj.label}
                       onChange={(e) => store.updateEditorObjectMetadata(obj.mode, obj.id, { label: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                 </div>
@@ -673,7 +702,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={mz.name}
                       onChange={(e) => store.updateMechanicalZone(mz.id, { name: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -682,7 +711,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={mz.zoneType}
                       onChange={(e) => store.updateMechanicalZone(mz.id, { zoneType: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -692,7 +721,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       value={mz.material}
                       placeholder="e.g. polycarbonate, silicone, epoxy potting"
                       onChange={(e) => store.updateMechanicalZone(mz.id, { material: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -702,7 +731,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       value={mz.dimensionNote}
                       placeholder="e.g. Ø 18.5 mm"
                       onChange={(e) => store.updateMechanicalZone(mz.id, { dimensionNote: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -711,7 +740,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       rows={2}
                       value={mz.notes}
                       onChange={(e) => store.updateMechanicalZone(mz.id, { notes: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none text-[10px]"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none text-[10px]"
                     />
                   </div>
                 </div>
@@ -730,7 +759,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={al.name}
                       onChange={(e) => store.updateAssemblyLayer(al.id, { name: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -739,7 +768,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={al.layerType}
                       onChange={(e) => store.updateAssemblyLayer(al.id, { layerType: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -749,7 +778,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       value={al.fasteningMethod}
                       placeholder="e.g. screws, adhesives, ultrasonic"
                       onChange={(e) => store.updateAssemblyLayer(al.id, { fasteningMethod: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -758,7 +787,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={al.inspectionNote}
                       onChange={(e) => store.updateAssemblyLayer(al.id, { inspectionNote: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -767,7 +796,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={al.material}
                       onChange={(e) => store.updateAssemblyLayer(al.id, { material: e.target.value })}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                 </div>
@@ -786,7 +815,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       rows={2}
                       value={ch.item}
                       onChange={(e) => handleUpdateSourceField('checklist', sourceId, 'item', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none text-[10px]"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none text-[10px]"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -794,7 +823,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     <select
                       value={ch.status}
                       onChange={(e) => handleUpdateSourceField('checklist', sourceId, 'status', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none font-bold"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none font-bold"
                     >
                       <option value="Not Started">Not Started</option>
                       <option value="In Progress">In Progress</option>
@@ -808,7 +837,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       type="text"
                       value={ch.ownerNotes}
                       onChange={(e) => handleUpdateSourceField('checklist', sourceId, 'ownerNotes', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none"
                     />
                   </div>
                 </div>
@@ -827,7 +856,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     <select
                       value={ff.status}
                       onChange={(e) => handleUpdateSourceField('factory-file', sourceId, 'status', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none font-bold text-amber-400"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none font-bold text-amber-700"
                     >
                       <option value="Not Generated">Not Generated Yet</option>
                       <option value="Conceptual">Conceptual Planning Only</option>
@@ -841,7 +870,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                     <select
                       value={ff.source}
                       onChange={(e) => handleUpdateSourceField('factory-file', sourceId, 'source', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full cursor-pointer focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full cursor-pointer focus:outline-none"
                     >
                       <option value="Hardware Studio">Hardware Studio</option>
                       <option value="KiCad">KiCad EDA</option>
@@ -860,7 +889,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       value={ff.fileName || ""}
                       placeholder="e.g. gerber_artwork_v1.zip"
                       onChange={(e) => handleUpdateSourceField('factory-file', sourceId, 'fileName', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none font-mono"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none font-mono"
                     />
                   </div>
                   <div className="flex flex-col space-y-1">
@@ -869,7 +898,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
                       rows={3}
                       value={ff.notes || ""}
                       onChange={(e) => handleUpdateSourceField('factory-file', sourceId, 'notes', e.target.value)}
-                      className="bg-slate-850 border border-slate-750 text-slate-200 rounded p-1.5 w-full focus:outline-none text-[10px]"
+                      className="bg-slate-50 border border-slate-200 text-slate-800 rounded p-1.5 w-full focus:outline-none text-[10px]"
                     />
                   </div>
                 </div>
@@ -880,7 +909,7 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
         )}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-slate-800 bg-slate-950/20 p-2 rounded text-[9.5px] leading-relaxed text-slate-500 font-mono">
+      <div className="mt-4 pt-3 border-t border-slate-200 bg-slate-50 p-2 rounded text-[9.5px] leading-relaxed text-slate-500 font-mono">
         OBJECT ID: {obj.id}<br />
         SOURCE LINK: {obj.sourceId || 'Unlinked Custom annotation'}
       </div>
@@ -888,3 +917,5 @@ export const EditorInspector: React.FC<EditorInspectorProps> = ({
     </div>
   );
 };
+
+

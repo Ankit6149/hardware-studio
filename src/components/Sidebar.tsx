@@ -163,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
                   const isTable = tabularViews.includes(s.id);
                   return (
                     <button
-                      key={s.id}
+                      key={`${group.title}-${s.id}-${s.label}`}
                       onClick={() => setActiveView(s.id)}
                       className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-[11px] font-semibold tracking-wide transition-all duration-150 cursor-pointer group ${
                         isActive 
