@@ -26,7 +26,9 @@ import {
   Trace,
   Via,
   DrillHole,
-  PcbRule
+  PcbRule,
+  KeepoutZone,
+  PadNetAssignment
 } from '../types';
 import { templates } from '../data/templates';
 import {
@@ -199,6 +201,14 @@ interface ProjectState extends Project {
   addPcbRule: (item: Omit<PcbRule, 'id'>) => void;
   updatePcbRule: (id: string, data: Partial<PcbRule>) => void;
   deletePcbRule: (id: string) => void;
+
+  addKeepoutZone: (item: Omit<KeepoutZone, 'id'> & { id?: string }) => void;
+  updateKeepoutZone: (id: string, data: Partial<KeepoutZone>) => void;
+  deleteKeepoutZone: (id: string) => void;
+
+  addPadNetAssignment: (item: Omit<PadNetAssignment, 'id'> & { id?: string }) => void;
+  deletePadNetAssignment: (id: string) => void;
+  setPadNetAssignments: (items: PadNetAssignment[]) => void;
 
   runFullDesignReview: () => void;
 
@@ -424,7 +434,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       boardOutlines: state.boardOutlines || [],
       pcbRules: state.pcbRules || [],
       reviewResults: state.reviewResults || [],
-      exportHistory: state.exportHistory || []
+      exportHistory: state.exportHistory || [],
+      padNetAssignments: state.padNetAssignments || [],
+      keepoutZones: state.keepoutZones || []
     };
   };
 
@@ -472,6 +484,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     exportHistory: initialProject.exportHistory || [],
     factoryPackageStatus: initialProject.factoryPackageStatus || "Draft",
     factoryReviewChecks: initialProject.factoryReviewChecks || {},
+    padNetAssignments: initialProject.padNetAssignments || [],
+    keepoutZones: initialProject.keepoutZones || [],
 
     selectedNodeId: null,
     projectsList: [],
@@ -2573,6 +2587,33 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     deletePcbRule: (id) => {
       const pcbRules = (get().pcbRules || []).filter(r => r.id !== id);
       persistChange({ pcbRules });
+    },
+
+    addKeepoutZone: (item) => {
+      const id = item.id || `keepout_${Date.now()}_${Math.random()}`;
+      const zones = [...(get().keepoutZones || []), { ...item, id }];
+      persistChange({ keepoutZones: zones });
+    },
+    updateKeepoutZone: (id, fields) => {
+      const zones = (get().keepoutZones || []).map(z => z.id === id ? { ...z, ...fields } : z);
+      persistChange({ keepoutZones: zones });
+    },
+    deleteKeepoutZone: (id) => {
+      const zones = (get().keepoutZones || []).filter(z => z.id !== id);
+      persistChange({ keepoutZones: zones });
+    },
+
+    addPadNetAssignment: (item) => {
+      const id = item.id || `pna_${Date.now()}_${Math.random()}`;
+      const items = [...(get().padNetAssignments || []), { ...item, id }];
+      persistChange({ padNetAssignments: items });
+    },
+    deletePadNetAssignment: (id) => {
+      const items = (get().padNetAssignments || []).filter(a => a.id !== id);
+      persistChange({ padNetAssignments: items });
+    },
+    setPadNetAssignments: (items) => {
+      persistChange({ padNetAssignments: items });
     },
 
     runFullDesignReview: () => {

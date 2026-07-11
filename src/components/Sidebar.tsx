@@ -58,6 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     {
       title: "Electronics",
       items: [
+        { id: 'board-designer', label: 'Board Designer', icon: Cpu },
         { id: 'board-studio', label: 'Boards', icon: Layers },
         { id: 'board-components', label: 'Components', icon: Cpu },
         { id: 'circuit-planner', label: 'Circuits / Schematic', icon: Boxes },
@@ -144,7 +145,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     'mfg-pack',
     'blueprint-sheets',
     'blueprint-editor',
-    'factory-builder'
+    'factory-builder',
+    'board-designer'
   ];
   const isCanvasView = !tabularViews.includes(activeView);
 

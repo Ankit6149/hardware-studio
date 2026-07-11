@@ -1863,15 +1863,19 @@ export const theRingTemplate: Project = {
       circuitBlockId: "cb_ring_mcu",
       referenceDesignator: "U1",
       componentName: "ESP32-C3 Controller",
-      componentType: "Integrated Circuit",
+      componentType: "MCU",
       value: "ESP32-C3-MINI-1",
       packageName: "QFN-32",
-      footprint: "QFN32_5x5mm_0.5mmPitch",
+      footprint: "QFN_32",
       partNumber: "ESP32-C3-MINI-1-N4",
       quantity: 1,
       side: "Top",
       placementCriticality: "High",
-      notes: "Central system microcontroller processor."
+      notes: "Central microcontroller.",
+      placementX: 22.0,
+      placementY: 6.0,
+      rotationDeg: 0,
+      placementStatus: "Placed"
     },
     {
       id: "bc_ring_u2",
@@ -1879,47 +1883,59 @@ export const theRingTemplate: Project = {
       circuitBlockId: "cb_ring_power",
       referenceDesignator: "U2",
       componentName: "AP2112 LDO Regulator",
-      componentType: "Power Regulator",
-      value: "3.3V / 600mA LDO",
+      componentType: "Power",
+      value: "3.3V LDO",
       packageName: "SOT-23-5",
-      footprint: "SOT23-5_Standard",
+      footprint: "SOT23_5",
       partNumber: "AP2112K-3.3TRG1",
       quantity: 1,
       side: "Top",
       placementCriticality: "Medium",
-      notes: "Steps battery voltage down to digital 3.3V rail."
+      notes: "3.3V power regulator.",
+      placementX: 14.0,
+      placementY: 4.0,
+      rotationDeg: 180,
+      placementStatus: "Placed"
     },
     {
       id: "bc_ring_u3",
-      boardId: "board_ring_charging",
+      boardId: "board_ring_main",
       circuitBlockId: "cb_ring_charger",
       referenceDesignator: "U3",
       componentName: "MCP73831 Charger BMS",
-      componentType: "Integrated Circuit",
-      value: "LiPo Linear Charger",
+      componentType: "Charger",
+      value: "LiPo Charger",
       packageName: "SOT-23-5",
-      footprint: "SOT23-5_Standard",
+      footprint: "SOT23_5",
       partNumber: "MCP73831T-2ACI/OT",
       quantity: 1,
       side: "Top",
-      placementCriticality: "High",
-      notes: "Located on Charging Contacts Board."
+      placementCriticality: "Medium",
+      notes: "Battery charging controller.",
+      placementX: 6.0,
+      placementY: 4.0,
+      rotationDeg: 0,
+      placementStatus: "Placed"
     },
     {
       id: "bc_ring_bt1",
       boardId: "board_ring_main",
       circuitBlockId: "cb_ring_power",
       referenceDesignator: "BT1",
-      componentName: "LiPo Battery",
+      componentName: "LiPo Battery Pads",
       componentType: "Battery",
-      value: "18mAh / 3.7V Cell",
-      packageName: "Custom Poly Pack",
-      footprint: "Battery_Pads_2pin",
+      value: "18mAh / 3.7V",
+      packageName: "2-pin SMD",
+      footprint: "BATTERY_PAD",
       partNumber: "Custom_18mah_Lipo",
       quantity: 1,
       side: "Bottom",
       placementCriticality: "High",
-      notes: "Glued beneath flex circuit board."
+      notes: "Power connection pads.",
+      placementX: 6.0,
+      placementY: 9.0,
+      rotationDeg: 0,
+      placementStatus: "Placed"
     },
     {
       id: "bc_ring_ant1",
@@ -1927,15 +1943,119 @@ export const theRingTemplate: Project = {
       circuitBlockId: "cb_ring_rf",
       referenceDesignator: "ANT1",
       componentName: "2.4GHz Chip Antenna",
-      componentType: "Antenna",
+      componentType: "RF",
       value: "BLE Chip Antenna",
       packageName: "SMD-3216",
-      footprint: "Antenna_Chip_3.2x1.6mm",
+      footprint: "ANTENNA_CHIP",
       partNumber: "2450AT18D0100E",
       quantity: 1,
       side: "Top",
       placementCriticality: "High",
-      notes: "Requires ground keepout void below layout region."
+      notes: "Requires keepouts.",
+      placementX: 41.0,
+      placementY: 6.0,
+      rotationDeg: 90,
+      placementStatus: "Placed"
+    },
+    {
+      id: "bc_ring_q1",
+      boardId: "board_ring_main",
+      circuitBlockId: "cb_ring_haptics",
+      referenceDesignator: "Q1",
+      componentName: "Haptic NPN Transistor",
+      componentType: "Haptic",
+      value: "NPN Switch",
+      packageName: "SOT-23",
+      footprint: "SOT23",
+      partNumber: "MMBT2222A",
+      quantity: 1,
+      side: "Top",
+      placementCriticality: "Low",
+      notes: "Vibration motor driver.",
+      placementX: 18.0,
+      placementY: 9.0,
+      rotationDeg: 90,
+      placementStatus: "Placed"
+    },
+    {
+      id: "bc_ring_m1",
+      boardId: "board_ring_main",
+      circuitBlockId: "cb_ring_haptics",
+      referenceDesignator: "M1",
+      componentName: "Motor Pads",
+      componentType: "Haptic",
+      value: "Coin LRA Pads",
+      packageName: "2-pin SMD",
+      footprint: "MOTOR_PAD",
+      partNumber: "LRA-Coin-Pads",
+      quantity: 1,
+      side: "Top",
+      placementCriticality: "Low",
+      notes: "Actuator connection point.",
+      placementX: 28.0,
+      placementY: 3.0,
+      rotationDeg: 0,
+      placementStatus: "Placed"
+    },
+    {
+      id: "bc_ring_tp1",
+      boardId: "board_ring_main",
+      circuitBlockId: "cb_ring_mcu",
+      referenceDesignator: "TP1",
+      componentName: "Touch Electrode Pad",
+      componentType: "Sensor",
+      value: "Capacitive Pad",
+      packageName: "SMD-1mm",
+      footprint: "TEST_PAD",
+      partNumber: "Touch-Pad-1mm",
+      quantity: 1,
+      side: "Top",
+      placementCriticality: "High",
+      notes: "Touch input pad sensor.",
+      placementX: 34.0,
+      placementY: 9.0,
+      rotationDeg: 0,
+      placementStatus: "Placed"
+    },
+    {
+      id: "bc_ring_c1",
+      boardId: "board_ring_main",
+      circuitBlockId: "cb_ring_power",
+      referenceDesignator: "C1",
+      componentName: "Input Filter Capacitor",
+      componentType: "Passive Network",
+      value: "10uF",
+      packageName: "0603",
+      footprint: "C_0603",
+      partNumber: "GRM188R61A106KE69D",
+      quantity: 1,
+      side: "Top",
+      placementCriticality: "Low",
+      notes: "Regulator input filter.",
+      placementX: 11.0,
+      placementY: 6.0,
+      rotationDeg: 90,
+      placementStatus: "Placed"
+    },
+    {
+      id: "bc_ring_r1",
+      boardId: "board_ring_main",
+      circuitBlockId: "cb_ring_haptics",
+      referenceDesignator: "R1",
+      componentName: "Base Limit Resistor",
+      componentType: "Passive Network",
+      value: "1k",
+      packageName: "0603",
+      footprint: "R_0603",
+      partNumber: "RC0603FR-071KL",
+      quantity: 1,
+      side: "Top",
+      placementCriticality: "Low",
+      notes: "Base drive current limit.",
+      placementX: 16.0,
+      placementY: 9.0,
+      rotationDeg: 0,
+      placementStatus: "Placed"
     }
   ],
   nets: [
@@ -1947,11 +2067,11 @@ export const theRingTemplate: Project = {
       sourceComponent: "BT1",
       sourcePin: "Pin 2 (BAT_GND)",
       targetComponent: "U1",
-      targetPin: "Pin 33 (GND)",
-      protocol: "Direct Connect",
+      targetPin: "Pin 5 (GND)",
+      protocol: "Ground Return",
       currentEstimate: "85mA max",
-      impedanceRequirement: "Low Impedance Return Plane",
-      notes: "Main system digital ground return plane."
+      impedanceRequirement: "Low Impedance",
+      notes: "Main return path."
     },
     {
       id: "net_ring_3v3",
@@ -1961,11 +2081,11 @@ export const theRingTemplate: Project = {
       sourceComponent: "U2",
       sourcePin: "Pin 5 (VOUT)",
       targetComponent: "U1",
-      targetPin: "Pin 3 (VDD)",
-      protocol: "Power Distribution",
+      targetPin: "Pin 4 (VDD)",
+      protocol: "Power rail",
       currentEstimate: "45mA avg",
-      impedanceRequirement: "Wide traces (8-10mil)",
-      notes: "Main regulated digital voltage rail."
+      impedanceRequirement: "Standard Trace",
+      notes: "Regulated voltage."
     },
     {
       id: "net_ring_vbat",
@@ -1976,10 +2096,10 @@ export const theRingTemplate: Project = {
       sourcePin: "Pin 1 (BAT_POS)",
       targetComponent: "U2",
       targetPin: "Pin 1 (VIN)",
-      protocol: "Power Distribution",
+      protocol: "Power rail",
       currentEstimate: "85mA max",
-      impedanceRequirement: "Wide traces (8-10mil)",
-      notes: "Raw battery input voltage line."
+      impedanceRequirement: "Standard Trace",
+      notes: "Battery raw supply."
     },
     {
       id: "net_ring_touch",
@@ -1987,13 +2107,88 @@ export const theRingTemplate: Project = {
       netType: "Signal",
       voltage: "3.3V",
       sourceComponent: "U1",
-      sourcePin: "Pin 4 (GPIO_4)",
-      targetComponent: "ANT1",
-      targetPin: "Pin 1",
-      protocol: "Analog Capacitive",
+      sourcePin: "Pin 1 (GPIO_4)",
+      targetComponent: "TP1",
+      targetPin: "TP1",
+      protocol: "Capacitive",
       currentEstimate: "0.1mA",
-      impedanceRequirement: "Guard trace isolation",
-      notes: "Senses touch surface capacitive charge shifts."
+      impedanceRequirement: "Isolated Path",
+      notes: "Capacitive sensing node."
+    },
+    {
+      id: "net_ring_haptic",
+      netName: "HAPTIC_DRV",
+      netType: "Signal",
+      voltage: "3.3V",
+      sourceComponent: "U1",
+      sourcePin: "Pin 2 (GPIO_5)",
+      targetComponent: "Q1",
+      targetPin: "Pin 1",
+      protocol: "PWM",
+      currentEstimate: "1.0mA",
+      impedanceRequirement: "Standard Routing",
+      notes: "Motor switch signal."
+    },
+    {
+      id: "net_ring_rf",
+      netName: "BLE_RF",
+      netType: "RF",
+      voltage: "0V",
+      sourceComponent: "U1",
+      sourcePin: "Pin 3 (RF)",
+      targetComponent: "ANT1",
+      targetPin: "FEED",
+      protocol: "RF",
+      currentEstimate: "15mA",
+      impedanceRequirement: "50-ohm microstrip",
+      notes: "Antenna RF channel."
+    }
+  ],
+  padNetAssignments: [
+    { id: "pna_1", componentId: "bc_ring_u1", referenceDesignator: "U1", padName: "1", netName: "TOUCH_SENSE" },
+    { id: "pna_2", componentId: "bc_ring_tp1", referenceDesignator: "TP1", padName: "TP1", netName: "TOUCH_SENSE" },
+    { id: "pna_3", componentId: "bc_ring_u1", referenceDesignator: "U1", padName: "2", netName: "HAPTIC_DRV" },
+    { id: "pna_4", componentId: "bc_ring_q1", referenceDesignator: "Q1", padName: "1", netName: "HAPTIC_DRV" },
+    { id: "pna_5", componentId: "bc_ring_u1", referenceDesignator: "U1", padName: "4", netName: "3V3" },
+    { id: "pna_6", componentId: "bc_ring_u2", referenceDesignator: "U2", padName: "5", netName: "3V3" },
+    { id: "pna_7", componentId: "bc_ring_u1", referenceDesignator: "U1", padName: "5", netName: "GND" },
+    { id: "pna_8", componentId: "bc_ring_u2", referenceDesignator: "U2", padName: "2", netName: "GND" },
+    { id: "pna_9", componentId: "bc_ring_u3", referenceDesignator: "U3", padName: "2", netName: "GND" },
+    { id: "pna_10", componentId: "bc_ring_q1", referenceDesignator: "Q1", padName: "2", netName: "GND" }
+  ],
+  keepoutZones: [
+    {
+      id: "ko_ring_antenna",
+      boardId: "board_ring_main",
+      x: 39,
+      y: 0,
+      width: 6,
+      height: 12,
+      shape: "rect",
+      layerScope: "All",
+      reason: "BLE antenna clearance keepout"
+    },
+    {
+      id: "ko_ring_bend",
+      boardId: "board_ring_main",
+      x: 24,
+      y: 0,
+      width: 3,
+      height: 12,
+      shape: "rect",
+      layerScope: "All",
+      reason: "Flex PCB bend zone no-placement"
+    },
+    {
+      id: "ko_ring_battery",
+      boardId: "board_ring_main",
+      x: 2,
+      y: 6,
+      width: 8,
+      height: 6,
+      shape: "rect",
+      layerScope: "All",
+      reason: "Battery casing clearance vault"
     }
   ],
   pcbConstraints: [
@@ -2001,8 +2196,8 @@ export const theRingTemplate: Project = {
       id: "con_ring_width",
       boardId: "board_ring_main",
       constraintType: "Trace Width",
-      value: "4.0",
-      unit: "mil",
+      value: "0.15",
+      unit: "mm",
       description: "Minimum trace width sizing rule to ensure flex circuit yield compatibility.",
       severity: "Warning"
     },
@@ -2010,27 +2205,9 @@ export const theRingTemplate: Project = {
       id: "con_ring_clearance",
       boardId: "board_ring_main",
       constraintType: "Clearance",
-      value: "4.0",
-      unit: "mil",
+      value: "0.15",
+      unit: "mm",
       description: "Minimum clearance spacing constraint between raw copper traces.",
-      severity: "Critical"
-    },
-    {
-      id: "con_ring_bend",
-      boardId: "board_ring_main",
-      constraintType: "Flex Bend",
-      value: "1.5",
-      unit: "mm",
-      description: "Minimum bend radius limit allowed in polyimide wrap bend zones.",
-      severity: "Critical"
-    },
-    {
-      id: "con_ring_antenna",
-      boardId: "board_ring_main",
-      constraintType: "RF Keepout",
-      value: "5.0",
-      unit: "mm",
-      description: "Ground plane copper exclusion keepout void boundary below BLE antenna trace.",
       severity: "Critical"
     }
   ],
@@ -2050,22 +2227,6 @@ export const theRingTemplate: Project = {
       status: "In Progress",
       ownerNotes: "Checking trace routing clearances.",
       blockingReason: ""
-    },
-    {
-      id: "mc_ring_keepout",
-      category: "PCB Layout",
-      item: "Verify copper keepout regions are active below BLE transceiver antenna trace",
-      status: "Done",
-      ownerNotes: "Antenna keepout void on flex board confirmed.",
-      blockingReason: ""
-    },
-    {
-      id: "mc_ring_skin",
-      category: "Compliance",
-      item: "Verify wearable skin-contact polymer safety biocompatibility compliance certifications",
-      status: "Not Started",
-      ownerNotes: "Need to order medical grade polyurethane coating samples.",
-      blockingReason: ""
     }
   ],
   mechanicalZones: [
@@ -2076,22 +2237,6 @@ export const theRingTemplate: Project = {
       material: "Zirconia ZrO2",
       dimensionNote: "Thickness 0.8mm",
       notes: "Protective outer body ring shell casing."
-    },
-    {
-      id: "mz_ring_flex",
-      name: "FPC Flex Channel",
-      zoneType: "Substrate Channel",
-      material: "Polyimide Film",
-      dimensionNote: "Width 6mm",
-      notes: "Internal channel pocket for flex PCBA."
-    },
-    {
-      id: "mz_ring_battery",
-      name: "Battery Compartment",
-      zoneType: "Power Pocket",
-      material: "Rigid Titanium Vault",
-      dimensionNote: "8 x 2mm arc slot",
-      notes: "Bottom capsule segment compartment."
     }
   ],
   assemblyLayers: [
@@ -2103,27 +2248,7 @@ export const theRingTemplate: Project = {
       material: "ZrO2 Ceramic",
       fasteningMethod: "Press-fit & Epoxy",
       inspectionNote: "Verify gap clearance & aesthetic concentricity.",
-      notes: "Outer cosmetic band."
-    },
-    {
-      id: "al_ring_pcb",
-      name: "Flexible PCBA Installation",
-      order: 2,
-      layerType: "PCBA",
-      material: "Rigid-Flex PCB",
-      fasteningMethod: "Double-sided conductive tape",
-      inspectionNote: "Verify antenna keeping clearance.",
-      notes: "Main electronic assembly."
-    },
-    {
-      id: "al_ring_battery",
-      name: "Micro Cell Battery Integration",
-      order: 3,
-      layerType: "Battery",
-      material: "Lithium Polymer Cell",
-      fasteningMethod: "Solder tabs & Epoxy potting",
-      inspectionNote: "Perform voltage leakage check.",
-      notes: "Power source integration."
+      notes: "Outer cosmetic cosmetic band."
     }
   ],
   schematicSymbols: [
@@ -2136,29 +2261,7 @@ export const theRingTemplate: Project = {
       x: 300,
       y: 180,
       rotation: 0,
-      notes: "Main MCU BLE controller",
-      pins: [
-        { pinNum: "1", label: "TOUCH_SENSE", direction: "Input" },
-        { pinNum: "2", label: "HAPTIC_PWM", direction: "Output" },
-        { pinNum: "3", label: "DEBUG_TX", direction: "Output" },
-        { pinNum: "4", label: "VDD", direction: "Power" },
-        { pinNum: "5", label: "GND", direction: "Passive" }
-      ]
-    },
-    {
-      id: "sym_ring_motor",
-      circuitId: "haptic-motor-output",
-      symbolType: "Motor",
-      referenceDesignator: "M1",
-      label: "LRA Haptic",
-      x: 550,
-      y: 180,
-      rotation: 0,
-      notes: "Haptic actuator",
-      pins: [
-        { pinNum: "1", label: "PWM_DRIVE", direction: "Input" },
-        { pinNum: "2", label: "GND", direction: "Passive" }
-      ]
+      notes: "Main MCU BLE controller"
     }
   ],
   schematicConnections: [
@@ -2178,11 +2281,15 @@ export const theRingTemplate: Project = {
       id: "out_ring_main",
       boardId: "board_ring_main",
       points: [
-        { x: 50, y: 50 },
-        { x: 750, y: 50 },
-        { x: 750, y: 550 },
-        { x: 50, y: 550 }
-      ]
+        { x: 0, y: 0 },
+        { x: 45, y: 0 },
+        { x: 45, y: 12 },
+        { x: 0, y: 12 }
+      ],
+      width: 45,
+      height: 12,
+      units: "mm",
+      notes: "Curved flex board outline strip"
     }
   ],
   copperShapes: [
@@ -2192,64 +2299,70 @@ export const theRingTemplate: Project = {
       netId: "net_gnd",
       layerId: "Bottom",
       points: [
-        { x: 60, y: 60 },
-        { x: 740, y: 60 },
-        { x: 740, y: 540 },
-        { x: 60, y: 540 }
+        { x: 1, y: 1 },
+        { x: 44, y: 1 },
+        { x: 44, y: 11 },
+        { x: 1, y: 11 }
       ]
     }
   ],
   traces: [
     {
-      id: "trace_ring_pwm",
+      id: "trace_ring_3v3",
       boardId: "board_ring_main",
-      netId: "net_pwm",
-      layerId: "Top",
+      netName: "3V3",
+      layerId: "top-copper",
       width: 0.2,
       points: [
-        { x: 300, y: 180 },
-        { x: 550, y: 180 }
-      ]
+        { x: 14.0, y: 4.0 },
+        { x: 16.0, y: 4.0 },
+        { x: 22.0, y: 6.0 }
+      ],
+      status: "Draft"
+    },
+    {
+      id: "trace_ring_gnd",
+      boardId: "board_ring_main",
+      netName: "GND",
+      layerId: "bottom-copper",
+      width: 0.3,
+      points: [
+        { x: 6.0, y: 9.0 },
+        { x: 14.0, y: 9.0 },
+        { x: 22.0, y: 6.0 }
+      ],
+      status: "Draft"
     }
   ],
   vias: [
     {
       id: "via_ring_gnd",
       boardId: "board_ring_main",
-      netId: "net_gnd",
-      x: 350,
-      y: 200,
+      x: 20.5,
+      y: 6.5,
       drillDiameter: 0.3,
-      outerDiameter: 0.6
+      outerDiameter: 0.6,
+      netId: "net_ring_gnd"
     }
   ],
   drillHoles: [
     {
       id: "drill_ring_align_1",
       boardId: "board_ring_main",
-      x: 380,
-      y: 200,
-      diameter: 1.0,
+      x: 3.0,
+      y: 6.0,
+      diameter: 1.2,
       plated: false,
-      purpose: "Mechanical Casing Alignment Pin A"
+      purpose: "Casing alignment pin alignment"
     },
     {
-      id: "drill_ring_align_2",
+      id: "drill_ring_test_fixture",
       boardId: "board_ring_main",
-      x: 420,
-      y: 200,
+      x: 42.0,
+      y: 1.5,
       diameter: 1.0,
       plated: false,
-      purpose: "Mechanical Casing Alignment Pin B"
-    },
-    {
-      id: "drill_ring_via_hole_1",
-      boardId: "board_ring_main",
-      x: 350,
-      y: 200,
-      diameter: 0.3,
-      plated: true,
-      purpose: "GND Signal Via Connection Void"
+      purpose: "Test jig bed of nails align drill"
     }
   ],
   pcbRules: [
@@ -2259,6 +2372,13 @@ export const theRingTemplate: Project = {
       ruleType: "Clearance",
       value: "0.15",
       description: "Minimum spacing clearance allowed between parallel trace lanes."
+    },
+    {
+      id: "rule_ring_width",
+      boardId: "board_ring_main",
+      ruleType: "Trace Width",
+      value: "0.15",
+      description: "Minimum trace width sizing rule to ensure flex circuit yield compatibility."
     }
   ]
 };

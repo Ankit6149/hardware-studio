@@ -740,6 +740,7 @@ export const generateNativeBoardLayoutJson = (project: Project): string => {
   const data = {
     generatedAt: new Date().toISOString(),
     projectName: project.projectName,
+    version: project.version,
     boards: project.boards || [],
     boardOutlines: project.boardOutlines || [],
     pcbLayers: project.pcbLayers || [],
@@ -748,10 +749,17 @@ export const generateNativeBoardLayoutJson = (project: Project): string => {
     vias: project.vias || [],
     drillHoles: project.drillHoles || [],
     copperShapes: project.copperShapes || [],
+    keepoutZones: project.keepoutZones || [],
+    padNetAssignments: project.padNetAssignments || [],
     pcbRules: project.pcbRules || [],
+    reviewResults: project.reviewResults || [],
     disclaimer: "App-generated native board layouts metadata document. Final mechanical review required."
   };
   return JSON.stringify(data, null, 2);
+};
+
+export const exportHardwareStudioBoardJson = (project: Project): string => {
+  return generateNativeBoardLayoutJson(project);
 };
 
 // M. generateFactoryReviewReadme

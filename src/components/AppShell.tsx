@@ -23,6 +23,7 @@ import { ProjectDashboard } from './ProjectDashboard';
 import { BlueprintSheets } from './BlueprintSheets';
 import { BlueprintEditor } from './BlueprintEditor';
 import { FactoryPackageBuilder } from './FactoryPackageBuilder';
+import { BoardDesigner } from './board/BoardDesigner';
 
 export const AppShell: React.FC = () => {
   const { activeView, loadProjectFromLocalStorage } = useProjectStore();
@@ -74,6 +75,8 @@ export const AppShell: React.FC = () => {
         return <PCBConstraints />;
       case 'mfg-pack':
         return <ManufacturingPack />;
+      case 'board-designer':
+        return <BoardDesigner />;
       default:
         return <BlueprintCanvas />;
     }
@@ -98,7 +101,8 @@ export const AppShell: React.FC = () => {
     'pcb-constraints',
     'mfg-pack',
     'blueprint-editor',
-    'factory-builder'
+    'factory-builder',
+    'board-designer'
   ];
   const isCanvasView = !tabularViews.includes(activeView);
   const showVisualizer = !tabularViews.includes(activeView);

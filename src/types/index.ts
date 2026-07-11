@@ -166,6 +166,7 @@ export interface BoardComponent {
   placementY?: number;
   rotationDeg?: number;
   lockedPlacement?: boolean;
+  placementStatus?: 'Unplaced' | 'Placed' | 'Locked' | 'Needs Review' | 'Outside Board' | 'Missing Footprint';
 }
 
 export interface NetItem {
@@ -295,12 +296,36 @@ export interface Trace {
   boardId: string;
   layerId?: string;
   netId?: string;
+  netName?: string;
   points?: { x: number; y: number }[];
   width?: number;
   viaIds?: string[];
   locked?: boolean;
   lengthEstimate?: number;
   impedanceNote?: string;
+  status?: 'Draft' | 'Routed' | 'Needs Review' | 'Verified';
+}
+
+export interface PadNetAssignment {
+  id: string;
+  componentId: string;
+  referenceDesignator: string;
+  padName: string;
+  netName: string;
+}
+
+export interface KeepoutZone {
+  id: string;
+  boardId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  shape: 'rect' | 'polygon';
+  points?: { x: number; y: number }[];
+  layerScope: 'All' | 'Top' | 'Bottom';
+  reason: string;
+  notes?: string;
 }
 
 export interface Via {
@@ -422,6 +447,8 @@ export interface Project {
   pcbRules?: PcbRule[];
   reviewResults?: ReviewResult[];
   exportHistory?: string[];
+  padNetAssignments?: PadNetAssignment[];
+  keepoutZones?: KeepoutZone[];
 
   // Blueprint Generation System
   blueprintPack?: BlueprintPack;

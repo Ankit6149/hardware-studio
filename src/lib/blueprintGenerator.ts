@@ -353,28 +353,59 @@ function generatePCBLayoutSheet(p: Project, reviewResults: ReturnType<typeof run
 
   const drawObjs: BlueprintDrawingObject[] = [];
 
-  boards.forEach((b, i) => {
+  const outline = outlines[0];
+  const boardW = outline?.width || 50;
+  const boardH = outline?.height || 12;
+  const scale = Math.min(450 / boardW, 250 / boardH);
+  const startX = 400 - (boardW * scale) / 2;
+  const startY = 250 - (boardH * scale) / 2;
+
+  if (boards.length > 0) {
     drawObjs.push({
-      id: objId(), type: "board", label: b.name,
-      x: 50 + i * 300, y: 50, width: 260, height: 180,
-      sourceType: "board", sourceId: b.id,
-      metadata: { boardType: b.boardType, dimensions: b.dimensionsMm || "", layers: b.layerCount, substrate: b.substrate, status: b.status }
+      id: objId(), type: "board", label: boards[0].name,
+      x: startX, y: startY, width: boardW * scale, height: boardH * scale,
+      sourceType: "board", sourceId: boards[0].id,
+      metadata: { boardType: boards[0].boardType, dimensions: boards[0].dimensionsMm || "", layers: boards[0].layerCount, substrate: boards[0].substrate, status: boards[0].status }
     });
-  });
+  }
 
   vias.forEach(v => {
-    if (v.x != null && v.y != null) drawObjs.push({ id: objId(), type: "via", label: `Via ${v.drillDiameter ?? ""}mm`, x: v.x, y: v.y, width: 8, height: 8, sourceType: "via", sourceId: v.id });
+    if (v.x != null && v.y != null) {
+      drawObjs.push({
+        id: objId(), type: "via", label: "",
+        x: startX + v.x * scale - 2, y: startY + v.y * scale - 2,
+        width: 4, height: 4, sourceType: "via", sourceId: v.id
+      });
+    }
+  });
+
+  drills.forEach(d => {
+    if (d.x != null && d.y != null) {
+      drawObjs.push({
+        id: objId(), type: "via", label: "",
+        x: startX + d.x * scale - 3, y: startY + d.y * scale - 3,
+        width: 6, height: 6, sourceType: "drill", sourceId: d.id
+      });
+    }
   });
 
   const dims: BlueprintDimension[] = [];
-  outlines.forEach(ol => {
-    if (ol.width && ol.height) dims.push({ id: dimId(), label: `${ol.width}×${ol.height} ${ol.units || "mm"}`, from: { x: 50, y: 460 }, to: { x: 50 + ol.width * 3, y: 460 }, unit: ol.units || "mm" });
-  });
+  if (outline) {
+    dims.push({
+      id: dimId(), label: `${boardW} mm`,
+      from: { x: startX, y: startY + boardH * scale + 15 },
+      to: { x: startX + boardW * scale, y: startY + boardH * scale + 15 },
+      unit: "mm"
+    });
+    dims.push({
+      id: dimId(), label: `${boardH} mm`,
+      from: { x: startX - 15, y: startY },
+      to: { x: startX - 15, y: startY + boardH * scale },
+      unit: "mm"
+    });
+  }
 
   if (boards.length === 0) warnings.push({ id: warnId(), sheetId: "sh-7", severity: "Blocker", title: "No Boards", message: "No PCB boards defined." });
-  boards.forEach(b => {
-    if (!b.dimensionsMm || b.dimensionsMm === "0 x 0") warnings.push({ id: warnId(), sheetId: "sh-7", severity: "Error", title: `${b.name} No Dimensions`, message: `Board "${b.name}" lacks physical dimensions.`, sourceType: "board", sourceId: b.id });
-  });
   reviewResults.filter(r => r.category.includes("DRC") || r.category.includes("PCB")).forEach(r => {
     warnings.push({ id: warnId(), sheetId: "sh-7", severity: r.severity, title: r.title, message: r.description, sourceType: r.linkedObjectType, sourceId: r.linkedObjectId });
   });
@@ -400,37 +431,56 @@ function generatePCBLayoutSheet(p: Project, reviewResults: ReturnType<typeof run
 // ============================================================
 // SHEET 8 — Component Placement Blueprint
 // ============================================================
+import { getFootprint as getFpPreset } from './footprints';
+
 function generateComponentPlacementSheet(p: Project): BlueprintSheet {
   const components = p.boardComponents || [];
   const boards = p.boards || [];
+  const outlines = p.boardOutlines || [];
   const warnings: BlueprintWarning[] = [];
   const sources: BlueprintSourceRef[] = components.map(c => ({ type: "component", id: c.id, label: c.referenceDesignator || c.componentName }));
 
   const drawObjs: BlueprintDrawingObject[] = [];
 
+  const outline = outlines[0];
+  const boardW = outline?.width || 50;
+  const boardH = outline?.height || 12;
+  const scale = Math.min(450 / boardW, 250 / boardH);
+  const startX = 400 - (boardW * scale) / 2;
+  const startY = 250 - (boardH * scale) / 2;
+
   // Board outline background
   if (boards.length > 0) {
-    drawObjs.push({ id: objId(), type: "board", label: boards[0].name, x: 50, y: 50, width: 300, height: 200, sourceType: "board", sourceId: boards[0].id });
+    drawObjs.push({
+      id: objId(), type: "board", label: boards[0].name,
+      x: startX, y: startY, width: boardW * scale, height: boardH * scale,
+      sourceType: "board", sourceId: boards[0].id
+    });
   }
 
-  components.forEach((c, i) => {
-    drawObjs.push({
-      id: objId(), type: "component", label: c.referenceDesignator || c.componentName,
-      x: c.placementX ?? (70 + (i % 6) * 45), y: c.placementY ?? (70 + Math.floor(i / 6) * 35), width: 35, height: 25,
-      rotation: c.rotationDeg, sourceType: "component", sourceId: c.id,
-      metadata: { footprint: c.footprint || "", value: c.value || "", side: c.side, packageName: c.packageName || "" }
-    });
+  components.forEach(c => {
+    if (c.placementX != null && c.placementY != null) {
+      const fp = getFpPreset(c.footprint);
+      const w = fp.bodyWidthMm || 3;
+      const h = fp.bodyHeightMm || 2;
+      drawObjs.push({
+        id: objId(), type: "component", label: c.referenceDesignator || c.componentName,
+        x: startX + (c.placementX - w / 2) * scale,
+        y: startY + (c.placementY - h / 2) * scale,
+        width: w * scale, height: h * scale,
+        rotation: c.rotationDeg, sourceType: "component", sourceId: c.id,
+        metadata: { footprint: c.footprint || "", value: c.value || "", side: c.side, packageName: c.packageName || "" }
+      });
+    }
   });
 
   if (components.length === 0) warnings.push({ id: warnId(), sheetId: "sh-8", severity: "Warning", title: "No Components", message: "No board components defined." });
-  const unplaced = components.filter(c => !c.placementX || !c.placementY);
+  const unplaced = components.filter(c => c.placementX == null || c.placementY == null);
   if (unplaced.length > 0) warnings.push({ id: warnId(), sheetId: "sh-8", severity: "Warning", title: `${unplaced.length} Unplaced`, message: `${unplaced.length} components lack placement coordinates.` });
-  const noFP = components.filter(c => !c.footprint || c.footprint.toUpperCase().includes("REQUIRED"));
-  if (noFP.length > 0) warnings.push({ id: warnId(), sheetId: "sh-8", severity: "Warning", title: `${noFP.length} Missing Footprint`, message: `${noFP.length} components missing footprint assignments.` });
 
   const placementTable: BlueprintTable = {
     id: tblId(), title: "Component Placement", columns: ["RefDes", "Component", "Footprint", "X", "Y", "Rotation", "Side", "Status"],
-    rows: components.map(c => [c.referenceDesignator, c.componentName, c.footprint || "—", String(c.placementX ?? "—"), String(c.placementY ?? "—"), String(c.rotationDeg ?? 0), c.side, c.placementX ? "Placed" : "Unplaced"])
+    rows: components.map(c => [c.referenceDesignator, c.componentName, c.footprint || "—", String(c.placementX ?? "—"), String(c.placementY ?? "—"), String(c.rotationDeg ?? 0), c.side, c.placementX != null ? "Placed" : "Unplaced"])
   };
 
   return {
@@ -449,29 +499,71 @@ function generateRoutingSheet(p: Project): BlueprintSheet {
   const nets = p.nets || [];
   const traces = p.traces || [];
   const vias = p.vias || [];
+  const outlines = p.boardOutlines || [];
+  const boards = p.boards || [];
   const warnings: BlueprintWarning[] = [];
   const sources: BlueprintSourceRef[] = nets.map(n => ({ type: "net", id: n.id, label: n.netName }));
 
   const drawObjs: BlueprintDrawingObject[] = [];
 
-  // Traces
-  traces.forEach((t, i) => {
+  const outline = outlines[0];
+  const boardW = outline?.width || 50;
+  const boardH = outline?.height || 12;
+  const scale = Math.min(450 / boardW, 250 / boardH);
+  const startX = 400 - (boardW * scale) / 2;
+  const startY = 250 - (boardH * scale) / 2;
+
+  // Board outline background
+  if (boards.length > 0) {
     drawObjs.push({
-      id: objId(), type: "trace", label: t.netId || `Trace ${i + 1}`,
-      x: t.points?.[0]?.x ?? (50 + (i % 6) * 120), y: t.points?.[0]?.y ?? (50 + Math.floor(i / 6) * 60), width: 100, height: 6,
-      sourceType: "trace", sourceId: t.id, metadata: { width: t.width ?? 0.2, netId: t.netId || "" }
+      id: objId(), type: "board", label: boards[0].name,
+      x: startX, y: startY, width: boardW * scale, height: boardH * scale,
+      sourceType: "board", sourceId: boards[0].id
     });
+  }
+
+  // Draw traces as rotated segments
+  traces.forEach(t => {
+    if (t.points && t.points.length > 1) {
+      for (let i = 0; i < t.points.length - 1; i++) {
+        const pt1 = t.points[i];
+        const pt2 = t.points[i + 1];
+        const cx = (pt1.x + pt2.x) / 2;
+        const cy = (pt1.y + pt2.y) / 2;
+        const dist = Math.hypot(pt2.x - pt1.x, pt2.y - pt1.y);
+        const angle = Math.atan2(pt2.y - pt1.y, pt2.x - pt1.x) * 180 / Math.PI;
+
+        drawObjs.push({
+          id: objId(), type: "trace", label: "",
+          x: startX + cx * scale - (dist * scale) / 2,
+          y: startY + cy * scale - 1,
+          width: dist * scale, height: 2,
+          rotation: angle, sourceType: "trace", sourceId: t.id
+        });
+      }
+    }
+  });
+
+  // Draw vias
+  vias.forEach(v => {
+    if (v.x != null && v.y != null) {
+      drawObjs.push({
+        id: objId(), type: "via", label: "",
+        x: startX + v.x * scale - 2, y: startY + v.y * scale - 2,
+        width: 4, height: 4, sourceType: "via", sourceId: v.id
+      });
+    }
   });
 
   const hasGND = nets.some(n => n.netName.toUpperCase() === "GND" || n.netType === "Ground");
   if (!hasGND && nets.length > 0) warnings.push({ id: warnId(), sheetId: "sh-9", severity: "Error", title: "Missing GND", message: "No GND net defined." });
   if (nets.length === 0) warnings.push({ id: warnId(), sheetId: "sh-9", severity: "Warning", title: "No Nets", message: "No nets defined." });
-  const unrouted = nets.filter(n => !traces.some(t => t.netId === n.id));
+  const unrouted = nets.filter(n => !traces.some(t => t.netName === n.netName || t.netId === n.id));
   if (unrouted.length > 0) warnings.push({ id: warnId(), sheetId: "sh-9", severity: "Info", title: `${unrouted.length} Unrouted`, message: `${unrouted.length} nets lack routed traces.` });
 
   const netTable: BlueprintTable = {
     id: tblId(), title: "Net List", columns: ["Net", "Type", "Voltage", "Source", "Target", "Protocol", "Routed"],
-    rows: nets.map(n => [n.netName, n.netType, n.voltage || "—", n.sourceComponent, n.targetComponent, n.protocol || "—", traces.some(t => t.netId === n.id) ? "Yes" : "No"])
+    rows: nets.map(n => [n.netName, n.netType, n.voltage || "—", n.sourceComponent, n.targetComponent, n.protocol || "—", traces.some(t => t.netName === n.netName || t.netId === n.id) ? "Yes" : "No"])
   };
 
   return {
@@ -722,7 +814,7 @@ function generateFirmwareStateMachineSheet(p: Project): BlueprintSheet {
 // ============================================================
 // SHEET 14 — Testing / Validation Blueprint
 // ============================================================
-function generateTestingSheet(p: Project, _reviewResults: ReturnType<typeof runDesignReview>): BlueprintSheet {
+function generateTestingSheet(p: Project): BlueprintSheet {
   const tests = p.testing || [];
   const checklist = p.manufacturingChecklist || [];
   const warnings: BlueprintWarning[] = [];
@@ -892,7 +984,7 @@ export function generateBlueprintPack(project: Project): BlueprintPack {
     generatePinMapSheet(project),
     generateFirmwareArchSheet(project),
     generateFirmwareStateMachineSheet(project),
-    generateTestingSheet(project, reviewResults),
+    generateTestingSheet(project),
     generateManufacturingSheet(project),
     generateReadinessSheet(project, reviewResults),
   ];
