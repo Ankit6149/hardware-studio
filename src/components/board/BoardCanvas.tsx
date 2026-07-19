@@ -1,16 +1,16 @@
 import React, { useRef, useCallback, useMemo } from 'react';
 import { useProjectStore } from '../../store/projectStore';
-import { BoardViewState } from './boardInteractionTypes';
+import { BoardDesignerUIState } from './boardInteraction';
 import {
-  mmToSvg, svgToMm, snapToGrid,
+  mmToSvg, svgToMm, snapToGrid as snapCoordinateToGrid,
   getOutlineBounds, getNetRatsnestLines,
 } from './boardGeometry';
 import { getFootprint } from '../../lib/footprints';
 import { ReviewResult, Project } from '../../types';
 
 interface BoardCanvasProps {
-  viewState: BoardViewState;
-  onViewStateChange: (patch: Partial<BoardViewState>) => void;
+  viewState: BoardDesignerUIState;
+  onViewStateChange: (patch: Partial<BoardDesignerUIState>) => void;
   drcResults: ReviewResult[];
 }
 
@@ -24,9 +24,19 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
 
-  const { zoom, panX, panY, gridSizeMm, snapEnabled, activeTool, selectedObjectId,
-    selectedObjectType, selectedNetName, showRatsnest, showDrcMarkers,
+  const { zoom, panX, panY, gridSizeMm, activeTool,
+    selectedComponentId, selectedTraceId, selectedViaId, selectedDrillHoleId, selectedKeepoutId,
+    selectedNetName, showRatsnest, showDRC,
     routePreviewPoints, isRouting, layerVisibility } = viewState;
+
+  const selectedObjectId =
+    selectedComponentId || selectedTraceId || selectedViaId || selectedDrillHoleId || selectedKeepoutId;
+  const selectedObjectType =
+    selectedComponentId ? 'component' :
+    selectedTraceId ? 'trace' :
+    selectedViaId ? 'via' :
+    selectedDrillHoleId ? 'drill' :
+    selectedKeepoutId ? 'keepout' : null;
 
   const outline = (boardOutlines || [])[0];
   
@@ -45,12 +55,12 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     const svgY = clientY - rect.top;
     let mmX = svgToMm(svgX - panX, zoom) + bounds.minX - pad;
     let mmY = svgToMm(svgY - panY, zoom) + bounds.minY - pad;
-    if (snapEnabled) {
-      mmX = snapToGrid(mmX, gridSizeMm);
-      mmY = snapToGrid(mmY, gridSizeMm);
+    if (viewState.snapToGrid) {
+      mmX = snapCoordinateToGrid(mmX, gridSizeMm);
+      mmY = snapCoordinateToGrid(mmY, gridSizeMm);
     }
     return { x: mmX, y: mmY };
-  }, [zoom, panX, panY, bounds, snapEnabled, gridSizeMm]);
+  }, [zoom, panX, panY, bounds.minX, bounds.minY, viewState.snapToGrid, gridSizeMm]);
 
   const bx = useCallback((mm: number) => mmToSvg(mm - bounds.minX + pad, zoom) + panX, [bounds.minX, zoom, panX]);
   const by = useCallback((mm: number) => mmToSvg(mm - bounds.minY + pad, zoom) + panY, [bounds.minY, zoom, panY]);
@@ -65,7 +75,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
   }, [zoom, onViewStateChange]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && e.altKey)) {
+    if (e.button === 1 || (e.button === 0 && (e.altKey || activeTool === 'pan'))) {
       isPanning.current = true;
       panStart.current = { x: e.clientX - panX, y: e.clientY - panY };
       return;
@@ -73,23 +83,21 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
 
     const pt = screenToBoard(e.clientX, e.clientY);
 
-    if (activeTool === 'route-trace' && selectedNetName) {
+    if (activeTool === 'route' && selectedNetName) {
       if (!isRouting) {
-        // Start routing
         onViewStateChange({
           isRouting: true,
           routePreviewPoints: [pt],
         });
       } else {
-        // Add intermediate point
         onViewStateChange({
-          routePreviewPoints: [...routePreviewPoints, pt],
+          routePreviewPoints: [...(routePreviewPoints || []), pt],
         });
       }
       return;
     }
 
-    if (activeTool === 'add-via' && selectedNetName) {
+    if (activeTool === 'via' && selectedNetName) {
       const primaryBoard = (useProjectStore.getState().boards || [])[0];
       addVia({
         boardId: primaryBoard?.id || 'board-main',
@@ -104,7 +112,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       return;
     }
 
-    if (activeTool === 'add-drill') {
+    if (activeTool === 'drill') {
       const primaryBoard = (useProjectStore.getState().boards || [])[0];
       addDrillHole({
         boardId: primaryBoard?.id || 'board-main',
@@ -117,7 +125,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       return;
     }
 
-    if (activeTool === 'add-keepout') {
+    if (activeTool === 'keepout') {
       const primaryBoard = (useProjectStore.getState().boards || [])[0];
       if (typeof addKeepoutZone === 'function') {
         addKeepoutZone({
@@ -135,7 +143,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     }
 
     // Select mode
-    if (activeTool === 'select' || activeTool === 'move') {
+    if (activeTool === 'select' || activeTool === 'place-component') {
       // Check if click is on a component
       const comps = boardComponents || [];
       for (const comp of comps) {
@@ -144,7 +152,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
         const hw = fp.courtyardWidthMm / 2;
         const hh = fp.courtyardHeightMm / 2;
         if (Math.abs(pt.x - comp.placementX) <= hw && Math.abs(pt.y - comp.placementY) <= hh) {
-          onViewStateChange({ selectedObjectId: comp.id, selectedObjectType: 'component' });
+          onViewStateChange({
+            selectedComponentId: comp.id,
+            selectedTraceId: null,
+            selectedViaId: null,
+            selectedDrillHoleId: null,
+            selectedKeepoutId: null,
+          });
           return;
         }
       }
@@ -152,7 +166,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       for (const via of (vias || [])) {
         if (via.x != null && via.y != null) {
           if (Math.hypot(pt.x - via.x, pt.y - via.y) < (via.outerDiameter || 0.6) / 2 + 0.3) {
-            onViewStateChange({ selectedObjectId: via.id, selectedObjectType: 'via' });
+            onViewStateChange({
+              selectedViaId: via.id,
+              selectedComponentId: null,
+              selectedTraceId: null,
+              selectedDrillHoleId: null,
+              selectedKeepoutId: null,
+            });
             return;
           }
         }
@@ -161,13 +181,25 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       for (const drill of (drillHoles || [])) {
         if (drill.x != null && drill.y != null) {
           if (Math.hypot(pt.x - drill.x, pt.y - drill.y) < (drill.diameter || 1.0) / 2 + 0.3) {
-            onViewStateChange({ selectedObjectId: drill.id, selectedObjectType: 'drill' });
+            onViewStateChange({
+              selectedDrillHoleId: drill.id,
+              selectedComponentId: null,
+              selectedTraceId: null,
+              selectedViaId: null,
+              selectedKeepoutId: null,
+            });
             return;
           }
         }
       }
       // Deselect
-      onViewStateChange({ selectedObjectId: null, selectedObjectType: null });
+      onViewStateChange({
+        selectedComponentId: null,
+        selectedTraceId: null,
+        selectedViaId: null,
+        selectedDrillHoleId: null,
+        selectedKeepoutId: null,
+      });
     }
   }, [activeTool, selectedNetName, isRouting, routePreviewPoints, screenToBoard,
     panX, panY, onViewStateChange, boardComponents, vias, drillHoles, nets, addVia, addDrillHole, addKeepoutZone]);
@@ -185,7 +217,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     onViewStateChange({ mouseXMm: pt.x, mouseYMm: pt.y });
 
     // Component dragging
-    if (activeTool === 'move' && selectedObjectId && selectedObjectType === 'component' && e.buttons === 1) {
+    if ((activeTool === 'select' || activeTool === 'place-component') && selectedObjectId && selectedObjectType === 'component' && e.buttons === 1) {
       updateBoardComponent(selectedObjectId, {
         placementX: pt.x,
         placementY: pt.y,
@@ -199,7 +231,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
   }, []);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (isRouting && routePreviewPoints.length >= 2 && selectedNetName) {
+    if (isRouting && routePreviewPoints && routePreviewPoints.length >= 2 && selectedNetName) {
       // Finish route
       const pt = screenToBoard(e.clientX, e.clientY);
       const allPoints = [...routePreviewPoints, pt];
@@ -221,6 +253,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     if (e.key === 'Escape') {
       onViewStateChange({ isRouting: false, routePreviewPoints: [], activeTool: 'select' });
     }
+    // Rotate 90 degrees
     if (e.key === 'r' && selectedObjectId && selectedObjectType === 'component') {
       const comp = (boardComponents || []).find(c => c.id === selectedObjectId);
       if (comp) {
@@ -229,8 +262,51 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
         });
       }
     }
-    // Nudge
-    const nudge = gridSizeMm;
+    // Flip side
+    if (e.key === 'f' && selectedObjectId && selectedObjectType === 'component') {
+      const comp = (boardComponents || []).find(c => c.id === selectedObjectId);
+      if (comp) {
+        updateBoardComponent(selectedObjectId, {
+          side: comp.side === 'Bottom' ? 'Top' : 'Bottom',
+        });
+      }
+    }
+    // Ctrl/Cmd + S
+    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      alert('Board design saved! Layout state persisted.');
+    }
+    // Delete layout object
+    if (e.key === 'Delete' && selectedObjectId) {
+      if (selectedObjectType === 'component') {
+        updateBoardComponent(selectedObjectId, {
+          placementX: undefined,
+          placementY: undefined,
+          placementStatus: 'Unplaced',
+        });
+      } else if (selectedObjectType === 'trace') {
+        const { deleteTrace } = useProjectStore.getState();
+        if (typeof deleteTrace === 'function') deleteTrace(selectedObjectId);
+      } else if (selectedObjectType === 'via') {
+        const { deleteVia } = useProjectStore.getState();
+        if (typeof deleteVia === 'function') deleteVia(selectedObjectId);
+      } else if (selectedObjectType === 'drill') {
+        const { deleteDrillHole } = useProjectStore.getState();
+        if (typeof deleteDrillHole === 'function') deleteDrillHole(selectedObjectId);
+      } else if (selectedObjectType === 'keepout') {
+        const { deleteKeepoutZone } = useProjectStore.getState();
+        if (typeof deleteKeepoutZone === 'function') deleteKeepoutZone(selectedObjectId);
+      }
+      onViewStateChange({
+        selectedComponentId: null,
+        selectedTraceId: null,
+        selectedViaId: null,
+        selectedDrillHoleId: null,
+        selectedKeepoutId: null,
+      });
+    }
+    // Nudge with Arrow keys (Shift for 5x nudge)
+    const nudge = e.shiftKey ? gridSizeMm * 5 : gridSizeMm;
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedObjectId && selectedObjectType === 'component') {
       const comp = (boardComponents || []).find(c => c.id === selectedObjectId);
       if (comp && comp.placementX != null && comp.placementY != null) {
@@ -311,19 +387,31 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       <line x1={bx(0)} y1={by(0) - 8} x2={bx(0)} y2={by(0) + 8} stroke="#ef4444" strokeWidth={1} opacity={0.6} />
 
       {/* Keepout zones */}
-      {layerVisibility['keepouts'] && (keepoutZones || []).map(zone => (
-        <g key={zone.id}>
-          <rect
-            x={bx(zone.x)} y={by(zone.y)}
-            width={bs(zone.width)} height={bs(zone.height)}
-            fill="#ef4444" opacity={0.12}
-            stroke="#ef4444" strokeWidth={1} strokeDasharray="4,2"
-          />
-          <text x={bx(zone.x) + 3} y={by(zone.y) + 10} fill="#ef4444" fontSize={8} opacity={0.7}>
-            {zone.reason}
-          </text>
-        </g>
-      ))}
+      {layerVisibility['keepouts'] && (keepoutZones || []).map(zone => {
+        const isSelected = selectedKeepoutId === zone.id;
+        return (
+          <g key={zone.id} onClick={(e) => {
+            e.stopPropagation();
+            onViewStateChange({
+              selectedKeepoutId: zone.id,
+              selectedComponentId: null,
+              selectedTraceId: null,
+              selectedViaId: null,
+              selectedDrillHoleId: null,
+            });
+          }} className="cursor-pointer">
+            <rect
+              x={bx(zone.x)} y={by(zone.y)}
+              width={bs(zone.width)} height={bs(zone.height)}
+              fill="#ef4444" opacity={isSelected ? 0.25 : 0.12}
+              stroke="#ef4444" strokeWidth={isSelected ? 1.5 : 1} strokeDasharray="4,2"
+            />
+            <text x={bx(zone.x) + 3} y={by(zone.y) + 10} fill="#ef4444" fontSize={8} opacity={0.7}>
+              {zone.reason}
+            </text>
+          </g>
+        );
+      })}
 
       {/* Traces */}
       {layerVisibility['top-copper'] && (traces || []).map(trace => {
@@ -342,7 +430,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
             opacity={isHighlighted || isSelected ? 1 : 0.8}
             onClick={(e) => {
               e.stopPropagation();
-              onViewStateChange({ selectedObjectId: trace.id, selectedObjectType: 'trace' });
+              onViewStateChange({
+                selectedTraceId: trace.id,
+                selectedComponentId: null,
+                selectedViaId: null,
+                selectedDrillHoleId: null,
+                selectedKeepoutId: null,
+              });
             }}
             className="cursor-pointer"
           />
@@ -368,7 +462,16 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
         if (via.x == null || via.y == null) return null;
         const isSelected = selectedObjectId === via.id;
         return (
-          <g key={via.id} onClick={(e) => { e.stopPropagation(); onViewStateChange({ selectedObjectId: via.id, selectedObjectType: 'via' }); }} className="cursor-pointer">
+          <g key={via.id} onClick={(e) => {
+            e.stopPropagation();
+            onViewStateChange({
+              selectedViaId: via.id,
+              selectedComponentId: null,
+              selectedTraceId: null,
+              selectedDrillHoleId: null,
+              selectedKeepoutId: null,
+            });
+          }} className="cursor-pointer">
             <circle cx={bx(via.x)} cy={by(via.y)} r={bs((via.outerDiameter || 0.6) / 2)} fill="#1e293b" stroke={isSelected ? '#f59e0b' : '#8b5cf6'} strokeWidth={1.2} />
             <circle cx={bx(via.x)} cy={by(via.y)} r={bs((via.drillDiameter || 0.3) / 2)} fill="#0f172a" />
           </g>
@@ -380,7 +483,16 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
         if (drill.x == null || drill.y == null) return null;
         const isSelected = selectedObjectId === drill.id;
         return (
-          <g key={drill.id} onClick={(e) => { e.stopPropagation(); onViewStateChange({ selectedObjectId: drill.id, selectedObjectType: 'drill' }); }} className="cursor-pointer">
+          <g key={drill.id} onClick={(e) => {
+            e.stopPropagation();
+            onViewStateChange({
+              selectedDrillHoleId: drill.id,
+              selectedComponentId: null,
+              selectedTraceId: null,
+              selectedViaId: null,
+              selectedKeepoutId: null,
+            });
+          }} className="cursor-pointer">
             <circle cx={bx(drill.x)} cy={by(drill.y)} r={bs((drill.diameter || 1.0) / 2)} fill="none" stroke={isSelected ? '#f59e0b' : '#94a3b8'} strokeWidth={1} />
             <line x1={bx(drill.x) - 3} y1={by(drill.y)} x2={bx(drill.x) + 3} y2={by(drill.y)} stroke="#94a3b8" strokeWidth={0.5} />
             <line x1={bx(drill.x)} y1={by(drill.y) - 3} x2={bx(drill.x)} y2={by(drill.y) + 3} stroke="#94a3b8" strokeWidth={0.5} />
@@ -402,7 +514,16 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
           <g
             key={comp.id}
             transform={`translate(${bx(comp.placementX)}, ${by(comp.placementY)}) rotate(${rot})`}
-            onClick={(e) => { e.stopPropagation(); onViewStateChange({ selectedObjectId: comp.id, selectedObjectType: 'component' }); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewStateChange({
+                selectedComponentId: comp.id,
+                selectedTraceId: null,
+                selectedViaId: null,
+                selectedDrillHoleId: null,
+                selectedKeepoutId: null,
+              });
+            }}
             className="cursor-pointer"
           >
             {/* Courtyard */}
@@ -483,7 +604,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       })}
 
       {/* DRC markers */}
-      {showDrcMarkers && drcResults.filter(r => r.severity === 'Error' || r.severity === 'Blocker').slice(0, 30).map((r, i) => {
+      {showDRC && drcResults.filter(r => r.severity === 'Error' || r.severity === 'Blocker').slice(0, 30).map((r, i) => {
         // Try to get a location from linked object
         let mx: number | null = null, my: number | null = null;
         if (r.linkedObjectType === 'component') {

@@ -1,13 +1,13 @@
 import React from 'react';
-import { BoardViewState, BoardTool, GRID_PRESETS } from './boardInteractionTypes';
+import { BoardDesignerUIState, BoardTool, GRID_PRESETS } from './boardInteraction';
 import {
   MousePointer2, Move, Component, Route, Circle, Drill, Square, Ruler,
   LayoutGrid, Magnet, Play, Zap, FileText, Download, Package, AlertTriangle,
 } from 'lucide-react';
 
 interface BoardToolbarProps {
-  viewState: BoardViewState;
-  onViewStateChange: (patch: Partial<BoardViewState>) => void;
+  viewState: BoardDesignerUIState;
+  onViewStateChange: (patch: Partial<BoardDesignerUIState>) => void;
   drcCount: number;
   onAutoPlace: () => void;
   onRoughAutoroute: () => void;
@@ -19,12 +19,12 @@ interface BoardToolbarProps {
 
 const tools: { tool: BoardTool; label: string; Icon: React.FC<{ className?: string }> }[] = [
   { tool: 'select', label: 'Select', Icon: MousePointer2 },
-  { tool: 'move', label: 'Move', Icon: Move },
+  { tool: 'pan', label: 'Pan', Icon: Move },
   { tool: 'place-component', label: 'Place', Icon: Component },
-  { tool: 'route-trace', label: 'Route', Icon: Route },
-  { tool: 'add-via', label: 'Via', Icon: Circle },
-  { tool: 'add-drill', label: 'Drill', Icon: Drill },
-  { tool: 'add-keepout', label: 'Keepout', Icon: Square },
+  { tool: 'route', label: 'Route', Icon: Route },
+  { tool: 'via', label: 'Via', Icon: Circle },
+  { tool: 'drill', label: 'Drill', Icon: Drill },
+  { tool: 'keepout', label: 'Keepout', Icon: Square },
   { tool: 'measure', label: 'Measure', Icon: Ruler },
 ];
 
@@ -33,7 +33,7 @@ export const BoardToolbar: React.FC<BoardToolbarProps> = ({
   onAutoPlace, onRoughAutoroute, onRunDRC,
   onGenerateBlueprint, onExportBoard, onOpenFactory,
 }) => {
-  const { activeTool, gridSizeMm, snapEnabled } = viewState;
+  const { activeTool, gridSizeMm, snapToGrid } = viewState;
 
   return (
     <div className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 border-b border-slate-800 select-none shrink-0">
@@ -69,9 +69,9 @@ export const BoardToolbar: React.FC<BoardToolbarProps> = ({
           ))}
         </select>
         <button
-          onClick={() => onViewStateChange({ snapEnabled: !snapEnabled })}
+          onClick={() => onViewStateChange({ snapToGrid: !snapToGrid })}
           className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-            snapEnabled ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-800 text-slate-500'
+            snapToGrid ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-800 text-slate-500'
           }`}
           title="Toggle snap to grid"
         >

@@ -2,14 +2,15 @@
 
 import React, { useState, useCallback } from 'react';
 import { useProjectStore } from '../../store/projectStore';
-import { BoardViewState, DEFAULT_VIEW_STATE } from './boardInteractionTypes';
+import { BoardDesignerUIState, DEFAULT_VIEW_STATE } from './boardInteraction';
 import { BoardToolbar } from './BoardToolbar';
 import { BoardCanvas } from './BoardCanvas';
 import { BoardLayerPanel } from './BoardLayerPanel';
-import { BoardObjectInspector } from './BoardObjectInspector';
+import { BoardInspector } from './BoardInspector';
 import { BoardNetPanel } from './BoardNetPanel';
 import { BoardComponentBin } from './BoardComponentBin';
 import { BoardDRCPanel } from './BoardDRCPanel';
+import { BoardStatusBar } from './BoardStatusBar';
 import { runBoardDRC } from '../../lib/boardDRC';
 import {
   autoPlaceComponents as autoPlaceFn,
@@ -29,14 +30,14 @@ export const BoardDesigner: React.FC = () => {
     setActiveView, generateBlueprintPack, addTrace,
   } = store;
 
-  const [viewState, setViewState] = useState<BoardViewState>({
+  const [viewState, setViewState] = useState<BoardDesignerUIState>({
     ...DEFAULT_VIEW_STATE,
     activeLayerId: (pcbLayers || [])[0]?.id || 'top-copper',
   });
   const [rightTab, setRightTab] = useState<RightTab>('inspector');
   const [drcResults, setDrcResults] = useState<ReviewResult[]>([]);
 
-  const updateView = useCallback((patch: Partial<BoardViewState>) => {
+  const updateView = useCallback((patch: Partial<BoardDesignerUIState>) => {
     setViewState(prev => ({ ...prev, ...patch }));
   }, []);
 
@@ -144,7 +145,7 @@ export const BoardDesigner: React.FC = () => {
         {/* Left: Layer panel */}
         <BoardLayerPanel viewState={viewState} onViewStateChange={updateView} />
 
-        {/* Center: Canvas */}
+        {/* Center: Canvas & bin & status */}
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 min-h-0 relative">
             <BoardCanvas
@@ -160,6 +161,9 @@ export const BoardDesigner: React.FC = () => {
             onViewStateChange={updateView}
             onAutoPlace={handleAutoPlace}
           />
+
+          {/* Bottom-most Status Bar */}
+          <BoardStatusBar viewState={viewState} />
         </div>
 
         {/* Right panel: tabbed */}
@@ -192,7 +196,7 @@ export const BoardDesigner: React.FC = () => {
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto min-h-0">
             {rightTab === 'inspector' && (
-              <BoardObjectInspector viewState={viewState} onViewStateChange={updateView} />
+              <BoardInspector viewState={viewState} onViewStateChange={updateView} />
             )}
             {rightTab === 'nets' && (
               <BoardNetPanel viewState={viewState} onViewStateChange={updateView} />

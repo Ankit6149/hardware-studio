@@ -1,11 +1,11 @@
 import React from 'react';
 import { useProjectStore } from '../../store/projectStore';
-import { BoardViewState } from './boardInteractionTypes';
+import { BoardDesignerUIState } from './boardInteraction';
 import { Eye, EyeOff, Layers } from 'lucide-react';
 
 interface BoardLayerPanelProps {
-  viewState: BoardViewState;
-  onViewStateChange: (patch: Partial<BoardViewState>) => void;
+  viewState: BoardDesignerUIState;
+  onViewStateChange: (patch: Partial<BoardDesignerUIState>) => void;
 }
 
 const LAYER_DEFS = [
@@ -31,7 +31,7 @@ export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onV
         [key]: !layerVisibility[key],
       },
       showRatsnest: key === 'ratsnest' ? !layerVisibility[key] : viewState.showRatsnest,
-      showDrcMarkers: key === 'drc' ? !layerVisibility[key] : viewState.showDrcMarkers,
+      showDRC: key === 'drc' ? !layerVisibility[key] : viewState.showDRC,
     });
   };
 

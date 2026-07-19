@@ -1,11 +1,12 @@
 import React from 'react';
 import { ReviewResult } from '../../types';
-import { BoardViewState } from './boardInteractionTypes';
+import { BoardDesignerUIState } from './boardInteraction';
 import { AlertTriangle, AlertOctagon, Info, CheckCircle2 } from 'lucide-react';
 
 interface BoardDRCPanelProps {
   results: ReviewResult[];
-  onViewStateChange: (patch: Partial<BoardViewState>) => void;
+  viewState?: BoardDesignerUIState;
+  onViewStateChange: (patch: Partial<BoardDesignerUIState>) => void;
 }
 
 const severityOrder: Record<string, number> = { Blocker: 0, Error: 1, Warning: 2, Info: 3 };
@@ -53,12 +54,12 @@ export const BoardDRCPanel: React.FC<BoardDRCPanelProps> = ({ results, onViewSta
               key={r.id || i}
               onClick={() => {
                 if (r.linkedObjectId && r.linkedObjectType) {
-                  const typeMap: Record<string, string> = {
-                    component: 'component', trace: 'trace', via: 'via', drill: 'drill',
-                  };
                   onViewStateChange({
-                    selectedObjectId: r.linkedObjectId,
-                    selectedObjectType: (typeMap[r.linkedObjectType] || null) as BoardViewState['selectedObjectType'],
+                    selectedComponentId: r.linkedObjectType === 'component' ? r.linkedObjectId : null,
+                    selectedTraceId: r.linkedObjectType === 'trace' ? r.linkedObjectId : null,
+                    selectedViaId: r.linkedObjectType === 'via' ? r.linkedObjectId : null,
+                    selectedDrillHoleId: r.linkedObjectType === 'drill' ? r.linkedObjectId : null,
+                    selectedKeepoutId: r.linkedObjectType === 'keepout' ? r.linkedObjectId : null,
                   });
                 }
               }}

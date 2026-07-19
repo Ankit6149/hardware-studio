@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
-import { BoardViewState } from './boardInteractionTypes';
+import { BoardDesignerUIState } from './boardInteraction';
 import { Component, Search, GripVertical, Lock } from 'lucide-react';
 import { getFootprint } from '../../lib/footprints';
 
 interface BoardComponentBinProps {
-  viewState: BoardViewState;
-  onViewStateChange: (patch: Partial<BoardViewState>) => void;
+  viewState: BoardDesignerUIState;
+  onViewStateChange: (patch: Partial<BoardDesignerUIState>) => void;
   onAutoPlace: () => void;
 }
 
@@ -33,7 +33,7 @@ export const BoardComponentBin: React.FC<BoardComponentBinProps> = ({ viewState,
     );
   }, [showPlaced, placed, unplaced, search]);
 
-  const getStatusBadge = (comp: typeof comps[0]) => {
+  const getStatusBadge = (comp: typeof boardComponents[0]) => {
     if (comp.lockedPlacement) return { text: 'Locked', cls: 'bg-amber-900/40 text-amber-400' };
     if (comp.placementX == null) return { text: 'Unplaced', cls: 'bg-slate-800 text-slate-500' };
     if (comp.placementStatus === 'Needs Review') return { text: 'Review', cls: 'bg-amber-900/40 text-amber-400' };
@@ -81,11 +81,17 @@ export const BoardComponentBin: React.FC<BoardComponentBinProps> = ({ viewState,
       <div className="overflow-x-auto overflow-y-auto px-2 pb-2 flex flex-wrap gap-1" style={{ maxHeight: '120px' }}>
         {filtered.map(comp => {
           const badge = getStatusBadge(comp);
-          const isSelected = viewState.selectedObjectId === comp.id;
+          const isSelected = viewState.selectedComponentId === comp.id;
           return (
             <button
               key={comp.id}
-              onClick={() => onViewStateChange({ selectedObjectId: comp.id, selectedObjectType: 'component' })}
+              onClick={() => onViewStateChange({
+                selectedComponentId: comp.id,
+                selectedTraceId: null,
+                selectedViaId: null,
+                selectedDrillHoleId: null,
+                selectedKeepoutId: null,
+              })}
               className={`flex items-center gap-1.5 px-2 py-1 rounded border text-[10px] transition-all shrink-0 ${
                 isSelected
                   ? 'bg-slate-800 border-indigo-500 text-indigo-200'

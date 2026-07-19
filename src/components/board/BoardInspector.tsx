@@ -1,20 +1,32 @@
 import React from 'react';
 import { useProjectStore } from '../../store/projectStore';
-import { BoardViewState } from './boardInteractionTypes';
+import { BoardDesignerUIState } from './boardInteraction';
 import { getFootprint } from '../../lib/footprints';
-import { Info, Cpu, Route, Circle as CircleIcon, Drill, Layers } from 'lucide-react';
+import { Info, Cpu, Route, Circle as CircleIcon, Drill, Layers, Shield } from 'lucide-react';
 
 interface BoardObjectInspectorProps {
-  viewState: BoardViewState;
-  onViewStateChange: (patch: Partial<BoardViewState>) => void;
+  viewState: BoardDesignerUIState;
+  onViewStateChange: (patch: Partial<BoardDesignerUIState>) => void;
 }
 
-export const BoardObjectInspector: React.FC<BoardObjectInspectorProps> = ({ viewState }) => {
+export const BoardInspector: React.FC<BoardObjectInspectorProps> = ({ viewState }) => {
   const {
-    boardComponents, traces, vias, drillHoles, boards, boardOutlines,
-    updateBoardComponent, updateTrace, updateVia, updateDrillHole, nets,
+    boardComponents, traces, vias, drillHoles, keepoutZones, boards, boardOutlines,
+    updateBoardComponent, updateTrace, updateVia, updateDrillHole, updateKeepoutZone, nets,
   } = useProjectStore();
-  const { selectedObjectId, selectedObjectType } = viewState;
+
+  const {
+    selectedComponentId, selectedTraceId, selectedViaId, selectedDrillHoleId, selectedKeepoutId
+  } = viewState;
+
+  const selectedObjectId =
+    selectedComponentId || selectedTraceId || selectedViaId || selectedDrillHoleId || selectedKeepoutId;
+  const selectedObjectType =
+    selectedComponentId ? 'component' :
+    selectedTraceId ? 'trace' :
+    selectedViaId ? 'via' :
+    selectedDrillHoleId ? 'drill' :
+    selectedKeepoutId ? 'keepout' : null;
 
   if (!selectedObjectId || !selectedObjectType) {
     // Show board info
@@ -167,8 +179,51 @@ export const BoardObjectInspector: React.FC<BoardObjectInspectorProps> = ({ view
     );
   }
 
+  // Keepout inspector
+  if (selectedObjectType === 'keepout') {
+    const zone = (keepoutZones || []).find(z => z.id === selectedObjectId);
+    if (!zone) return <NoSelection />;
+    return (
+      <div className="p-3">
+        <div className="flex items-center gap-1.5 mb-3">
+          <Shield className="w-3.5 h-3.5 text-red-400" />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Keepout Zone</span>
+        </div>
+        <div className="space-y-2 text-[10px]">
+          <div className="flex flex-col gap-1">
+            <span className="text-slate-500 font-semibold">Reason</span>
+            <input
+              value={zone.reason}
+              onChange={(e) => updateKeepoutZone(zone.id, { reason: e.target.value })}
+              className="bg-slate-800 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-slate-700 w-full text-[10px]"
+            />
+          </div>
+          <EditField label="X (mm)" value={String(zone.x?.toFixed(2) || 0)} onChange={v => updateKeepoutZone(zone.id, { x: parseFloat(v) || 0 })} />
+          <EditField label="Y (mm)" value={String(zone.y?.toFixed(2) || 0)} onChange={v => updateKeepoutZone(zone.id, { y: parseFloat(v) || 0 })} />
+          <EditField label="Width (mm)" value={String(zone.width || 0)} onChange={v => updateKeepoutZone(zone.id, { width: parseFloat(v) || 0 })} />
+          <EditField label="Height (mm)" value={String(zone.height || 0)} onChange={v => updateKeepoutZone(zone.id, { height: parseFloat(v) || 0 })} />
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500 font-semibold">Scope</span>
+            <select
+              value={zone.layerScope}
+              onChange={(e) => updateKeepoutZone(zone.id, { layerScope: e.target.value as 'All' | 'Top' | 'Bottom' })}
+              className="bg-slate-800 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-slate-700 text-[10px]"
+            >
+              <option value="All">All Layers</option>
+              <option value="Top">Top Layer</option>
+              <option value="Bottom">Bottom Layer</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return <NoSelection />;
 };
+
+// Backward compatibility export
+export const BoardObjectInspector = BoardInspector;
 
 // Helpers
 const Field: React.FC<{ label: string; value: string }> = ({ label, value }) => (

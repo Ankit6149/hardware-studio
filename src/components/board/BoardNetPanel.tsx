@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
-import { BoardViewState } from './boardInteractionTypes';
+import { BoardDesignerUIState } from './boardInteraction';
 import { Network, Search, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface BoardNetPanelProps {
-  viewState: BoardViewState;
-  onViewStateChange: (patch: Partial<BoardViewState>) => void;
+  viewState: BoardDesignerUIState;
+  onViewStateChange: (patch: Partial<BoardDesignerUIState>) => void;
 }
 
 export const BoardNetPanel: React.FC<BoardNetPanelProps> = ({ viewState, onViewStateChange }) => {
@@ -83,7 +83,7 @@ export const BoardNetPanel: React.FC<BoardNetPanelProps> = ({ viewState, onViewS
               key={net.id}
               onClick={() => onViewStateChange({
                 selectedNetName: isSelected ? null : net.netName,
-                activeTool: isSelected ? viewState.activeTool : 'route-trace',
+                activeTool: isSelected ? viewState.activeTool : 'route',
               })}
               className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded text-[10px] text-left transition-all ${
                 isSelected
