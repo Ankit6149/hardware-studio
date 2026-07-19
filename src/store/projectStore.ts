@@ -28,7 +28,8 @@ import {
   DrillHole,
   PcbRule,
   KeepoutZone,
-  PadNetAssignment
+  PadNetAssignment,
+  SchematicWire
 } from '../types';
 import { templates } from '../data/templates';
 import {
@@ -42,18 +43,36 @@ import {
   fixMissingDimensionsWithPlaceholder,
   getInitialFactoryFiles
 } from '../lib/editorLayoutGenerators';
+import { ElectronicComponentDefinition } from '../lib/components/componentLibrary';
 import { runDesignReview } from '../lib/designReview';
 import { generateBlueprintPack as generateBlueprintPackFn } from '../lib/blueprintGenerator';
-import { migrateProjectSchema } from '../lib/projectMigrations';
+import { 
+  migrateProjectSchema,
+  normalizeProjectComponent,
+  syncLegacyPlacementFields,
+  syncNestedPcbFields
+} from '../lib/projectMigrations';
+
+export function normalizeNetName(name: string): string {
+  const trimmed = name.trim();
+  const up = trimmed.toUpperCase();
+  if (up === 'GND' || up === 'GROUND') return 'GND';
+  if (up === '3V3' || up === '3.3V') return '3V3';
+  if (up === '5V') return '5V';
+  if (up === 'VBAT' || up === 'BAT') return 'VBAT';
+  return trimmed; // Preserve custom signal case consistently
+}
 
 interface ProjectState extends Project {
   selectedNodeId: string | null;
   projectsList: { id: string; projectName: string; description: string; updatedAt: string; templateName?: string }[];
+  activeBoardId: string;
 
   setSelectedNodeId: (id: string | null) => void;
   setProjectName: (name: string) => void;
   setProjectDescription: (desc: string) => void;
   setActiveView: (view: string) => void;
+  setActiveBoard: (id: string) => void;
 
   // Node management
   addNode: (node: Omit<CustomNode, 'id'> & { id?: string }) => void;
@@ -102,7 +121,7 @@ interface ProjectState extends Project {
   generateFirmwareTasksFromBlueprint: () => void;
 
   // Board Studio management
-  addBoard: (item: Omit<BoardItem, 'id'>) => void;
+  addBoard: (item: Omit<BoardItem, 'id'>) => BoardItem;
   updateBoard: (id: string, data: Partial<BoardItem>) => void;
   deleteBoard: (id: string) => void;
 
@@ -226,6 +245,26 @@ interface ProjectState extends Project {
   addFlybackDiode: () => void;
   addDebugTestPad: () => void;
   updateProjectState: (patch: Partial<Project>) => void;
+
+  // Vertical Slice Canonical Actions
+  customComponentLibrary?: ElectronicComponentDefinition[];
+  addProjectComponentFromLibrary: (libComp: ElectronicComponentDefinition, boardId?: string, circuitBlockId?: string) => BoardComponent;
+  updateProjectComponent: (id: string, data: Partial<BoardComponent>) => void;
+  deleteProjectComponent: (componentId: string, scope: 'schematic-only' | 'pcb-only' | 'entire-product') => void;
+  placeComponentOnSchematic: (id: string, x: number, y: number) => void;
+  unplaceComponentFromSchematic: (id: string) => void;
+  placeComponentOnBoard: (id: string, x: number, y: number, side?: 'Top' | 'Bottom') => void;
+  unplaceComponentFromBoard: (id: string) => void;
+  createNet: (item: Omit<NetItem, 'id'> & { id?: string }) => NetItem;
+  getOrCreateNet: (name: string, data?: Partial<NetItem>) => NetItem;
+  connectComponentPins: (sourceComponentId: string, sourcePinNumber: string, targetComponentId: string, targetPinNumber: string, netName?: string, points?: {x:number, y:number}[]) => { wire: SchematicWire; net: NetItem; assignments: PadNetAssignment[] };
+  disconnectComponentPin: (componentId: string, pinNumber: string) => void;
+  deleteNetSafely: (netName: string) => void;
+  addCustomComponentDefinition: (def: ElectronicComponentDefinition) => void;
+  updateCustomComponentDefinition: (id: string, def: Partial<ElectronicComponentDefinition>) => void;
+  deleteCustomComponentDefinition: (id: string) => void;
+  duplicateComponentDefinition: (id: string) => void;
+  markDerivedArtifactsStale: (reason: string) => void;
 }
 
 const PROJECTS_KEY = 'hardware_studio_projects_v1';
@@ -439,7 +478,11 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       exportHistory: state.exportHistory || [],
       padNetAssignments: state.padNetAssignments || [],
       keepoutZones: state.keepoutZones || [],
-      schematicWires: state.schematicWires || []
+      schematicWires: state.schematicWires || [],
+      customComponentLibrary: state.customComponentLibrary || [],
+      blueprintPack: state.blueprintPack || undefined,
+      blueprintPackStatus: state.blueprintPackStatus || 'Stale',
+      activeBoardId: state.activeBoardId || 'board-main'
     };
   };
 
@@ -489,6 +532,10 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     factoryReviewChecks: initialProject.factoryReviewChecks || {},
     padNetAssignments: initialProject.padNetAssignments || [],
     keepoutZones: initialProject.keepoutZones || [],
+    customComponentLibrary: initialProject.customComponentLibrary || [],
+    blueprintPack: initialProject.blueprintPack || undefined,
+    blueprintPackStatus: initialProject.blueprintPackStatus || 'Stale',
+    activeBoardId: initialProject.activeBoardId || 'board-main',
 
     selectedNodeId: null,
     projectsList: [],
@@ -517,6 +564,10 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         return node;
       });
       persistChange({ activeView, nodes: updatedNodes });
+    },
+
+    setActiveBoard: (boardId) => {
+      persistChange({ activeBoardId: boardId });
     },
 
     // Node management
@@ -1359,24 +1410,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           status: cb.status || "Concept"
         })),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        boardComponents: (json.boardComponents || []).map((bc: any) => ({
-          id: bc.id || `cmp_${Math.random()}`,
-          boardId: bc.boardId || "",
-          circuitBlockId: bc.circuitBlockId || "",
-          referenceDesignator: bc.referenceDesignator || "",
-          componentName: bc.componentName || "",
-          componentType: bc.componentType || "",
-          value: bc.value || "",
-          packageName: bc.packageName || "",
-          footprint: bc.footprint || "",
-          partNumber: bc.partNumber || "",
-          quantity: Number(bc.quantity) || 1,
-          side: bc.side || "Top",
-          placementCriticality: bc.placementCriticality || "Low",
-          datasheetUrl: bc.datasheetUrl || "",
-          supplier: bc.supplier || "",
-          notes: bc.notes || ""
-        })),
+        boardComponents: (json.boardComponents || []).map((bc: any) => normalizeProjectComponent(bc)),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         nets: (json.nets || []).map((n: any) => ({
           id: n.id || `net_${Math.random()}`,
@@ -1430,7 +1464,12 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         reviewResults: json.reviewResults || [],
         exportHistory: json.exportHistory || [],
         factoryPackageStatus: json.factoryPackageStatus || "Draft",
-        factoryReviewChecks: json.factoryReviewChecks || {}
+        factoryReviewChecks: json.factoryReviewChecks || {},
+        padNetAssignments: json.padNetAssignments || [],
+        keepoutZones: json.keepoutZones || [],
+        customComponentLibrary: json.customComponentLibrary || [],
+        blueprintPack: json.blueprintPack || undefined,
+        blueprintPackStatus: json.blueprintPackStatus || "Stale"
       };
 
       const saved = getSavedProjects();
@@ -1464,6 +1503,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const newItem: BoardItem = { ...item, id };
       const boards = [...(get().boards || []), newItem];
       persistChange({ boards });
+      return newItem;
     },
 
     updateBoard: (id, fields) => {
@@ -2866,6 +2906,499 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       get().generateEditorLayouts();
       get().runFullDesignReview();
     },
+    addProjectComponentFromLibrary: (libComp, boardId, circuitBlockId) => {
+      const components = get().boardComponents || [];
+      const prefix = libComp.category === 'Resistor' ? 'R' :
+                     libComp.category === 'Capacitor' ? 'C' :
+                     libComp.category === 'Inductor' ? 'L' :
+                     libComp.category === 'Diode' ? 'D' :
+                     libComp.category === 'LED' ? 'LED' :
+                     libComp.category === 'Transistor' || libComp.category === 'MOSFET' ? 'Q' :
+                     libComp.category === 'Sensor' ? 'SEN' :
+                     libComp.category === 'Connector' ? 'J' :
+                     libComp.category === 'Button' || libComp.category === 'Touch' ? 'SW' :
+                     libComp.category === 'Regulator' || libComp.category === 'Charger' ? 'U' :
+                     libComp.category === 'MCU' || libComp.category === 'Processor' ? 'U' : 'U';
+      
+      let index = 1;
+      while (components.some(c => c.referenceDesignator === `${prefix}${index}`)) {
+        index++;
+      }
+      const refDes = `${prefix}${index}`;
+      const compId = `cmp_${libComp.libraryId}_${Date.now()}_${Math.random()}`;
+
+      // Create new BOM item
+      const bomId = `bom_${Date.now()}_${Math.random()}`;
+      const bomItem: BOMItem = {
+        id: bomId,
+        componentId: compId,
+        blockName: circuitBlockId || 'Block',
+        candidateComponent: libComp.name,
+        partNumber: libComp.partNumber || '',
+        stage: 'Prototype',
+        quantity: libComp.defaultQuantity || 1,
+        voltage: libComp.electrical?.typicalVoltage ? `${libComp.electrical.typicalVoltage}V` : '',
+        currentEstimate: '',
+        interface: '',
+        packageSize: libComp.packageName,
+        dimensions: '',
+        costEstimate: '0.00',
+        supplier: libComp.manufacturer || 'Generic',
+        supplierUrl: '',
+        datasheetUrl: '',
+        status: 'Not Started',
+        risk: '',
+        alternative: '',
+        notes: libComp.description || ''
+      };
+
+      const rawComp = {
+        id: compId,
+        libraryId: libComp.libraryId,
+        referenceDesignator: refDes,
+        componentName: libComp.name,
+        componentType: libComp.category,
+        value: libComp.value || '',
+        packageName: libComp.packageName,
+        footprint: libComp.footprintName,
+        partNumber: libComp.partNumber || '',
+        pins: libComp.pins || [],
+        boardId: boardId || get().activeBoardId || 'board-main',
+        circuitBlockId: circuitBlockId || '',
+        bomItemId: bomId,
+        quantity: libComp.defaultQuantity || 1,
+        schematic: { placed: false, x: 150, y: 150, rotation: 0, locked: false },
+        pcb: { placed: false, xMm: 0, yMm: 0, rotationDeg: 0, side: 'Top' as const, locked: false, placementStatus: 'Unplaced' as const },
+        status: 'Selected' as const,
+        notes: libComp.description || ''
+      };
+
+      const newComp = normalizeProjectComponent(rawComp);
+      
+      const updatedComponents = [...components, newComp];
+      const updatedBom = [...(get().bom || []), bomItem];
+      
+      persistChange({
+        boardComponents: updatedComponents,
+        bom: updatedBom
+      });
+
+      return newComp;
+    },
+
+    updateProjectComponent: (id, data) => {
+      const components = get().boardComponents || [];
+      const index = components.findIndex(c => c.id === id);
+      if (index === -1) return;
+
+      const current = components[index];
+      let updated = { ...current, ...data };
+      
+      // Keep legacy and nested fields synchronized
+      if (data.pcb) {
+        updated.pcb = { ...current.pcb, ...data.pcb };
+        updated = syncNestedPcbFields(updated);
+      } else if (data.placementX !== undefined || data.placementY !== undefined || data.rotationDeg !== undefined || data.side !== undefined || data.lockedPlacement !== undefined || data.placementStatus !== undefined) {
+        updated = syncLegacyPlacementFields(updated);
+      }
+
+      const updatedComponents = [...components];
+      updatedComponents[index] = updated;
+
+      // Update linked BOM item
+      let updatedBom = get().bom || [];
+      if (updated.bomItemId) {
+        updatedBom = updatedBom.map(b => {
+          if (b.id === updated.bomItemId) {
+            return {
+              ...b,
+              partNumber: updated.partNumber || b.partNumber,
+              candidateComponent: updated.componentName || b.candidateComponent,
+              quantity: updated.quantity || b.quantity,
+              packageSize: updated.packageName || b.packageSize,
+              supplier: updated.manufacturer || b.supplier
+            };
+          }
+          return b;
+        });
+      }
+
+      persistChange({
+        boardComponents: updatedComponents,
+        bom: updatedBom
+      });
+    },
+
+    deleteProjectComponent: (componentId, scope) => {
+      const components = get().boardComponents || [];
+      const comp = components.find(c => c.id === componentId);
+      if (!comp) return;
+
+      if (scope === 'schematic-only') {
+        const updatedComponents = components.map(c => {
+          if (c.id === componentId) {
+            return {
+              ...c,
+              schematic: { ...c.schematic, placed: false }
+            };
+          }
+          return c;
+        });
+        
+        // Remove schematic wires connected to this component's pins
+        const updatedWires = (get().schematicWires || []).filter(w => 
+          w.sourceComponentId !== componentId && w.targetComponentId !== componentId
+        );
+
+        persistChange({
+          boardComponents: updatedComponents,
+          schematicWires: updatedWires
+        });
+        get().markDerivedArtifactsStale('Schematic component unplaced');
+      } 
+      else if (scope === 'pcb-only') {
+        const updatedComponents = components.map(c => {
+          if (c.id === componentId) {
+            const updatedPcb = {
+              placed: false,
+              xMm: undefined,
+              yMm: undefined,
+              rotationDeg: 0,
+              side: 'Top' as const,
+              locked: false,
+              placementStatus: 'Unplaced' as const
+            };
+            return {
+              ...c,
+              pcb: updatedPcb,
+              placementX: undefined,
+              placementY: undefined,
+              rotationDeg: 0,
+              side: 'Top',
+              lockedPlacement: false,
+              placementStatus: 'Unplaced'
+            };
+          }
+          return c;
+        });
+
+        // Filter traces terminating on this component's pads
+        const updatedTraces = (get().traces || []).filter(t => {
+          const matchesSource = t.sourceAnchor?.componentId === componentId;
+          const matchesTarget = t.targetAnchor?.componentId === componentId;
+          return !(matchesSource || matchesTarget);
+        });
+
+        persistChange({
+          boardComponents: updatedComponents,
+          traces: updatedTraces
+        });
+        get().markDerivedArtifactsStale('PCB component unplaced');
+      } 
+      else if (scope === 'entire-product') {
+        // Remove component
+        const updatedComponents = components.filter(c => c.id !== componentId);
+
+        // Remove BOM item
+        const updatedBom = (get().bom || []).filter(b => b.id !== comp.bomItemId && b.componentId !== componentId);
+
+        // Remove wires
+        const updatedWires = (get().schematicWires || []).filter(w => 
+          w.sourceComponentId !== componentId && w.targetComponentId !== componentId
+        );
+
+        // Remove pad-net assignments
+        const updatedAssignments = (get().padNetAssignments || []).filter(a => a.componentId !== componentId);
+
+        // Remove linked traces
+        const updatedTraces = (get().traces || []).filter(t => {
+          const matchesSource = t.sourceAnchor?.componentId === componentId;
+          const matchesTarget = t.targetAnchor?.componentId === componentId;
+          return !(matchesSource || matchesTarget);
+        });
+
+        persistChange({
+          boardComponents: updatedComponents,
+          bom: updatedBom,
+          schematicWires: updatedWires,
+          padNetAssignments: updatedAssignments,
+          traces: updatedTraces
+        });
+
+        // Clean up empty nets
+        const activeNetIds = new Set(updatedAssignments.map(a => a.netId));
+        const updatedNets = (get().nets || []).filter(n => activeNetIds.has(n.id) || n.netName === 'GND' || n.netName === '3V3' || n.netName === '5V');
+        
+        persistChange({ nets: updatedNets });
+        get().markDerivedArtifactsStale('Component completely deleted');
+      }
+    },
+
+    placeComponentOnSchematic: (id, x, y) => {
+      const components = get().boardComponents || [];
+      const updated = components.map(c => {
+        if (c.id === id) {
+          return {
+            ...c,
+            schematic: {
+              placed: true,
+              x,
+              y,
+              rotation: c.schematic?.rotation || 0,
+              locked: c.schematic?.locked || false
+            }
+          };
+        }
+        return c;
+      });
+      persistChange({ boardComponents: updated });
+      get().markDerivedArtifactsStale('Component placed on schematic');
+    },
+
+    unplaceComponentFromSchematic: (id) => {
+      get().deleteProjectComponent(id, 'schematic-only');
+    },
+
+    placeComponentOnBoard: (id, x, y, side) => {
+      const components = get().boardComponents || [];
+      const updated = components.map(c => {
+        if (c.id === id) {
+          const updatedPcb = {
+            placed: true,
+            xMm: x,
+            yMm: y,
+            rotationDeg: c.pcb?.rotationDeg || 0,
+            side: side || c.pcb?.side || 'Top',
+            locked: c.pcb?.locked || false,
+            placementStatus: 'Placed' as const
+          };
+          return {
+            ...c,
+            pcb: updatedPcb,
+            placementX: x,
+            placementY: y,
+            rotationDeg: updatedPcb.rotationDeg,
+            side: updatedPcb.side,
+            lockedPlacement: updatedPcb.locked,
+            placementStatus: 'Placed'
+          };
+        }
+        return c;
+      });
+      persistChange({ boardComponents: updated });
+      get().markDerivedArtifactsStale('Component placed on PCB');
+    },
+
+    unplaceComponentFromBoard: (id) => {
+      get().deleteProjectComponent(id, 'pcb-only');
+    },
+
+    createNet: (item) => {
+      const id = item.id || `net_${Date.now()}_${Math.random()}`;
+      const newItem: NetItem = {
+        id,
+        netName: item.netName,
+        netType: item.netType || 'Signal',
+        voltage: item.voltage || '',
+        sourceComponent: item.sourceComponent || '',
+        sourcePin: item.sourcePin || '',
+        targetComponent: item.targetComponent || '',
+        targetPin: item.targetPin || '',
+        protocol: item.protocol || 'General',
+        currentEstimate: item.currentEstimate || '',
+        impedanceRequirement: item.impedanceRequirement || '',
+        notes: item.notes || ''
+      };
+      const nets = [...(get().nets || []), newItem];
+      persistChange({ nets });
+      return newItem;
+    },
+
+    getOrCreateNet: (name, data) => {
+      const normalized = normalizeNetName(name);
+      const nets = get().nets || [];
+      const found = nets.find(n => normalizeNetName(n.netName) === normalized);
+      if (found) return found;
+
+      return get().createNet({
+        netName: normalized,
+        netType: (normalized === 'GND' || normalized === '3V3' || normalized === '5V' || normalized === 'VBAT') ? 'Power' : 'Signal',
+        voltage: normalized === '3V3' ? '3.3V' : normalized === '5V' ? '5V' : '',
+        ...data
+      });
+    },
+
+    connectComponentPins: (sourceComponentId, sourcePinNumber, targetComponentId, targetPinNumber, netName, points) => {
+      const activeNetName = netName || `NET_${Date.now()}`;
+      const net = get().getOrCreateNet(activeNetName);
+
+      // Create pad net assignments
+      const assignments = get().padNetAssignments || [];
+      const newAssignments: PadNetAssignment[] = [...assignments];
+
+      const addAssignmentUnique = (compId: string, pinNum: string) => {
+        const exists = newAssignments.some(a => a.componentId === compId && a.padName === pinNum);
+        if (!exists) {
+          newAssignments.push({
+            id: `assignment_${Date.now()}_${Math.random()}`,
+            componentId: compId,
+            padName: pinNum,
+            netId: net.id,
+            netName: net.netName
+          });
+        }
+      };
+
+      addAssignmentUnique(sourceComponentId, sourcePinNumber);
+      addAssignmentUnique(targetComponentId, targetPinNumber);
+
+      // Update component pins list
+      const updatedComponents = (get().boardComponents || []).map(c => {
+        if (c.id === sourceComponentId || c.id === targetComponentId) {
+          const pinNum = c.id === sourceComponentId ? sourcePinNumber : targetPinNumber;
+          const updatedPins = (c.pins || []).map(p => {
+            if (p.pinNumber === pinNum) {
+              return { ...p, netId: net.id, netName: net.netName };
+            }
+            return p;
+          });
+          return { ...c, pins: updatedPins };
+        }
+        return c;
+      });
+
+      // Create schematic wire
+      const wireId = `wire_${Date.now()}_${Math.random()}`;
+      const wire: SchematicWire = {
+        id: wireId,
+        sourceComponentId,
+        sourcePinNumber,
+        targetComponentId,
+        targetPinNumber,
+        netId: net.id,
+        netName: net.netName,
+        points: points || [],
+        status: 'Draft'
+      };
+
+      const updatedWires = [...(get().schematicWires || []), wire];
+
+      persistChange({
+        boardComponents: updatedComponents,
+        schematicWires: updatedWires,
+        padNetAssignments: newAssignments
+      });
+
+      get().markDerivedArtifactsStale('Pins connected via wire');
+
+      return {
+        wire,
+        net,
+        assignments: newAssignments.filter(a => a.netId === net.id)
+      };
+    },
+
+    disconnectComponentPin: (componentId, pinNumber) => {
+      const updatedComponents = (get().boardComponents || []).map(c => {
+        if (c.id === componentId) {
+          const updatedPins = (c.pins || []).map(p => {
+            if (p.pinNumber === pinNumber) {
+              return { ...p, netId: undefined, netName: '' };
+            }
+            return p;
+          });
+          return { ...c, pins: updatedPins };
+        }
+        return c;
+      });
+
+      const updatedAssignments = (get().padNetAssignments || []).filter(a => 
+        !(a.componentId === componentId && a.padName === pinNumber)
+      );
+
+      const updatedWires = (get().schematicWires || []).filter(w => 
+        !(w.sourceComponentId === componentId && w.sourcePinNumber === pinNumber) &&
+        !(w.targetComponentId === componentId && w.targetPinNumber === pinNumber)
+      );
+
+      persistChange({
+        boardComponents: updatedComponents,
+        padNetAssignments: updatedAssignments,
+        schematicWires: updatedWires
+      });
+
+      get().markDerivedArtifactsStale('Pin disconnected');
+    },
+
+    deleteNetSafely: (netName) => {
+      const net = (get().nets || []).find(n => n.netName === netName);
+      if (!net) return;
+
+      const updatedComponents = (get().boardComponents || []).map(c => {
+        const updatedPins = (c.pins || []).map(p => {
+          if (p.netId === net.id || p.netName === netName) {
+            return { ...p, netId: undefined, netName: '' };
+          }
+          return p;
+        });
+        return { ...c, pins: updatedPins };
+      });
+
+      const updatedAssignments = (get().padNetAssignments || []).filter(a => a.netId !== net.id);
+      const updatedWires = (get().schematicWires || []).filter(w => w.netId !== net.id);
+      const updatedTraces = (get().traces || []).filter(t => t.netId !== net.id);
+      const updatedNets = (get().nets || []).filter(n => n.id !== net.id);
+
+      persistChange({
+        boardComponents: updatedComponents,
+        padNetAssignments: updatedAssignments,
+        schematicWires: updatedWires,
+        traces: updatedTraces,
+        nets: updatedNets
+      });
+
+      get().markDerivedArtifactsStale('Net safely deleted');
+    },
+
+    addCustomComponentDefinition: (def) => {
+      const list = get().customComponentLibrary || [];
+      const updated = [...list, def];
+      persistChange({ customComponentLibrary: updated });
+    },
+
+    updateCustomComponentDefinition: (id, def) => {
+      const list = get().customComponentLibrary || [];
+      const updated = list.map(x => x.libraryId === id ? { ...x, ...def } as ElectronicComponentDefinition : x);
+      persistChange({ customComponentLibrary: updated });
+    },
+
+    deleteCustomComponentDefinition: (id) => {
+      const list = get().customComponentLibrary || [];
+      const updated = list.filter(x => x.libraryId !== id);
+      persistChange({ customComponentLibrary: updated });
+    },
+
+    duplicateComponentDefinition: (id) => {
+      const list = get().customComponentLibrary || [];
+      const found = list.find(x => x.libraryId === id);
+      if (found) {
+        const copy: ElectronicComponentDefinition = {
+          ...found,
+          libraryId: `${found.libraryId}-copy-${Date.now()}`,
+          name: `${found.name} Copy`
+        };
+        persistChange({ customComponentLibrary: [...list, copy] });
+      }
+    },
+
+    markDerivedArtifactsStale: (reason) => {
+      console.log(`[Stale Trigger] ${reason}`);
+      set({
+        blueprintPackStatus: 'Stale',
+        factoryPackageStatus: 'Needs Review'
+      });
+    },
+
     updateProjectState: (patch) => {
       persistChange(patch);
     }

@@ -106,6 +106,17 @@ export const BoardInspector: React.FC<BoardObjectInspectorProps> = ({ viewState 
           <Field label="Part #" value={comp.partNumber} />
           <Field label="Pads" value={String(fp.pads.length)} />
           <Field label="Body" value={`${fp.bodyWidthMm}×${fp.bodyHeightMm}mm`} />
+          <div className="pt-1.5 border-t border-slate-850 flex items-center justify-between">
+            <span className="text-slate-500 font-bold uppercase tracking-wider text-[8px]">Cross Probe</span>
+            <button
+              onClick={() => {
+                useProjectStore.getState().setActiveView('schematic-editor');
+              }}
+              className="text-[9px] text-indigo-400 hover:text-indigo-300 font-bold uppercase transition-all"
+            >
+              Focus in Schematic →
+            </button>
+          </div>
         </div>
       </div>
     );

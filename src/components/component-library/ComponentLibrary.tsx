@@ -45,6 +45,13 @@ export const ComponentLibrary: React.FC = () => {
     'Haptic', 'Memory', 'Debug', 'Test Point', 'Battery', 'Custom'
   ];
 
+  const packages = [
+    'All', 'SOT23', 'SOT23_5', 'SOT23_6', 'SOIC_8', 'SOIC_14', 'TSSOP_16', 
+    'TSSOP_20', 'QFN_16', 'QFN_24', 'QFN_32', 'QFN_48', 'DFN_6', 'DFN_8', 
+    'LGA_12', 'LGA_16', 'R_0603', 'R_0805', 'C_0603', 'C_0805', 'USB_C_RECEPTACLE', 
+    'JST_PH_2', 'TEST_PAD', 'POGO_PAD', 'MOTOR_PAD', 'TACTILE_SWITCH', 'CHIP_ANTENNA'
+  ];
+
   // Combined library list
   const fullLibrary = useMemo(() => {
     return [...customComponents, ...defaultComponents];

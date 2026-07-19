@@ -85,6 +85,18 @@ export const BoardComponentBin: React.FC<BoardComponentBinProps> = ({ viewState,
           return (
             <button
               key={comp.id}
+              draggable={true}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/hardware-studio-component', comp.id);
+                // Also set selection state
+                onViewStateChange({
+                  selectedComponentId: comp.id,
+                  selectedTraceId: null,
+                  selectedViaId: null,
+                  selectedDrillHoleId: null,
+                  selectedKeepoutId: null,
+                });
+              }}
               onClick={() => onViewStateChange({
                 selectedComponentId: comp.id,
                 selectedTraceId: null,
@@ -92,7 +104,7 @@ export const BoardComponentBin: React.FC<BoardComponentBinProps> = ({ viewState,
                 selectedDrillHoleId: null,
                 selectedKeepoutId: null,
               })}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded border text-[10px] transition-all shrink-0 ${
+              className={`flex items-center gap-1.5 px-2 py-1 rounded border text-[10px] transition-all shrink-0 cursor-grab active:cursor-grabbing ${
                 isSelected
                   ? 'bg-slate-800 border-indigo-500 text-indigo-200'
                   : 'bg-slate-850 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300'

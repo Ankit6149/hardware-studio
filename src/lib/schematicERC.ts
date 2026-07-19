@@ -17,7 +17,7 @@ export function runSchematicERC(project: Project): ReviewResult[] {
     suggestedFix: string
   ) => {
     results.push({
-      id: `erc_${linkedObjectId}_${title.replace(/\s+/g, '_').toLowerCase()}_${Date.now()}`,
+      id: `erc_${linkedObjectId}_${title.replace(/\s+/g, '_').toLowerCase()}`,
       category: 'Schematic ERC',
       severity,
       title,
@@ -25,7 +25,7 @@ export function runSchematicERC(project: Project): ReviewResult[] {
       linkedObjectType,
       linkedObjectId,
       suggestedFix,
-      autoFixAvailable: true,
+      autoFixAvailable: false,
       status: 'Open'
     });
   };
@@ -241,22 +241,53 @@ export function runSchematicERC(project: Project): ReviewResult[] {
     }
   });
 
-  // Rule: Incompatible power net short
-  const powerNets = ['3V3', '5V', 'GND', 'VBAT'];
+  // Rule: Output-to-Output conflict (multiple Outputs or Power Outputs on the same net)
   nets.forEach(n => {
-    if (powerNets.includes(n.netName)) {
-      // Find other power nets in the same copper shapes or traces (shorts)
-      const matches = nets.filter(other => other.id !== n.id && other.netName === n.netName);
-      if (matches.length > 0) {
-        addIssue(
-          'Blocker',
-          'Power Net Conflicting Duplicate',
-          `Multiple distinct net objects defined for net name '${n.netName}'.`,
-          'net',
-          n.id,
-          'Merge duplicate net records in the Nets manager.'
-        );
+    const pinsInNet = padAssignments.filter(a => a.netName === n.netName);
+    const outputPins = pinsInNet.filter(a => {
+      const c = comps.find(comp => comp.id === a.componentId);
+      const p = c?.pins?.find(pin => pin.pinNumber === a.padName);
+      return p?.electricalType === 'Output' || p?.electricalType === 'Power Output';
+    });
+    if (outputPins.length > 1) {
+      const names = outputPins.map(op => {
+        const c = comps.find(comp => comp.id === op.componentId);
+        return `${c?.referenceDesignator || 'U'}.${op.padName}`;
+      }).join(', ');
+      addIssue(
+        'Error',
+        'Output Pin Conflict',
+        `Multiple output pins (${names}) are connected to net '${n.netName}'. This creates a driving conflict.`,
+        'net',
+        n.id,
+        'Disconnect one of the outputs or insert a buffer/gate.'
+      );
+    }
+  });
+
+  // Rule: Incompatible voltage connections (e.g., 5V output driving 3.3V input)
+  nets.forEach(n => {
+    const pinsInNet = padAssignments.filter(a => a.netName === n.netName);
+    let voltage5V = false;
+    let voltage3V3 = false;
+    pinsInNet.forEach(op => {
+      const c = comps.find(comp => comp.id === op.componentId);
+      const p = c?.pins?.find(pin => pin.pinNumber === op.padName);
+      if (p) {
+        const pinNameUpper = (p.pinName || '').toUpperCase();
+        if (pinNameUpper.includes('5V') || pinNameUpper.includes('VBUS')) voltage5V = true;
+        if (pinNameUpper.includes('3V3') || pinNameUpper.includes('VDD')) voltage3V3 = true;
       }
+    });
+    if (voltage5V && voltage3V3) {
+      addIssue(
+        'Error',
+        'Incompatible Voltage Rail Connection',
+        `Net '${n.netName}' connects both 5V and 3.3V terminals together, which can cause component damage.`,
+        'net',
+        n.id,
+        'Isolate the rails or add a level shifter / voltage regulator.'
+      );
     }
   });
 

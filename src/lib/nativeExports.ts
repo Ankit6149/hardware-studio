@@ -258,7 +258,8 @@ const getBoardDimensions = (project: Project) => {
 
 // Component Placement Resolver
 const getPlacedComponents = (project: Project) => {
-  const comps = project.boardComponents || [];
+  const activeBoardId = project.activeBoardId || 'board-main';
+  const comps = (project.boardComponents || []).filter(c => c.boardId === activeBoardId);
   const canvasComps = project.editorLayouts?.components || [];
   
   return comps.map(c => {
@@ -300,7 +301,8 @@ export const generateNativeGerberCopperTop = (project: Project): string => {
 
   // 1. Draw Traces
   gbr += "G54D10*\n";
-  const topTraces = (project.traces || []).filter(t => t.layerId?.toLowerCase() !== 'bottom');
+  const activeBoardId = project.activeBoardId || 'board-main';
+  const topTraces = (project.traces || []).filter(t => t.boardId === activeBoardId && t.layerId?.toLowerCase() !== 'bottom');
   if (topTraces.length > 0) {
     topTraces.forEach(t => {
       if (t.points && t.points.length > 1) {
@@ -368,7 +370,8 @@ export const generateNativeGerberCopperBottom = (project: Project): string => {
 
   // 1. Draw bottom copper traces
   gbr += "G54D10*\n";
-  const bottomTraces = (project.traces || []).filter(t => t.layerId?.toLowerCase() === 'bottom');
+  const activeBoardId = project.activeBoardId || 'board-main';
+  const bottomTraces = (project.traces || []).filter(t => t.boardId === activeBoardId && t.layerId?.toLowerCase() === 'bottom');
   bottomTraces.forEach(t => {
     if (t.points && t.points.length > 1) {
       const start = t.points[0];
@@ -422,9 +425,11 @@ export const generateNativeGerberBoardOutline = (project: Project): string => {
   gbr += "%ADD10C,0.0080*%\n"; // Edge line profile 8mils width
 
   gbr += "G54D10*\n";
-  const outlines = project.boardOutlines || [];
-  if (outlines.length > 0 && outlines[0].points && outlines[0].points.length > 1) {
-    const pts = outlines[0].points;
+  const activeBoardId = project.activeBoardId || 'board-main';
+  const outlines = (project.boardOutlines || []).filter(o => o.boardId === activeBoardId);
+  const primaryOutline = outlines[0] || (project.boardOutlines || [])[0];
+  if (primaryOutline && primaryOutline.points && primaryOutline.points.length > 1) {
+    const pts = primaryOutline.points;
     gbr += `X${scaleGerber(pts[0].x * mmToInch)}Y${scaleGerber(pts[0].y * mmToInch)}D02*\n`;
     for (let i = 1; i < pts.length; i++) {
       gbr += `X${scaleGerber(pts[i].x * mmToInch)}Y${scaleGerber(pts[i].y * mmToInch)}D01*\n`;
@@ -595,8 +600,9 @@ export const generateNativeGerberBottomPaste = (project: Project): string => {
 
 // I. generateNativeExcellonDrills
 export const generateNativeExcellonDrills = (project: Project): string => {
-  const vias = project.vias || [];
-  const drillHoles = project.drillHoles || [];
+  const activeBoardId = project.activeBoardId || 'board-main';
+  const vias = (project.vias || []).filter(v => v.boardId === activeBoardId);
+  const drillHoles = (project.drillHoles || []).filter(d => d.boardId === activeBoardId);
 
   const scaleExcellon = (val: number) => {
     const v = Math.round(val * 100);

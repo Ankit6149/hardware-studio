@@ -284,28 +284,39 @@ function generateElectronicsArchSheet(p: Project): BlueprintSheet {
 // SHEET 6 — Schematic Blueprint
 // ============================================================
 function generateSchematicSheet(p: Project, reviewResults: ReturnType<typeof runDesignReview>): BlueprintSheet {
-  const symbols = p.schematicSymbols || [];
-  const connections = p.schematicConnections || [];
-  const circuits = p.circuitBlocks || [];
-  const components = p.boardComponents || [];
+  const components = (p.boardComponents || []).filter(c => c.schematic?.placed === true);
+  const wires = p.schematicWires || [];
   const warnings: BlueprintWarning[] = [];
-  const sources: BlueprintSourceRef[] = symbols.map(s => ({ type: "schematic-symbol", id: s.id, label: s.label || s.referenceDesignator || s.id }));
+  const sources: BlueprintSourceRef[] = components.map(c => ({ type: "component", id: c.id, label: c.referenceDesignator }));
 
-  const drawObjs: BlueprintDrawingObject[] = symbols.map((s, i) => ({
-    id: objId(), type: "schematic-symbol" as const, label: s.label || s.referenceDesignator || s.symbolType,
-    x: s.x ?? (50 + (i % 5) * 150), y: s.y ?? (50 + Math.floor(i / 5) * 110), width: 120, height: 80,
-    rotation: s.rotation, sourceType: "schematic-symbol", sourceId: s.id,
-    metadata: { symbolType: s.symbolType, refdes: s.referenceDesignator || "", pinCount: s.pins?.length ?? 0 }
+  // Convert components to blueprint drawing objects
+  const drawObjs: BlueprintDrawingObject[] = components.map(c => ({
+    id: objId(),
+    type: "schematic-symbol" as const,
+    label: c.referenceDesignator,
+    x: c.schematic?.x || 150,
+    y: c.schematic?.y || 150,
+    width: 60,
+    height: 40,
+    rotation: c.schematic?.rotation,
+    sourceType: "component",
+    sourceId: c.id,
+    metadata: { symbolType: c.componentType, value: c.value || c.componentName, pinCount: c.pins?.length || 0 }
   }));
 
-  const drawConns: BlueprintDrawingConnection[] = connections.map(c => ({
-    id: connId(), sourceId: drawObjs.find(o => o.sourceId === c.sourceSymbolId)?.id || "",
-    targetId: drawObjs.find(o => o.sourceId === c.targetSymbolId)?.id || "",
-    label: c.label || c.netId || "", type: "signal" as const
-  })).filter(c => c.sourceId && c.targetId);
-
-  if (symbols.length === 0 && circuits.length > 0) warnings.push({ id: warnId(), sheetId: "sh-6", severity: "Info", title: "Auto-Generated From Circuits", message: `Schematic symbols auto-generated from ${circuits.length} circuit blocks.` });
-  if (symbols.length === 0 && circuits.length === 0) warnings.push({ id: warnId(), sheetId: "sh-6", severity: "Warning", title: "No Schematic Data", message: "No schematic symbols or circuit blocks defined." });
+  // Convert schematic wires to drawing connections
+  const drawConns: BlueprintDrawingConnection[] = wires.map(w => {
+    const srcCompId = w.sourcePinId?.split('_')[0] || w.sourceComponentId;
+    const tgtCompId = w.targetPinId?.split('_')[0] || w.targetComponentId;
+    
+    return {
+      id: connId(),
+      sourceId: drawObjs.find(o => o.sourceId === srcCompId)?.id || "",
+      targetId: drawObjs.find(o => o.sourceId === tgtCompId)?.id || "",
+      label: w.netName,
+      type: w.netName?.toUpperCase() === 'GND' ? 'ground' : (w.netName?.toUpperCase() === '3V3' || w.netName?.toUpperCase() === '5V') ? 'power' : 'signal'
+    };
+  }).filter(c => c.sourceId && c.targetId);
 
   // Map ERC review results
   reviewResults.filter(r => r.category.includes("ERC") || r.category.includes("Schematic")).forEach(r => {
@@ -313,28 +324,16 @@ function generateSchematicSheet(p: Project, reviewResults: ReturnType<typeof run
   });
 
   const symbolTable: BlueprintTable = {
-    id: tblId(), title: "Schematic Symbols", columns: ["RefDes", "Type", "Label", "Pins", "Circuit"],
-    rows: symbols.map(s => [s.referenceDesignator || "—", s.symbolType, s.label || "—", String(s.pins?.length ?? 0), s.circuitId || "—"])
+    id: tblId(), title: "Placed Schematic Components", columns: ["Designator", "Type", "Value", "Pins", "Footprint"],
+    rows: components.map(c => [c.referenceDesignator, c.componentType, c.value || "—", String(c.pins?.length || 0), c.footprint])
   };
-
-  // If no symbols, generate from circuits + components
-  if (symbols.length === 0 && components.length > 0) {
-    components.slice(0, 20).forEach((comp, i) => {
-      drawObjs.push({
-        id: objId(), type: "schematic-symbol", label: comp.referenceDesignator || comp.componentName,
-        x: 50 + (i % 5) * 150, y: 50 + Math.floor(i / 5) * 110, width: 120, height: 80,
-        sourceType: "component", sourceId: comp.id,
-        metadata: { componentType: comp.componentType, value: comp.value, footprint: comp.footprint }
-      });
-    });
-  }
 
   return {
     id: "sh-6", sheetNo: "06", title: "Schematic Blueprint", category: "schematic",
-    status: sheetStatus(symbols.length > 0 || components.length > 0, warnings), sourceObjects: sources,
+    status: sheetStatus(components.length > 0, warnings), sourceObjects: sources,
     drawing: { viewBox: "0 0 800 600", grid: true, objects: drawObjs, connections: drawConns, dimensions: [], callouts: [] },
-    tables: [symbolTable], notes: [`${symbols.length} symbols.`, `${connections.length} connections.`],
-    warnings, disclaimer: "Generated schematic-prep blueprint. Final engineering review required."
+    tables: [symbolTable], notes: [`${components.length} symbols.`, `${wires.length} wires.`],
+    warnings, disclaimer: "Generated schematic blueprint from live product workspace. Final engineering review required."
   };
 }
 
@@ -342,12 +341,13 @@ function generateSchematicSheet(p: Project, reviewResults: ReturnType<typeof run
 // SHEET 7 — PCB Board Layout Blueprint
 // ============================================================
 function generatePCBLayoutSheet(p: Project, reviewResults: ReturnType<typeof runDesignReview>): BlueprintSheet {
-  const boards = p.boards || [];
-  const outlines = p.boardOutlines || [];
+  const activeBoardId = p.activeBoardId || 'board-main';
+  const boards = (p.boards || []).filter(b => b.id === activeBoardId);
+  const outlines = (p.boardOutlines || []).filter(o => o.boardId === activeBoardId);
   const layers = p.pcbLayers || [];
-  const traces = p.traces || [];
-  const vias = p.vias || [];
-  const drills = p.drillHoles || [];
+  const traces = (p.traces || []).filter(t => t.boardId === activeBoardId);
+  const vias = (p.vias || []).filter(v => v.boardId === activeBoardId);
+  const drills = (p.drillHoles || []).filter(d => d.boardId === activeBoardId);
   const warnings: BlueprintWarning[] = [];
   const sources: BlueprintSourceRef[] = boards.map(b => ({ type: "board", id: b.id, label: b.name }));
 
@@ -434,9 +434,10 @@ function generatePCBLayoutSheet(p: Project, reviewResults: ReturnType<typeof run
 import { getFootprint as getFpPreset } from './footprints';
 
 function generateComponentPlacementSheet(p: Project): BlueprintSheet {
-  const components = p.boardComponents || [];
-  const boards = p.boards || [];
-  const outlines = p.boardOutlines || [];
+  const activeBoardId = p.activeBoardId || 'board-main';
+  const components = (p.boardComponents || []).filter(c => c.boardId === activeBoardId);
+  const boards = (p.boards || []).filter(b => b.id === activeBoardId);
+  const outlines = (p.boardOutlines || []).filter(o => o.boardId === activeBoardId);
   const warnings: BlueprintWarning[] = [];
   const sources: BlueprintSourceRef[] = components.map(c => ({ type: "component", id: c.id, label: c.referenceDesignator || c.componentName }));
 
@@ -496,11 +497,12 @@ function generateComponentPlacementSheet(p: Project): BlueprintSheet {
 // SHEET 9 — Routing / Net Blueprint
 // ============================================================
 function generateRoutingSheet(p: Project): BlueprintSheet {
+  const activeBoardId = p.activeBoardId || 'board-main';
   const nets = p.nets || [];
-  const traces = p.traces || [];
-  const vias = p.vias || [];
-  const outlines = p.boardOutlines || [];
-  const boards = p.boards || [];
+  const traces = (p.traces || []).filter(t => t.boardId === activeBoardId);
+  const vias = (p.vias || []).filter(v => v.boardId === activeBoardId);
+  const outlines = (p.boardOutlines || []).filter(o => o.boardId === activeBoardId);
+  const boards = (p.boards || []).filter(b => b.id === activeBoardId);
   const warnings: BlueprintWarning[] = [];
   const sources: BlueprintSourceRef[] = nets.map(n => ({ type: "net", id: n.id, label: n.netName }));
 

@@ -36,6 +36,7 @@ export type CustomEdge = Edge & {
 
 export interface BOMItem {
   id: string;
+  componentId?: string;
   blockName: string;
   candidateComponent: string;
   partNumber?: string;
@@ -453,6 +454,7 @@ export interface Project {
   batteryCapacityMah?: number;
   
   // Board Studio extensions
+  activeBoardId?: string;
   boards?: BoardItem[];
   circuitBlocks?: CircuitBlock[];
   boardComponents?: BoardComponent[];

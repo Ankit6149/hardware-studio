@@ -1,9 +1,10 @@
-// SchematicCanvas.tsx — Phase 6 Schematic canvas layout
-import React, { useRef, useCallback } from 'react';
+// SchematicCanvas.tsx — Phase 6 Schematic canvas layout & Interactive Dragging
+import React, { useRef, useCallback, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { SchematicUIState } from './schematicInteraction';
 import { getSymbolPinLayouts, snapToGrid } from './schematicGeometry';
 import { ReviewResult } from '../../types';
+import { SchematicSymbolRenderer } from './SchematicSymbolRenderer';
 
 interface SchematicCanvasProps {
   viewState: SchematicUIState;
@@ -12,14 +13,15 @@ interface SchematicCanvasProps {
 }
 
 export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onViewStateChange }) => {
+  const project = useProjectStore();
   const {
     boardComponents,
     schematicWires,
-    addNet,
     nets,
     padNetAssignments,
-    updateProjectState
-  } = useProjectStore();
+    updateBoardComponent,
+    connectComponentPins
+  } = project;
 
   const svgRef = useRef<SVGSVGElement>(null);
   const {
@@ -31,8 +33,13 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
     selectedWireId,
     isDrawingWire,
     wirePoints,
-    sourcePin
+    sourcePin,
+    hoveredPin
   } = viewState;
+
+  // Local state to track dragging components
+  const [draggedCompId, setDraggedCompId] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   // Convert SVG coordinates to canvas coordinates
   const getCanvasCoords = useCallback((e: React.MouseEvent) => {
@@ -44,6 +51,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
   }, [panX, panY, zoom]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+    if (draggedCompId) return; // Ignore clicks while dragging
     if (activeTool === 'pan' || activeTool === 'select') {
       onViewStateChange({
         selectedComponentId: null,
@@ -55,11 +63,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
     if (activeTool === 'wire') {
       const coords = getCanvasCoords(e);
       if (!isDrawingWire) {
-        // Start wire
-        onViewStateChange({
-          isDrawingWire: true,
-          wirePoints: [coords, coords]
-        });
+        // Start wire from empty space (Dangling Wire start is not encouraged, pin-click is standard)
       } else {
         // Add vertex point
         onViewStateChange({
@@ -67,21 +71,65 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
         });
       }
     }
-  }, [activeTool, getCanvasCoords, isDrawingWire, onViewStateChange, wirePoints]);
+  }, [activeTool, getCanvasCoords, isDrawingWire, onViewStateChange, wirePoints, draggedCompId]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    // If drawing wire
     if (isDrawingWire && wirePoints.length > 0) {
       const coords = getCanvasCoords(e);
       const points = [...wirePoints];
       points[points.length - 1] = coords;
       onViewStateChange({ wirePoints: points });
     }
-  }, [isDrawingWire, wirePoints, getCanvasCoords, onViewStateChange]);
+    // If dragging component
+    else if (draggedCompId) {
+      const coords = getCanvasCoords(e);
+      const targetX = snapToGrid(coords.x - dragOffset.x, 10);
+      const targetY = snapToGrid(coords.y - dragOffset.y, 10);
+      
+      const comp = (boardComponents || []).find(c => c.id === draggedCompId);
+      if (comp) {
+        updateBoardComponent(draggedCompId, {
+          schematic: {
+            ...comp.schematic,
+            placed: true,
+            x: targetX,
+            y: targetY
+          }
+        });
+      }
+    }
+  }, [isDrawingWire, wirePoints, draggedCompId, dragOffset, boardComponents, updateBoardComponent, getCanvasCoords, onViewStateChange]);
+
+  const handleMouseUp = useCallback(() => {
+    if (draggedCompId) {
+      setDraggedCompId(null);
+    }
+  }, [draggedCompId]);
+
+  const handleComponentMouseDown = useCallback((e: React.MouseEvent, compId: string) => {
+    if (activeTool !== 'select') return;
+    const comp = (boardComponents || []).find(c => c.id === compId);
+    if (!comp || comp.schematic?.locked) return;
+
+    e.stopPropagation();
+    const coords = getCanvasCoords(e);
+    
+    setDraggedCompId(compId);
+    setDragOffset({
+      x: coords.x - (comp.schematic?.x || 150),
+      y: coords.y - (comp.schematic?.y || 150)
+    });
+    
+    onViewStateChange({
+      selectedComponentId: compId,
+      selectedWireId: null
+    });
+  }, [activeTool, boardComponents, getCanvasCoords, onViewStateChange]);
 
   const handlePinClick = useCallback((e: React.MouseEvent, compId: string, pinNum: string, defaultNet?: string) => {
     e.stopPropagation();
     
-    // Find pin definition
     const comp = (boardComponents || []).find(c => c.id === compId);
     if (!comp) return;
 
@@ -105,63 +153,29 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
 
           const srcComp = (boardComponents || []).find(c => c.id === sourcePin.componentId);
           const srcRefDes = srcComp ? srcComp.referenceDesignator : 'U';
-          // Join or create net!
-          const netName = defaultNet || `NET_${srcRefDes}_${sourcePin.pinNumber}_to_${comp.referenceDesignator}_${pinNum}`;
           
-          // Check if net already exists
-          let net = (nets || []).find(n => n.netName === netName);
-          if (!net) {
-            net = {
-              id: `net_${Date.now()}`,
-              netName,
-              netType: 'Signal',
-              voltage: '',
-              sourceComponent: sourcePin.componentId,
-              sourcePin: sourcePin.pinNumber,
-              targetComponent: compId,
-              targetPin: pinNum,
-              protocol: 'General',
-              currentEstimate: '',
-              impedanceRequirement: '',
-              notes: 'Generated via Schematic Editor wire connection'
-            };
-            addNet(net);
+          // Normalize Power net names or compose custom signals
+          let netName = defaultNet || '';
+          if (!netName) {
+            const upName = pName => pName.toUpperCase();
+            const sourcePinName = srcComp?.pins?.find(p => p.pinNumber === sourcePin.pinNumber)?.pinName || '';
+            const targetPinName = comp.pins?.find(p => p.pinNumber === pinNum)?.pinName || '';
+            
+            if (upName(sourcePinName) === 'GND' || upName(targetPinName) === 'GND') netName = 'GND';
+            else if (upName(sourcePinName) === '3V3' || upName(targetPinName) === '3V3') netName = '3V3';
+            else if (upName(sourcePinName) === '5V' || upName(targetPinName) === '5V') netName = '5V';
+            else netName = `NET_${srcRefDes}_${sourcePin.pinNumber}_to_${comp.referenceDesignator}_${pinNum}`;
           }
 
-          // Create new pad net assignments in store
-          const newAssignments = [
-            ...(padNetAssignments || []),
-            {
-              id: `assignment_${Date.now()}_1`,
-              componentId: sourcePin.componentId,
-              referenceDesignator: (boardComponents || []).find(c => c.id === sourcePin.componentId)?.referenceDesignator || 'U1',
-              padName: sourcePin.pinNumber,
-              netName
-            },
-            {
-              id: `assignment_${Date.now()}_2`,
-              componentId: compId,
-              referenceDesignator: comp.referenceDesignator,
-              padName: pinNum,
-              netName
-            }
-          ];
-
-          // Create new wire object
-          const newWire = {
-            id: `wire_${Date.now()}`,
-            netId: net.id,
+          // Use the canonical store action to guarantee identical Net IDs
+          connectComponentPins(
+            sourcePin.componentId,
+            sourcePin.pinNumber,
+            compId,
+            pinNum,
             netName,
-            points: finalPoints,
-            sourcePinId: `${sourcePin.componentId}_${sourcePin.pinNumber}`,
-            targetPinId: `${compId}_${pinNum}`
-          };
-
-          // Save back to store
-          updateProjectState({
-            padNetAssignments: newAssignments,
-            schematicWires: [...(schematicWires || []), newWire]
-          });
+            finalPoints
+          );
 
           // Reset routing state
           onViewStateChange({
@@ -169,12 +183,13 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
             sourcePin: null,
             wirePoints: []
           });
-
-          alert(`Connected ${sourcePin.componentId}.${sourcePin.pinNumber} to ${comp.referenceDesignator}.${pinNum} on net '${netName}'!`);
         }
       }
     }
-  }, [boardComponents, activeTool, isDrawingWire, onViewStateChange, sourcePin, wirePoints, nets, addNet, padNetAssignments, schematicWires, updateProjectState]);
+  }, [boardComponents, activeTool, isDrawingWire, onViewStateChange, sourcePin, wirePoints, connectComponentPins]);
+
+  // Only render schematic-placed components
+  const placedComponents = (boardComponents || []).filter(c => c.schematic?.placed === true);
 
   return (
     <div className="flex-1 w-full h-full relative overflow-hidden bg-slate-900 select-none">
@@ -186,6 +201,8 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
         className="cursor-crosshair"
         onClick={handleCanvasClick}
         onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
         <defs>
           {/* Snap Grid pattern */}
@@ -199,101 +216,32 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
         {/* Outer view translation group */}
         <g transform={`translate(${panX}, ${panY}) scale(${zoom})`}>
           
-          {/* Placed symbols */}
-          {(boardComponents || []).map(c => {
+          {/* Placed symbols utilizing symbol renderer */}
+          {placedComponents.map(c => {
             const sx = c.schematic?.x || 150;
             const sy = c.schematic?.y || 150;
             const isSelected = selectedComponentId === c.id;
-            const pinLayouts = getSymbolPinLayouts(c, sx, sy);
 
             return (
               <g
                 key={c.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewStateChange({
-                    selectedComponentId: c.id,
-                    selectedWireId: null
-                  });
-                }}
+                transform={`translate(${sx}, ${sy})`}
+                onMouseDown={(e) => handleComponentMouseDown(e, c.id)}
                 className="cursor-pointer"
               >
-                {/* Visual bounding box for selection */}
-                {isSelected && (
-                  <rect
-                    x={sx - 45}
-                    y={sy - 35}
-                    width={90}
-                    height={pinLayouts.length * 10 + 40}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth={1}
-                    strokeDasharray="3,3"
-                  />
-                )}
-
-                {/* Symbol body box */}
-                <rect
-                  x={sx - 35}
-                  y={sy - 25}
-                  width={70}
-                  height={pinLayouts.length * 10 + 20}
-                  fill="#1e293b"
-                  stroke={isSelected ? '#10b981' : '#64748b'}
-                  strokeWidth={1.5}
-                  rx={2}
+                <SchematicSymbolRenderer
+                  componentType={c.componentType}
+                  referenceDesignator={c.referenceDesignator}
+                  value={c.value}
+                  packageName={c.packageName}
+                  pins={c.pins || []}
+                  rotation={c.schematic?.rotation || 0}
+                  isSelected={isSelected}
+                  hoveredPinNumber={hoveredPin?.componentId === c.id ? hoveredPin.pinNumber : null}
+                  onPinClick={(e, pinNum, pinLabel) => handlePinClick(e, c.id, pinNum, pinLabel)}
+                  onPinMouseEnter={(pinNum) => onViewStateChange({ hoveredPin: { componentId: c.id, pinNumber: pinNum } })}
+                  onPinMouseLeave={() => onViewStateChange({ hoveredPin: null })}
                 />
-
-                {/* Designator & Value */}
-                <text x={sx} y={sy - 30} fill="#10b981" fontSize={8} fontWeight="bold" textAnchor="middle" fontFamily="monospace">
-                  {c.referenceDesignator}
-                </text>
-                <text x={sx} y={sy + pinLayouts.length * 10 + 5} fill="#94a3b8" fontSize={8.5} textAnchor="middle">
-                  {c.value || c.componentName}
-                </text>
-
-                {/* Pins and connection terminals */}
-                {pinLayouts.map(p => {
-                  const isHovered = hoveredPin?.componentId === c.id && hoveredPin?.pinNumber === p.number;
-                  
-                  return (
-                    <g key={p.number}>
-                      {/* Wire terminal line */}
-                      <line
-                        x1={p.side === 'left' ? p.x : p.x - 10}
-                        y1={p.y}
-                        x2={p.side === 'left' ? p.x + 10 : p.x}
-                        y2={p.y}
-                        stroke="#64748b"
-                        strokeWidth={1}
-                      />
-                      
-                      {/* Terminal connection circle anchor */}
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r={isHovered ? 4.5 : 2.5}
-                        fill={isHovered ? '#10b981' : '#ef4444'}
-                        className="cursor-pointer transition-all"
-                        onClick={(e) => handlePinClick(e, c.id, p.number, p.label)}
-                        onMouseEnter={() => onViewStateChange({ hoveredPin: { componentId: c.id, pinNumber: p.number } })}
-                        onMouseLeave={() => onViewStateChange({ hoveredPin: null })}
-                      />
-
-                      {/* Pin label inside symbol body */}
-                      <text
-                        x={p.side === 'left' ? p.x + 14 : p.x - 14}
-                        y={p.y + 2.5}
-                        fill="#cbd5e1"
-                        fontSize={7.5}
-                        fontFamily="monospace"
-                        textAnchor={p.side === 'left' ? 'start' : 'end'}
-                      >
-                        {p.label}
-                      </text>
-                    </g>
-                  );
-                })}
               </g>
             );
           })}
@@ -301,6 +249,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
           {/* Render wires */}
           {(schematicWires || []).map((w, idx) => {
             const isSelected = selectedWireId === w.id;
+            if (!w.points || w.points.length < 2) return null;
             
             return (
               <g

@@ -22,7 +22,7 @@ const LAYER_DEFS = [
 
 export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onViewStateChange }) => {
   const { boards } = useProjectStore();
-  const { layerVisibility, activeLayerId } = viewState;
+  const { layerVisibility, activeLayerId, activeBoardId } = viewState;
 
   const toggleLayer = (key: string) => {
     onViewStateChange({
@@ -44,13 +44,42 @@ export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onV
         </div>
 
         {/* Board selector */}
-        {(boards || []).length > 0 && (
-          <select className="w-full bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded border border-slate-700 mb-2 font-mono">
-            {(boards || []).map(b => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-        )}
+        <div className="space-y-1.5 mb-2.5">
+          <label className="text-[8px] text-slate-500 font-bold block uppercase tracking-wider">PCB Board</label>
+          <div className="flex gap-1">
+            <select
+              value={activeBoardId || 'board-main'}
+              onChange={(e) => {
+                const val = e.target.value;
+                useProjectStore.getState().setActiveBoard(val);
+                onViewStateChange({ activeBoardId: val });
+              }}
+              className="flex-1 bg-slate-950 text-slate-200 text-[10px] px-2 py-0.5 rounded border border-slate-800 font-mono focus:outline-none focus:border-indigo-500"
+            >
+              {(boards || []).map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => {
+                const name = window.prompt("Enter new PCB board name:", `Multi-board Layout ${(boards || []).length + 1}`);
+                if (name) {
+                  const state = useProjectStore.getState();
+                  const newBoard = state.addBoard({
+                    name,
+                    notes: 'Added via Multi-board manager'
+                  });
+                  state.setActiveBoard(newBoard.id);
+                  onViewStateChange({ activeBoardId: newBoard.id });
+                }
+              }}
+              className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 font-bold text-[9px] rounded"
+              title="Add a new PCB board layer"
+            >
+              +
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">

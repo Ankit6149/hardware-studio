@@ -4,6 +4,7 @@ import { BoardDesignerUIState } from './boardInteraction';
 import {
   mmToSvg, svgToMm, snapToGrid as snapCoordinateToGrid,
   getOutlineBounds, getNetRatsnestLines,
+  getComponentPads, getNearestPad
 } from './boardGeometry';
 import { getFootprint } from '../../lib/footprints';
 import { ReviewResult, Project } from '../../types';
@@ -38,7 +39,33 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     selectedDrillHoleId ? 'drill' :
     selectedKeepoutId ? 'keepout' : null;
 
-  const outline = (boardOutlines || [])[0];
+  const activeBoardId = viewState.activeBoardId || 'board-main';
+
+  const filteredOutlines = useMemo(() => {
+    return (boardOutlines || []).filter(o => o.boardId === activeBoardId);
+  }, [boardOutlines, activeBoardId]);
+
+  const filteredComponents = useMemo(() => {
+    return (boardComponents || []).filter(c => c.boardId === activeBoardId);
+  }, [boardComponents, activeBoardId]);
+
+  const filteredTraces = useMemo(() => {
+    return (traces || []).filter(t => t.boardId === activeBoardId);
+  }, [traces, activeBoardId]);
+
+  const filteredVias = useMemo(() => {
+    return (vias || []).filter(v => v.boardId === activeBoardId);
+  }, [vias, activeBoardId]);
+
+  const filteredDrills = useMemo(() => {
+    return (drillHoles || []).filter(d => d.boardId === activeBoardId);
+  }, [drillHoles, activeBoardId]);
+
+  const filteredKeepouts = useMemo(() => {
+    return (keepoutZones || []).filter(k => k.boardId === activeBoardId);
+  }, [keepoutZones, activeBoardId]);
+
+  const outline = filteredOutlines[0] || (boardOutlines || [])[0];
   
   const bounds = useMemo(() => {
     return outline ? getOutlineBounds(outline) : { minX: 0, minY: 0, maxX: 50, maxY: 30 };
@@ -67,6 +94,42 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
   const bs = useCallback((mm: number) => mmToSvg(mm, zoom), [zoom]);
 
   // ── Mouse handlers ───────────────────────────────────────
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const componentId = e.dataTransfer.getData('application/hardware-studio-component');
+    if (!componentId) return;
+
+    const pt = screenToBoard(e.clientX, e.clientY);
+    const primaryBoardId = viewState.activeBoardId || 'board-main';
+
+    updateBoardComponent(componentId, {
+      boardId: primaryBoardId,
+      placementX: pt.x,
+      placementY: pt.y,
+      placementStatus: 'Needs Review',
+      pcb: {
+        placed: true,
+        xMm: pt.x,
+        yMm: pt.y,
+        side: 'Top',
+        locked: false,
+        placementStatus: 'Needs Review',
+      }
+    });
+
+    onViewStateChange({
+      selectedComponentId: componentId,
+      selectedTraceId: null,
+      selectedViaId: null,
+      selectedDrillHoleId: null,
+      selectedKeepoutId: null,
+    });
+  }, [screenToBoard, viewState.activeBoardId, updateBoardComponent, onViewStateChange]);
+
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -1 : 1;
@@ -81,15 +144,41 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       return;
     }
 
-    const pt = screenToBoard(e.clientX, e.clientY);
+    // Find all pads for snap routing
+    const allPads = (boardComponents || []).flatMap(comp => {
+      if (comp.placementX == null || comp.placementY == null) return [];
+      return getComponentPads(comp).map(p => ({
+        ...p,
+        netName: (padNetAssignments || []).find(a => a.componentId === comp.id && a.padName === p.padName)?.netName || ''
+      }));
+    });
 
-    if (activeTool === 'route' && selectedNetName) {
+    let pt = screenToBoard(e.clientX, e.clientY);
+    const nearestPad = getNearestPad(pt, allPads, 1.2);
+    if (nearestPad) {
+      pt = { x: nearestPad.x, y: nearestPad.y };
+    }
+
+    if (activeTool === 'route') {
+      let netToUse = selectedNetName;
       if (!isRouting) {
+        if (nearestPad && nearestPad.netName) {
+          netToUse = nearestPad.netName;
+        }
+        if (!netToUse) {
+          alert("Click on a pad assigned to a net or select a net in the Nets panel first.");
+          return;
+        }
         onViewStateChange({
           isRouting: true,
           routePreviewPoints: [pt],
+          selectedNetName: netToUse
         });
       } else {
+        if (nearestPad && nearestPad.netName && nearestPad.netName !== selectedNetName) {
+          alert(`Wrong Net Connection Rejected!\nThis pad belongs to net '${nearestPad.netName}', but active route is '${selectedNetName}'.`);
+          return;
+        }
         onViewStateChange({
           routePreviewPoints: [...(routePreviewPoints || []), pt],
         });
@@ -231,13 +320,31 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
   }, []);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (isRouting && routePreviewPoints && routePreviewPoints.length >= 2 && selectedNetName) {
-      // Finish route
-      const pt = screenToBoard(e.clientX, e.clientY);
+    if (isRouting && routePreviewPoints && routePreviewPoints.length >= 1 && selectedNetName) {
+      // Find all pads for snap routing
+      const allPads = (boardComponents || []).flatMap(comp => {
+        if (comp.placementX == null || comp.placementY == null) return [];
+        return getComponentPads(comp).map(p => ({
+          ...p,
+          netName: (padNetAssignments || []).find(a => a.componentId === comp.id && a.padName === p.padName)?.netName || ''
+        }));
+      });
+
+      let pt = screenToBoard(e.clientX, e.clientY);
+      const nearestPad = getNearestPad(pt, allPads, 1.2);
+      if (nearestPad) {
+        if (nearestPad.netName && nearestPad.netName !== selectedNetName) {
+          alert(`Wrong Net Connection Rejected!\nThis pad belongs to net '${nearestPad.netName}', but active route is '${selectedNetName}'.`);
+          return;
+        }
+        pt = { x: nearestPad.x, y: nearestPad.y };
+      }
+
       const allPoints = [...routePreviewPoints, pt];
-      const primaryBoard = (useProjectStore.getState().boards || [])[0];
+      const activeBoard = activeBoardId;
+
       addTrace({
-        boardId: primaryBoard?.id || 'board-main',
+        boardId: activeBoard,
         layerId: viewState.activeLayerId || 'top-copper',
         netId: (nets || []).find(n => n.netName === selectedNetName)?.id,
         netName: selectedNetName,
@@ -245,9 +352,10 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
         width: selectedNetName.toLowerCase().includes('gnd') || selectedNetName.toLowerCase().includes('vbat') ? 0.3 : 0.15,
         status: 'Draft',
       });
+
       onViewStateChange({ isRouting: false, routePreviewPoints: [] });
     }
-  }, [isRouting, routePreviewPoints, selectedNetName, screenToBoard, addTrace, nets, viewState.activeLayerId, onViewStateChange]);
+  }, [isRouting, routePreviewPoints, selectedNetName, screenToBoard, addTrace, nets, viewState.activeLayerId, onViewStateChange, boardComponents, padNetAssignments]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -324,9 +432,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
   // ── Ratsnest lines (memoized) ────────────────────────────
   const ratsnestLines = useMemo(() => {
     if (!showRatsnest) return [];
-    const project = { boardComponents, traces, nets, padNetAssignments };
+    const project = { boardComponents: filteredComponents, traces: filteredTraces, nets, padNetAssignments };
     return getNetRatsnestLines(project as unknown as Project);
-  }, [showRatsnest, boardComponents, traces, nets, padNetAssignments]);
+  }, [showRatsnest, filteredComponents, filteredTraces, nets, padNetAssignments]);
 
   // ── Grid dots ────────────────────────────────────────────
   const gridDots = useMemo(() => {
@@ -354,6 +462,8 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       onMouseUp={handleMouseUp}
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
       tabIndex={0}
       style={{ minHeight: '100%' }}
     >
@@ -387,7 +497,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       <line x1={bx(0)} y1={by(0) - 8} x2={bx(0)} y2={by(0) + 8} stroke="#ef4444" strokeWidth={1} opacity={0.6} />
 
       {/* Keepout zones */}
-      {layerVisibility['keepouts'] && (keepoutZones || []).map(zone => {
+      {layerVisibility['keepouts'] && filteredKeepouts.map(zone => {
         const isSelected = selectedKeepoutId === zone.id;
         return (
           <g key={zone.id} onClick={(e) => {
@@ -414,20 +524,34 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       })}
 
       {/* Traces */}
-      {layerVisibility['top-copper'] && (traces || []).map(trace => {
+      {filteredTraces.map(trace => {
         if (!trace.points || trace.points.length < 2) return null;
+        const layerId = trace.layerId || 'top-copper';
+        const isVisible = layerVisibility[layerId] !== false;
+        if (!isVisible) return null;
+
+        const isActive = viewState.activeLayerId === layerId;
         const isHighlighted = selectedNetName && trace.netName === selectedNetName;
         const isSelected = selectedObjectId === trace.id;
+
+        // Color based on layer: Top is green, Bottom is blue
+        let strokeColor = layerId === 'bottom-copper' ? '#3b82f6' : '#22c55e';
+        if (isHighlighted) strokeColor = '#22d3ee';
+        else if (isSelected) strokeColor = '#f59e0b';
+
+        // Opacity: lower if not the active layer
+        const opacity = isSelected || isHighlighted ? 1 : isActive ? 0.85 : 0.25;
+
         return (
           <polyline
             key={trace.id}
             points={trace.points.map(p => `${bx(p.x)},${by(p.y)}`).join(' ')}
             fill="none"
-            stroke={isHighlighted ? '#22d3ee' : isSelected ? '#f59e0b' : '#22c55e'}
+            stroke={strokeColor}
             strokeWidth={bs(trace.width || 0.15)}
             strokeLinecap="round"
             strokeLinejoin="round"
-            opacity={isHighlighted || isSelected ? 1 : 0.8}
+            opacity={opacity}
             onClick={(e) => {
               e.stopPropagation();
               onViewStateChange({
@@ -458,7 +582,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       )}
 
       {/* Vias */}
-      {layerVisibility['drill'] && (vias || []).map(via => {
+      {layerVisibility['drill'] && filteredVias.map(via => {
         if (via.x == null || via.y == null) return null;
         const isSelected = selectedObjectId === via.id;
         return (
@@ -479,7 +603,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       })}
 
       {/* Drill holes */}
-      {layerVisibility['drill'] && (drillHoles || []).map(drill => {
+      {layerVisibility['drill'] && filteredDrills.map(drill => {
         if (drill.x == null || drill.y == null) return null;
         const isSelected = selectedObjectId === drill.id;
         return (
@@ -501,7 +625,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       })}
 
       {/* Components */}
-      {(boardComponents || []).map(comp => {
+      {filteredComponents.map(comp => {
         if (comp.placementX == null || comp.placementY == null) return null;
         const fp = getFootprint(comp.footprint);
         const isSelected = selectedObjectId === comp.id;
@@ -531,7 +655,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
               x={-bs(fp.courtyardWidthMm / 2)} y={-bs(fp.courtyardHeightMm / 2)}
               width={bs(fp.courtyardWidthMm)} height={bs(fp.courtyardHeightMm)}
               fill="none" stroke={isSelected ? '#f59e0b' : '#475569'}
-              strokeWidth={0.5} strokeDasharray={isSelected ? 'none' : '2,1'} opacity={0.5}
+              strokeWidth={0.5} strokeDasharray={comp.side === 'Bottom' ? '2,2' : isSelected ? 'none' : '2,1'} opacity={comp.side === 'Bottom' ? 0.35 : 0.5}
             />
             {/* Body */}
             <rect
@@ -540,24 +664,28 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
               fill={isSelected ? '#1e3a5f' : isNetHighlighted ? '#1a2e4a' : '#1e293b'}
               stroke={isSelected ? '#f59e0b' : isNetHighlighted ? '#22d3ee' : '#64748b'}
               strokeWidth={isSelected ? 1.5 : 1}
+              strokeDasharray={comp.side === 'Bottom' ? '3,3' : 'none'}
               rx={bs(0.2)}
             />
-            {/* Pads */}
-            {fp.pads.map((pad, pi) => (
-              <rect
-                key={pi}
-                x={bs(pad.xMm) - bs(pad.widthMm / 2)}
-                y={bs(pad.yMm) - bs(pad.heightMm / 2)}
-                width={bs(pad.widthMm)}
-                height={bs(pad.heightMm)}
-                fill={isNetHighlighted ? '#22d3ee' : '#c084fc'}
-                opacity={0.8}
-                rx={bs(0.05)}
-              />
-            ))}
+            {/* Pads - mirrored X if side is Bottom */}
+            {fp.pads.map((pad, pi) => {
+              const padXMm = comp.side === 'Bottom' ? -pad.xMm : pad.xMm;
+              return (
+                <rect
+                  key={pi}
+                  x={bs(padXMm) - bs(pad.widthMm / 2)}
+                  y={bs(pad.yMm) - bs(pad.heightMm / 2)}
+                  width={bs(pad.widthMm)}
+                  height={bs(pad.heightMm)}
+                  fill={isNetHighlighted ? '#22d3ee' : comp.side === 'Bottom' ? '#3b82f6' : '#c084fc'}
+                  opacity={comp.side === 'Bottom' ? 0.6 : 0.8}
+                  rx={bs(0.05)}
+                />
+              );
+            })}
             {/* Pin 1 marker */}
             <circle
-              cx={bs(fp.pads[0]?.xMm || -fp.bodyWidthMm / 2 + 0.3)}
+              cx={bs((comp.side === 'Bottom' ? -1 : 1) * (fp.pads[0]?.xMm || -fp.bodyWidthMm / 2 + 0.3))}
               cy={bs(fp.pads[0]?.yMm || -fp.bodyHeightMm / 2 + 0.3)}
               r={bs(0.15)}
               fill="#ef4444"

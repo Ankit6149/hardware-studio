@@ -138,50 +138,185 @@ export const getNearestPad = (
 
 // ─── Ratsnest ──────────────────────────────────────────────────────
 
+class UnionFind {
+  parent: Record<string, string> = {};
+  
+  find(id: string): string {
+    if (!this.parent[id]) {
+      this.parent[id] = id;
+      return id;
+    }
+    let p = this.parent[id];
+    while (p !== this.parent[p]) {
+      this.parent[p] = this.parent[this.parent[p]];
+      p = this.parent[p];
+    }
+    return p;
+  }
+
+  union(a: string, b: string) {
+    const rootA = this.find(a);
+    const rootB = this.find(b);
+    if (rootA !== rootB) {
+      this.parent[rootA] = rootB;
+    }
+  }
+}
+
 export interface RatsnestLine {
   netName: string;
   x1: number; y1: number;
   x2: number; y2: number;
 }
 
-/** Compute ratsnest (unrouted connections) for all nets */
+/** Compute ratsnest (unrouted connections) for all nets using Union-Find and Kruskal's MST */
 export const getNetRatsnestLines = (project: Project): RatsnestLine[] => {
   const nets = project.nets || [];
   const traces = project.traces || [];
   const lines: RatsnestLine[] = [];
 
-  const netNames = new Set(nets.map(n => n.netName));
+  const netNames = Array.from(new Set(nets.map(n => n.netName)));
 
   for (const netName of netNames) {
     const pads = getPadsForNet(project, netName);
     if (pads.length < 2) continue;
 
-    // Check if there's already a trace for this net connecting these pads
+    // Filter traces assigned to this net
     const netTraces = traces.filter(t => t.netName === netName || t.netId === nets.find(n => n.netName === netName)?.id);
 
-    // Simple star ratsnest: connect each pad to the first pad
-    // Skip connections that have a trace
-    const firstPad = pads[0];
-    for (let i = 1; i < pads.length; i++) {
-      const pad = pads[i];
-      // Check if any trace connects near both pads
-      const isRouted = netTraces.some(t => {
-        if (!t.points || t.points.length < 2) return false;
-        const first = t.points[0];
-        const last = t.points[t.points.length - 1];
-        const d1a = Math.hypot(first.x - firstPad.x, first.y - firstPad.y);
-        const d1b = Math.hypot(last.x - firstPad.x, last.y - firstPad.y);
-        const d2a = Math.hypot(first.x - pad.x, first.y - pad.y);
-        const d2b = Math.hypot(last.x - pad.x, last.y - pad.y);
-        return (d1a < 1.0 && d2b < 1.0) || (d1b < 1.0 && d2a < 1.0);
-      });
+    // Initialize Union-Find
+    const uf = new UnionFind();
+    const padIds = pads.map(p => `${p.componentId}_${p.padName}`);
+    
+    // Connect elements if they are close (< 0.2mm)
+    // 1. Pad to Pad distance check
+    for (let i = 0; i < pads.length; i++) {
+      for (let j = i + 1; j < pads.length; j++) {
+        const dist = Math.hypot(pads[i].x - pads[j].x, pads[i].y - pads[j].y);
+        if (dist < 0.2) {
+          uf.union(padIds[i], padIds[j]);
+        }
+      }
+    }
 
-      if (!isRouted) {
+    // 2. Traces connection to Pads and other Traces
+    const traceIds = netTraces.map((_, idx) => `trace_${idx}`);
+    
+    // Union Trace to Pads
+    netTraces.forEach((trace, tIdx) => {
+      const tId = traceIds[tIdx];
+      const pts = trace.points;
+      if (!pts || pts.length === 0) return;
+
+      pads.forEach((pad, pIdx) => {
+        const pId = padIds[pIdx];
+        
+        // Check if any point on the trace is near the pad (threshold 0.2mm)
+        const isNear = pts.some(pt => Math.hypot(pt.x - pad.x, pt.y - pad.y) < 0.2);
+        if (isNear) {
+          uf.union(tId, pId);
+        }
+      });
+    });
+
+    // Union Trace to Trace (if they overlap/intersect within 0.2mm)
+    for (let i = 0; i < netTraces.length; i++) {
+      for (let j = i + 1; j < netTraces.length; j++) {
+        const t1 = netTraces[i];
+        const t2 = netTraces[j];
+        if (!t1.points || !t2.points) continue;
+        
+        let connected = false;
+        for (const p1 of t1.points) {
+          for (const p2 of t2.points) {
+            if (Math.hypot(p1.x - p2.x, p1.y - p2.y) < 0.2) {
+              connected = true;
+              break;
+            }
+          }
+          if (connected) break;
+        }
+
+        if (connected) {
+          uf.union(traceIds[i], traceIds[j]);
+        }
+      }
+    }
+
+    // Group pads by their root connected components
+    const componentGroups: Record<string, typeof pads> = {};
+    pads.forEach((pad, idx) => {
+      const root = uf.find(padIds[idx]);
+      if (!componentGroups[root]) {
+        componentGroups[root] = [];
+      }
+      componentGroups[root].push(pad);
+    });
+
+    const groups = Object.values(componentGroups);
+    if (groups.length < 2) {
+      // Net is fully routed!
+      continue;
+    }
+
+    // Build Kruskal's MST between disjoint pad components
+    interface Edge {
+      u: number; // group index A
+      v: number; // group index B
+      padA: typeof pads[0];
+      padB: typeof pads[0];
+      weight: number;
+    }
+
+    const edges: Edge[] = [];
+    for (let i = 0; i < groups.length; i++) {
+      for (let j = i + 1; j < groups.length; j++) {
+        const gA = groups[i];
+        const gB = groups[j];
+        
+        let minWeight = Infinity;
+        let bestPair: [typeof pads[0], typeof pads[0]] | null = null;
+
+        for (const pA of gA) {
+          for (const pB of gB) {
+            const dist = Math.hypot(pA.x - pB.x, pA.y - pB.y);
+            if (dist < minWeight) {
+              minWeight = dist;
+              bestPair = [pA, pB];
+            }
+          }
+        }
+
+        if (bestPair) {
+          edges.push({
+            u: i,
+            v: j,
+            padA: bestPair[0],
+            padB: bestPair[1],
+            weight: minWeight
+          });
+        }
+      }
+    }
+
+    // Sort edges by weight (distance)
+    edges.sort((a, b) => a.weight - b.weight);
+
+    // Union-Find over the group indices to build the MST
+    const groupUf = new UnionFind();
+    let edgeCount = 0;
+    for (const edge of edges) {
+      if (groupUf.find(String(edge.u)) !== groupUf.find(String(edge.v))) {
+        groupUf.union(String(edge.u), String(edge.v));
         lines.push({
           netName,
-          x1: firstPad.x, y1: firstPad.y,
-          x2: pad.x, y2: pad.y,
+          x1: edge.padA.x,
+          y1: edge.padA.y,
+          x2: edge.padB.x,
+          y2: edge.padB.y
         });
+        edgeCount++;
+        if (edgeCount === groups.length - 1) break;
       }
     }
   }

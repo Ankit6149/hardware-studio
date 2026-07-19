@@ -11,24 +11,28 @@ import {
 } from '../components/board/boardGeometry';
 
 let drcCounter = 0;
-const drcId = () => `drc_${++drcCounter}_${Date.now()}`;
+const drcId = (prefix: string = 'gen') => `drc_${prefix}_${++drcCounter}`;
 
 export const runBoardDRC = (project: Project): ReviewResult[] => {
   drcCounter = 0;
   const results: ReviewResult[] = [];
+  const activeBoardId = project.activeBoardId || 'board-main';
   const boards = project.boards || [];
-  const components = project.boardComponents || [];
-  const outlines = project.boardOutlines || [];
-  const traces = project.traces || [];
-  const vias = project.vias || [];
-  const drillHoles = project.drillHoles || [];
-  const keepoutZones = project.keepoutZones || [];
+  
+  // Filter design elements by activeBoardId
+  const components = (project.boardComponents || []).filter(c => c.boardId === activeBoardId);
+  const outlines = (project.boardOutlines || []).filter(o => o.boardId === activeBoardId);
+  const traces = (project.traces || []).filter(t => t.boardId === activeBoardId);
+  const vias = (project.vias || []).filter(v => v.boardId === activeBoardId);
+  const drillHoles = (project.drillHoles || []).filter(d => d.boardId === activeBoardId);
+  const keepoutZones = (project.keepoutZones || []).filter(k => k.boardId === activeBoardId);
+  
   const nets = project.nets || [];
   const pcbLayers = project.pcbLayers || [];
   const pcbRules = project.pcbRules || [];
 
-  // Get first board outline
-  const primaryOutline = outlines[0];
+  // Get primary board outline
+  const primaryOutline = outlines[0] || (project.boardOutlines || [])[0];
   const minTraceWidth = pcbRules.find(r => r.ruleType === 'Trace Width')?.value
     ? parseFloat(pcbRules.find(r => r.ruleType === 'Trace Width')!.value!)
     : 0.1;
@@ -141,17 +145,18 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
     }
   }
 
-  // Overlapping components
+  // Overlapping components (only if on the same side)
   for (let i = 0; i < components.length; i++) {
     for (let j = i + 1; j < components.length; j++) {
       const a = components[i];
       const b = components[j];
       if (a.placementX == null || b.placementX == null) continue;
+      if (a.side !== b.side) continue; // Components on opposite sides do not overlap
       if (componentsOverlap(a, b)) {
         results.push({
-          id: drcId(), category: 'Component', severity: 'Error',
+          id: drcId('overlap'), category: 'Component', severity: 'Error',
           title: `Overlapping components: ${a.referenceDesignator} & ${b.referenceDesignator}`,
-          description: `Courtyard areas of ${a.referenceDesignator} and ${b.referenceDesignator} overlap.`,
+          description: `Courtyard areas of ${a.referenceDesignator} and ${b.referenceDesignator} overlap on the ${a.side} side.`,
           linkedObjectType: 'component', linkedObjectId: a.id,
           suggestedFix: 'Move one of the components to eliminate overlap.',
           status: 'Open',

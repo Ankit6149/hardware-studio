@@ -3,6 +3,110 @@ import { Project, BoardComponent } from '../types';
 
 export const CURRENT_SCHEMA_VERSION = 4;
 
+export function normalizeProjectComponent(bc: any): BoardComponent {
+  const compId = bc.id || `cmp_${Date.now()}_${Math.random()}`;
+
+  // Pins normalization
+  const pins = (bc.pins || []).map((p: any) => ({
+    id: p.id || `pin_${compId}_${p.pinNumber}`,
+    componentId: compId,
+    pinNumber: String(p.pinNumber),
+    pinName: p.pinName || `PIN${p.pinNumber}`,
+    electricalType: p.electricalType || 'Passive',
+    netId: p.netId || undefined,
+    netName: p.netName || '',
+    noConnect: !!p.noConnect,
+    required: !!p.required
+  }));
+
+  // Schematic placement initialization
+  const schematic = {
+    placed: bc.schematic?.placed ?? (bc.placementX != null),
+    x: bc.schematic?.x ?? bc.placementX ?? 150,
+    y: bc.schematic?.y ?? bc.placementY ?? 150,
+    rotation: bc.schematic?.rotation ?? bc.rotationDeg ?? 0,
+    locked: bc.schematic?.locked ?? false,
+  };
+
+  // PCB placement initialization
+  const pcb = {
+    placed: bc.pcb?.placed ?? (bc.placementX != null),
+    xMm: bc.pcb?.xMm ?? bc.placementX ?? 0,
+    yMm: bc.pcb?.yMm ?? bc.placementY ?? 0,
+    rotationDeg: bc.pcb?.rotationDeg ?? bc.rotationDeg ?? 0,
+    side: (bc.pcb?.side || bc.side || "Top") as 'Top' | 'Bottom',
+    locked: bc.pcb?.locked ?? bc.lockedPlacement ?? false,
+    placementStatus: (bc.pcb?.placementStatus || bc.placementStatus || (bc.placementX != null ? "Placed" : "Unplaced")) as any,
+  };
+
+  return {
+    id: compId,
+    libraryId: bc.libraryId || "",
+    referenceDesignator: bc.referenceDesignator || "U1",
+    componentName: bc.componentName || "",
+    componentType: bc.componentType || "",
+    value: bc.value || "",
+    packageName: bc.packageName || "",
+    footprint: bc.footprint || "",
+    partNumber: bc.partNumber || "",
+    pins,
+    boardId: bc.boardId || "board_0",
+    circuitBlockId: bc.circuitBlockId || "block_0",
+    bomItemId: bc.bomItemId || "",
+    quantity: Number(bc.quantity) || 1,
+    schematic,
+    pcb,
+    status: bc.status || "Draft",
+    notes: bc.notes || "",
+    
+    // Synchronize flat fields
+    placementX: pcb.xMm,
+    placementY: pcb.yMm,
+    rotationDeg: pcb.rotationDeg,
+    side: pcb.side,
+    lockedPlacement: pcb.locked,
+    placementStatus: pcb.placementStatus,
+    supplier: bc.supplier || "",
+    datasheetUrl: bc.datasheetUrl || "",
+    placementCriticality: bc.placementCriticality || "Low"
+  };
+}
+
+export function syncLegacyPlacementFields(comp: BoardComponent): BoardComponent {
+  if (!comp.pcb) {
+    comp.pcb = {
+      placed: comp.placementX != null,
+      xMm: comp.placementX,
+      yMm: comp.placementY,
+      rotationDeg: comp.rotationDeg,
+      side: comp.side === 'Bottom' ? 'Bottom' : 'Top',
+      locked: !!comp.lockedPlacement,
+      placementStatus: (comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced')) as any,
+    };
+  } else {
+    comp.pcb.placed = comp.placementX != null;
+    comp.pcb.xMm = comp.placementX;
+    comp.pcb.yMm = comp.placementY;
+    comp.pcb.rotationDeg = comp.rotationDeg;
+    comp.pcb.side = comp.side === 'Bottom' ? 'Bottom' : 'Top';
+    comp.pcb.locked = !!comp.lockedPlacement;
+    comp.pcb.placementStatus = (comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced')) as any;
+  }
+  return comp;
+}
+
+export function syncNestedPcbFields(comp: BoardComponent): BoardComponent {
+  if (comp.pcb) {
+    comp.placementX = comp.pcb.xMm;
+    comp.placementY = comp.pcb.yMm;
+    comp.rotationDeg = comp.pcb.rotationDeg;
+    comp.side = comp.pcb.side;
+    comp.lockedPlacement = comp.pcb.locked;
+    comp.placementStatus = comp.pcb.placementStatus as any;
+  }
+  return comp;
+}
+
 export function migrateProjectSchema(project: unknown): Project {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const migrated = JSON.parse(JSON.stringify(project || {})) as Project & Record<string, any>;
@@ -36,61 +140,7 @@ export function migrateProjectSchema(project: unknown): Project {
 
   // Migrate boardComponents pins, pcb & schematic objects if missing
   migrated.boardComponents = (migrated.boardComponents as BoardComponent[]).map((c) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updated = { ...c } as BoardComponent & Record<string, any>;
-
-    // Initialize pins from generic packages if missing
-    if (!updated.pins || updated.pins.length === 0) {
-      const pinCount = updated.packageName.toLowerCase().includes('qfn_32') ? 32 :
-                       updated.packageName.toLowerCase().includes('qfn_48') ? 48 :
-                       updated.packageName.toLowerCase().includes('soic_8') ? 8 :
-                       updated.packageName.toLowerCase().includes('soic_14') ? 14 : 2;
-      const generatedPins = [];
-      for (let i = 1; i <= pinCount; i++) {
-        generatedPins.push({
-          id: `pin_${updated.id}_${i}`,
-          componentId: updated.id,
-          pinNumber: String(i),
-          pinName: `PIN${i}`,
-          electricalType: 'Passive',
-          netName: ''
-        });
-      }
-      updated.pins = generatedPins;
-    }
-
-    // Populate schematic placement if missing
-    if (!updated.schematic) {
-      updated.schematic = {
-        placed: updated.placementX != null,
-        x: updated.placementX || 100,
-        y: updated.placementY || 100,
-        rotation: updated.rotationDeg || 0
-      };
-    }
-
-    // Populate pcb placement if missing
-    if (!updated.pcb) {
-      updated.pcb = {
-        placed: updated.placementX != null,
-        xMm: updated.placementX || 0,
-        yMm: updated.placementY || 0,
-        rotationDeg: updated.rotationDeg || 0,
-        side: updated.side === 'Bottom' ? 'Bottom' : 'Top',
-        locked: !!updated.lockedPlacement,
-        placementStatus: updated.placementStatus || (updated.placementX != null ? 'Placed' : 'Unplaced')
-      };
-    }
-
-    // Ensure flat fields are synchronized for backward compatibility
-    if (updated.placementX == null && updated.pcb?.xMm != null) updated.placementX = updated.pcb.xMm;
-    if (updated.placementY == null && updated.pcb?.yMm != null) updated.placementY = updated.pcb.yMm;
-    if (updated.rotationDeg == null && updated.pcb?.rotationDeg != null) updated.rotationDeg = updated.pcb.rotationDeg;
-    if (updated.lockedPlacement == null && updated.pcb?.locked != null) updated.lockedPlacement = updated.pcb.locked;
-    if (!updated.side && updated.pcb?.side) updated.side = updated.pcb.side;
-    if (!updated.placementStatus && updated.pcb?.placementStatus) updated.placementStatus = updated.pcb.placementStatus;
-
-    return updated;
+    return normalizeProjectComponent(c);
   });
 
   // Make sure version is bumped

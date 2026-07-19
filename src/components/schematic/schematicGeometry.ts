@@ -19,31 +19,121 @@ export function getSymbolPinLayouts(
   symbolY: number
 ): SymbolPinLayout[] {
   const pins = comp.pins || [];
-  const layouts: SymbolPinLayout[] = [];
   const len = pins.length;
+  const type = comp.componentType.toLowerCase();
 
-  // Simple box symbol layout logic
-  // Resistors/Capacitors: left pin & right pin
-  if (comp.componentType.toUpperCase() === 'RESISTOR' || comp.componentType.toUpperCase() === 'CAPACITOR' || comp.componentType.toUpperCase() === 'DIODE' || comp.componentType.toUpperCase() === 'LED') {
-    layouts.push({ x: symbolX - 30, y: symbolY, label: '1', number: '1', side: 'left' });
-    layouts.push({ x: symbolX + 30, y: symbolY, label: '2', number: '2', side: 'right' });
-    return layouts;
+  // Basic passive: 2 pins
+  if (type === 'resistor' || type === 'capacitor' || type === 'inductor' || type === 'diode' || type === 'led' || type === 'switch' || type === 'button') {
+    const p1 = pins[0] || { pinNumber: '1', pinName: '1' };
+    const p2 = pins[1] || { pinNumber: '2', pinName: '2' };
+    
+    // Rotate coordinates based on component schematic rotation
+    const rotation = comp.schematic?.rotation || 0;
+    const rad = (rotation * Math.PI) / 180;
+    
+    const rotate = (x: number, y: number) => {
+      const rx = symbolX + x * Math.cos(rad) - y * Math.sin(rad);
+      const ry = symbolY + x * Math.sin(rad) + y * Math.cos(rad);
+      return { x: rx, y: ry };
+    };
+
+    const pt1 = rotate(-30, 0);
+    const pt2 = rotate(30, 0);
+
+    return [
+      { x: pt1.x, y: pt1.y, label: p1.pinName, number: p1.pinNumber, side: 'left' },
+      { x: pt2.x, y: pt2.y, label: p2.pinName, number: p2.pinNumber, side: 'right' }
+    ];
   }
 
-  // Generic MCU / IC: Left side pins, Right side pins
+  if (type === 'transistor' || type === 'mosfet') {
+    const p1 = pins[0] || { pinNumber: '1', pinName: 'G' };
+    const p2 = pins[1] || { pinNumber: '2', pinName: 'D' };
+    const p3 = pins[2] || { pinNumber: '3', pinName: 'S' };
+
+    const rotation = comp.schematic?.rotation || 0;
+    const rad = (rotation * Math.PI) / 180;
+    const rotate = (x: number, y: number) => {
+      const rx = symbolX + x * Math.cos(rad) - y * Math.sin(rad);
+      const ry = symbolY + x * Math.sin(rad) + y * Math.cos(rad);
+      return { x: rx, y: ry };
+    };
+
+    const pt1 = rotate(-20, 0);
+    const pt2 = rotate(20, -20);
+    const pt3 = rotate(20, 20);
+
+    return [
+      { x: pt1.x, y: pt1.y, label: p1.pinName, number: p1.pinNumber, side: 'left' },
+      { x: pt2.x, y: pt2.y, label: p2.pinName, number: p2.pinNumber, side: 'right' },
+      { x: pt3.x, y: pt3.y, label: p3.pinName, number: p3.pinNumber, side: 'right' }
+    ];
+  }
+
+  if (type === 'ground') {
+    const p1 = pins[0] || { pinNumber: '1', pinName: 'GND' };
+    const rotation = comp.schematic?.rotation || 0;
+    const rad = (rotation * Math.PI) / 180;
+    const rotate = (x: number, y: number) => {
+      const rx = symbolX + x * Math.cos(rad) - y * Math.sin(rad);
+      const ry = symbolY + x * Math.sin(rad) + y * Math.cos(rad);
+      return { x: rx, y: ry };
+    };
+    const pt1 = rotate(0, -20);
+    return [
+      { x: pt1.x, y: pt1.y, label: p1.pinName, number: p1.pinNumber, side: 'left' }
+    ];
+  }
+
+  if (type === 'power' || type === 'vcc') {
+    const p1 = pins[0] || { pinNumber: '1', pinName: 'VCC' };
+    const rotation = comp.schematic?.rotation || 0;
+    const rad = (rotation * Math.PI) / 180;
+    const rotate = (x: number, y: number) => {
+      const rx = symbolX + x * Math.cos(rad) - y * Math.sin(rad);
+      const ry = symbolY + x * Math.sin(rad) + y * Math.cos(rad);
+      return { x: rx, y: ry };
+    };
+    const pt1 = rotate(0, 20);
+    return [
+      { x: pt1.x, y: pt1.y, label: p1.pinName, number: p1.pinNumber, side: 'right' }
+    ];
+  }
+
+  // Multi-pin ICs, MCUs, regulators, Custom parts
   const half = Math.ceil(len / 2);
-  for (let i = 0; i < len; i++) {
-    const pin = pins[i];
-    const isLeftSide = i < half;
-    const offsetIdx = isLeftSide ? i : i - half;
-    const pinX = isLeftSide ? symbolX - 40 : symbolX + 40;
-    const pinY = symbolY - 30 + offsetIdx * 20;
+  const layouts: SymbolPinLayout[] = [];
+  const rotation = comp.schematic?.rotation || 0;
+  const rad = (rotation * Math.PI) / 180;
+  const rotate = (x: number, y: number) => {
+    const rx = symbolX + x * Math.cos(rad) - y * Math.sin(rad);
+    const ry = symbolY + x * Math.sin(rad) + y * Math.cos(rad);
+    return { x: rx, y: ry };
+  };
+
+  // Left side pins
+  for (let i = 0; i < half; i++) {
+    const pin = pins[i] || { pinNumber: String(i + 1), pinName: `P${i + 1}` };
+    const pt = rotate(-40, -30 + i * 20);
     layouts.push({
-      x: pinX,
-      y: pinY,
+      x: pt.x,
+      y: pt.y,
       label: pin.pinName,
       number: pin.pinNumber,
-      side: isLeftSide ? 'left' : 'right'
+      side: 'left'
+    });
+  }
+  
+  // Right side pins
+  for (let i = half; i < len; i++) {
+    const pin = pins[i] || { pinNumber: String(i + 1), pinName: `P${i + 1}` };
+    const pt = rotate(40, -30 + (i - half) * 20);
+    layouts.push({
+      x: pt.x,
+      y: pt.y,
+      label: pin.pinName,
+      number: pin.pinNumber,
+      side: 'right'
     });
   }
 

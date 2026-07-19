@@ -56,20 +56,36 @@ export const SchematicEditor: React.FC = () => {
 
   const handleDeleteSelected = useCallback(() => {
     if (viewState.selectedComponentId) {
+      const comp = (boardComponents || []).find(c => c.id === viewState.selectedComponentId);
+      if (!comp) return;
+
+      // Calculate dependency summary
+      const wiresCount = (schematicWires || []).filter(w => 
+        w.sourceComponentId === comp.id || w.targetComponentId === comp.id
+      ).length;
+      
+      const assignedNets = Array.from(new Set(
+        (project.padNetAssignments || []).filter(a => a.componentId === comp.id).map(a => a.netName)
+      ));
+
+      const tracesCount = (project.traces || []).filter(t => 
+        t.sourceAnchor?.componentId === comp.id || t.targetAnchor?.componentId === comp.id
+      ).length;
+
+      const hasBom = !!comp.bomItemId;
+
       const confirmDelete = window.confirm(
-        `Are you sure you want to remove component ${
-          (boardComponents || []).find(c => c.id === viewState.selectedComponentId)?.referenceDesignator
-        }? This will remove it from Schematic, PCB, and BOM.`
+        `Are you sure you want to completely delete component ${comp.referenceDesignator} (${comp.componentName})?\n\n` +
+        `This will clean up these dependencies:\n` +
+        `- Schematic Wires affected: ${wiresCount}\n` +
+        `- Nets affected: ${assignedNets.join(', ') || 'None'}\n` +
+        `- PCB Traces affected: ${tracesCount}\n` +
+        `- BOM Record affected: ${hasBom ? 'Yes' : 'No'}\n\n` +
+        `Proceed to remove from the entire product?`
       );
+
       if (confirmDelete) {
-        const remainingComps = (boardComponents || []).filter(c => c.id !== viewState.selectedComponentId);
-        const remainingWires = (schematicWires || []).filter(w => !w.sourcePinId?.startsWith(viewState.selectedComponentId!) && !w.targetPinId?.startsWith(viewState.selectedComponentId!));
-        
-        updateProjectState({
-          boardComponents: remainingComps,
-          schematicWires: remainingWires
-        });
-        
+        project.deleteProjectComponent(comp.id, 'entire-product');
         handleViewStateChange({ selectedComponentId: null });
       }
     } else if (viewState.selectedWireId) {
@@ -77,7 +93,7 @@ export const SchematicEditor: React.FC = () => {
       updateProjectState({ schematicWires: remainingWires });
       handleViewStateChange({ selectedWireId: null });
     }
-  }, [viewState.selectedComponentId, viewState.selectedWireId, boardComponents, schematicWires, updateProjectState, handleViewStateChange]);
+  }, [viewState.selectedComponentId, viewState.selectedWireId, boardComponents, schematicWires, updateProjectState, handleViewStateChange, project]);
 
   // Keyboard controls
   useEffect(() => {
@@ -92,11 +108,33 @@ export const SchematicEditor: React.FC = () => {
           wirePoints: [],
           sourcePin: null
         });
+      } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        if (!viewState.selectedComponentId) return;
+        const comp = (boardComponents || []).find(c => c.id === viewState.selectedComponentId);
+        if (!comp || comp.schematic?.locked) return;
+
+        e.preventDefault();
+        const amt = e.shiftKey ? 50 : 10;
+        let dx = 0;
+        let dy = 0;
+        if (e.key === 'ArrowUp') dy = -amt;
+        else if (e.key === 'ArrowDown') dy = amt;
+        else if (e.key === 'ArrowLeft') dx = -amt;
+        else if (e.key === 'ArrowRight') dx = amt;
+
+        updateBoardComponent(comp.id, {
+          schematic: {
+            ...comp.schematic,
+            placed: true,
+            x: (comp.schematic?.x || 150) + dx,
+            y: (comp.schematic?.y || 150) + dy
+          }
+        });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleRotateSelected, handleDeleteSelected, handleViewStateChange]);
+  }, [handleRotateSelected, handleDeleteSelected, handleViewStateChange, viewState.selectedComponentId, boardComponents, updateBoardComponent]);
 
   // Place component from Library into Schematic
   const handlePlaceLibraryComponent = useCallback((libComp: ElectronicComponentDefinition) => {
@@ -173,6 +211,43 @@ export const SchematicEditor: React.FC = () => {
     handleViewStateChange({ selectedComponentId: compId });
   }, [boardComponents, viewState.panX, viewState.panY, viewState.zoom, updateProjectState, handleViewStateChange]);
 
+  const unplacedComponents = useMemo(() => {
+    return (boardComponents || []).filter(c => !c.schematic?.placed);
+  }, [boardComponents]);
+
+  const placedComponents = useMemo(() => {
+    return (boardComponents || []).filter(c => c.schematic?.placed === true);
+  }, [boardComponents]);
+
+  const handleAddLibraryComponent = useCallback((libComp: ElectronicComponentDefinition) => {
+    project.addProjectComponentFromLibrary(libComp);
+  }, [project]);
+
+  const handlePlaceComponent = useCallback((compId: string) => {
+    const sx = Math.round((250 - viewState.panX) / viewState.zoom / 10) * 10;
+    const sy = Math.round((250 - viewState.panY) / viewState.zoom / 10) * 10;
+    project.placeComponentOnSchematic(compId, sx, sy);
+    handleViewStateChange({ selectedComponentId: compId });
+  }, [viewState.panX, viewState.panY, viewState.zoom, project, handleViewStateChange]);
+
+  const handleUnplaceComponent = useCallback((compId: string) => {
+    project.unplaceComponentFromSchematic(compId);
+    if (viewState.selectedComponentId === compId) {
+      handleViewStateChange({ selectedComponentId: null });
+    }
+  }, [project, viewState.selectedComponentId, handleViewStateChange]);
+
+  const handleFocusComponent = useCallback((c: { id: string; schematic?: { x?: number; y?: number; rotation?: number; placed?: boolean } }) => {
+    if (c.schematic?.x == null || c.schematic?.y == null) return;
+    const newPanX = 250 - c.schematic.x * viewState.zoom;
+    const newPanY = 250 - c.schematic.y * viewState.zoom;
+    handleViewStateChange({
+      selectedComponentId: c.id,
+      panX: newPanX,
+      panY: newPanY
+    });
+  }, [viewState.zoom, handleViewStateChange]);
+
   const searchedLib = searchQuery ? searchComponents(searchQuery) : defaultComponents.slice(0, 6);
 
   const selectedComponentObject = (boardComponents || []).find(c => c.id === viewState.selectedComponentId);
@@ -240,36 +315,106 @@ export const SchematicEditor: React.FC = () => {
         
         {/* Schematic Component Bin Panel (Left) */}
         <div className="w-56 border-r border-slate-800 bg-slate-900/40 flex flex-col h-full overflow-hidden shrink-0">
-          <div className="p-2 border-b border-slate-800">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Add Symbol</span>
-            <div className="relative">
-              <Search className="w-3 h-3 absolute left-1.5 top-1.5 text-slate-500" />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search symbol..."
-                className="w-full bg-slate-950 border border-slate-800 rounded pl-5 pr-1 py-0.5 text-[9px] font-mono focus:outline-none focus:border-emerald-500 text-slate-350"
-              />
+          
+          {/* Library Components Section */}
+          <div className="flex-[2] flex flex-col min-h-[160px] border-b border-slate-800 overflow-hidden">
+            <div className="p-2 border-b border-slate-800 shrink-0">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Library Components</span>
+              <div className="relative">
+                <Search className="w-3 h-3 absolute left-1.5 top-1.5 text-slate-500" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search symbol..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded pl-5 pr-1 py-0.5 text-[9px] font-mono focus:outline-none focus:border-emerald-500 text-slate-350"
+                />
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-2 space-y-1 bg-slate-950/20">
+              {searchedLib.map(c => (
+                <div
+                  key={c.libraryId}
+                  onClick={() => handleAddLibraryComponent(c)}
+                  className="p-1 bg-slate-950 border border-slate-850 hover:border-emerald-500 rounded cursor-pointer transition-all flex items-center justify-between"
+                  title="Click to add to Project (Unplaced)"
+                >
+                  <div className="min-w-0 pr-1">
+                    <span className="text-[8.5px] font-bold text-slate-300 leading-none truncate block">{c.name}</span>
+                    <span className="text-[7.5px] text-slate-500 font-mono mt-0.5 block">{c.packageName}</span>
+                  </div>
+                  <button className="p-0.5 bg-slate-900 hover:bg-slate-800 text-emerald-400 rounded shrink-0">
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
-          
-          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-            {searchedLib.map(c => (
-              <div
-                key={c.libraryId}
-                onClick={() => handlePlaceLibraryComponent(c)}
-                className="p-1.5 bg-slate-950 border border-slate-850 hover:border-emerald-500 rounded cursor-pointer transition-all flex items-center justify-between"
-              >
-                <div className="min-w-0 pr-1">
-                  <span className="text-[9px] font-bold text-slate-300 leading-none truncate block">{c.name}</span>
-                  <span className="text-[8px] text-slate-500 font-mono mt-0.5 block">{c.packageName}</span>
+
+          {/* Project Components — Unplaced Section */}
+          <div className="flex-1 flex flex-col border-b border-slate-800 overflow-hidden">
+            <div className="p-2 border-b border-slate-800 shrink-0 bg-slate-900/60">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Project Unplaced ({unplacedComponents.length})</span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1 bg-slate-950/40">
+              {unplacedComponents.map(c => (
+                <div
+                  key={c.id}
+                  onClick={() => handlePlaceComponent(c.id)}
+                  className="p-1 bg-slate-900/55 border border-slate-800 hover:border-blue-500 rounded cursor-pointer transition-all flex items-center justify-between"
+                  title="Click to place on schematic canvas"
+                >
+                  <div className="min-w-0">
+                    <span className="text-[8.5px] font-bold text-slate-300 font-mono">{c.referenceDesignator}</span>
+                    <span className="text-[7.5px] text-slate-500 block truncate">{c.componentName}</span>
+                  </div>
+                  <span className="text-[7.5px] bg-slate-800 text-indigo-400 font-bold px-1 rounded uppercase shrink-0">Place</span>
                 </div>
-                <button className="p-0.5 bg-slate-900 hover:bg-slate-800 text-emerald-400 rounded shrink-0">
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
+              ))}
+              {unplacedComponents.length === 0 && (
+                <div className="text-[8px] text-slate-600 text-center py-4">No unplaced components</div>
+              )}
+            </div>
           </div>
+
+          {/* Project Components — Placed Section */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="p-2 border-b border-slate-800 shrink-0 bg-slate-900/60">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Project Placed ({placedComponents.length})</span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1 bg-slate-950/40">
+              {placedComponents.map(c => {
+                const isSelected = viewState.selectedComponentId === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => handleFocusComponent(c)}
+                    className={`p-1 border rounded cursor-pointer transition-all flex items-center justify-between ${
+                      isSelected ? 'bg-slate-800 border-emerald-500' : 'bg-slate-900/30 border-slate-850 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <span className="text-[8.5px] font-bold text-slate-300 font-mono">{c.referenceDesignator}</span>
+                      <span className="text-[7.5px] text-slate-550 block truncate">{c.componentName}</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUnplaceComponent(c.id);
+                      }}
+                      className="text-[7px] text-red-400 hover:text-red-300 px-0.5 rounded font-bold shrink-0 hover:bg-slate-800"
+                    >
+                      Unplace
+                    </button>
+                  </div>
+                );
+              })}
+              {placedComponents.length === 0 && (
+                <div className="text-[8px] text-slate-650 text-center py-4">No placed components</div>
+              )}
+            </div>
+          </div>
+
         </div>
 
         {/* Central Graphic Canvas */}
@@ -314,6 +459,17 @@ export const SchematicEditor: React.FC = () => {
                 <div>
                   <span className="text-slate-500 block">PCB Footprint</span>
                   <span className="text-slate-350 font-mono">{selectedComponentObject.footprint}</span>
+                </div>
+                <div className="pt-1.5 border-t border-slate-800/60 flex items-center justify-between">
+                  <span className="text-slate-500">Cross Probe</span>
+                  <button
+                    onClick={() => {
+                      project.setActiveView('board-studio');
+                    }}
+                    className="text-[9px] text-indigo-450 hover:text-indigo-350 font-bold uppercase transition-all"
+                  >
+                    Focus in Board Studio →
+                  </button>
                 </div>
                 
                 {/* Pins list */}
@@ -366,7 +522,10 @@ export const SchematicEditor: React.FC = () => {
                     key={i}
                     onClick={() => {
                       if (r.linkedObjectType === 'component') {
-                        handleViewStateChange({ selectedComponentId: r.linkedObjectId });
+                        const comp = (boardComponents || []).find(c => c.id === r.linkedObjectId);
+                        if (comp) {
+                          handleFocusComponent(comp);
+                        }
                       }
                     }}
                     className="p-1.5 bg-slate-900/40 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 rounded cursor-pointer text-[9.5px]"
