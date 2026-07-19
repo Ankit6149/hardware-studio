@@ -74,7 +74,18 @@ export interface TestStage {
   resultNotes?: string;
   evidenceLink?: string;
   order?: number;
+
+  // Phase 21 expansion
+  stage?: 'EVT' | 'DVT' | 'PVT' | 'Factory QA';
+  linkedRequirementIds?: string[];
+  linkedComponentIds?: string[];
+  linkedNetIds?: string[];
+  linkedFirmwareModuleIds?: string[];
+  evidence?: string;
 }
+
+export type ValidationTest = TestStage;
+
 
 export interface PowerBudgetItem {
   id: string;
@@ -145,6 +156,18 @@ export interface CircuitBlock {
   status: 'Concept' | 'In Progress' | 'Complete' | 'Needs Review';
 }
 
+export interface ProjectComponentPin {
+  id: string;
+  componentId: string;
+  pinNumber: string;
+  pinName: string;
+  electricalType: string;
+  netId?: string;
+  netName?: string;
+  noConnect?: boolean;
+  required?: boolean;
+}
+
 export interface BoardComponent {
   id: string;
   boardId: string;
@@ -166,8 +189,35 @@ export interface BoardComponent {
   placementY?: number;
   rotationDeg?: number;
   lockedPlacement?: boolean;
-  placementStatus?: 'Unplaced' | 'Placed' | 'Locked' | 'Needs Review' | 'Outside Board' | 'Missing Footprint';
+  placementStatus?: 'Unplaced' | 'Placed' | 'Locked' | 'Needs Review' | 'Outside Board' | 'Missing Footprint' | 'Verified';
+
+  // Phase 4 nested data models
+  libraryId?: string;
+  pins?: ProjectComponentPin[];
+  architectureNodeId?: string;
+  bomItemId?: string;
+  manufacturer?: string;
+  status?: 'Draft' | 'Selected' | 'Needs Review' | 'Verified' | 'Concept' | 'In Progress' | 'Complete';
+  schematic?: {
+    placed: boolean;
+    x?: number;
+    y?: number;
+    rotation?: number;
+    unit?: string;
+  };
+  pcb?: {
+    placed: boolean;
+    xMm?: number;
+    yMm?: number;
+    rotationDeg?: number;
+    side: 'Top' | 'Bottom';
+    locked: boolean;
+    placementStatus: 'Unplaced' | 'Placed' | 'Locked' | 'Needs Review' | 'Outside Board' | 'Missing Footprint' | 'Verified';
+  };
 }
+
+export type ProjectElectronicComponent = BoardComponent;
+
 
 export interface NetItem {
   id: string;
@@ -255,6 +305,17 @@ export interface SchematicConnection {
   label?: string;
   connectionType?: string;
 }
+
+export interface SchematicWire {
+  id: string;
+  netId: string;
+  netName: string;
+  points: { x: number; y: number }[];
+  sourcePinId?: string;
+  targetPinId?: string;
+  junctionIds?: string[];
+}
+
 
 export interface PcbLayer {
   id: string;
@@ -438,6 +499,7 @@ export interface Project {
   assemblyLayers?: AssemblyLayer[];
   schematicSymbols?: SchematicSymbol[];
   schematicConnections?: SchematicConnection[];
+  schematicWires?: SchematicWire[];
   pcbLayers?: PcbLayer[];
   copperShapes?: CopperShape[];
   traces?: Trace[];

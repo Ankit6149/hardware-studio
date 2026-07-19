@@ -44,6 +44,7 @@ import {
 } from '../lib/editorLayoutGenerators';
 import { runDesignReview } from '../lib/designReview';
 import { generateBlueprintPack as generateBlueprintPackFn } from '../lib/blueprintGenerator';
+import { migrateProjectSchema } from '../lib/projectMigrations';
 
 interface ProjectState extends Project {
   selectedNodeId: string | null;
@@ -109,7 +110,7 @@ interface ProjectState extends Project {
   updateCircuitBlock: (id: string, data: Partial<CircuitBlock>) => void;
   deleteCircuitBlock: (id: string) => void;
 
-  addBoardComponent: (item: Omit<BoardComponent, 'id'>) => void;
+  addBoardComponent: (item: Omit<BoardComponent, 'id'> & { id?: string }) => void;
   updateBoardComponent: (id: string, data: Partial<BoardComponent>) => void;
   deleteBoardComponent: (id: string) => void;
 
@@ -224,6 +225,7 @@ interface ProjectState extends Project {
   addI2cPullupResistor: () => void;
   addFlybackDiode: () => void;
   addDebugTestPad: () => void;
+  updateProjectState: (patch: Partial<Project>) => void;
 }
 
 const PROJECTS_KEY = 'hardware_studio_projects_v1';
@@ -350,15 +352,15 @@ const getInitialActiveProject = (): Project => {
   const allProjects = getSavedProjects();
   const activeId = getActiveId();
   if (allProjects[activeId]) {
-    return allProjects[activeId];
+    return migrateProjectSchema(allProjects[activeId]);
   }
   const firstId = Object.keys(allProjects)[0];
   if (firstId && allProjects[firstId]) {
-    return allProjects[firstId];
+    return migrateProjectSchema(allProjects[firstId]);
   }
   // Ultimate fallback
   const ringTemplate = templates.find(t => t.id === 'the-ring')?.project;
-  return JSON.parse(JSON.stringify(ringTemplate || {
+  return migrateProjectSchema(JSON.parse(JSON.stringify(ringTemplate || {
     id: "empty-project",
     projectName: "New Hardware Project",
     description: "",
@@ -373,7 +375,7 @@ const getInitialActiveProject = (): Project => {
     powerBudget: [],
     pinMap: [],
     firmwareTasks: []
-  }));
+  })));
 };
 
 export const useProjectStore = create<ProjectState>((set, get) => {
@@ -436,7 +438,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       reviewResults: state.reviewResults || [],
       exportHistory: state.exportHistory || [],
       padNetAssignments: state.padNetAssignments || [],
-      keepoutZones: state.keepoutZones || []
+      keepoutZones: state.keepoutZones || [],
+      schematicWires: state.schematicWires || []
     };
   };
 
@@ -1062,8 +1065,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
 
     loadProject: (id) => {
       const saved = getSavedProjects();
-      const proj = saved[id];
-      if (proj) {
+      const rawProj = saved[id];
+      if (rawProj) {
+        const proj = migrateProjectSchema(rawProj);
         // Safe check and default arrays to prevent crashes on legacy loads
         set({
           id: proj.id,
@@ -1088,6 +1092,20 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           nets: proj.nets || [],
           pcbConstraints: proj.pcbConstraints || [],
           manufacturingChecklist: proj.manufacturingChecklist || [],
+          mechanicalZones: proj.mechanicalZones || [],
+          assemblyLayers: proj.assemblyLayers || [],
+          schematicSymbols: proj.schematicSymbols || [],
+          schematicConnections: proj.schematicConnections || [],
+          schematicWires: proj.schematicWires || [],
+          pcbLayers: proj.pcbLayers || [],
+          copperShapes: proj.copperShapes || [],
+          traces: proj.traces || [],
+          vias: proj.vias || [],
+          drillHoles: proj.drillHoles || [],
+          boardOutlines: proj.boardOutlines || [],
+          pcbRules: proj.pcbRules || [],
+          padNetAssignments: proj.padNetAssignments || [],
+          keepoutZones: proj.keepoutZones || [],
           selectedNodeId: null,
           projectsList: syncProjectsList(saved)
         });
@@ -1121,7 +1139,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     loadProjectFromTemplate: (templateId) => {
       const targetTpl = templates.find(t => t.id === templateId)?.project;
       if (targetTpl) {
-        const copy = JSON.parse(JSON.stringify(targetTpl)) as Project;
+        const copyRaw = JSON.parse(JSON.stringify(targetTpl)) as Project;
+        const copy = migrateProjectSchema(copyRaw);
         const newId = `project_template_${templateId}_${Date.now()}`;
         copy.id = newId;
         copy.projectName = `My ${copy.projectName}`;
@@ -1171,14 +1190,15 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     },
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    importProjectJSON: (json: any) => {
-      if (!json || typeof json !== 'object') {
+    importProjectJSON: (rawJson: any) => {
+      if (!rawJson || typeof rawJson !== 'object') {
         return { success: false, error: "Invalid JSON format." };
       }
-      if (!json.projectName) {
+      if (!rawJson.projectName) {
         return { success: false, error: "Missing required 'projectName' property." };
       }
 
+      const json = migrateProjectSchema(rawJson);
       const importedId = json.id || `project_import_${Date.now()}`;
       
       // Parse with fallback safety gates (Feature 13)
@@ -1384,9 +1404,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         })),
         manufacturingChecklist: (json.manufacturingChecklist || []).map((mc: { id?: string; category?: string; item?: string; status?: string; ownerNotes?: string; blockingReason?: string }) => ({
           id: mc.id || `mfg_${Math.random()}`,
-          category: mc.category || "Schematic",
+          category: (mc.category || "Schematic") as ManufacturingChecklistItem['category'],
           item: mc.item || "",
-          status: mc.status || "Not Started",
+          status: (mc.status || "Not Started") as ManufacturingChecklistItem['status'],
           ownerNotes: mc.ownerNotes || "",
           blockingReason: mc.blockingReason || ""
         })),
@@ -1399,6 +1419,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         assemblyLayers: json.assemblyLayers || [],
         schematicSymbols: json.schematicSymbols || [],
         schematicConnections: json.schematicConnections || [],
+        schematicWires: json.schematicWires || [],
         pcbLayers: json.pcbLayers || [],
         copperShapes: json.copperShapes || [],
         traces: json.traces || [],
@@ -1473,7 +1494,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     },
 
     addBoardComponent: (item) => {
-      const id = `cmp_${Date.now()}_${Math.random()}`;
+      const id = item.id || `cmp_${Date.now()}_${Math.random()}`;
       const newItem: BoardComponent = { ...item, id };
       const boardComponents = [...(get().boardComponents || []), newItem];
       persistChange({ boardComponents });
@@ -2844,6 +2865,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       persistChange({ boardComponents: [...components, tp1, tp2] });
       get().generateEditorLayouts();
       get().runFullDesignReview();
+    },
+    updateProjectState: (patch) => {
+      persistChange(patch);
     }
   };
 });

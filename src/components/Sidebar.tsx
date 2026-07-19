@@ -56,12 +56,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
       ]
     },
     {
-      title: "Electronics",
+      title: "Electronics & PCB",
       items: [
+        { id: 'component-library', label: 'Component Library', icon: Cpu },
+        { id: 'schematic-editor', label: 'Schematic Editor', icon: Boxes },
         { id: 'board-designer', label: 'Board Designer', icon: Cpu },
-        { id: 'board-studio', label: 'Boards', icon: Layers },
-        { id: 'board-components', label: 'Components', icon: Cpu },
-        { id: 'circuit-planner', label: 'Circuits / Schematic', icon: Boxes },
+        { id: 'board-studio', label: 'Boards Manager', icon: Layers },
+        { id: 'board-components', label: 'Components List', icon: Cpu },
         { id: 'netlist-planner', label: 'Nets / Routing', icon: Network },
         { id: 'pin-map', label: 'Pin Map', icon: Cpu },
         { id: 'power-budget', label: 'Power Budget', icon: Zap },
@@ -77,13 +78,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
       ]
     },
     {
-      title: "Factory Package",
+      title: "Factory Handoff",
       items: [
-        { id: 'factory-builder', label: 'Factory Package Builder', icon: Package },
-        { id: 'exports', label: 'Factory Files', icon: Download },
-        { id: 'exports', label: 'Handoff Manifest', icon: FileText },
-        { id: 'readiness', label: 'Missing Files', icon: FileCheck2 },
-        { id: 'readiness', label: 'Fabrication Review', icon: FileCheck2 },
+        { id: 'factory-builder', label: 'Factory Package Builder', icon: Package }
       ]
     }
   ];
@@ -146,7 +143,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     'blueprint-sheets',
     'blueprint-editor',
     'factory-builder',
-    'board-designer'
+    'board-designer',
+    'component-library',
+    'schematic-editor'
   ];
   const isCanvasView = !tabularViews.includes(activeView);
 

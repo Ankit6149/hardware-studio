@@ -24,6 +24,8 @@ import { BlueprintSheets } from './BlueprintSheets';
 import { BlueprintEditor } from './BlueprintEditor';
 import { FactoryPackageBuilder } from './FactoryPackageBuilder';
 import { BoardDesigner } from './board/BoardDesigner';
+import { ComponentLibrary } from './component-library/ComponentLibrary';
+import { SchematicEditor } from './schematic/SchematicEditor';
 
 export const AppShell: React.FC = () => {
   const { activeView, loadProjectFromLocalStorage } = useProjectStore();
@@ -41,6 +43,10 @@ export const AppShell: React.FC = () => {
     switch (activeView) {
       case 'dashboard':
         return <ProjectDashboard />;
+      case 'component-library':
+        return <ComponentLibrary />;
+      case 'schematic-editor':
+        return <SchematicEditor />;
       case 'blueprint-sheets':
         return <BlueprintSheets />;
       case 'blueprint-editor':
@@ -102,7 +108,9 @@ export const AppShell: React.FC = () => {
     'mfg-pack',
     'blueprint-editor',
     'factory-builder',
-    'board-designer'
+    'board-designer',
+    'component-library',
+    'schematic-editor'
   ];
   const isCanvasView = !tabularViews.includes(activeView);
   const showVisualizer = !tabularViews.includes(activeView);
