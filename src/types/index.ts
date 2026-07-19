@@ -205,6 +205,7 @@ export interface BoardComponent {
     y?: number;
     rotation?: number;
     unit?: string;
+    locked?: boolean;
   };
   pcb?: {
     placed: boolean;
@@ -512,6 +513,7 @@ export interface Project {
   reviewResults?: ReviewResult[];
   exportHistory?: string[];
   padNetAssignments?: PadNetAssignment[];
+  customComponentLibrary?: any[];
   keepoutZones?: KeepoutZone[];
 
   // Blueprint Generation System

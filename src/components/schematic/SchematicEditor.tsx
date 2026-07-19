@@ -60,8 +60,9 @@ export const SchematicEditor: React.FC = () => {
       if (!comp) return;
 
       // Calculate dependency summary
+      const compPrefix = `${comp.id}_`;
       const wiresCount = (schematicWires || []).filter(w => 
-        w.sourceComponentId === comp.id || w.targetComponentId === comp.id
+        w.sourcePinId?.startsWith(compPrefix) || w.targetPinId?.startsWith(compPrefix)
       ).length;
       
       const assignedNets = Array.from(new Set(
@@ -69,7 +70,7 @@ export const SchematicEditor: React.FC = () => {
       ));
 
       const tracesCount = (project.traces || []).filter(t => 
-        t.sourceAnchor?.componentId === comp.id || t.targetAnchor?.componentId === comp.id
+        assignedNets.includes(t.netName || '')
       ).length;
 
       const hasBom = !!comp.bomItemId;

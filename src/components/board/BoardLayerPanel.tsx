@@ -67,7 +67,7 @@ export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onV
                   const state = useProjectStore.getState();
                   const newBoard = state.addBoard({
                     name,
-                    notes: 'Added via Multi-board manager'
+                    mountingNotes: 'Added via Multi-board manager'
                   });
                   state.setActiveBoard(newBoard.id);
                   onViewStateChange({ activeBoardId: newBoard.id });

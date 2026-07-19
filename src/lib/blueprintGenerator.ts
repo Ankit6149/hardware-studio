@@ -306,15 +306,15 @@ function generateSchematicSheet(p: Project, reviewResults: ReturnType<typeof run
 
   // Convert schematic wires to drawing connections
   const drawConns: BlueprintDrawingConnection[] = wires.map(w => {
-    const srcCompId = w.sourcePinId?.split('_')[0] || w.sourceComponentId;
-    const tgtCompId = w.targetPinId?.split('_')[0] || w.targetComponentId;
+    const srcCompId = w.sourcePinId?.split('_')[0] || '';
+    const tgtCompId = w.targetPinId?.split('_')[0] || '';
     
     return {
       id: connId(),
       sourceId: drawObjs.find(o => o.sourceId === srcCompId)?.id || "",
       targetId: drawObjs.find(o => o.sourceId === tgtCompId)?.id || "",
       label: w.netName,
-      type: w.netName?.toUpperCase() === 'GND' ? 'ground' : (w.netName?.toUpperCase() === '3V3' || w.netName?.toUpperCase() === '5V') ? 'power' : 'signal'
+      type: (w.netName?.toUpperCase() === 'GND' ? 'ground' : (w.netName?.toUpperCase() === '3V3' || w.netName?.toUpperCase() === '5V') ? 'power' : 'signal') as 'ground' | 'power' | 'signal'
     };
   }).filter(c => c.sourceId && c.targetId);
 

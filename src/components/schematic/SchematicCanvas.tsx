@@ -157,7 +157,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
           // Normalize Power net names or compose custom signals
           let netName = defaultNet || '';
           if (!netName) {
-            const upName = pName => pName.toUpperCase();
+            const upName = (pName: string) => pName.toUpperCase();
             const sourcePinName = srcComp?.pins?.find(p => p.pinNumber === sourcePin.pinNumber)?.pinName || '';
             const targetPinName = comp.pins?.find(p => p.pinNumber === pinNum)?.pinName || '';
             

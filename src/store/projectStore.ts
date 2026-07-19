@@ -121,7 +121,7 @@ interface ProjectState extends Project {
   generateFirmwareTasksFromBlueprint: () => void;
 
   // Board Studio management
-  addBoard: (item: Omit<BoardItem, 'id'>) => BoardItem;
+  addBoard: (item: Partial<Omit<BoardItem, 'id'>> & { name: string }) => BoardItem;
   updateBoard: (id: string, data: Partial<BoardItem>) => void;
   deleteBoard: (id: string) => void;
 
@@ -1500,7 +1500,21 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     // Board Studio Actions
     addBoard: (item) => {
       const id = `board_${Date.now()}_${Math.random()}`;
-      const newItem: BoardItem = { ...item, id };
+      const newItem: BoardItem = {
+        name: item.name,
+        boardType: item.boardType || 'Main PCB',
+        purpose: item.purpose || '',
+        dimensionsMm: item.dimensionsMm || '50x50',
+        layerCount: item.layerCount || 2,
+        substrate: item.substrate || 'FR4',
+        placement: item.placement || 'Internal',
+        mountingNotes: item.mountingNotes || '',
+        connectorNotes: item.connectorNotes || '',
+        thermalNotes: item.thermalNotes || '',
+        rfNotes: item.rfNotes || '',
+        status: item.status || 'Concept',
+        id
+      };
       const boards = [...(get().boards || []), newItem];
       persistChange({ boards });
       return newItem;
@@ -3045,9 +3059,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           return c;
         });
         
-        // Remove schematic wires connected to this component's pins
+        const compPrefix = `${componentId}_`;
         const updatedWires = (get().schematicWires || []).filter(w => 
-          w.sourceComponentId !== componentId && w.targetComponentId !== componentId
+          !w.sourcePinId?.startsWith(compPrefix) && !w.targetPinId?.startsWith(compPrefix)
         );
 
         persistChange({
@@ -3074,20 +3088,18 @@ export const useProjectStore = create<ProjectState>((set, get) => {
               placementX: undefined,
               placementY: undefined,
               rotationDeg: 0,
-              side: 'Top',
+              side: 'Top' as const,
               lockedPlacement: false,
-              placementStatus: 'Unplaced'
+              placementStatus: 'Unplaced' as const
             };
           }
           return c;
         });
 
-        // Filter traces terminating on this component's pads
-        const updatedTraces = (get().traces || []).filter(t => {
-          const matchesSource = t.sourceAnchor?.componentId === componentId;
-          const matchesTarget = t.targetAnchor?.componentId === componentId;
-          return !(matchesSource || matchesTarget);
-        });
+        const assignedNets = (get().padNetAssignments || [])
+          .filter(a => a.componentId === componentId)
+          .map(a => a.netName);
+        const updatedTraces = (get().traces || []).filter(t => !assignedNets.includes(t.netName || ''));
 
         persistChange({
           boardComponents: updatedComponents,
@@ -3103,19 +3115,19 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         const updatedBom = (get().bom || []).filter(b => b.id !== comp.bomItemId && b.componentId !== componentId);
 
         // Remove wires
+        const compPrefix = `${componentId}_`;
         const updatedWires = (get().schematicWires || []).filter(w => 
-          w.sourceComponentId !== componentId && w.targetComponentId !== componentId
+          !w.sourcePinId?.startsWith(compPrefix) && !w.targetPinId?.startsWith(compPrefix)
         );
 
         // Remove pad-net assignments
+        const assignedNets = (get().padNetAssignments || [])
+          .filter(a => a.componentId === componentId)
+          .map(a => a.netName);
         const updatedAssignments = (get().padNetAssignments || []).filter(a => a.componentId !== componentId);
 
         // Remove linked traces
-        const updatedTraces = (get().traces || []).filter(t => {
-          const matchesSource = t.sourceAnchor?.componentId === componentId;
-          const matchesTarget = t.targetAnchor?.componentId === componentId;
-          return !(matchesSource || matchesTarget);
-        });
+        const updatedTraces = (get().traces || []).filter(t => !assignedNets.includes(t.netName || ''));
 
         persistChange({
           boardComponents: updatedComponents,
@@ -3126,8 +3138,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         });
 
         // Clean up empty nets
-        const activeNetIds = new Set(updatedAssignments.map(a => a.netId));
-        const updatedNets = (get().nets || []).filter(n => activeNetIds.has(n.id) || n.netName === 'GND' || n.netName === '3V3' || n.netName === '5V');
+        const activeNetNames = new Set(updatedAssignments.map(a => a.netName));
+        const updatedNets = (get().nets || []).filter(n => activeNetNames.has(n.netName) || n.netName === 'GND' || n.netName === '3V3' || n.netName === '5V' || n.netName === 'VBAT');
         
         persistChange({ nets: updatedNets });
         get().markDerivedArtifactsStale('Component completely deleted');
@@ -3180,7 +3192,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
             rotationDeg: updatedPcb.rotationDeg,
             side: updatedPcb.side,
             lockedPlacement: updatedPcb.locked,
-            placementStatus: 'Placed'
+            placementStatus: 'Placed' as const
           };
         }
         return c;
@@ -3224,7 +3236,14 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         netName: normalized,
         netType: (normalized === 'GND' || normalized === '3V3' || normalized === '5V' || normalized === 'VBAT') ? 'Power' : 'Signal',
         voltage: normalized === '3V3' ? '3.3V' : normalized === '5V' ? '5V' : '',
-        ...data
+        sourceComponent: data?.sourceComponent || '',
+        sourcePin: data?.sourcePin || '',
+        targetComponent: data?.targetComponent || '',
+        targetPin: data?.targetPin || '',
+        protocol: data?.protocol || '',
+        currentEstimate: data?.currentEstimate || '',
+        impedanceRequirement: data?.impedanceRequirement || '',
+        notes: data?.notes || ''
       });
     },
 
@@ -3239,11 +3258,13 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const addAssignmentUnique = (compId: string, pinNum: string) => {
         const exists = newAssignments.some(a => a.componentId === compId && a.padName === pinNum);
         if (!exists) {
+          const comp = (get().boardComponents || []).find(c => c.id === compId);
+          const refDes = comp ? comp.referenceDesignator : '';
           newAssignments.push({
             id: `assignment_${Date.now()}_${Math.random()}`,
             componentId: compId,
+            referenceDesignator: refDes,
             padName: pinNum,
-            netId: net.id,
             netName: net.netName
           });
         }
@@ -3271,14 +3292,11 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const wireId = `wire_${Date.now()}_${Math.random()}`;
       const wire: SchematicWire = {
         id: wireId,
-        sourceComponentId,
-        sourcePinNumber,
-        targetComponentId,
-        targetPinNumber,
-        netId: net.id,
+        netId: net.id || `net_${Date.now()}`,
         netName: net.netName,
         points: points || [],
-        status: 'Draft'
+        sourcePinId: `${sourceComponentId}_${sourcePinNumber}`,
+        targetPinId: `${targetComponentId}_${targetPinNumber}`
       };
 
       const updatedWires = [...(get().schematicWires || []), wire];
@@ -3294,7 +3312,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       return {
         wire,
         net,
-        assignments: newAssignments.filter(a => a.netId === net.id)
+        assignments: newAssignments.filter(a => a.netName === net.netName)
       };
     },
 
@@ -3316,9 +3334,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         !(a.componentId === componentId && a.padName === pinNumber)
       );
 
+      const pinId = `${componentId}_${pinNumber}`;
       const updatedWires = (get().schematicWires || []).filter(w => 
-        !(w.sourceComponentId === componentId && w.sourcePinNumber === pinNumber) &&
-        !(w.targetComponentId === componentId && w.targetPinNumber === pinNumber)
+        w.sourcePinId !== pinId && w.targetPinId !== pinId
       );
 
       persistChange({
@@ -3344,10 +3362,10 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         return { ...c, pins: updatedPins };
       });
 
-      const updatedAssignments = (get().padNetAssignments || []).filter(a => a.netId !== net.id);
-      const updatedWires = (get().schematicWires || []).filter(w => w.netId !== net.id);
-      const updatedTraces = (get().traces || []).filter(t => t.netId !== net.id);
-      const updatedNets = (get().nets || []).filter(n => n.id !== net.id);
+      const updatedAssignments = (get().padNetAssignments || []).filter(a => a.netName !== net.netName);
+      const updatedWires = (get().schematicWires || []).filter(w => w.netId !== net.id && w.netName !== net.netName);
+      const updatedTraces = (get().traces || []).filter(t => t.netId !== net.id && t.netName !== net.netName);
+      const updatedNets = (get().nets || []).filter(n => n.id !== net.id && n.netName !== net.netName);
 
       persistChange({
         boardComponents: updatedComponents,
