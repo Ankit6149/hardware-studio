@@ -40,6 +40,11 @@ export const ProjectDashboard: React.FC = () => {
     factoryPackageStatus = "Draft",
     factoryReviewChecks = {},
     reviewResults = [],
+    requirements = [],
+    architectureNodes = [],
+    mechanicalObjects = [],
+    firmwareModules = [],
+    validationTests = [],
     setActiveView,
     generateFullProductPlan,
     runFullDesignReview,
@@ -193,14 +198,14 @@ export const ProjectDashboard: React.FC = () => {
   // 10 Pipeline Stages Configuration
   const pipelineStages = [
     { step: "Idea", label: "Template pick", active: true, count: 1, unit: "selected", warnings: 0, view: "dashboard" },
-    { step: "Architecture", label: "Subsystems map", active: nodes.length > 0, count: nodes.length, unit: "nodes", warnings: getCategoryIssuesCount("Architecture"), view: "blueprint-editor" },
-    { step: "Mechanical", label: "Enclosure outline", active: mechanicalZones.length > 0, count: mechanicalZones.length, unit: "zones", warnings: getCategoryIssuesCount("Mechanical"), view: "blueprint-editor" },
-    { step: "Assembly", label: "Stackup stack", active: assemblyLayers.length > 0, count: assemblyLayers.length, unit: "layers", warnings: getCategoryIssuesCount("Assembly"), view: "blueprint-editor" },
-    { step: "Schematic", label: "Logical modules", active: circuitBlocks.length > 0, count: circuitBlocks.length, unit: "circuits", warnings: getCategoryIssuesCount("Schematic ERC"), view: "circuit-planner" },
-    { step: "PCB Layout", label: "Substrates contours", active: boards.length > 0, count: boards.length, unit: "PCBs", warnings: getCategoryIssuesCount("PCB DRC"), view: "board-studio" },
-    { step: "Routing", label: "Trace track path", active: traces.length > 0, count: traces.length, unit: "traces", warnings: getCategoryIssuesCount("Routing"), view: "netlist-planner" },
-    { step: "Firmware", label: "Code driver loops", active: firmwareTasks.length > 0, count: firmwareTasks.length, unit: "tasks", warnings: getCategoryIssuesCount("Firmware"), view: "firmware-plan" },
-    { step: "Testing", label: "QA diagnostic plan", active: testing.length > 0, count: testing.length, unit: "tests", warnings: getCategoryIssuesCount("Testing"), view: "testing" },
+    { step: "Architecture", label: "Subsystems map", active: architectureNodes.length > 0 || nodes.length > 0, count: architectureNodes.length || nodes.length, unit: "nodes", warnings: getCategoryIssuesCount("Architecture"), view: "electronics" },
+    { step: "Mechanical", label: "Enclosure outline", active: mechanicalObjects.length > 0 || mechanicalZones.length > 0, count: mechanicalObjects.length || mechanicalZones.length, unit: "zones", warnings: getCategoryIssuesCount("Mechanical"), view: "mechanical-studio" },
+    { step: "Assembly", label: "Stackup stack", active: assemblyLayers.length > 0, count: assemblyLayers.length, unit: "layers", warnings: getCategoryIssuesCount("Assembly"), view: "assembly-stack" },
+    { step: "Schematic", label: "Logical modules", active: circuitBlocks.length > 0, count: circuitBlocks.length, unit: "circuits", warnings: getCategoryIssuesCount("Schematic ERC"), view: "schematic-editor" },
+    { step: "PCB Layout", label: "Substrates contours", active: boards.length > 0, count: boards.length, unit: "PCBs", warnings: getCategoryIssuesCount("PCB DRC"), view: "board-designer" },
+    { step: "Routing", label: "Trace track path", active: traces.length > 0, count: traces.length, unit: "traces", warnings: getCategoryIssuesCount("Routing"), view: "board-designer" },
+    { step: "Firmware", label: "Code driver loops", active: firmwareModules.length > 0 || firmwareTasks.length > 0, count: firmwareModules.length || firmwareTasks.length, unit: "modules", warnings: getCategoryIssuesCount("Firmware"), view: "firmware-studio" },
+    { step: "Testing", label: "QA diagnostic plan", active: validationTests.length > 0 || testing.length > 0, count: validationTests.length || testing.length, unit: "tests", warnings: getCategoryIssuesCount("Testing"), view: "validation-studio" },
     { step: "Factory Package", label: "Gerbers drill release", active: factoryPackageStatus !== 'Draft', count: Object.values(factoryFiles).filter(f => f && f.status !== 'Not Generated').length, unit: "files", warnings: getCategoryIssuesCount("Factory Package"), view: "factory-builder" }
   ];
 

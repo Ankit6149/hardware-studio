@@ -137,6 +137,11 @@ export function migrateProjectSchema(project: unknown): Project {
   if (!migrated.padNetAssignments) migrated.padNetAssignments = [];
   if (!migrated.keepoutZones) migrated.keepoutZones = [];
   if (!migrated.testing) migrated.testing = [];
+  if (!migrated.requirements) migrated.requirements = [];
+  if (!migrated.architectureNodes) migrated.architectureNodes = [];
+  if (!migrated.mechanicalObjects) migrated.mechanicalObjects = [];
+  if (!migrated.firmwareModules) migrated.firmwareModules = [];
+  if (!migrated.validationTests) migrated.validationTests = [];
 
   // Migrate boardComponents pins, pcb & schematic objects if missing
   migrated.boardComponents = (migrated.boardComponents as BoardComponent[]).map((c) => {

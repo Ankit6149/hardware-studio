@@ -26,6 +26,10 @@ import { FactoryPackageBuilder } from './FactoryPackageBuilder';
 import { BoardDesigner } from './board/BoardDesigner';
 import { ComponentLibrary } from './component-library/ComponentLibrary';
 import { SchematicEditor } from './schematic/SchematicEditor';
+import { ProductStudio } from './product/ProductStudio';
+import { MechanicalStudio } from './mechanical/MechanicalStudio';
+import { FirmwareStudio } from './firmware/FirmwareStudio';
+import { ValidationStudio } from './validation/ValidationStudio';
 
 export const AppShell: React.FC = () => {
   const { activeView, loadProjectFromLocalStorage } = useProjectStore();
@@ -43,46 +47,49 @@ export const AppShell: React.FC = () => {
     switch (activeView) {
       case 'dashboard':
         return <ProjectDashboard />;
+      case 'product-studio':
+      case 'requirements':
+      case 'risks-interfaces':
+        return <ProductStudio />;
+      case 'mechanical-studio':
+      case 'assembly-stack':
+        return <MechanicalStudio />;
       case 'component-library':
         return <ComponentLibrary />;
       case 'schematic-editor':
         return <SchematicEditor />;
-      case 'blueprint-sheets':
-        return <BlueprintSheets />;
-      case 'blueprint-editor':
-        return <BlueprintEditor />;
-      case 'factory-builder':
-        return <FactoryPackageBuilder />;
-      case 'bom':
-        return <BOMTable />;
-      case 'testing':
-        return <TestingBoard />;
+      case 'power-tree':
       case 'power-budget':
         return <PowerBudgetTable />;
       case 'pin-map':
+      case 'hardware-mapping':
         return <PinMapTable />;
-      case 'firmware-plan':
-        return <FirmwarePlan />;
-      case 'readiness':
-        return <ReadinessDashboard />;
-      case 'exports':
-        return <ExportCenter />;
-      case 'dossier':
-        return <BlueprintDossier />;
-      case 'board-studio':
-        return <BoardStudio />;
-      case 'circuit-planner':
-        return <CircuitPlanner />;
-      case 'board-components':
-        return <BoardStudio />;
-      case 'netlist-planner':
-        return <NetlistPlanner />;
-      case 'pcb-constraints':
-        return <PCBConstraints />;
-      case 'mfg-pack':
-        return <ManufacturingPack />;
+      case 'bom':
+        return <BOMTable />;
       case 'board-designer':
         return <BoardDesigner />;
+      case 'board-settings':
+      case 'board-studio':
+      case 'board-components':
+        return <BoardStudio />;
+      case 'pcb-constraints':
+        return <PCBConstraints />;
+      case 'pcb-drc':
+        return <TestingBoard />;
+      case 'firmware-studio':
+      case 'state-machines':
+      case 'source-skeleton':
+        return <FirmwareStudio />;
+      case 'validation-studio':
+      case 'requirement-coverage':
+      case 'factory-qa':
+        return <ValidationStudio />;
+      case 'blueprint-sheets':
+        return <BlueprintSheets />;
+      case 'exports':
+        return <ExportCenter />;
+      case 'factory-builder':
+        return <FactoryPackageBuilder />;
       default:
         return <BlueprintCanvas />;
     }
@@ -90,27 +97,12 @@ export const AppShell: React.FC = () => {
 
   // Canvas views are drawing-board views
   const tabularViews = [
-    'dashboard',
-    'blueprint-sheets',
-    'bom', 
-    'testing', 
-    'exports', 
-    'power-budget', 
-    'pin-map', 
-    'firmware-plan', 
-    'readiness', 
-    'dossier',
-    'board-studio',
-    'circuit-planner',
-    'board-components',
-    'netlist-planner',
-    'pcb-constraints',
-    'mfg-pack',
-    'blueprint-editor',
-    'factory-builder',
-    'board-designer',
-    'component-library',
-    'schematic-editor'
+    'dashboard', 'product-studio', 'readiness', 'requirements', 'risks-interfaces',
+    'mechanical-studio', 'assembly-stack', 'component-library', 'schematic-editor',
+    'power-tree', 'power-budget', 'pin-map', 'hardware-mapping', 'bom', 'board-designer',
+    'board-settings', 'board-studio', 'board-components', 'pcb-constraints', 'pcb-drc',
+    'firmware-studio', 'state-machines', 'source-skeleton', 'validation-studio',
+    'requirement-coverage', 'factory-qa', 'blueprint-sheets', 'exports', 'factory-builder'
   ];
   const isCanvasView = !tabularViews.includes(activeView);
   const showVisualizer = !tabularViews.includes(activeView);

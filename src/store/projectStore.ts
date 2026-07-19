@@ -29,7 +29,12 @@ import {
   PcbRule,
   KeepoutZone,
   PadNetAssignment,
-  SchematicWire
+  SchematicWire,
+  ProductRequirement,
+  ProductArchitectureNode,
+  MechanicalObject,
+  FirmwareModule,
+  ValidationTest
 } from '../types';
 import { templates } from '../data/templates';
 import {
@@ -265,6 +270,34 @@ interface ProjectState extends Project {
   deleteCustomComponentDefinition: (id: string) => void;
   duplicateComponentDefinition: (id: string) => void;
   markDerivedArtifactsStale: (reason: string) => void;
+
+  // Shared Product Graph CRUD
+  addRequirement: (req: Omit<ProductRequirement, 'id'>) => void;
+  updateRequirement: (id: string, data: Partial<ProductRequirement>) => void;
+  deleteRequirement: (id: string) => void;
+
+  addArchitectureNode: (node: Omit<ProductArchitectureNode, 'id'>) => void;
+  updateArchitectureNode: (id: string, data: Partial<ProductArchitectureNode>) => void;
+  deleteArchitectureNode: (id: string) => void;
+
+  addMechanicalObject: (obj: Omit<MechanicalObject, 'id'>) => void;
+  updateMechanicalObject: (id: string, data: Partial<MechanicalObject>) => void;
+  deleteMechanicalObject: (id: string) => void;
+
+  addFirmwareModule: (mod: Omit<FirmwareModule, 'id'>) => void;
+  updateFirmwareModule: (id: string, data: Partial<FirmwareModule>) => void;
+  deleteFirmwareModule: (id: string) => void;
+
+  addValidationTest: (test: Omit<ValidationTest, 'id'>) => void;
+  updateValidationTest: (id: string, data: Partial<ValidationTest>) => void;
+  deleteValidationTest: (id: string) => void;
+
+  // Command History System
+  executeProjectCommand: (type: string, description: string, applyChange: () => void) => void;
+  undoProjectCommand: () => void;
+  redoProjectCommand: () => void;
+  pastCommands: { type: string; description: string; snapshot: string }[];
+  futureCommands: { type: string; description: string; snapshot: string }[];
 }
 
 const PROJECTS_KEY = 'hardware_studio_projects_v1';
@@ -482,7 +515,12 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       customComponentLibrary: state.customComponentLibrary || [],
       blueprintPack: state.blueprintPack || undefined,
       blueprintPackStatus: state.blueprintPackStatus || 'Stale',
-      activeBoardId: state.activeBoardId || 'board-main'
+      activeBoardId: state.activeBoardId || 'board-main',
+      requirements: state.requirements || [],
+      architectureNodes: state.architectureNodes || [],
+      mechanicalObjects: state.mechanicalObjects || [],
+      firmwareModules: state.firmwareModules || [],
+      validationTests: state.validationTests || []
     };
   };
 
@@ -536,6 +574,14 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     blueprintPack: initialProject.blueprintPack || undefined,
     blueprintPackStatus: initialProject.blueprintPackStatus || 'Stale',
     activeBoardId: initialProject.activeBoardId || 'board-main',
+
+    requirements: initialProject.requirements || [],
+    architectureNodes: initialProject.architectureNodes || [],
+    mechanicalObjects: initialProject.mechanicalObjects || [],
+    firmwareModules: initialProject.firmwareModules || [],
+    validationTests: initialProject.validationTests || [],
+    pastCommands: [],
+    futureCommands: [],
 
     selectedNodeId: null,
     projectsList: [],
@@ -1469,7 +1515,12 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         keepoutZones: json.keepoutZones || [],
         customComponentLibrary: json.customComponentLibrary || [],
         blueprintPack: json.blueprintPack || undefined,
-        blueprintPackStatus: json.blueprintPackStatus || "Stale"
+        blueprintPackStatus: json.blueprintPackStatus || "Stale",
+        requirements: json.requirements || [],
+        architectureNodes: json.architectureNodes || [],
+        mechanicalObjects: json.mechanicalObjects || [],
+        firmwareModules: json.firmwareModules || [],
+        validationTests: json.validationTests || []
       };
 
       const saved = getSavedProjects();
@@ -3419,6 +3470,187 @@ export const useProjectStore = create<ProjectState>((set, get) => {
 
     updateProjectState: (patch) => {
       persistChange(patch);
+    },
+
+    // ----------------------------------------------------
+    // Shared Product Graph CRUD
+    // ----------------------------------------------------
+    addRequirement: (req) => {
+      const id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const list = get().requirements || [];
+      persistChange({ requirements: [...list, { ...req, id }] });
+    },
+
+    updateRequirement: (id, data) => {
+      const list = get().requirements || [];
+      const updated = list.map(r => r.id === id ? { ...r, ...data } : r);
+      persistChange({ requirements: updated });
+    },
+
+    deleteRequirement: (id) => {
+      const list = get().requirements || [];
+      const updated = list.filter(r => r.id !== id);
+      persistChange({ requirements: updated });
+    },
+
+    addArchitectureNode: (node) => {
+      const id = `arch_node_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const list = get().architectureNodes || [];
+      persistChange({ architectureNodes: [...list, { ...node, id }] });
+    },
+
+    updateArchitectureNode: (id, data) => {
+      const list = get().architectureNodes || [];
+      const updated = list.map(n => n.id === id ? { ...n, ...data } : n);
+      persistChange({ architectureNodes: updated });
+    },
+
+    deleteArchitectureNode: (id) => {
+      const list = get().architectureNodes || [];
+      const updated = list.filter(n => n.id !== id);
+      persistChange({ architectureNodes: updated });
+    },
+
+    addMechanicalObject: (obj) => {
+      const id = `mech_obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const list = get().mechanicalObjects || [];
+      persistChange({ mechanicalObjects: [...list, { ...obj, id }] });
+    },
+
+    updateMechanicalObject: (id, data) => {
+      const list = get().mechanicalObjects || [];
+      const updated = list.map(o => o.id === id ? { ...o, ...data } : o);
+      persistChange({ mechanicalObjects: updated });
+    },
+
+    deleteMechanicalObject: (id) => {
+      const list = get().mechanicalObjects || [];
+      const updated = list.filter(o => o.id !== id);
+      persistChange({ mechanicalObjects: updated });
+    },
+
+    addFirmwareModule: (mod) => {
+      const id = `fw_mod_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const list = get().firmwareModules || [];
+      persistChange({ firmwareModules: [...list, { ...mod, id }] });
+    },
+
+    updateFirmwareModule: (id, data) => {
+      const list = get().firmwareModules || [];
+      const updated = list.map(m => m.id === id ? { ...m, ...data } : m);
+      persistChange({ firmwareModules: updated });
+    },
+
+    deleteFirmwareModule: (id) => {
+      const list = get().firmwareModules || [];
+      const updated = list.filter(m => m.id !== id);
+      persistChange({ firmwareModules: updated });
+    },
+
+    addValidationTest: (test) => {
+      const id = `val_test_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const list = get().validationTests || [];
+      persistChange({ validationTests: [...list, { ...test, id }] });
+    },
+
+    updateValidationTest: (id, data) => {
+      const list = get().validationTests || [];
+      const updated = list.map(t => t.id === id ? { ...t, ...data } : t);
+      persistChange({ validationTests: updated });
+    },
+
+    deleteValidationTest: (id) => {
+      const list = get().validationTests || [];
+      const updated = list.filter(t => t.id !== id);
+      persistChange({ validationTests: updated });
+    },
+
+    // ----------------------------------------------------
+    // Command History System
+    // ----------------------------------------------------
+    executeProjectCommand: (type, description, applyChange) => {
+      const snapshotKeys: (keyof Project)[] = [
+        'nodes', 'edges', 'bom', 'testing', 'powerBudget', 'pinMap', 'firmwareTasks',
+        'boards', 'circuitBlocks', 'boardComponents', 'nets', 'pcbConstraints',
+        'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
+        'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
+        'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
+        'requirements', 'architectureNodes', 'mechanicalObjects', 'firmwareModules', 'validationTests'
+      ];
+
+      const state = get();
+      const beforeSnapshot: Partial<Project> = {};
+      snapshotKeys.forEach(k => {
+        if (state[k] !== undefined) {
+          beforeSnapshot[k] = JSON.parse(JSON.stringify(state[k]));
+        }
+      });
+
+      applyChange();
+
+      const updatedState = get();
+      const afterSnapshot: Partial<Project> = {};
+      snapshotKeys.forEach(k => {
+        if (updatedState[k] !== undefined) {
+          afterSnapshot[k] = JSON.parse(JSON.stringify(updatedState[k]));
+        }
+      });
+
+      const newPast = [
+        ...(get().pastCommands || []),
+        {
+          type,
+          description,
+          snapshot: JSON.stringify({ before: beforeSnapshot, after: afterSnapshot })
+        }
+      ];
+
+      persistChange({
+        pastCommands: newPast,
+        futureCommands: []
+      });
+
+      get().markDerivedArtifactsStale(description);
+    },
+
+    undoProjectCommand: () => {
+      const past = get().pastCommands || [];
+      if (past.length === 0) return;
+
+      const lastCmd = past[past.length - 1];
+      const newPast = past.slice(0, -1);
+      const { before } = JSON.parse(lastCmd.snapshot);
+
+      persistChange({
+        ...before,
+        pastCommands: newPast,
+        futureCommands: [
+          ...(get().futureCommands || []),
+          lastCmd
+        ]
+      });
+
+      get().markDerivedArtifactsStale(`Undo: ${lastCmd.description}`);
+    },
+
+    redoProjectCommand: () => {
+      const future = get().futureCommands || [];
+      if (future.length === 0) return;
+
+      const nextCmd = future[future.length - 1];
+      const newFuture = future.slice(0, -1);
+      const { after } = JSON.parse(nextCmd.snapshot);
+
+      persistChange({
+        ...after,
+        pastCommands: [
+          ...(get().pastCommands || []),
+          nextCmd
+        ],
+        futureCommands: newFuture
+      });
+
+      get().markDerivedArtifactsStale(`Redo: ${nextCmd.description}`);
     }
   };
 });

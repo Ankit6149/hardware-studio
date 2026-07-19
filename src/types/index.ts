@@ -85,7 +85,7 @@ export interface TestStage {
   evidence?: string;
 }
 
-export type ValidationTest = TestStage;
+
 
 
 export interface PowerBudgetItem {
@@ -516,6 +516,13 @@ export interface Project {
   customComponentLibrary?: any[];
   keepoutZones?: KeepoutZone[];
 
+  // Shared Product Graph
+  requirements?: ProductRequirement[];
+  architectureNodes?: ProductArchitectureNode[];
+  mechanicalObjects?: MechanicalObject[];
+  firmwareModules?: FirmwareModule[];
+  validationTests?: ValidationTest[];
+
   // Blueprint Generation System
   blueprintPack?: BlueprintPack;
   blueprintPackStatus?: BlueprintPackStatusType;
@@ -598,3 +605,124 @@ export type FactoryFileStatus = {
   generatedBy?: string;
   requiresReview?: boolean;
 };
+
+// ----------------------------------------------------
+// SHARED PRODUCT GRAPH TYPINGS
+// ----------------------------------------------------
+
+export interface ProductRequirement {
+  id: string;
+  title: string;
+  description: string;
+  type: "Functional" | "Electrical" | "Mechanical" | "Firmware" | "Safety" | "Manufacturing" | "Validation";
+  priority: "Critical" | "High" | "Medium" | "Low";
+  status: "Draft" | "Approved" | "Implemented" | "Verified";
+  source?: string;
+  acceptanceCriteria: string[];
+  linkedArchitectureNodeIds: string[];
+  linkedComponentIds: string[];
+  linkedFirmwareModuleIds: string[];
+  linkedTestIds: string[];
+  risks: string[];
+  notes?: string;
+}
+
+export interface ProductArchitectureNode {
+  id: string;
+  name: string;
+  category: "Input" | "Processing" | "Power" | "Communication" | "Feedback" | "Mechanical" | "Firmware" | "Safety" | "Manufacturing";
+  description: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  linkedRequirementIds: string[];
+  linkedCircuitIds: string[];
+  linkedComponentIds: string[];
+  linkedFirmwareModuleIds: string[];
+  linkedTestIds: string[];
+  status: "MVP" | "Later" | "Future";
+}
+
+export interface MechanicalObject {
+  id: string;
+  name: string;
+  type: "Outer Profile" | "Inner Profile" | "Board Zone" | "Battery Cavity" | "Connector Opening" | "Button Opening" | "Sensor Window" | "Mounting Point" | "Antenna Keepout" | "Thermal Zone" | "Seal Zone" | "Flex Bend Zone" | "Mechanical Keepout" | "Annotation";
+  shape: "rect" | "circle" | "ellipse" | "polygon";
+  xMm: number;
+  yMm: number;
+  widthMm?: number;
+  heightMm?: number;
+  radiusMm?: number;
+  points?: { x: number; y: number }[];
+  rotationDeg: number;
+  material?: string;
+  clearanceMm?: number;
+  linkedBoardId?: string;
+  linkedComponentIds?: string[];
+  locked: boolean;
+  visible: boolean;
+  notes?: string;
+}
+
+export interface FirmwareSourceFile {
+  name: string;
+  content: string;
+}
+
+export interface FirmwareModule {
+  id: string;
+  name: string;
+  type: "Driver" | "Service" | "Communication" | "Power" | "Safety" | "Application" | "Test";
+  description: string;
+  linkedArchitectureNodeIds: string[];
+  linkedComponentIds: string[];
+  linkedPinIds: string[];
+  linkedNetIds: string[];
+  linkedTestIds: string[];
+  dependencies: string[];
+  sourceFiles: FirmwareSourceFile[];
+  status: "Draft" | "Implemented" | "Needs Review" | "Verified";
+}
+
+export interface ValidationTestStep {
+  stepNumber: number;
+  instruction: string;
+  expectedResult: string;
+  completed: boolean;
+}
+
+export interface ValidationMeasurement {
+  id: string;
+  name: string;
+  expectedValue: string | number;
+  actualValue?: string | number;
+  unit?: string;
+  tolerance?: string | number;
+  status?: 'Pass' | 'Fail' | 'Untested';
+}
+
+export interface ValidationEvidence {
+  id: string;
+  fileName: string;
+  description: string;
+  evidenceUrl?: string;
+}
+
+export interface ValidationTest {
+  id: string;
+  name: string;
+  stage: "EVT" | "DVT" | "PVT" | "Factory QA";
+  category: "Requirement" | "Mechanical" | "Electrical" | "Power" | "RF" | "Firmware" | "Thermal" | "Environmental" | "Manufacturing";
+  linkedRequirementIds: string[];
+  linkedArchitectureNodeIds: string[];
+  linkedComponentIds: string[];
+  linkedNetIds: string[];
+  linkedFirmwareModuleIds: string[];
+  steps: ValidationTestStep[];
+  measurements: ValidationMeasurement[];
+  passCriteria: string[];
+  status: "Not Started" | "In Progress" | "Passed" | "Failed" | "Blocked";
+  evidence: ValidationEvidence[];
+  resultNotes?: string;
+}

@@ -21,7 +21,8 @@ import {
   Network,
   Ruler,
   Package,
-  LayoutDashboard
+  LayoutDashboard,
+  ShieldAlert
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -40,46 +41,66 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
       title: "Overview",
       items: [
         { id: 'dashboard', label: 'Project Dashboard', icon: LayoutDashboard },
-        { id: 'blueprint-editor', label: 'Blueprint Editor', icon: Palette },
-        { id: 'blueprint-sheets', label: 'Blueprint Sheets', icon: FileText },
-        { id: 'readiness', label: 'Readiness Review', icon: FileCheck2 },
-        { id: 'exports', label: 'Export Center', icon: Download },
+        { id: 'product-studio', label: 'Product Studio', icon: Cpu },
+        { id: 'readiness', label: 'Release Readiness', icon: FileCheck2 },
       ]
     },
     {
-      title: "Product Definition",
+      title: "Product",
       items: [
-        { id: 'dossier', label: 'Master Blueprint', icon: Eye },
-        { id: 'electronics', label: 'Architecture', icon: Cpu },
-        { id: 'outer', label: 'Mechanical Layout', icon: Palette },
-        { id: 'internal', label: 'Assembly Layout', icon: Layout },
+        { id: 'requirements', label: 'Requirements', icon: CheckSquare },
+        { id: 'electronics', label: 'Product Architecture', icon: Cpu },
+        { id: 'risks-interfaces', label: 'Risks & Interfaces', icon: ShieldAlert },
       ]
     },
     {
-      title: "Electronics & PCB",
+      title: "Mechanical",
       items: [
-        { id: 'component-library', label: 'Component Library', icon: Cpu },
-        { id: 'schematic-editor', label: 'Schematic Editor', icon: Boxes },
-        { id: 'board-designer', label: 'Board Designer', icon: Cpu },
-        { id: 'board-studio', label: 'Boards Manager', icon: Layers },
-        { id: 'board-components', label: 'Components List', icon: Cpu },
-        { id: 'netlist-planner', label: 'Nets / Routing', icon: Network },
+        { id: 'mechanical-studio', label: 'Mechanical Studio', icon: Palette },
+        { id: 'assembly-stack', label: 'Assembly Stack', icon: Layers },
+      ]
+    },
+    {
+      title: "Electronics",
+      items: [
+        { id: 'component-library', label: 'Component Library', icon: Boxes },
+        { id: 'schematic-editor', label: 'Schematic Editor', icon: Cpu },
+        { id: 'power-tree', label: 'Power Tree', icon: Zap },
         { id: 'pin-map', label: 'Pin Map', icon: Cpu },
-        { id: 'power-budget', label: 'Power Budget', icon: Zap },
+        { id: 'bom', label: 'BOM', icon: Table },
+      ]
+    },
+    {
+      title: "PCB",
+      items: [
+        { id: 'board-designer', label: 'Board Designer', icon: Cpu },
+        { id: 'board-settings', label: 'Board Settings', icon: Layers },
         { id: 'pcb-constraints', label: 'PCB Rules', icon: Ruler },
+        { id: 'pcb-drc', label: 'DRC', icon: ShieldAlert },
       ]
     },
     {
-      title: "Firmware & Validation",
+      title: "Firmware",
       items: [
-        { id: 'firmware-plan', label: 'Firmware Plan', icon: Binary },
-        { id: 'testing', label: 'Testing Plan', icon: CheckSquare },
-        { id: 'mfg-pack', label: 'Manufacturing Checklist', icon: Package },
+        { id: 'firmware-studio', label: 'Firmware Studio', icon: Binary },
+        { id: 'state-machines', label: 'State Machines', icon: Cpu },
+        { id: 'hardware-mapping', label: 'Hardware Mapping', icon: Cpu },
+        { id: 'source-skeleton', label: 'Source Skeleton', icon: FileText },
       ]
     },
     {
-      title: "Factory Handoff",
+      title: "Validation",
       items: [
+        { id: 'validation-studio', label: 'Validation Studio', icon: CheckSquare },
+        { id: 'requirement-coverage', label: 'Requirement Coverage', icon: FileCheck2 },
+        { id: 'factory-qa', label: 'Factory QA', icon: CheckSquare },
+      ]
+    },
+    {
+      title: "Outputs",
+      items: [
+        { id: 'blueprint-sheets', label: 'Blueprint Studio', icon: FileText },
+        { id: 'exports', label: 'Export Center', icon: Download },
         { id: 'factory-builder', label: 'Factory Package Builder', icon: Package }
       ]
     }
@@ -125,27 +146,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
 
   // Determine if active view allows placing blocks
   const tabularViews = [
-    'dashboard',
-    'bom', 
-    'testing', 
-    'exports', 
-    'power-budget', 
-    'pin-map', 
-    'firmware-plan', 
-    'readiness', 
-    'dossier',
-    'board-studio',
-    'circuit-planner',
-    'board-components',
-    'netlist-planner',
-    'pcb-constraints',
-    'mfg-pack',
-    'blueprint-sheets',
-    'blueprint-editor',
-    'factory-builder',
-    'board-designer',
-    'component-library',
-    'schematic-editor'
+    'dashboard', 'product-studio', 'readiness', 'requirements', 'risks-interfaces',
+    'mechanical-studio', 'assembly-stack', 'component-library', 'schematic-editor',
+    'power-tree', 'pin-map', 'bom', 'board-designer', 'board-settings', 'pcb-constraints',
+    'pcb-drc', 'firmware-studio', 'state-machines', 'hardware-mapping', 'source-skeleton',
+    'validation-studio', 'requirement-coverage', 'factory-qa', 'blueprint-sheets',
+    'exports', 'factory-builder'
   ];
   const isCanvasView = !tabularViews.includes(activeView);
 
