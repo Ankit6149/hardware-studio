@@ -38,7 +38,7 @@ export const CURRENT_SCHEMA_VERSION = 4;export function normalizeProjectComponen
     rotationDeg: (bcPcb?.rotationDeg as number) ?? (bc.rotationDeg as number) ?? 0,
     side: ((bcPcb?.side as string) || (bc.side as string) || "Top") as 'Top' | 'Bottom',
     locked: (bcPcb?.locked as boolean) ?? (bc.lockedPlacement as boolean) ?? false,
-    placementStatus: ((bcPcb?.placementStatus as string) || (bc.placementStatus as string) || (bc.placementX != null ? "Placed" : "Unplaced")) as BoardComponent['placementStatus'],
+    placementStatus: ((bcPcb?.placementStatus as BoardComponent['placementStatus']) || (bc.placementStatus as BoardComponent['placementStatus']) || (bc.placementX != null ? "Placed" : "Unplaced")),
   };
 
   return {
@@ -146,7 +146,7 @@ export function migrateProjectSchema(project: unknown): Project {
 
   // Migrate boardComponents pins, pcb & schematic objects if missing
   migrated.boardComponents = (migrated.boardComponents as BoardComponent[]).map((c) => {
-    return normalizeProjectComponent(c);
+    return normalizeProjectComponent(c as unknown as Record<string, unknown>);
   });
 
   // Make sure version is bumped

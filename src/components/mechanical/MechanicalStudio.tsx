@@ -4,8 +4,9 @@ import React, { useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { MechanicalCanvas } from './MechanicalCanvas';
 import { MechanicalInspector } from './MechanicalInspector';
+import { Mechanical3DView } from './Mechanical3DView';
 import { validateMechanicalLayout } from '../../lib/mechanical/mechanicalValidation';
-import { Square, Circle, MousePointer, Move, Undo2, Redo2, Trash2, ShieldAlert, Layers, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
+import { Square, Circle, MousePointer, Move, Undo2, Redo2, Trash2, ShieldAlert, Lock, EyeOff } from 'lucide-react';
 
 type ToolMode = 'select' | 'pan' | 'rect' | 'circle' | 'polygon';
 
@@ -18,7 +19,9 @@ export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode 
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolMode>('select');
   const [showWarnings, setShowWarnings] = useState(false);
-  const [studioMode, setStudioMode] = useState<'canvas' | 'assembly'>(initialMode === 'assembly' ? 'assembly' : 'canvas');
+  const [studioMode, setStudioMode] = useState<'canvas' | 'assembly' | '3d-preview'>(
+    initialMode === 'assembly' ? 'assembly' : initialMode === '3d-preview' ? '3d-preview' : 'canvas'
+  );
 
   const mechanicalObjects = store.mechanicalObjects || [];
   const assemblyLayers = store.assemblyLayers || [];
@@ -36,12 +39,28 @@ export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode 
     return sum + (match ? parseFloat(match[1]) : 0);
   }, 0);
 
+  if (studioMode === '3d-preview') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
+          <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: 400 }}>Canvas</button>
+          <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: 400 }}>Assembly Stack</button>
+          <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: 700, borderBottom: '2px solid #3b82f6' }}>3D Preview</button>
+        </div>
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <Mechanical3DView />
+        </div>
+      </div>
+    );
+  }
+
   if (studioMode === 'assembly') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
           <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: 400 }}>Canvas</button>
           <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: 700, borderBottom: '2px solid #3b82f6' }}>Assembly Stack</button>
+          <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: 400 }}>3D Preview</button>
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: 11, color: '#64748b' }}>Total: {totalThickness.toFixed(1)}mm</span>
         </div>
@@ -109,6 +128,7 @@ export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode 
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white', flexShrink: 0 }}>
         <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: 700, borderBottom: '2px solid #3b82f6' }}>Canvas</button>
         <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: 400 }}>Assembly</button>
+        <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: 400 }}>3D Preview</button>
         <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 4px' }} />
         {tools.map(t => (
           <button key={t.mode} onClick={() => setTool(t.mode)}

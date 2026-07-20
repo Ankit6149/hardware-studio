@@ -251,6 +251,36 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
             const isSelected = selectedWireId === w.id;
             if (!w.points || w.points.length < 2) return null;
             
+            // Compute dynamic endpoints anchored to current symbol pin positions
+            let points = [...w.points];
+            if (w.sourcePinId) {
+              const lastIdx = w.sourcePinId.lastIndexOf('_');
+              if (lastIdx > 0) {
+                const compId = w.sourcePinId.slice(0, lastIdx);
+                const pinNum = w.sourcePinId.slice(lastIdx + 1);
+                const comp = (boardComponents || []).find(c => c.id === compId);
+                if (comp && comp.schematic?.placed) {
+                  const layouts = getSymbolPinLayouts(comp, comp.schematic?.x || 150, comp.schematic?.y || 150);
+                  const pinPos = layouts.find(l => l.number === pinNum);
+                  if (pinPos) points[0] = { x: pinPos.x, y: pinPos.y };
+                }
+              }
+            }
+
+            if (w.targetPinId) {
+              const lastIdx = w.targetPinId.lastIndexOf('_');
+              if (lastIdx > 0) {
+                const compId = w.targetPinId.slice(0, lastIdx);
+                const pinNum = w.targetPinId.slice(lastIdx + 1);
+                const comp = (boardComponents || []).find(c => c.id === compId);
+                if (comp && comp.schematic?.placed) {
+                  const layouts = getSymbolPinLayouts(comp, comp.schematic?.x || 150, comp.schematic?.y || 150);
+                  const pinPos = layouts.find(l => l.number === pinNum);
+                  if (pinPos) points[points.length - 1] = { x: pinPos.x, y: pinPos.y };
+                }
+              }
+            }
+
             return (
               <g
                 key={w.id || idx}
@@ -264,7 +294,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
               >
                 {/* Background fat stroke for easy clicking selection */}
                 <path
-                  d={`M ${w.points.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                  d={`M ${points.map(p => `${p.x} ${p.y}`).join(' L ')}`}
                   fill="none"
                   stroke="transparent"
                   strokeWidth={8}
@@ -272,7 +302,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
                 />
                 {/* Real wire segment */}
                 <path
-                  d={`M ${w.points.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                  d={`M ${points.map(p => `${p.x} ${p.y}`).join(' L ')}`}
                   fill="none"
                   stroke={isSelected ? '#10b981' : '#38bdf8'}
                   strokeWidth={1.5}

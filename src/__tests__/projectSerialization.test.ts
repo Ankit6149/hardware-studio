@@ -55,7 +55,9 @@ describe('Project Serialization & Schema v5 Round-Trip Tests', () => {
       validationTests: [{
         id: 'val_1', name: 'Voltage Test', stage: 'EVT', category: 'Electrical', linkedRequirementIds: ['req_1'], linkedArchitectureNodeIds: ['arch_1'], linkedComponentIds: ['c1'], linkedNetIds: ['net_vcc'], linkedFirmwareModuleIds: ['fw_1'], steps: [], measurements: [], passCriteria: [], status: 'Not Started', evidence: []
       }],
-      customComponentLibrary: [{ id: 'lib_cmp_1', name: 'Custom Sensor Module' }]
+      customComponentLibrary: [{
+        libraryId: 'lib_cmp_1', name: 'Custom Sensor Module', category: 'Sensor', description: '', packageName: 'SOIC_8', footprintName: 'SOIC_8', symbolName: 'Sensor', electrical: {}, pins: [], tags: [], defaultQuantity: 1
+      }]
     };
 
     // Serialize
@@ -72,7 +74,7 @@ describe('Project Serialization & Schema v5 Round-Trip Tests', () => {
     expect(restored.mechanicalDimensions?.[0].id).toBe('dim_1');
     expect(restored.firmwareStates?.[0].name).toBe('IDLE');
     expect(restored.firmwareTransitions?.[0].event).toBe('EVT_TICK');
-    expect(restored.customComponentLibrary?.[0].id).toBe('lib_cmp_1');
+    expect(restored.customComponentLibrary?.[0].libraryId).toBe('lib_cmp_1');
 
     // Verify integrity checks pass cleanly
     const issues = validateProjectIntegrity(restored);

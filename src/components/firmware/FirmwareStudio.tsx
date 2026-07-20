@@ -5,7 +5,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { FirmwareStateMachineCanvas } from './FirmwareStateMachineCanvas';
 import { FirmwareCodePreview } from './FirmwareCodePreview';
 import { validateStateMachine } from '../../lib/firmware/firmwareValidation';
-import { FirmwareState, FirmwareTransition } from '../../types';
+import { FirmwareState, FirmwareTransition, FirmwareModule } from '../../types';
 import { Plus, Trash2, Undo2, Redo2, ShieldAlert } from 'lucide-react';
 
 interface FirmwareStudioProps {

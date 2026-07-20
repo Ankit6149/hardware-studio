@@ -6,13 +6,13 @@ import { getFootprint } from '../../lib/footprints';
 import { Cpu, Search, Plus, Copy, X, Check, Save } from 'lucide-react';
 
 export const ComponentLibrary: React.FC = () => {
-  const { boardComponents, boards, circuitBlocks, addBoardComponent, addBOMItem } = useProjectStore();
+  const store = useProjectStore();
+  const { boardComponents, boards, circuitBlocks, addBoardComponent, addBOMItem, customComponentLibrary = [] } = store;
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   
-  // Custom component list saved locally in session
-  const [customComponents, setCustomComponents] = useState<ElectronicComponentDefinition[]>([]);
+  const customComponents = (customComponentLibrary || []) as ElectronicComponentDefinition[];
   const [selectedComponent, setSelectedComponent] = useState<ElectronicComponentDefinition | null>(defaultComponents[0]);
   
   // Forms & Dialogs
@@ -87,14 +87,7 @@ export const ComponentLibrary: React.FC = () => {
   };
 
   const handleDuplicate = (comp: ElectronicComponentDefinition) => {
-    const copy: ElectronicComponentDefinition = {
-      ...comp,
-      libraryId: `${comp.libraryId}-copy-${Date.now()}`,
-      name: `${comp.name} Copy`,
-      tags: [...comp.tags, 'duplicated']
-    };
-    setCustomComponents([copy, ...customComponents]);
-    setSelectedComponent(copy);
+    store.duplicateComponentDefinition(comp.libraryId);
   };
 
   const handleAddPinRow = () => {
@@ -141,10 +134,10 @@ export const ComponentLibrary: React.FC = () => {
     };
 
     if (isEditingCustom) {
-      setCustomComponents(prev => prev.map(c => c.libraryId === completedComponent.libraryId ? completedComponent : c));
+      store.updateCustomComponentDefinition(completedComponent.libraryId, completedComponent);
       setIsEditingCustom(false);
     } else {
-      setCustomComponents([completedComponent, ...customComponents]);
+      store.addCustomComponentDefinition(completedComponent);
       setIsCreatingCustom(false);
     }
     setSelectedComponent(completedComponent);

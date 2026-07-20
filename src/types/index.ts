@@ -1,5 +1,6 @@
 import { Node, Edge } from '@xyflow/react';
 import type { BlueprintPack, BlueprintPackStatusType } from '../lib/blueprintSheetTypes';
+import type { ElectronicComponentDefinition } from '../lib/components/componentLibrary';
 
 export type NodeData = {
   name: string;
@@ -219,6 +220,34 @@ export interface BoardComponent {
 }
 
 export type ProjectElectronicComponent = BoardComponent;
+
+export interface CustomComponentDefinition {
+  id: string;
+  name: string;
+  category: string;
+  manufacturer?: string;
+  partNumber?: string;
+  description?: string;
+  datasheetUrl?: string;
+  symbol?: {
+    symbolType: string;
+    pins: { pinNum: string; label: string; direction: string }[];
+  };
+  footprint?: {
+    footprintName: string;
+    widthMm: number;
+    heightMm: number;
+    padCount: number;
+  };
+  package3d?: {
+    widthMm: number;
+    heightMm: number;
+    depthMm: number;
+  };
+  pins?: ProjectComponentPin[];
+  electricalProperties?: Record<string, string | number>;
+  mechanicalProperties?: Record<string, string | number>;
+}
 
 
 export interface NetItem {
@@ -513,7 +542,7 @@ export interface Project {
   reviewResults?: ReviewResult[];
   exportHistory?: string[];
   padNetAssignments?: PadNetAssignment[];
-  customComponentLibrary?: Record<string, unknown>[];
+  customComponentLibrary?: ElectronicComponentDefinition[];
   keepoutZones?: KeepoutZone[];
 
   // Shared Product Graph
