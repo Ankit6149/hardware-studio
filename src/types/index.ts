@@ -487,6 +487,17 @@ export interface Project {
   activeBoardId?: string;
   boards?: BoardItem[];
   circuitBlocks?: CircuitBlock[];
+export interface EngineeringCommand<TBefore = unknown, TAfter = unknown> {
+  id: string;
+  type: string;
+  description: string;
+  createdAt: string;
+  affectedDomains: string[];
+  affectedObjectIds: string[];
+  before: TBefore;
+  after: TAfter;
+}
+
   boardComponents?: BoardComponent[];
   nets?: NetItem[];
   pcbConstraints?: PCBConstraint[];
