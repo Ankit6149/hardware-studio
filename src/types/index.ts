@@ -337,6 +337,19 @@ export interface SchematicConnection {
   connectionType?: string;
 }
 
+export interface SchematicPinAnchor {
+  type: 'pin';
+  componentId: string;
+  pinNumber: string;
+}
+
+export interface SchematicPointAnchor {
+  type: 'junction' | 'label' | 'dangling';
+  objectId?: string;
+  x?: number;
+  y?: number;
+}
+
 export interface SchematicWire {
   id: string;
   netId: string;
@@ -344,7 +357,10 @@ export interface SchematicWire {
   points: { x: number; y: number }[];
   sourcePinId?: string;
   targetPinId?: string;
+  sourceAnchor?: SchematicPinAnchor | SchematicPointAnchor;
+  targetAnchor?: SchematicPinAnchor | SchematicPointAnchor;
   junctionIds?: string[];
+  status?: 'Connected' | 'Dangling' | 'Needs Review';
 }
 
 

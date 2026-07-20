@@ -253,31 +253,42 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
             
             // Compute dynamic endpoints anchored to current symbol pin positions
             const points = [...w.points];
-            if (w.sourcePinId) {
+
+            // Resolve source anchor (structured or fallback to sourcePinId)
+            let sourceCompId = w.sourceAnchor?.type === 'pin' ? w.sourceAnchor.componentId : undefined;
+            let sourcePinNum = w.sourceAnchor?.type === 'pin' ? w.sourceAnchor.pinNumber : undefined;
+            if (!sourceCompId && w.sourcePinId) {
               const lastIdx = w.sourcePinId.lastIndexOf('_');
               if (lastIdx > 0) {
-                const compId = w.sourcePinId.slice(0, lastIdx);
-                const pinNum = w.sourcePinId.slice(lastIdx + 1);
-                const comp = (boardComponents || []).find(c => c.id === compId);
-                if (comp && comp.schematic?.placed) {
-                  const layouts = getSymbolPinLayouts(comp, comp.schematic?.x || 150, comp.schematic?.y || 150);
-                  const pinPos = layouts.find(l => l.number === pinNum);
-                  if (pinPos) points[0] = { x: pinPos.x, y: pinPos.y };
-                }
+                sourceCompId = w.sourcePinId.slice(0, lastIdx);
+                sourcePinNum = w.sourcePinId.slice(lastIdx + 1);
+              }
+            }
+            if (sourceCompId && sourcePinNum) {
+              const comp = (boardComponents || []).find(c => c.id === sourceCompId);
+              if (comp && comp.schematic?.placed) {
+                const layouts = getSymbolPinLayouts(comp, comp.schematic?.x || 150, comp.schematic?.y || 150);
+                const pinPos = layouts.find(l => l.number === sourcePinNum);
+                if (pinPos) points[0] = { x: pinPos.x, y: pinPos.y };
               }
             }
 
-            if (w.targetPinId) {
+            // Resolve target anchor (structured or fallback to targetPinId)
+            let targetCompId = w.targetAnchor?.type === 'pin' ? w.targetAnchor.componentId : undefined;
+            let targetPinNum = w.targetAnchor?.type === 'pin' ? w.targetAnchor.pinNumber : undefined;
+            if (!targetCompId && w.targetPinId) {
               const lastIdx = w.targetPinId.lastIndexOf('_');
               if (lastIdx > 0) {
-                const compId = w.targetPinId.slice(0, lastIdx);
-                const pinNum = w.targetPinId.slice(lastIdx + 1);
-                const comp = (boardComponents || []).find(c => c.id === compId);
-                if (comp && comp.schematic?.placed) {
-                  const layouts = getSymbolPinLayouts(comp, comp.schematic?.x || 150, comp.schematic?.y || 150);
-                  const pinPos = layouts.find(l => l.number === pinNum);
-                  if (pinPos) points[points.length - 1] = { x: pinPos.x, y: pinPos.y };
-                }
+                targetCompId = w.targetPinId.slice(0, lastIdx);
+                targetPinNum = w.targetPinId.slice(lastIdx + 1);
+              }
+            }
+            if (targetCompId && targetPinNum) {
+              const comp = (boardComponents || []).find(c => c.id === targetCompId);
+              if (comp && comp.schematic?.placed) {
+                const layouts = getSymbolPinLayouts(comp, comp.schematic?.x || 150, comp.schematic?.y || 150);
+                const pinPos = layouts.find(l => l.number === targetPinNum);
+                if (pinPos) points[points.length - 1] = { x: pinPos.x, y: pinPos.y };
               }
             }
 
