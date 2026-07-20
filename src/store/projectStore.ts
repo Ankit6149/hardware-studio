@@ -61,6 +61,11 @@ import {
   syncLegacyPlacementFields,
   syncNestedPcbFields
 } from '../lib/projectMigrations';
+import {
+  serializeProject,
+  deserializeProject,
+  validateProjectIntegrity
+} from '../lib/projectSerialization';
 
 export function normalizeNetName(name: string): string {
   const trimmed = name.trim();
@@ -76,6 +81,9 @@ interface ProjectState extends Project {
   selectedNodeId: string | null;
   projectsList: { id: string; projectName: string; description: string; updatedAt: string; templateName?: string }[];
   activeBoardId: string;
+
+  exportProjectJSON: () => string;
+  importProjectJSON: (rawInput: string | object) => { success: boolean; issues: unknown[] };
 
   setSelectedNodeId: (id: string | null) => void;
   setProjectName: (name: string) => void;
@@ -3758,6 +3766,30 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       });
 
       get().markDerivedArtifactsStale(`Redo: ${nextCmd.description}`);
+    },
+
+    exportProjectJSON: () => {
+      const cleanData = getCleanProjectData(get() as ProjectState);
+      return serializeProject(cleanData);
+    },
+
+    importProjectJSON: (rawInput: string | object) => {
+      const jsonString = typeof rawInput === 'string' ? rawInput : JSON.stringify(rawInput);
+      const deserialized = deserializeProject(jsonString);
+      const migrated = migrateProjectSchema(deserialized);
+      const issues = validateProjectIntegrity(migrated);
+
+      const cleanProject = getCleanProjectData(migrated as ProjectState);
+      const saved = getSavedProjects();
+      saved[cleanProject.id] = cleanProject;
+      saveProjectsToStorage(saved, cleanProject.id);
+
+      set({
+        ...cleanProject,
+        projectsList: syncProjectsList(saved)
+      });
+
+      return { success: issues.filter(i => i.severity === 'Error').length === 0, issues };
     }
   };
 });
