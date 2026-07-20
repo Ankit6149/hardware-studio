@@ -16,6 +16,7 @@ import { PCBConstraints } from './PCBConstraints';
 import { ProjectDashboard } from './ProjectDashboard';
 import { BlueprintSheets } from './BlueprintSheets';
 import { FactoryPackageBuilder } from './FactoryPackageBuilder';
+import { RevisionsStudio } from './revisions/RevisionsStudio';
 import { BoardDesigner } from './board/BoardDesigner';
 import { ComponentLibrary } from './component-library/ComponentLibrary';
 import { SchematicEditor } from './schematic/SchematicEditor';
@@ -91,6 +92,10 @@ export const AppShell: React.FC = () => {
         return <BlueprintSheets />;
       case 'exports':
         return <ExportCenter />;
+      case 'revisions':
+      case 'branches':
+      case 'releases':
+        return <RevisionsStudio />;
       case 'factory-builder':
         return <FactoryPackageBuilder />;
       default:
