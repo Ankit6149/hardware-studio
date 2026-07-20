@@ -49,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
       title: "Product",
       items: [
         { id: 'requirements', label: 'Requirements', icon: CheckSquare },
-        { id: 'electronics', label: 'Product Architecture', icon: Cpu },
+        { id: 'product-architecture', label: 'Product Architecture', icon: Cpu },
         { id: 'risks-interfaces', label: 'Risks & Interfaces', icon: ShieldAlert },
       ]
     },

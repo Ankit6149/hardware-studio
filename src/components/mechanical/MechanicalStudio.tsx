@@ -2,349 +2,189 @@
 
 import React, { useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
-import { MechanicalObject, AssemblyLayer } from '../../types';
-import { Plus, LayoutGrid, Layers, Trash2, ShieldAlert } from 'lucide-react';
+import { MechanicalCanvas } from './MechanicalCanvas';
+import { MechanicalInspector } from './MechanicalInspector';
+import { validateMechanicalLayout } from '../../lib/mechanical/mechanicalValidation';
+import { Square, Circle, MousePointer, Move, Undo2, Redo2, Trash2, ShieldAlert, Layers, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 
-export const MechanicalStudio: React.FC = () => {
+type ToolMode = 'select' | 'pan' | 'rect' | 'circle' | 'polygon';
+
+interface MechanicalStudioProps {
+  initialMode?: string;
+}
+
+export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode }) => {
   const store = useProjectStore();
-  const {
-    mechanicalObjects = [],
-    assemblyLayers = [],
-    addMechanicalObject,
-    updateMechanicalObject,
-    deleteMechanicalObject,
-    addAssemblyLayer,
-    updateAssemblyLayer,
-    deleteAssemblyLayer
-  } = store;
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+  const [tool, setTool] = useState<ToolMode>('select');
+  const [showWarnings, setShowWarnings] = useState(false);
+  const [studioMode, setStudioMode] = useState<'canvas' | 'assembly'>(initialMode === 'assembly' ? 'assembly' : 'canvas');
 
-  // Selected state
-  const [selectedObjId, setSelectedObjId] = useState<string | null>(null);
+  const mechanicalObjects = store.mechanicalObjects || [];
+  const assemblyLayers = store.assemblyLayers || [];
+  const warnings = validateMechanicalLayout(mechanicalObjects);
 
-  // Object Form State
-  const [objName, setObjName] = useState('');
-  const [objType, setObjType] = useState<MechanicalObject['type']>('Board Zone');
-  const [objShape, setObjShape] = useState<MechanicalObject['shape']>('rect');
-  const [objX, setObjX] = useState(0);
-  const [objY, setObjY] = useState(0);
-  const [objW, setObjW] = useState(50);
-  const [objH, setObjH] = useState(50);
-  const [objRadius, setObjRadius] = useState(0);
+  const tools: { mode: ToolMode; icon: React.ReactNode; label: string }[] = [
+    { mode: 'select', icon: <MousePointer size={14} />, label: 'Select' },
+    { mode: 'pan', icon: <Move size={14} />, label: 'Pan' },
+    { mode: 'rect', icon: <Square size={14} />, label: 'Rectangle' },
+    { mode: 'circle', icon: <Circle size={14} />, label: 'Circle' },
+  ];
 
-  // Assembly Layer Form State
-  const [layerName, setLayerName] = useState('');
-  const [layerMaterial, setLayerMaterial] = useState('');
-  const [layerThickness, setLayerThickness] = useState(1);
+  const totalThickness = assemblyLayers.reduce((sum, l) => {
+    const match = l.notes?.match(/Thickness\s*([\d.]+)/i);
+    return sum + (match ? parseFloat(match[1]) : 0);
+  }, 0);
 
-  const handleAddObject = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!objName.trim()) return;
-
-    store.executeProjectCommand(
-      'ADD_MECHANICAL_OBJECT',
-      `Add mechanical zone: ${objName}`,
-      () => addMechanicalObject({
-        name: objName,
-        type: objType,
-        shape: objShape,
-        xMm: objX,
-        yMm: objY,
-        widthMm: objShape === 'circle' ? undefined : objW,
-        heightMm: objShape === 'circle' ? undefined : objH,
-        radiusMm: objShape === 'circle' ? objRadius || 25 : undefined,
-        rotationDeg: 0,
-        locked: false,
-        visible: true
-      })
-    );
-
-    setObjName('');
-  };
-
-  const handleAddLayer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!layerName.trim()) return;
-
-    store.executeProjectCommand(
-      'ADD_ASSEMBLY_LAYER',
-      `Add assembly layer: ${layerName}`,
-      () => addAssemblyLayer({
-        name: layerName,
-        order: assemblyLayers.length + 1,
-        layerType: 'Casing',
-        material: layerMaterial || 'Aluminum',
-        fasteningMethod: 'Screw Thread',
-        inspectionNote: '',
-        notes: `Thickness ${layerThickness}mm`
-      })
-    );
-
-    setLayerName('');
-    setLayerMaterial('');
-  };
-
-  const handleDeleteObject = (id: string) => {
-    const obj = mechanicalObjects.find(o => o.id === id);
-    if (!obj) return;
-    store.executeProjectCommand(
-      'DELETE_MECHANICAL_OBJECT',
-      `Delete mechanical object: ${obj.name}`,
-      () => deleteMechanicalObject(id)
-    );
-    if (selectedObjId === id) setSelectedObjId(null);
-  };
-
-  const handleDeleteLayer = (id: string) => {
-    const layer = assemblyLayers.find(l => l.id === id);
-    if (!layer) return;
-    store.executeProjectCommand(
-      'DELETE_ASSEMBLY_LAYER',
-      `Delete assembly layer: ${layer.name}`,
-      () => deleteAssemblyLayer(id)
-    );
-  };
-
-  // Run mechanical overlaps / collision verification
-  const getValidationWarnings = () => {
-    const warnings: string[] = [];
-    const outer = mechanicalObjects.find(o => o.type === 'Outer Profile');
-    const board = mechanicalObjects.find(o => o.type === 'Board Zone');
-
-    if (!outer) {
-      warnings.push("Outer Profile casing boundary is not defined.");
-    }
-    if (!board) {
-      warnings.push("No PCB Board Zone footprint defined.");
-    }
-    
-    // Simple mock overlap warning if board size is larger than casing
-    if (outer && board) {
-      const outerSize = outer.radiusMm ? outer.radiusMm * 2 : (outer.widthMm || 0);
-      const boardSize = board.radiusMm ? board.radiusMm * 2 : (board.widthMm || 0);
-      if (boardSize > outerSize) {
-        warnings.push("Warning: PCB Board Zone size exceeds enclosure casing size!");
-      }
-    }
-
-    const hasBattery = mechanicalObjects.some(o => o.type === 'Battery Cavity');
-    if (!hasBattery) {
-      warnings.push("Warning: Battery Cavity zone is missing.");
-    }
-
-    return warnings;
-  };
-
-  const warningsList = getValidationWarnings();
-
-  return (
-    <div className="flex-1 bg-slate-900 text-slate-100 flex flex-col min-h-0 overflow-hidden font-mono text-[11px] p-6 space-y-6">
-      {/* Header */}
-      <div className="bg-slate-800/80 border border-slate-700 p-4 rounded-xl shadow-md flex items-center justify-between">
-        <div>
-          <h1 className="text-sm font-extrabold text-indigo-400 uppercase tracking-widest">2D Mechanical Studio</h1>
-          <p className="text-[10px] text-slate-400 mt-1">Design physical board zones, connector openings, keepouts and vertical assembly order.</p>
+  if (studioMode === 'assembly') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
+          <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: 400 }}>Canvas</button>
+          <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: 700, borderBottom: '2px solid #3b82f6' }}>Assembly Stack</button>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: 11, color: '#64748b' }}>Total: {totalThickness.toFixed(1)}mm</span>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => store.undoProjectCommand()} className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-200 border border-slate-650 transition-all cursor-pointer">⟲ Undo</button>
-          <button onClick={() => store.redoProjectCommand()} className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-200 border border-slate-650 transition-all cursor-pointer">⟳ Redo</button>
+        <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>Assembly Layers</div>
+            <button onClick={() => store.executeProjectCommand('ADD_LAYER', 'Add layer', () =>
+              store.addAssemblyLayer({
+                name: `Layer ${assemblyLayers.length + 1}`, order: assemblyLayers.length + 1,
+                layerType: 'Casing', material: 'Aluminum', fasteningMethod: 'Screw Thread',
+                inspectionNote: '', notes: 'Thickness 1mm'
+              })
+            )} style={toolBtnStyle}>
+              + Add Layer
+            </button>
+          </div>
+          {assemblyLayers.sort((a, b) => a.order - b.order).map((layer, i) => (
+            <div key={layer.id} style={{
+              padding: 12, marginBottom: 8, background: 'white', border: '1px solid #e2e8f0',
+              borderRadius: 8, display: 'flex', gap: 8, alignItems: 'flex-start'
+            }}>
+              <div style={{ fontWeight: 700, fontSize: 16, color: '#94a3b8', minWidth: 24 }}>{i + 1}</div>
+              <div style={{ flex: 1 }}>
+                <input value={layer.name} onChange={e => store.updateAssemblyLayer(layer.id, { name: e.target.value })}
+                  style={{ fontWeight: 600, fontSize: 13, border: 'none', outline: 'none', width: '100%', color: '#1e293b' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginTop: 6 }}>
+                  <input placeholder="Material" value={layer.material} onChange={e => store.updateAssemblyLayer(layer.id, { material: e.target.value })}
+                    style={{ padding: '3px 6px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 11 }} />
+                  <select value={layer.fasteningMethod} onChange={e => store.updateAssemblyLayer(layer.id, { fasteningMethod: e.target.value })}
+                    style={{ padding: '3px 6px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 11 }}>
+                    {['Screw Thread', 'Snap Fit', 'Adhesive', 'Press Fit', 'Gasket', 'Welded', 'Soldered'].map(f =>
+                      <option key={f} value={f}>{f}</option>
+                    )}
+                  </select>
+                </div>
+                <input placeholder="Inspection note" value={layer.inspectionNote} onChange={e => store.updateAssemblyLayer(layer.id, { inspectionNote: e.target.value })}
+                  style={{ width: '100%', padding: '3px 6px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 11, marginTop: 4 }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {i > 0 && <button onClick={() => {
+                  const prev = assemblyLayers.sort((a, b) => a.order - b.order)[i - 1];
+                  store.updateAssemblyLayer(layer.id, { order: prev.order });
+                  store.updateAssemblyLayer(prev.id, { order: layer.order });
+                }} style={{ fontSize: 11, border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>↑</button>}
+                {i < assemblyLayers.length - 1 && <button onClick={() => {
+                  const next = assemblyLayers.sort((a, b) => a.order - b.order)[i + 1];
+                  store.updateAssemblyLayer(layer.id, { order: next.order });
+                  store.updateAssemblyLayer(next.id, { order: layer.order });
+                }} style={{ fontSize: 11, border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>↓</button>}
+                <button onClick={() => store.executeProjectCommand('DEL_LAYER', 'Delete layer', () => store.deleteAssemblyLayer(layer.id))}
+                  style={{ fontSize: 11, border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444' }}>
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
+    );
+  }
 
-      <div className="flex-1 flex gap-6 min-h-0">
-        {/* Left: 2D Geometry Objects */}
-        <div className="w-1/2 bg-slate-800/50 border border-slate-700/80 rounded-xl flex flex-col min-h-0 overflow-hidden p-4 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-700 pb-2">
-            <h2 className="font-extrabold uppercase text-slate-350 tracking-wider flex items-center gap-1.5">
-              <LayoutGrid className="w-3.5 h-3.5 text-indigo-450" />
-              Mechanical Zones & Casing Profiles
-            </h2>
-            <span className="text-[9px] bg-slate-750 text-slate-450 px-2 py-0.5 rounded font-mono font-bold">
-              {mechanicalObjects.length} Objects
-            </span>
-          </div>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white', flexShrink: 0 }}>
+        <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: 700, borderBottom: '2px solid #3b82f6' }}>Canvas</button>
+        <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: 400 }}>Assembly</button>
+        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 4px' }} />
+        {tools.map(t => (
+          <button key={t.mode} onClick={() => setTool(t.mode)}
+            style={{ ...toolBtnStyle, background: tool === t.mode ? '#e0e7ff' : 'transparent', color: tool === t.mode ? '#3b82f6' : '#475569' }}
+            title={t.label}>
+            {t.icon}
+          </button>
+        ))}
+        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 4px' }} />
+        <button onClick={() => {
+          if (selectedObjectId) store.executeProjectCommand('DEL_OBJ', 'Delete object', () => {
+            store.deleteMechanicalObject(selectedObjectId);
+            setSelectedObjectId(null);
+          });
+        }} style={toolBtnStyle} disabled={!selectedObjectId} title="Delete">
+          <Trash2 size={14} />
+        </button>
+        <button onClick={() => store.undoProjectCommand()} style={toolBtnStyle} title="Undo"><Undo2 size={14} /></button>
+        <button onClick={() => store.redoProjectCommand()} style={toolBtnStyle} title="Redo"><Redo2 size={14} /></button>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: 10, color: '#94a3b8' }}>{mechanicalObjects.length} objects</span>
+        <button onClick={() => setShowWarnings(!showWarnings)} style={{ ...toolBtnStyle, color: warnings.length > 0 ? '#f59e0b' : '#94a3b8' }}>
+          <ShieldAlert size={14} /> <span style={{ fontSize: 11 }}>{warnings.length}</span>
+        </button>
+      </div>
 
-          <form onSubmit={handleAddObject} className="bg-slate-800/60 p-3 rounded-lg border border-slate-700 space-y-2.5">
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="text"
-                placeholder="Zone Object Name..."
-                value={objName}
-                onChange={e => setObjName(e.target.value)}
-                className="col-span-2 bg-slate-900 text-slate-100 placeholder-slate-500 rounded px-2 py-1 border border-slate-700 focus:outline-none focus:border-indigo-500"
-              />
-              <select
-                value={objType}
-                onChange={e => setObjType(e.target.value as any)}
-                className="bg-slate-900 text-slate-100 rounded px-2 py-1 border border-slate-700 focus:outline-none"
-              >
-                <option value="Outer Profile">Outer Profile</option>
-                <option value="Inner Profile">Inner Profile</option>
-                <option value="Board Zone">Board Zone</option>
-                <option value="Battery Cavity">Battery Cavity</option>
-                <option value="Connector Opening">Connector Opening</option>
-                <option value="Button Opening">Button Opening</option>
-                <option value="Sensor Window">Sensor Window</option>
-                <option value="Mechanical Keepout">Mechanical Keepout</option>
-              </select>
-              <select
-                value={objShape}
-                onChange={e => setObjShape(e.target.value as any)}
-                className="bg-slate-900 text-slate-100 rounded px-2 py-1 border border-slate-700 focus:outline-none"
-              >
-                <option value="rect">Rectangle</option>
-                <option value="circle">Circle</option>
-                <option value="ellipse">Ellipse</option>
-              </select>
+      {/* Main */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {/* Left: Object tree */}
+        <div style={{ width: 200, borderRight: '1px solid #e2e8f0', overflow: 'auto', flexShrink: 0, background: '#fafbfc', padding: 8 }}>
+          <div style={{ fontWeight: 600, fontSize: 11, color: '#64748b', marginBottom: 6 }}>Objects</div>
+          {mechanicalObjects.map(obj => (
+            <div key={obj.id} onClick={() => setSelectedObjectId(obj.id)}
+              style={{
+                padding: '4px 6px', fontSize: 11, borderRadius: 4, cursor: 'pointer', marginBottom: 2,
+                background: obj.id === selectedObjectId ? '#e0e7ff' : 'transparent',
+                display: 'flex', alignItems: 'center', gap: 4
+              }}>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{obj.name}</span>
+              <span style={{ fontSize: 9, color: '#94a3b8' }}>{obj.shape}</span>
+              {obj.locked ? <Lock size={10} color="#94a3b8" /> : null}
+              {!obj.visible ? <EyeOff size={10} color="#94a3b8" /> : null}
             </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="flex flex-col">
-                <span className="text-[8px] text-slate-500 font-bold uppercase mb-0.5">X (mm)</span>
-                <input type="number" value={objX} onChange={e => setObjX(Number(e.target.value))} className="bg-slate-900 text-slate-100 rounded px-1.5 py-0.5 border border-slate-700 focus:outline-none" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[8px] text-slate-500 font-bold uppercase mb-0.5">Y (mm)</span>
-                <input type="number" value={objY} onChange={e => setObjY(Number(e.target.value))} className="bg-slate-900 text-slate-100 rounded px-1.5 py-0.5 border border-slate-700 focus:outline-none" />
-              </div>
-              {objShape === 'circle' ? (
-                <div className="flex flex-col">
-                  <span className="text-[8px] text-slate-500 font-bold uppercase mb-0.5">Radius (mm)</span>
-                  <input type="number" value={objRadius} onChange={e => setObjRadius(Number(e.target.value))} className="bg-slate-900 text-slate-100 rounded px-1.5 py-0.5 border border-slate-700 focus:outline-none" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-col">
-                    <span className="text-[8px] text-slate-500 font-bold uppercase mb-0.5">Width (mm)</span>
-                    <input type="number" value={objW} onChange={e => setObjW(Number(e.target.value))} className="bg-slate-900 text-slate-100 rounded px-1.5 py-0.5 border border-slate-700 focus:outline-none" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[8px] text-slate-500 font-bold uppercase mb-0.5">Height (mm)</span>
-                    <input type="number" value={objH} onChange={e => setObjH(Number(e.target.value))} className="bg-slate-900 text-slate-100 rounded px-1.5 py-0.5 border border-slate-700 focus:outline-none" />
-                  </div>
-                </>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-1 bg-indigo-600 hover:bg-indigo-500 font-bold rounded text-white flex items-center justify-center gap-1 cursor-pointer transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Mechanical Object
-            </button>
-          </form>
-
-          <div className="flex-1 overflow-y-auto space-y-1.5 min-h-0 pr-1">
-            {mechanicalObjects.map(obj => (
-              <div
-                key={obj.id}
-                onClick={() => setSelectedObjId(obj.id)}
-                className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all ${
-                  selectedObjId === obj.id
-                    ? 'bg-slate-700/60 border-indigo-500'
-                    : 'bg-slate-800/40 border-slate-700 hover:bg-slate-750'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-extrabold text-slate-200">{obj.name}</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDeleteObject(obj.id); }}
-                    className="text-slate-500 hover:text-red-400 p-0.5"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-                <div className="flex gap-2 text-[9px] text-slate-400 mt-1">
-                  <span>Shape: {obj.shape}</span>
-                  <span>Pos: X:{obj.xMm} Y:{obj.yMm}</span>
-                  {obj.shape === 'circle' ? <span>Radius: {obj.radiusMm}mm</span> : <span>Size: {obj.widthMm}x{obj.heightMm}mm</span>}
-                </div>
-                <div className="flex gap-1.5 mt-2">
-                  <span className="text-[8px] bg-slate-900 text-indigo-400 px-1 py-0.2 rounded font-extrabold uppercase tracking-wide">{obj.type}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
 
-        {/* Right: Assembly Stack & Warnings */}
-        <div className="flex-1 flex flex-col gap-6 min-h-0">
-          {/* Validation Warnings */}
-          {warningsList.length > 0 && (
-            <div className="bg-rose-950/40 border border-rose-900 rounded-xl p-4">
-              <h3 className="font-bold text-rose-400 flex items-center gap-1.5 uppercase mb-2">
-                <ShieldAlert className="w-4 h-4" />
-                Mechanical DRC Violations
-              </h3>
-              <div className="space-y-1 text-rose-350 text-[10px]">
-                {warningsList.map((w, idx) => <div key={idx}>• {w}</div>)}
-              </div>
-            </div>
-          )}
-
-          {/* Assembly Stack */}
-          <div className="flex-1 bg-slate-800/50 border border-slate-700/80 rounded-xl flex flex-col min-h-0 overflow-hidden p-4 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-700 pb-2">
-              <h2 className="font-extrabold uppercase text-slate-350 tracking-wider flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-emerald-450" />
-                Assembly Stack Editor
-              </h2>
-              <span className="text-[9px] bg-slate-750 text-slate-450 px-2 py-0.5 rounded font-mono font-bold">
-                {assemblyLayers.length} Layers
-              </span>
-            </div>
-
-            <form onSubmit={handleAddLayer} className="bg-slate-800/60 p-3 rounded-lg border border-slate-700 space-y-2.5">
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  placeholder="Layer Name..."
-                  value={layerName}
-                  onChange={e => setLayerName(e.target.value)}
-                  className="bg-slate-900 text-slate-100 placeholder-slate-500 rounded px-2 py-1 border border-slate-700 focus:outline-none focus:border-indigo-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Material..."
-                  value={layerMaterial}
-                  onChange={e => setLayerMaterial(e.target.value)}
-                  className="bg-slate-900 text-slate-100 placeholder-slate-500 rounded px-2 py-1 border border-slate-700 focus:outline-none"
-                />
-                <div className="col-span-2 flex items-center gap-2">
-                  <span className="text-[9px] text-slate-400">Thickness (mm):</span>
-                  <input
-                    type="number"
-                    value={layerThickness}
-                    onChange={e => setLayerThickness(Number(e.target.value))}
-                    className="w-16 bg-slate-900 text-slate-100 rounded px-1.5 py-0.5 border border-slate-700 focus:outline-none"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                className="w-full py-1 bg-emerald-600 hover:bg-emerald-500 font-bold rounded text-white flex items-center justify-center gap-1 cursor-pointer transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add Layer
-              </button>
-            </form>
-
-            <div className="flex-1 overflow-y-auto space-y-1.5 min-h-0 pr-1">
-              {assemblyLayers.map(l => (
-                <div key={l.id} className="p-2.5 bg-slate-800/40 border border-slate-700 rounded-lg flex items-center justify-between">
-                  <div className="text-left">
-                    <span className="font-extrabold text-slate-200">Layer {l.order}: {l.name}</span>
-                    <div className="text-[9px] text-slate-400 mt-1">Material: {l.material} | {l.notes}</div>
-                  </div>
-                  <button onClick={() => handleDeleteLayer(l.id)} className="text-slate-500 hover:text-red-400 p-1">
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+        {/* Center: Canvas */}
+        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+          <MechanicalCanvas selectedObjectId={selectedObjectId} onSelectObject={setSelectedObjectId} tool={tool} />
+          {showWarnings && warnings.length > 0 && (
+            <div style={{
+              position: 'absolute', bottom: 12, left: 12, right: 12, maxHeight: 180, overflow: 'auto',
+              background: 'white', border: '1px solid #fbbf24', borderRadius: 8, padding: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10
+            }}>
+              {warnings.map((w, i) => (
+                <div key={i} style={{ fontSize: 11, color: w.severity === 'Error' ? '#dc2626' : '#d97706', padding: '2px 0' }}>
+                  [{w.severity}] {w.message}
                 </div>
               ))}
             </div>
-          </div>
+          )}
+        </div>
+
+        {/* Right: Inspector */}
+        <div style={{ width: 250, borderLeft: '1px solid #e2e8f0', overflow: 'auto', flexShrink: 0, background: '#fafbfc' }}>
+          <MechanicalInspector selectedObjectId={selectedObjectId} />
         </div>
       </div>
     </div>
   );
+};
+
+const toolBtnStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 2, padding: '4px 6px',
+  background: 'none', border: '1px solid transparent', borderRadius: 4, cursor: 'pointer', color: '#475569'
+};
+const tabStyle: React.CSSProperties = {
+  background: 'none', border: 'none', padding: '4px 8px', fontSize: 12, cursor: 'pointer', color: '#475569'
 };

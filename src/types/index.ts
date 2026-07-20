@@ -519,8 +519,12 @@ export interface Project {
   // Shared Product Graph
   requirements?: ProductRequirement[];
   architectureNodes?: ProductArchitectureNode[];
+  architectureConnections?: ProductArchitectureConnection[];
   mechanicalObjects?: MechanicalObject[];
+  mechanicalDimensions?: MechanicalDimension[];
   firmwareModules?: FirmwareModule[];
+  firmwareStates?: FirmwareState[];
+  firmwareTransitions?: FirmwareTransition[];
   validationTests?: ValidationTest[];
 
   // Blueprint Generation System
@@ -644,6 +648,18 @@ export interface ProductArchitectureNode {
   status: "MVP" | "Later" | "Future";
 }
 
+export interface ProductArchitectureConnection {
+  id: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  name?: string;
+  type: "Data" | "Power" | "Control" | "Mechanical" | "Wireless" | "Firmware" | "Safety";
+  protocol?: string;
+  voltage?: number;
+  direction: "Forward" | "Bidirectional";
+  notes?: string;
+}
+
 export interface MechanicalObject {
   id: string;
   name: string;
@@ -665,9 +681,25 @@ export interface MechanicalObject {
   notes?: string;
 }
 
-export interface FirmwareSourceFile {
+export interface MechanicalDimension {
+  id: string;
   name: string;
+  from: { xMm: number; yMm: number };
+  to: { xMm: number; yMm: number };
+  valueMm: number;
+  tolerancePlusMm?: number;
+  toleranceMinusMm?: number;
+  linkedObjectIds: string[];
+  notes?: string;
+}
+
+export interface FirmwareSourceFile {
+  id: string;
+  path: string;
+  language: "C" | "C++";
   content: string;
+  generated: boolean;
+  linkedModuleIds: string[];
 }
 
 export interface FirmwareModule {
@@ -685,6 +717,29 @@ export interface FirmwareModule {
   status: "Draft" | "Implemented" | "Needs Review" | "Verified";
 }
 
+export interface FirmwareState {
+  id: string;
+  name: string;
+  type: "Initial" | "Normal" | "Power" | "Charging" | "Fault" | "Debug" | "Final";
+  x: number;
+  y: number;
+  description?: string;
+  entryActions: string[];
+  exitActions: string[];
+  linkedModuleIds: string[];
+  linkedComponentIds: string[];
+}
+
+export interface FirmwareTransition {
+  id: string;
+  sourceStateId: string;
+  targetStateId: string;
+  event: string;
+  condition?: string;
+  action?: string;
+  priority?: number;
+}
+
 export interface ValidationTestStep {
   stepNumber: number;
   instruction: string;
@@ -695,18 +750,24 @@ export interface ValidationTestStep {
 export interface ValidationMeasurement {
   id: string;
   name: string;
-  expectedValue: string | number;
-  actualValue?: string | number;
+  type: "Numeric" | "Boolean" | "Text" | "Visual Inspection";
+  expectedValue?: number | string | boolean;
+  actualValue?: number | string | boolean;
   unit?: string;
-  tolerance?: string | number;
-  status?: 'Pass' | 'Fail' | 'Untested';
+  tolerancePlus?: number;
+  toleranceMinus?: number;
+  minValue?: number;
+  maxValue?: number;
+  required: boolean;
+  status: "Untested" | "Pass" | "Fail" | "Needs Review";
 }
 
 export interface ValidationEvidence {
   id: string;
-  fileName: string;
-  description: string;
-  evidenceUrl?: string;
+  type: "Text" | "URL" | "Measurement" | "Photo Reference" | "File Reference";
+  value: string;
+  createdAt: string;
+  notes?: string;
 }
 
 export interface ValidationTest {

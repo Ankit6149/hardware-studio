@@ -32,8 +32,12 @@ import {
   SchematicWire,
   ProductRequirement,
   ProductArchitectureNode,
+  ProductArchitectureConnection,
   MechanicalObject,
+  MechanicalDimension,
   FirmwareModule,
+  FirmwareState,
+  FirmwareTransition,
   ValidationTest
 } from '../types';
 import { templates } from '../data/templates';
@@ -280,13 +284,29 @@ interface ProjectState extends Project {
   updateArchitectureNode: (id: string, data: Partial<ProductArchitectureNode>) => void;
   deleteArchitectureNode: (id: string) => void;
 
+  addArchitectureConnection: (conn: Omit<ProductArchitectureConnection, 'id'>) => void;
+  updateArchitectureConnection: (id: string, data: Partial<ProductArchitectureConnection>) => void;
+  deleteArchitectureConnection: (id: string) => void;
+
   addMechanicalObject: (obj: Omit<MechanicalObject, 'id'>) => void;
   updateMechanicalObject: (id: string, data: Partial<MechanicalObject>) => void;
   deleteMechanicalObject: (id: string) => void;
 
+  addMechanicalDimension: (dim: Omit<MechanicalDimension, 'id'>) => void;
+  updateMechanicalDimension: (id: string, data: Partial<MechanicalDimension>) => void;
+  deleteMechanicalDimension: (id: string) => void;
+
   addFirmwareModule: (mod: Omit<FirmwareModule, 'id'>) => void;
   updateFirmwareModule: (id: string, data: Partial<FirmwareModule>) => void;
   deleteFirmwareModule: (id: string) => void;
+
+  addFirmwareState: (state: Omit<FirmwareState, 'id'>) => void;
+  updateFirmwareState: (id: string, data: Partial<FirmwareState>) => void;
+  deleteFirmwareState: (id: string) => void;
+
+  addFirmwareTransition: (trans: Omit<FirmwareTransition, 'id'>) => void;
+  updateFirmwareTransition: (id: string, data: Partial<FirmwareTransition>) => void;
+  deleteFirmwareTransition: (id: string) => void;
 
   addValidationTest: (test: Omit<ValidationTest, 'id'>) => void;
   updateValidationTest: (id: string, data: Partial<ValidationTest>) => void;
@@ -518,8 +538,12 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       activeBoardId: state.activeBoardId || 'board-main',
       requirements: state.requirements || [],
       architectureNodes: state.architectureNodes || [],
+      architectureConnections: state.architectureConnections || [],
       mechanicalObjects: state.mechanicalObjects || [],
+      mechanicalDimensions: state.mechanicalDimensions || [],
       firmwareModules: state.firmwareModules || [],
+      firmwareStates: state.firmwareStates || [],
+      firmwareTransitions: state.firmwareTransitions || [],
       validationTests: state.validationTests || []
     };
   };
@@ -3565,6 +3589,88 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       persistChange({ validationTests: updated });
     },
 
+    // Architecture Connections
+    addArchitectureConnection: (conn) => {
+      const id = `arch_conn_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const list = get().architectureConnections || [];
+      persistChange({ architectureConnections: [...list, { ...conn, id }] });
+    },
+
+    updateArchitectureConnection: (id, data) => {
+      const list = get().architectureConnections || [];
+      const updated = list.map(c => c.id === id ? { ...c, ...data } : c);
+      persistChange({ architectureConnections: updated });
+    },
+
+    deleteArchitectureConnection: (id) => {
+      const list = get().architectureConnections || [];
+      const updated = list.filter(c => c.id !== id);
+      persistChange({ architectureConnections: updated });
+    },
+
+    // Mechanical Dimensions
+    addMechanicalDimension: (dim) => {
+      const id = `mech_dim_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const list = get().mechanicalDimensions || [];
+      persistChange({ mechanicalDimensions: [...list, { ...dim, id }] });
+    },
+
+    updateMechanicalDimension: (id, data) => {
+      const list = get().mechanicalDimensions || [];
+      const updated = list.map(d => d.id === id ? { ...d, ...data } : d);
+      persistChange({ mechanicalDimensions: updated });
+    },
+
+    deleteMechanicalDimension: (id) => {
+      const list = get().mechanicalDimensions || [];
+      const updated = list.filter(d => d.id !== id);
+      persistChange({ mechanicalDimensions: updated });
+    },
+
+    // Firmware States
+    addFirmwareState: (state) => {
+      const id = `fw_state_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const list = get().firmwareStates || [];
+      persistChange({ firmwareStates: [...list, { ...state, id }] });
+    },
+
+    updateFirmwareState: (id, data) => {
+      const list = get().firmwareStates || [];
+      const updated = list.map(s => s.id === id ? { ...s, ...data } : s);
+      persistChange({ firmwareStates: updated });
+    },
+
+    deleteFirmwareState: (id) => {
+      const list = get().firmwareStates || [];
+      const updated = list.filter(s => s.id !== id);
+      persistChange({ firmwareStates: updated });
+      // Also remove transitions referencing this state
+      const transitions = get().firmwareTransitions || [];
+      const cleanedTransitions = transitions.filter(
+        t => t.sourceStateId !== id && t.targetStateId !== id
+      );
+      persistChange({ firmwareTransitions: cleanedTransitions });
+    },
+
+    // Firmware Transitions
+    addFirmwareTransition: (trans) => {
+      const id = `fw_trans_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const list = get().firmwareTransitions || [];
+      persistChange({ firmwareTransitions: [...list, { ...trans, id }] });
+    },
+
+    updateFirmwareTransition: (id, data) => {
+      const list = get().firmwareTransitions || [];
+      const updated = list.map(t => t.id === id ? { ...t, ...data } : t);
+      persistChange({ firmwareTransitions: updated });
+    },
+
+    deleteFirmwareTransition: (id) => {
+      const list = get().firmwareTransitions || [];
+      const updated = list.filter(t => t.id !== id);
+      persistChange({ firmwareTransitions: updated });
+    },
+
     // ----------------------------------------------------
     // Command History System
     // ----------------------------------------------------
@@ -3575,7 +3681,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
-        'requirements', 'architectureNodes', 'mechanicalObjects', 'firmwareModules', 'validationTests'
+        'requirements', 'architectureNodes', 'architectureConnections', 'mechanicalObjects', 'mechanicalDimensions',
+        'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
       ];
 
       const state = get();

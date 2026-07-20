@@ -50,10 +50,13 @@ export const AppShell: React.FC = () => {
       case 'product-studio':
       case 'requirements':
       case 'risks-interfaces':
+      case 'electronics':
+      case 'product-architecture':
         return <ProductStudio />;
       case 'mechanical-studio':
+        return <MechanicalStudio initialMode="canvas" />;
       case 'assembly-stack':
-        return <MechanicalStudio />;
+        return <MechanicalStudio initialMode="assembly" />;
       case 'component-library':
         return <ComponentLibrary />;
       case 'schematic-editor':
@@ -62,8 +65,9 @@ export const AppShell: React.FC = () => {
       case 'power-budget':
         return <PowerBudgetTable />;
       case 'pin-map':
-      case 'hardware-mapping':
         return <PinMapTable />;
+      case 'hardware-mapping':
+        return <FirmwareStudio initialMode="hardware-map" />;
       case 'bom':
         return <BOMTable />;
       case 'board-designer':
@@ -75,15 +79,21 @@ export const AppShell: React.FC = () => {
       case 'pcb-constraints':
         return <PCBConstraints />;
       case 'pcb-drc':
-        return <TestingBoard />;
+        return <BoardDesigner />;
+      case 'readiness':
+        return <ReadinessDashboard />;
       case 'firmware-studio':
+        return <FirmwareStudio initialMode="modules" />;
       case 'state-machines':
+        return <FirmwareStudio initialMode="state-machine" />;
       case 'source-skeleton':
-        return <FirmwareStudio />;
+        return <FirmwareStudio initialMode="source" />;
       case 'validation-studio':
+        return <ValidationStudio initialMode="tests" />;
       case 'requirement-coverage':
+        return <ValidationStudio initialMode="coverage" />;
       case 'factory-qa':
-        return <ValidationStudio />;
+        return <ValidationStudio initialMode="factory-qa" />;
       case 'blueprint-sheets':
         return <BlueprintSheets />;
       case 'exports':
@@ -98,6 +108,7 @@ export const AppShell: React.FC = () => {
   // Canvas views are drawing-board views
   const tabularViews = [
     'dashboard', 'product-studio', 'readiness', 'requirements', 'risks-interfaces',
+    'electronics', 'product-architecture',
     'mechanical-studio', 'assembly-stack', 'component-library', 'schematic-editor',
     'power-tree', 'power-budget', 'pin-map', 'hardware-mapping', 'bom', 'board-designer',
     'board-settings', 'board-studio', 'board-components', 'pcb-constraints', 'pcb-drc',
