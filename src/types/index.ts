@@ -364,6 +364,19 @@ export interface SchematicWire {
 }
 
 
+export interface MechanicalBody {
+  id: string;
+  sourceProfileId?: string;
+  operation: 'Extrude' | 'Box' | 'Cylinder';
+  depthMm?: number;
+  position: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number };
+  dimensions: { x: number; y: number; z: number };
+  linkedMechanicalObjectIds?: string[];
+  linkedBoardIds?: string[];
+  linkedComponentIds?: string[];
+}
+
 export interface PcbLayer {
   id: string;
   boardId: string;

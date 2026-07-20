@@ -5,6 +5,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { MechanicalCanvas } from './MechanicalCanvas';
 import { MechanicalInspector } from './MechanicalInspector';
 import { Mechanical3DView } from './Mechanical3DView';
+import { WebGL3DView } from './WebGL3DView';
 import { validateMechanicalLayout } from '../../lib/mechanical/mechanicalValidation';
 import { Square, Circle, MousePointer, Move, Undo2, Redo2, Trash2, ShieldAlert, Lock, EyeOff } from 'lucide-react';
 
@@ -19,7 +20,7 @@ export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode 
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolMode>('select');
   const [showWarnings, setShowWarnings] = useState(false);
-  const [studioMode, setStudioMode] = useState<'canvas' | 'assembly' | '3d-preview'>(
+  const [studioMode, setStudioMode] = useState<'canvas' | 'assembly' | '3d-preview' | 'webgl-3d'>(
     initialMode === 'assembly' ? 'assembly' : initialMode === '3d-preview' ? '3d-preview' : 'canvas'
   );
 
@@ -38,6 +39,22 @@ export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode 
     const match = l.notes?.match(/Thickness\s*([\d.]+)/i);
     return sum + (match ? parseFloat(match[1]) : 0);
   }, 0);
+
+  if (studioMode === 'webgl-3d') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
+          <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: 400 }}>Canvas</button>
+          <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: 400 }}>Assembly Stack</button>
+          <button onClick={() => setStudioMode('webgl-3d')} style={{ ...tabStyle, fontWeight: 700, borderBottom: '2px solid #3b82f6' }}>WebGL 3D Workbench</button>
+          <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: 400 }}>Isometric Preview (SVG)</button>
+        </div>
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <WebGL3DView />
+        </div>
+      </div>
+    );
+  }
 
   if (studioMode === '3d-preview') {
     return (
@@ -126,9 +143,10 @@ export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode 
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white', flexShrink: 0 }}>
-        <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: 700, borderBottom: '2px solid #3b82f6' }}>Canvas</button>
-        <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: 400 }}>Assembly</button>
-        <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: 400 }}>Isometric Preview (SVG)</button>
+        <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: studioMode === 'canvas' ? 700 : 400, borderBottom: studioMode === 'canvas' ? '2px solid #3b82f6' : 'none' }}>Canvas</button>
+        <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: studioMode === 'assembly' ? 700 : 400, borderBottom: studioMode === 'assembly' ? '2px solid #3b82f6' : 'none' }}>Assembly</button>
+        <button onClick={() => setStudioMode('webgl-3d')} style={{ ...tabStyle, fontWeight: studioMode === 'webgl-3d' ? 700 : 400, borderBottom: studioMode === 'webgl-3d' ? '2px solid #3b82f6' : 'none' }}>WebGL 3D Workbench</button>
+        <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: studioMode === '3d-preview' ? 700 : 400, borderBottom: studioMode === '3d-preview' ? '2px solid #3b82f6' : 'none' }}>Isometric Preview (SVG)</button>
         <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 4px' }} />
         {tools.map(t => (
           <button key={t.mode} onClick={() => setTool(t.mode)}
