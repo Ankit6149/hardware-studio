@@ -101,13 +101,13 @@ export const FirmwareStudio: React.FC<FirmwareStudioProps> = ({ initialMode }) =
                 </button>
               </div>
               <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                <select value={mod.type} onChange={e => store.updateFirmwareModule(mod.id, { type: e.target.value as any })}
+                <select value={mod.type} onChange={e => store.updateFirmwareModule(mod.id, { type: e.target.value as FirmwareModule['type'] })}
                   style={{ padding: '2px 6px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 11 }}>
                   {['Driver', 'Service', 'Communication', 'Power', 'Safety', 'Application', 'Test'].map(t =>
                     <option key={t} value={t}>{t}</option>
                   )}
                 </select>
-                <select value={mod.status} onChange={e => store.updateFirmwareModule(mod.id, { status: e.target.value as any })}
+                <select value={mod.status} onChange={e => store.updateFirmwareModule(mod.id, { status: e.target.value as FirmwareModule['status'] })}
                   style={{ padding: '2px 6px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 11 }}>
                   {['Draft', 'Implemented', 'Needs Review', 'Verified'].map(s =>
                     <option key={s} value={s}>{s}</option>

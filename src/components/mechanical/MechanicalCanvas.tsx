@@ -307,7 +307,7 @@ export const MechanicalCanvas: React.FC<MechanicalCanvasProps> = ({ selectedObje
       })}
 
       {/* Scale indicator */}
-      <g transform={`translate(20, ${svgRef.current?.clientHeight ? svgRef.current.clientHeight - 30 : 570})`}>
+      <g transform="translate(20, 540)">
         <line x1={0} y1={0} x2={10 * view.scale} y2={0} stroke="#64748b" strokeWidth={1} />
         <line x1={0} y1={-3} x2={0} y2={3} stroke="#64748b" strokeWidth={1} />
         <line x1={10 * view.scale} y1={-3} x2={10 * view.scale} y2={3} stroke="#64748b" strokeWidth={1} />

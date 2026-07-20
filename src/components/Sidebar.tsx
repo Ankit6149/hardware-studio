@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { blockLibrary, BlockLibraryItem } from '../data/blockLibrary';
 import { 
-  Eye, 
   Palette, 
-  Layout, 
   Cpu, 
   Binary, 
   Zap, 
@@ -18,7 +16,6 @@ import {
   FileText,
   Layers,
   Boxes,
-  Network,
   Ruler,
   Package,
   LayoutDashboard,

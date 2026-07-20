@@ -513,7 +513,7 @@ export interface Project {
   reviewResults?: ReviewResult[];
   exportHistory?: string[];
   padNetAssignments?: PadNetAssignment[];
-  customComponentLibrary?: any[];
+  customComponentLibrary?: Record<string, unknown>[];
   keepoutZones?: KeepoutZone[];
 
   // Shared Product Graph

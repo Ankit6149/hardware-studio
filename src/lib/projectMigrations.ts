@@ -1,63 +1,65 @@
 // projectMigrations.ts — Phase 23 Project Import/Export Correctness and Schema Migrations
 import { Project, BoardComponent } from '../types';
 
-export const CURRENT_SCHEMA_VERSION = 4;
-
-export function normalizeProjectComponent(bc: any): BoardComponent {
-  const compId = bc.id || `cmp_${Date.now()}_${Math.random()}`;
+export const CURRENT_SCHEMA_VERSION = 4;export function normalizeProjectComponent(bc: Record<string, unknown>): BoardComponent {
+  const compId = (bc.id as string) || `cmp_${Date.now()}_${Math.random()}`;
 
   // Pins normalization
-  const pins = (bc.pins || []).map((p: any) => ({
-    id: p.id || `pin_${compId}_${p.pinNumber}`,
+  const rawPins = (bc.pins as Record<string, unknown>[]) || [];
+  const pins = rawPins.map((p) => ({
+    id: (p.id as string) || `pin_${compId}_${p.pinNumber}`,
     componentId: compId,
     pinNumber: String(p.pinNumber),
-    pinName: p.pinName || `PIN${p.pinNumber}`,
-    electricalType: p.electricalType || 'Passive',
-    netId: p.netId || undefined,
-    netName: p.netName || '',
+    pinName: (p.pinName as string) || `PIN${p.pinNumber}`,
+    electricalType: (p.electricalType as string) || 'Passive',
+    netId: (p.netId as string) || undefined,
+    netName: (p.netName as string) || '',
     noConnect: !!p.noConnect,
     required: !!p.required
   }));
 
+  const bcSchematic = bc.schematic as Record<string, unknown> | undefined;
+  const bcPcb = bc.pcb as Record<string, unknown> | undefined;
+
   // Schematic placement initialization
   const schematic = {
-    placed: bc.schematic?.placed ?? (bc.placementX != null),
-    x: bc.schematic?.x ?? bc.placementX ?? 150,
-    y: bc.schematic?.y ?? bc.placementY ?? 150,
-    rotation: bc.schematic?.rotation ?? bc.rotationDeg ?? 0,
-    locked: bc.schematic?.locked ?? false,
+    placed: (bcSchematic?.placed as boolean) ?? (bc.placementX != null),
+    x: (bcSchematic?.x as number) ?? (bc.placementX as number) ?? 150,
+    y: (bcSchematic?.y as number) ?? (bc.placementY as number) ?? 150,
+    rotation: (bcSchematic?.rotation as number) ?? (bc.rotationDeg as number) ?? 0,
+    locked: (bcSchematic?.locked as boolean) ?? false,
   };
 
   // PCB placement initialization
   const pcb = {
-    placed: bc.pcb?.placed ?? (bc.placementX != null),
-    xMm: bc.pcb?.xMm ?? bc.placementX ?? 0,
-    yMm: bc.pcb?.yMm ?? bc.placementY ?? 0,
-    rotationDeg: bc.pcb?.rotationDeg ?? bc.rotationDeg ?? 0,
-    side: (bc.pcb?.side || bc.side || "Top") as 'Top' | 'Bottom',
-    locked: bc.pcb?.locked ?? bc.lockedPlacement ?? false,
-    placementStatus: (bc.pcb?.placementStatus || bc.placementStatus || (bc.placementX != null ? "Placed" : "Unplaced")) as any,
+    placed: (bcPcb?.placed as boolean) ?? (bc.placementX != null),
+    xMm: (bcPcb?.xMm as number) ?? (bc.placementX as number) ?? 0,
+    yMm: (bcPcb?.yMm as number) ?? (bc.placementY as number) ?? 0,
+    rotationDeg: (bcPcb?.rotationDeg as number) ?? (bc.rotationDeg as number) ?? 0,
+    side: ((bcPcb?.side as string) || (bc.side as string) || "Top") as 'Top' | 'Bottom',
+    locked: (bcPcb?.locked as boolean) ?? (bc.lockedPlacement as boolean) ?? false,
+    placementStatus: ((bcPcb?.placementStatus as string) || (bc.placementStatus as string) || (bc.placementX != null ? "Placed" : "Unplaced")) as BoardComponent['placementStatus'],
   };
 
   return {
     id: compId,
-    libraryId: bc.libraryId || "",
-    referenceDesignator: bc.referenceDesignator || "U1",
-    componentName: bc.componentName || "",
-    componentType: bc.componentType || "",
-    value: bc.value || "",
-    packageName: bc.packageName || "",
-    footprint: bc.footprint || "",
-    partNumber: bc.partNumber || "",
+    libraryId: (bc.libraryId as string) || "",
+    referenceDesignator: (bc.referenceDesignator as string) || "U1",
+    componentName: (bc.componentName as string) || "",
+    componentType: (bc.componentType as string) || "",
+    value: (bc.value as string) || "",
+    packageName: (bc.packageName as string) || "",
+    footprint: (bc.footprint as string) || "",
+    partNumber: (bc.partNumber as string) || "",
     pins,
-    boardId: bc.boardId || "board_0",
-    circuitBlockId: bc.circuitBlockId || "block_0",
-    bomItemId: bc.bomItemId || "",
+    boardId: (bc.boardId as string) || "board_0",
+    circuitBlockId: (bc.circuitBlockId as string) || "block_0",
+    bomItemId: (bc.bomItemId as string) || "",
     quantity: Number(bc.quantity) || 1,
     schematic,
     pcb,
-    status: bc.status || "Draft",
-    notes: bc.notes || "",
+    status: (bc.status as BoardComponent['status']) || "Draft",
+    notes: (bc.notes as string) || "",
     
     // Synchronize flat fields
     placementX: pcb.xMm,
@@ -66,9 +68,9 @@ export function normalizeProjectComponent(bc: any): BoardComponent {
     side: pcb.side,
     lockedPlacement: pcb.locked,
     placementStatus: pcb.placementStatus,
-    supplier: bc.supplier || "",
-    datasheetUrl: bc.datasheetUrl || "",
-    placementCriticality: bc.placementCriticality || "Low"
+    supplier: (bc.supplier as string) || "",
+    datasheetUrl: (bc.datasheetUrl as string) || "",
+    placementCriticality: (bc.placementCriticality as BoardComponent['placementCriticality']) || "Low"
   };
 }
 
@@ -81,7 +83,7 @@ export function syncLegacyPlacementFields(comp: BoardComponent): BoardComponent 
       rotationDeg: comp.rotationDeg,
       side: comp.side === 'Bottom' ? 'Bottom' : 'Top',
       locked: !!comp.lockedPlacement,
-      placementStatus: (comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced')) as any,
+      placementStatus: (comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced')),
     };
   } else {
     comp.pcb.placed = comp.placementX != null;
@@ -90,7 +92,7 @@ export function syncLegacyPlacementFields(comp: BoardComponent): BoardComponent 
     comp.pcb.rotationDeg = comp.rotationDeg;
     comp.pcb.side = comp.side === 'Bottom' ? 'Bottom' : 'Top';
     comp.pcb.locked = !!comp.lockedPlacement;
-    comp.pcb.placementStatus = (comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced')) as any;
+    comp.pcb.placementStatus = (comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced'));
   }
   return comp;
 }
@@ -102,14 +104,13 @@ export function syncNestedPcbFields(comp: BoardComponent): BoardComponent {
     comp.rotationDeg = comp.pcb.rotationDeg;
     comp.side = comp.pcb.side;
     comp.lockedPlacement = comp.pcb.locked;
-    comp.placementStatus = comp.pcb.placementStatus as any;
+    comp.placementStatus = comp.pcb.placementStatus;
   }
   return comp;
 }
 
 export function migrateProjectSchema(project: unknown): Project {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const migrated = JSON.parse(JSON.stringify(project || {})) as Project & Record<string, any>;
+  const migrated = JSON.parse(JSON.stringify(project || {})) as Project & Record<string, unknown>;
 
   if (!migrated.schemaVersion) {
     migrated.schemaVersion = 1;
