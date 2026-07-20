@@ -252,7 +252,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
             if (!w.points || w.points.length < 2) return null;
             
             // Compute dynamic endpoints anchored to current symbol pin positions
-            let points = [...w.points];
+            const points = [...w.points];
             if (w.sourcePinId) {
               const lastIdx = w.sourcePinId.lastIndexOf('_');
               if (lastIdx > 0) {
