@@ -427,12 +427,25 @@ export interface Trace {
   status?: 'Draft' | 'Routed' | 'Needs Review' | 'Verified';
 }
 
-export interface PadNetAssignment {
+export interface FirmwareConfiguration {
+  environmentName: string;
+  platform: string;
+  board: string;
+  framework: string;
+  buildFlags: string[];
+  libraryDependencies: string[];
+  uploadPort?: string;
+  monitorSpeed?: number;
+}
+
+export interface FirmwareSourceFile {
   id: string;
-  componentId: string;
-  referenceDesignator: string;
-  padName: string;
-  netName: string;
+  path: string;
+  language: 'C' | 'C++' | 'INI' | 'JSON' | 'Markdown';
+  content: string;
+  generated: boolean;
+  dirty: boolean;
+  linkedModuleIds: string[];
 }
 
 export interface KeepoutZone {
