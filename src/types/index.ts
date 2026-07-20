@@ -867,5 +867,13 @@ export interface ValidationTest {
   passCriteria: string[];
   status: "Not Started" | "In Progress" | "Passed" | "Failed" | "Blocked";
   evidence: ValidationEvidence[];
-  resultNotes?: string;
+export interface ValidationRun {
+  id: string;
+  testId: string;
+  startedAt: string;
+  completedAt?: string;
+  operator?: string;
+  measurements: ValidationMeasurement[];
+  evidence: ValidationEvidence[];
+  status: "In Progress" | "Passed" | "Failed" | "Needs Review";
 }
