@@ -24,7 +24,62 @@ export class HardwareStudioMCPServer {
   private proposals: MCPProposal[] = [];
   private auditLog: MCPAuditRecord[] = [];
 
-  constructor(private project: Project) {}
+  constructor(private project?: Project) {
+    if (!this.project) {
+      this.project = {
+        id: 'proj_mcp_default',
+        projectName: 'Hardware Studio Product',
+        description: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        version: '1.0.0',
+        activeView: 'master',
+        nodes: [],
+        edges: [],
+        bom: [],
+        testing: [],
+        powerBudget: [],
+        pinMap: [],
+        firmwareTasks: []
+      };
+    }
+  }
+
+  public callTool(toolName: string, params: Record<string, unknown> = {}): { success: boolean; data?: unknown; error?: string } {
+    try {
+      if (toolName === 'get_audit_log') {
+        const log = this.getAuditLog();
+        return { success: true, data: log };
+      } else if (toolName.startsWith('get_')) {
+        const data = this.handleReadTool(toolName, params);
+        return { success: true, data };
+      } else if (toolName.startsWith('draft_')) {
+        const proposal = this.handleDraftTool(toolName, params);
+        return { success: true, data: { proposalId: proposal.id, proposal } };
+      } else if (toolName === 'apply_draft') {
+        const proposalId = params.proposalId as string;
+        const applied = this.applyDraftProposal(proposalId);
+        return { success: true, data: applied };
+      } else if (toolName === 'delete_component' || toolName === 'replace_component') {
+        const approved = Boolean(params.userApproved);
+        const res = this.handleHighImpactAction(toolName, params, approved);
+        return { success: true, data: res };
+      } else {
+        return { success: true, data: this.handleReadTool(toolName, params) };
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, error: msg };
+    }
+  }
+
+  public getResource(uri: string): unknown {
+    return {
+      uri,
+      projectId: this.project?.id,
+      timestamp: new Date().toISOString()
+    };
+  }
 
   /** Handle read tool requests */
   public handleReadTool(toolName: string, params: Record<string, unknown> = {}): unknown {
@@ -33,13 +88,16 @@ export class HardwareStudioMCPServer {
     switch (toolName) {
       case 'get_current_product':
         return {
-          id: this.project.id,
-          name: this.project.projectName,
-          version: this.project.version,
-          activeView: this.project.activeView
+          id: this.project?.id,
+          name: this.project?.projectName,
+          version: this.project?.version,
+          activeView: this.project?.activeView
         };
+      case 'get_product_summary':
+        const summaryGraph = new ProductGraphEngine(this.project || ({} as any));
+        return summaryGraph.getProductSummary();
       case 'get_product_graph':
-        const graph = new ProductGraphEngine(this.project);
+        const graph = new ProductGraphEngine(this.project || ({} as any));
         return graph.getRequirementCoverage();
       case 'get_requirements':
         return this.project.requirements || [];
