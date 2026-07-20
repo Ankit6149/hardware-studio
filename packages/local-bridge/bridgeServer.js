@@ -136,6 +136,38 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/workspace/export-project' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body);
+        const targetPath = path.join(process.cwd(), 'project.hardware-studio.json');
+        fs.writeFileSync(targetPath, JSON.stringify(payload.project || payload, null, 2), 'utf8');
+        res.end(JSON.stringify({ success: true, exportedPath: targetPath }));
+      } catch (err) {
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
+  if (url.pathname === '/api/workspace/export-blueprints' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body);
+        const targetPath = path.join(process.cwd(), 'BLUEPRINTS_SPEC.md');
+        fs.writeFileSync(targetPath, payload.markdown || '# Blueprints', 'utf8');
+        res.end(JSON.stringify({ success: true, exportedPath: targetPath }));
+      } catch (err) {
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Endpoint not found' }));
 });
