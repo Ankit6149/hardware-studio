@@ -110,7 +110,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
           setNewName(loaded.projectName);
           setNewDesc(loaded.description);
         } else {
-          showToast(`Import failed: ${res.error}`, "error");
+          showToast(`Import failed: ${res.issues ? res.issues.map(i => (i as any).message || String(i)).join(', ') : 'Validation errors'}`, "error");
         }
       } catch {
         showToast("Invalid JSON file formatting.", "error");

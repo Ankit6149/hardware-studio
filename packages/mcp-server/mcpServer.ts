@@ -100,15 +100,15 @@ export class HardwareStudioMCPServer {
         const graph = new ProductGraphEngine(this.project || ({} as any));
         return graph.getRequirementCoverage();
       case 'get_requirements':
-        return this.project.requirements || [];
+        return this.project?.requirements || [];
       case 'get_components':
-        return this.project.boardComponents || [];
+        return this.project?.boardComponents || [];
       case 'get_boards':
-        return this.project.boards || [];
+        return this.project?.boards || [];
       case 'get_firmware_modules':
-        return this.project.firmwareModules || [];
+        return this.project?.firmwareModules || [];
       case 'get_validation_tests':
-        return this.project.validationTests || [];
+        return this.project?.validationTests || [];
       default:
         throw new Error(`Unknown read tool: ${toolName}`);
     }

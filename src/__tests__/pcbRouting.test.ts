@@ -59,7 +59,7 @@ describe('Active-Board Strict Pad-Aware PCB Routing & DRC Tests', () => {
     expect(Array.isArray(drcIssues)).toBe(true);
 
     // Filter issues for active board
-    const unroutedNetIssues = drcIssues.filter(i => i.category === 'Unrouted Net' || i.ruleName === 'Unrouted Net');
+    const unroutedNetIssues = drcIssues.filter(i => i.category === 'Unrouted Net' || (i as any).ruleName === 'Unrouted Net');
     expect(unroutedNetIssues.length).toBeGreaterThanOrEqual(0);
   });
 });

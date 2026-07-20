@@ -427,6 +427,14 @@ export interface Trace {
   status?: 'Draft' | 'Routed' | 'Needs Review' | 'Verified';
 }
 
+export interface PadNetAssignment {
+  id: string;
+  componentId: string;
+  referenceDesignator: string;
+  padName: string;
+  netName: string;
+}
+
 export interface FirmwareConfiguration {
   environmentName: string;
   platform: string;
@@ -507,6 +515,23 @@ export interface ReviewResult {
   status: 'Open' | 'Fixed' | 'Waived';
 }
 
+export interface ProductRevision {
+  id: string;
+  name: string;
+  parentRevisionId?: string;
+  branchName: string;
+  createdAt: string;
+  description: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  projectSnapshot?: any;
+  status: 'Working' | 'Named Version' | 'Release Candidate' | 'Released' | 'Superseded';
+  releaseArtifacts?: {
+    blueprintPackVersion?: string;
+    manufacturingPackageId?: string;
+    approvalSignoff?: string;
+  };
+}
+
 export interface Project {
   id: string;
   projectName: string;
@@ -515,6 +540,13 @@ export interface Project {
   updatedAt: string;
   templateName?: string;
   version: string;
+  schemaVersion?: number;
+  productVersion?: string;
+  revisions?: ProductRevision[];
+  branches?: ProductRevision[];
+  releaseCandidates?: ProductRevision[];
+  releases?: ProductRevision[];
+  activeBranch?: string;
   activeView: string;
   nodes: CustomNode[];
   edges: CustomEdge[];
@@ -525,21 +557,9 @@ export interface Project {
   firmwareTasks: FirmwareTask[];
   batteryCapacityMah?: number;
   
-  // Board Studio extensions
   activeBoardId?: string;
   boards?: BoardItem[];
   circuitBlocks?: CircuitBlock[];
-export interface EngineeringCommand<TBefore = unknown, TAfter = unknown> {
-  id: string;
-  type: string;
-  description: string;
-  createdAt: string;
-  affectedDomains: string[];
-  affectedObjectIds: string[];
-  before: TBefore;
-  after: TAfter;
-}
-
   boardComponents?: BoardComponent[];
   nets?: NetItem[];
   pcbConstraints?: PCBConstraint[];
@@ -751,7 +771,9 @@ export interface MechanicalObject {
   yMm: number;
   widthMm?: number;
   heightMm?: number;
+  depthMm?: number;
   radiusMm?: number;
+  layer?: string;
   points?: { x: number; y: number }[];
   rotationDeg: number;
   material?: string;
@@ -778,7 +800,7 @@ export interface MechanicalDimension {
 export interface FirmwareSourceFile {
   id: string;
   path: string;
-  language: "C" | "C++";
+  language: "C" | "C++" | "INI" | "JSON" | "Markdown";
   content: string;
   generated: boolean;
   linkedModuleIds: string[];
@@ -867,6 +889,9 @@ export interface ValidationTest {
   passCriteria: string[];
   status: "Not Started" | "In Progress" | "Passed" | "Failed" | "Blocked";
   evidence: ValidationEvidence[];
+  resultNotes?: string;
+}
+
 export interface ValidationRun {
   id: string;
   testId: string;
@@ -876,4 +901,15 @@ export interface ValidationRun {
   measurements: ValidationMeasurement[];
   evidence: ValidationEvidence[];
   status: "In Progress" | "Passed" | "Failed" | "Needs Review";
+}
+
+export interface EngineeringCommand<TBefore = unknown, TAfter = unknown> {
+  id: string;
+  type: string;
+  description: string;
+  createdAt: string;
+  affectedDomains: string[];
+  affectedObjectIds: string[];
+  before: TBefore;
+  after: TAfter;
 }

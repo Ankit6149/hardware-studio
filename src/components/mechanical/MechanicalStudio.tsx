@@ -143,10 +143,10 @@ export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode 
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white', flexShrink: 0 }}>
-        <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: studioMode === 'canvas' ? 700 : 400, borderBottom: studioMode === 'canvas' ? '2px solid #3b82f6' : 'none' }}>Canvas</button>
-        <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: studioMode === 'assembly' ? 700 : 400, borderBottom: studioMode === 'assembly' ? '2px solid #3b82f6' : 'none' }}>Assembly</button>
-        <button onClick={() => setStudioMode('webgl-3d')} style={{ ...tabStyle, fontWeight: studioMode === 'webgl-3d' ? 700 : 400, borderBottom: studioMode === 'webgl-3d' ? '2px solid #3b82f6' : 'none' }}>WebGL 3D Workbench</button>
-        <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: studioMode === '3d-preview' ? 700 : 400, borderBottom: studioMode === '3d-preview' ? '2px solid #3b82f6' : 'none' }}>Isometric Preview (SVG)</button>
+        <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: (studioMode as string) === 'canvas' ? 700 : 400, borderBottom: (studioMode as string) === 'canvas' ? '2px solid #3b82f6' : 'none' }}>Canvas</button>
+        <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: (studioMode as string) === 'assembly' ? 700 : 400, borderBottom: (studioMode as string) === 'assembly' ? '2px solid #3b82f6' : 'none' }}>Assembly</button>
+        <button onClick={() => setStudioMode('webgl-3d')} style={{ ...tabStyle, fontWeight: (studioMode as string) === 'webgl-3d' ? 700 : 400, borderBottom: (studioMode as string) === 'webgl-3d' ? '2px solid #3b82f6' : 'none' }}>WebGL 3D Workbench</button>
+        <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: (studioMode as string) === '3d-preview' ? 700 : 400, borderBottom: (studioMode as string) === '3d-preview' ? '2px solid #3b82f6' : 'none' }}>Isometric Preview (SVG)</button>
         <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 4px' }} />
         {tools.map(t => (
           <button key={t.mode} onClick={() => setTool(t.mode)}

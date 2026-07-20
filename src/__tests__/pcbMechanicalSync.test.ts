@@ -41,11 +41,11 @@ describe('PCB and Mechanical Spatial Synchronization Tests', () => {
     const boardOutline = project.boardOutlines?.[0];
     const encObj = project.mechanicalObjects?.[0];
 
-    expect(boardOutline?.points[1].x).toBe(110);
+    expect(boardOutline?.points?.[1]?.x).toBe(110);
     expect(encObj?.widthMm).toBe(120);
 
     // Verify PCB fits within enclosure
-    const fits = (boardOutline?.points[1].x || 0) <= (encObj?.widthMm || 0);
+    const fits = (boardOutline?.points?.[1]?.x || 0) <= (encObj?.widthMm || 0);
     expect(fits).toBe(true);
   });
 });

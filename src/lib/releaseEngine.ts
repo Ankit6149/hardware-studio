@@ -1,22 +1,7 @@
-import { Project } from '../types';
+import { Project, ProductRevision } from '../types';
+export type { ProductRevision };
 import { runBoardDRC } from './boardDRC';
 import { calculateRequirementCoverage } from './validation/validationCoverage';
-
-export interface ProductRevision {
-  id: string;
-  name: string;
-  parentRevisionId?: string;
-  branchName: string;
-  createdAt: string;
-  description: string;
-  projectSnapshot: Project;
-  status: 'Working' | 'Named Version' | 'Release Candidate' | 'Released' | 'Superseded';
-  releaseArtifacts?: {
-    blueprintPackVersion?: string;
-    manufacturingPackageId?: string;
-    approvalSignoff?: string;
-  };
-}
 
 export interface ReleaseBlocker {
   domain: string;

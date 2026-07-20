@@ -7,7 +7,9 @@ import {
   createBranch,
   createReleaseCandidate,
   approveRelease,
-  validateReleaseEligibility
+  validateReleaseEligibility,
+  ProductRevision,
+  ReleaseBlocker
 } from '../../lib/releaseEngine';
 import { GitBranch, Tag, ShieldCheck, AlertCircle, Plus, CheckCircle2 } from 'lucide-react';
 
@@ -17,16 +19,17 @@ export const RevisionsStudio: React.FC = () => {
   const [branchName, setBranchName] = useState('');
   const [rcTag, setRcTag] = useState('');
 
-  const revisions = store.revisions || [];
-  const branches = store.branches || [];
-  const releaseCandidates = store.releaseCandidates || [];
+  const revisions: ProductRevision[] = store.revisions || [];
+  const branches: ProductRevision[] = store.branches || [];
+  const releaseCandidates: ProductRevision[] = store.releaseCandidates || [];
   const activeBranch = store.activeBranch || 'main';
 
-  const eligibility = validateReleaseEligibility(store);
+  const blockers: ReleaseBlocker[] = validateReleaseEligibility(store);
+  const isEligible = blockers.length === 0;
 
   const handleCreateVersion = () => {
     if (!versionName.trim()) return;
-    const rev = createNamedRevision(store, versionName.trim());
+    const rev = createNamedRevision(store, versionName.trim(), 'Version snapshot');
     store.updateProjectState({
       revisions: [...revisions, rev]
     });
@@ -34,18 +37,20 @@ export const RevisionsStudio: React.FC = () => {
   };
 
   const handleCreateBranch = () => {
-    if (!branchName.trim()) return;
-    const branch = createBranch(store, branchName.trim(), 'Rev-1.0');
+    if (!branchName.trim() || revisions.length === 0) return;
+    const sourceRev = revisions[revisions.length - 1];
+    const branch = createBranch(sourceRev, branchName.trim());
     store.updateProjectState({
       branches: [...branches, branch],
-      activeBranch: branch.name
+      activeBranch: branch.branchName
     });
     setBranchName('');
   };
 
   const handleCreateRC = () => {
-    if (!rcTag.trim()) return;
-    const rc = createReleaseCandidate(store, rcTag.trim());
+    if (!rcTag.trim() || revisions.length === 0) return;
+    const sourceRev = revisions[revisions.length - 1];
+    const rc = createReleaseCandidate(sourceRev);
     store.updateProjectState({
       releaseCandidates: [...releaseCandidates, rc]
     });
@@ -53,14 +58,17 @@ export const RevisionsStudio: React.FC = () => {
   };
 
   const handleApproveRelease = (rcId: string) => {
-    const rel = approveRelease(store, rcId, 'Lead Hardware Engineer');
-    if (rel) {
+    const rc = releaseCandidates.find(r => r.id === rcId);
+    if (!rc) return;
+    try {
+      const rel = approveRelease(rc, 'Lead Hardware Engineer');
       store.updateProjectState({
         releases: [...(store.releases || []), rel]
       });
-      alert(`Release ${rel.releaseTag} approved and published cleanly!`);
-    } else {
-      alert('Cannot approve release candidate due to active blockers.');
+      alert(`Release ${rel.name} approved and published cleanly!`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Approval error: ${msg}`);
     }
   };
 
@@ -108,14 +116,14 @@ export const RevisionsStudio: React.FC = () => {
             </div>
 
             <div className="mt-4 space-y-2 max-h-48 overflow-y-auto">
-              {revisions.map(r => (
-                <div key={r.id} className="p-2 bg-slate-950 border border-slate-850 rounded flex items-center justify-between">
+              {revisions.map((r: ProductRevision) => (
+                <div key={r.id} className="p-2 bg-slate-950 border border-slate-800 rounded flex items-center justify-between">
                   <div>
                     <span className="text-xs font-bold font-mono text-slate-300 block">{r.name}</span>
-                    <span className="text-[10px] text-slate-500 font-mono">{r.timestamp}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">{r.createdAt}</span>
                   </div>
                   <span className="text-[10px] bg-slate-800 text-indigo-400 px-1.5 py-0.5 rounded font-mono font-bold">
-                    {r.schemaVersion ? `v${r.schemaVersion}` : 'v5'}
+                    {r.status}
                   </span>
                 </div>
               ))}
@@ -154,15 +162,15 @@ export const RevisionsStudio: React.FC = () => {
             <div className="space-y-2 mb-4">
               <div className="flex items-center justify-between p-2 bg-slate-950 rounded text-xs">
                 <span className="text-slate-400">Eligibility Status</span>
-                <span className={`font-bold font-mono ${eligibility.eligible ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {eligibility.eligible ? 'ELIGIBLE FOR RELEASE' : 'BLOCKED BY ISSUES'}
+                <span className={`font-bold font-mono ${isEligible ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {isEligible ? 'ELIGIBLE FOR RELEASE' : 'BLOCKED BY ISSUES'}
                 </span>
               </div>
               
-              {eligibility.blockers.map((b, idx) => (
+              {blockers.map((b: ReleaseBlocker, idx: number) => (
                 <div key={idx} className="p-2 bg-amber-950/40 border border-amber-500/30 rounded text-xs text-amber-300 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
-                  <span>{b}</span>
+                  <span>{b.message}</span>
                 </div>
               ))}
             </div>
@@ -176,7 +184,7 @@ export const RevisionsStudio: React.FC = () => {
               />
               <button
                 onClick={handleCreateRC}
-                disabled={!eligibility.eligible}
+                disabled={!isEligible}
                 className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded transition-all disabled:opacity-40"
               >
                 Promote RC
@@ -192,16 +200,16 @@ export const RevisionsStudio: React.FC = () => {
           </h2>
 
           <div className="space-y-3">
-            {releaseCandidates.map(rc => (
+            {releaseCandidates.map((rc: ProductRevision) => (
               <div key={rc.id} className="p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-200 font-mono">{rc.rcTag}</span>
+                  <span className="text-xs font-bold text-slate-200 font-mono">{rc.name}</span>
                   <span className="text-[10px] bg-slate-800 text-amber-400 font-mono px-1.5 py-0.5 rounded">
                     {rc.status}
                   </span>
                 </div>
 
-                {rc.status === 'Draft' && (
+                {rc.status === 'Release Candidate' && (
                   <button
                     onClick={() => handleApproveRelease(rc.id)}
                     className="w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs rounded transition-all"

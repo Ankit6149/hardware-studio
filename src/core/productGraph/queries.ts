@@ -167,12 +167,12 @@ export function getBoardRelations(project: Project, boardId: string) {
 
 /** Retrieve firmware module relations */
 export function getFirmwareModuleRelations(project: Project, moduleId: string) {
-  const module = (project.firmwareModules || []).find(m => m.id === moduleId);
+  const fwModule = (project.firmwareModules || []).find(m => m.id === moduleId);
   const states = (project.firmwareStates || []).filter(s => (s.linkedModuleIds || []).includes(moduleId));
   const tests = (project.validationTests || []).filter(t => (t.linkedFirmwareModuleIds || []).includes(moduleId));
 
   return {
-    module: module || null,
+    module: fwModule || null,
     states,
     validationTests: tests,
   };
