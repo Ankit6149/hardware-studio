@@ -128,7 +128,7 @@ export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode 
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white', flexShrink: 0 }}>
         <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: 700, borderBottom: '2px solid #3b82f6' }}>Canvas</button>
         <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: 400 }}>Assembly</button>
-        <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: 400 }}>3D Preview</button>
+        <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: 400 }}>Isometric Preview (SVG)</button>
         <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 4px' }} />
         {tools.map(t => (
           <button key={t.mode} onClick={() => setTool(t.mode)}
