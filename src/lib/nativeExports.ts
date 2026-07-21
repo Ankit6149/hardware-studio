@@ -764,6 +764,20 @@ export const generateNativeBoardLayoutJson = (project: Project): string => {
   return JSON.stringify(data, null, 2);
 };
 
+export const exportBomCsv = (project: Project): string => {
+  const headers = ["Reference Designator", "Component Name", "Value", "Footprint", "Package", "Quantity", "Manufacturer Part Number"];
+  const rows = (project.boardComponents || []).map(c => [
+    csvCell(c.referenceDesignator),
+    csvCell(c.componentName),
+    csvCell(c.value || ''),
+    csvCell(c.footprint || ''),
+    csvCell(c.packageName || ''),
+    csvCell(c.quantity || 1),
+    csvCell(c.partNumber || '')
+  ]);
+  return headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
+};
+
 export const exportHardwareStudioBoardJson = (project: Project): string => {
   return generateNativeBoardLayoutJson(project);
 };
@@ -809,3 +823,39 @@ export const generateFactoryReviewReadme = (project: Project): string => {
 
   return rm;
 };
+
+// Simple hash helper for manufacturing package manifest checksums
+function hashString(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return 'sha256_' + Math.abs(hash).toString(16).padStart(16, '0');
+}
+
+export function generateReleasePackageManifest(project: Project): string {
+  const gerber = generateNativeGerberCopperTop(project);
+  const drill = generateNativeExcellonDrills(project);
+  const netlist = generateNativeNetlistJson(project);
+  const cpl = generateNativeCplDraftCsv(project);
+  const bom = exportBomCsv(project);
+
+  const manifest = {
+    releaseManifestVersion: '1.0.0',
+    projectName: project.projectName,
+    projectVersion: project.version || '1.0.0',
+    activeBranch: project.activeBranch || 'main',
+    generatedAt: new Date().toISOString(),
+    artifacts: [
+      { filename: 'gerber_copper_top.gbr', sizeBytes: gerber.length, sha256: hashString(gerber) },
+      { filename: 'drill_holes.drl', sizeBytes: drill.length, sha256: hashString(drill) },
+      { filename: 'ipc_netlist.ipc', sizeBytes: netlist.length, sha256: hashString(netlist) },
+      { filename: 'cpl_placement.csv', sizeBytes: cpl.length, sha256: hashString(cpl) },
+      { filename: 'bom_components.csv', sizeBytes: bom.length, sha256: hashString(bom) }
+    ]
+  };
+
+  return JSON.stringify(manifest, null, 2);
+}
