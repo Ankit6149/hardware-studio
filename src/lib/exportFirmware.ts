@@ -200,6 +200,47 @@ void loop() {
 `;
 };
 
+// Helper to generate full workspace source file collection
+export function generateFirmwareWorkspace(project: Project): any[] {
+  const pioIniContent = `; PlatformIO Project Configuration File
+[env:esp32s3]
+platform = espressif32
+board = esp32-s3-devkitc-1
+framework = arduino
+monitor_speed = 115200
+lib_deps =
+    bblanchon/ArduinoJson @ ^6.21.3
+`;
+
+  const hwMapHeader = `#ifndef HARDWARE_MAP_H
+#define HARDWARE_MAP_H
+
+// Auto-generated Hardware Mappings for ${project.projectName || 'Hardware Studio Project'}
+${(project.pinMap || []).map(p => `#define PIN_${(p.signalName || 'SIG').toUpperCase()} "${p.mcuPin || 'NC'}"`).join('\n') || '// No pin mappings'}
+
+#endif // HARDWARE_MAP_H
+`;
+
+  const mainCppContent = `#include <Arduino.h>
+#include "hardware_map.h"
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("[Hardware Studio] Initializing ${project.projectName || 'Device'}...");
+}
+
+void loop() {
+  delay(1000);
+}
+`;
+
+  return [
+    { id: 'fw_ini', path: 'platformio.ini', name: 'platformio.ini', content: pioIniContent, isGenerated: true, dirty: false, language: 'ini' },
+    { id: 'fw_hw_map', path: 'include/hardware_map.h', name: 'hardware_map.h', content: hwMapHeader, isGenerated: true, dirty: false, language: 'c' },
+    { id: 'fw_main', path: 'src/main.cpp', name: 'main.cpp', content: mainCppContent, isGenerated: true, dirty: false, language: 'cpp' }
+  ];
+}
+
 export const exportFirmwareSkeletonFile = (project: Project) => {
   if (typeof window === 'undefined') return;
   const content = generateFirmwareSkeleton(project);
