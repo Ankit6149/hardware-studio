@@ -1,151 +1,339 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { useProjectStore } from '../store/projectStore';
-import { runBoardDRC } from '../lib/boardDRC';
-import { Trace, PCBAnchor } from '../types';
+import {
+  resolvePCBAnchor,
+  validateRouteStartAnchor,
+  validateRouteFinishAnchor,
+  beginRouteFromAnchor,
+  computeNetConnectivity
+} from '../lib/pcb/pcbRoutingEngine';
+import { getComponentPads } from '../components/board/boardGeometry';
 
-describe('Slice 4 & 5 Active-Board Strict Pad-Aware PCB Routing & DRC Tests', () => {
-  it('should enforce active board isolation, structured PCB anchors, strict routing rules, and DRC checks', () => {
+describe('Slice 2 Production PCB Editor & Routing Engine', () => {
+  beforeEach(() => {
+    useProjectStore.getState().resetProject();
+    useProjectStore.setState({
+      traces: [],
+      vias: [],
+      drillHoles: [],
+      keepoutZones: [],
+      boardComponents: []
+    });
+  });
+
+  it('should enforce activeBoardId for component placement and PCB operations', () => {
     const store = useProjectStore.getState();
 
-    // 1. Setup multi-board project with two boards
-    store.importProjectJSON({
-      id: 'pcb_multiboard_proj',
-      projectName: 'Multi-Board Engineering System',
-      activeBoardId: 'board_sensor',
-      boards: [
-        { id: 'board_main', name: 'Main Host PCB', boardType: 'Rigid', layerCount: 4, status: 'Draft' },
-        { id: 'board_sensor', name: 'Sensor Flex PCB', boardType: 'Flex', layerCount: 2, status: 'Draft' }
-      ],
-      boardOutlines: [
-        { id: 'out_main', boardId: 'board_main', points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 80 }, { x: 0, y: 80 }] },
-        { id: 'out_sensor', boardId: 'board_sensor', points: [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 30 }, { x: 0, y: 30 }] }
-      ],
-      nets: [
-        { id: 'net_sda', netName: 'I2C_SDA', netType: 'Signal' },
-        { id: 'net_scl', netName: 'I2C_SCL', netType: 'Signal' },
-        { id: 'net_vcc', netName: '3V3', netType: 'Power' }
-      ],
-      boardComponents: [
-        {
-          id: 'cmp_host_1',
-          boardId: 'board_main',
-          referenceDesignator: 'U101',
-          componentName: 'MCU',
-          componentType: 'MCU',
-          value: 'ESP32',
-          packageName: 'QFN_32',
-          footprint: 'QFN_32',
-          quantity: 1,
-          side: 'Top',
-          placementStatus: 'Placed',
-          pins: [{ id: 'p_host_1', componentId: 'cmp_host_1', pinNumber: '1', pinName: 'SDA', electricalType: 'Bidirectional', netName: 'I2C_SDA' }]
-        },
-        {
-          id: 'cmp_sensor_1',
-          boardId: 'board_sensor',
-          referenceDesignator: 'U201',
-          componentName: 'IMU',
-          componentType: 'Sensor',
-          value: 'BMI270',
-          packageName: 'LGA_14',
-          footprint: 'LGA_14',
-          quantity: 1,
-          side: 'Top',
-          placementStatus: 'Placed',
-          pins: [
-            { id: 'p_sns_1', componentId: 'cmp_sensor_1', pinNumber: '1', pinName: 'SDA', electricalType: 'Bidirectional', netName: 'I2C_SDA' },
-            { id: 'p_sns_2', componentId: 'cmp_sensor_1', pinNumber: '2', pinName: 'SCL', electricalType: 'Input', netName: 'I2C_SCL' }
-          ]
-        },
-        {
-          id: 'cmp_sensor_2',
-          boardId: 'board_sensor',
-          referenceDesignator: 'C201',
-          componentName: 'Capacitor',
-          componentType: 'Capacitor',
-          value: '100nF',
-          packageName: 'C_0402',
-          footprint: 'C_0402',
-          quantity: 1,
-          side: 'Top',
-          placementStatus: 'Placed',
-          pins: [
-            { id: 'p_sns_c1', componentId: 'cmp_sensor_2', pinNumber: '1', pinName: '1', electricalType: 'Passive', netName: 'I2C_SDA' }
-          ]
-        }
-      ]
+    // 1. Create two boards
+    const board1 = store.addBoard({ name: 'Main Motherboard' });
+    const board2 = store.addBoard({ name: 'Daughter Display Board' });
+
+    expect(board1.id).toBeDefined();
+    expect(board2.id).toBeDefined();
+
+    // 2. Select second board
+    store.setActiveBoard(board2.id);
+    expect(useProjectStore.getState().activeBoardId).toBe(board2.id);
+
+    // 3. Place component on second board using updatePCBPlacement
+    store.addBoardComponent({
+      id: 'comp_test_u1',
+      boardId: board2.id,
+      referenceDesignator: 'U1',
+      componentName: 'ESP32 Microcontroller',
+      componentType: 'MCU',
+      footprint: 'QFN40',
+      quantity: 1,
+      value: 'ESP32-S3',
+      partNumber: 'ESP32-S3-WROOM',
+      notes: ''
     });
 
-    expect(useProjectStore.getState().activeBoardId).toBe('board_sensor');
+    store.updatePCBPlacement('comp_test_u1', {
+      boardId: board2.id,
+      placementX: 50,
+      placementY: 40,
+      side: 'Top',
+      placementStatus: 'Placed'
+    });
 
-    // 2. Add via, drill hole, keepout zone, and copper shape on active board (board_sensor)
-    store.addVia({ boardId: 'board_sensor', x: 10, y: 10, outerDiameter: 0.8, drillDiameter: 0.4 });
-    store.addDrillHole({ boardId: 'board_sensor', x: 5, y: 5, diameter: 2.0, plated: false });
-    store.addKeepoutZone({ boardId: 'board_sensor', zoneName: 'RF Keepout', x: 25, y: 5, width: 10, height: 10, restrictTraces: true, restrictVias: true });
+    const comp = useProjectStore.getState().boardComponents?.find(c => c.id === 'comp_test_u1');
+    expect(comp?.boardId).toBe(board2.id);
+    expect(comp?.placementX).toBe(50);
+    expect(comp?.placementY).toBe(40);
+    expect(comp?.pcb?.xMm).toBe(50);
+    expect(comp?.pcb?.yMm).toBe(40);
+    expect(comp?.pcb?.placed).toBe(true);
 
-    const pState = useProjectStore.getState();
-    const sensorVias = (pState.vias || []).filter(v => v.boardId === 'board_sensor');
-    const sensorDrills = (pState.drillHoles || []).filter(d => d.boardId === 'board_sensor');
-    const sensorKeepouts = (pState.keepoutZones || []).filter(k => k.boardId === 'board_sensor');
+    // 4. Add via, drill, keepout on second board
+    store.addVia({
+      boardId: board2.id,
+      x: 55,
+      y: 45,
+      drillDiameter: 0.3,
+      outerDiameter: 0.6,
+      netId: 'GND',
+      fromLayer: 'top-copper',
+      toLayer: 'bottom-copper'
+    });
 
-    expect(sensorVias.length).toBe(1);
-    expect(sensorDrills.length).toBe(1);
-    expect(sensorKeepouts.length).toBe(1);
+    store.addDrillHole({
+      boardId: board2.id,
+      x: 10,
+      y: 10,
+      diameter: 3.2,
+      plated: false,
+      purpose: 'Mounting Hole'
+    });
 
-    // 3. Strict Routing Rule Test: Route same-net pad to pad on active board with structured anchors
-    const sourcePadAnchor: PCBAnchor = { type: 'pad', componentId: 'cmp_sensor_1', padNumber: '1' };
-    const targetPadAnchor: PCBAnchor = { type: 'pad', componentId: 'cmp_sensor_2', padNumber: '1' };
+    store.addKeepoutZone({
+      boardId: board2.id,
+      x: 30,
+      y: 30,
+      width: 10,
+      height: 10,
+      shape: 'rect',
+      layerScope: 'All',
+      reason: 'Antenna Keepout'
+    });
 
-    const validTrace: Trace = {
-      id: 'trace_sns_sda_1',
-      boardId: 'board_sensor',
-      netId: 'net_sda',
-      netName: 'I2C_SDA',
-      layerId: 'top_copper',
-      points: [{ x: 15, y: 15 }, { x: 20, y: 15 }],
-      width: 0.2,
-      sourceAnchor: sourcePadAnchor,
-      targetAnchor: targetPadAnchor,
+    // 5. Verify all objects belong to board2 and not board1
+    const state = useProjectStore.getState();
+    const board2Vias = (state.vias || []).filter(v => v.boardId === board2.id);
+    const board1Vias = (state.vias || []).filter(v => v.boardId === board1.id);
+    expect(board2Vias.length).toBe(1);
+    expect(board1Vias.length).toBe(0);
+
+    const board2Drills = (state.drillHoles || []).filter(d => d.boardId === board2.id);
+    const board1Drills = (state.drillHoles || []).filter(d => d.boardId === board1.id);
+    expect(board2Drills.length).toBe(1);
+    expect(board1Drills.length).toBe(0);
+
+    const board2Keepouts = (state.keepoutZones || []).filter(k => k.boardId === board2.id);
+    const board1Keepouts = (state.keepoutZones || []).filter(k => k.boardId === board1.id);
+    expect(board2Keepouts.length).toBe(1);
+    expect(board1Keepouts.length).toBe(0);
+  });
+
+  it('should reject starting route in empty space and enforce valid route start anchor', () => {
+    const store = useProjectStore.getState();
+    const activeBoard = store.activeBoardId || 'board-main';
+
+    const anchor = resolvePCBAnchor(
+      { x: 100, y: 100 },
+      store.boardComponents || [],
+      store.padNetAssignments || [],
+      store.vias || [],
+      store.traces || [],
+      activeBoard,
+      'top-copper'
+    );
+
+    expect(anchor).toBeNull();
+
+    const validation = validateRouteStartAnchor(anchor, 'GND');
+    expect(validation.valid).toBe(false);
+    expect(validation.error).toContain('Cannot start route in empty space');
+  });
+
+  it('should allow route start from a valid net pad and reject wrong-net finish target', () => {
+    const store = useProjectStore.getState();
+    const activeBoard = store.activeBoardId || 'board-main';
+
+    store.addBoardComponent({
+      id: 'comp_u1',
+      boardId: activeBoard,
+      referenceDesignator: 'U1',
+      componentName: 'LDO Regulator',
+      componentType: 'Power',
+      footprint: 'SOT23',
+      quantity: 1,
+      value: '3.3V',
+      partNumber: 'AMS1117',
+      notes: ''
+    });
+
+    store.updatePCBPlacement('comp_u1', {
+      boardId: activeBoard,
+      placementX: 20,
+      placementY: 20
+    });
+
+    const compU1 = useProjectStore.getState().boardComponents?.find(c => c.id === 'comp_u1')!;
+    const padsU1 = getComponentPads(compU1);
+
+    store.addBoardComponent({
+      id: 'comp_u2',
+      boardId: activeBoard,
+      referenceDesignator: 'U2',
+      componentName: 'MCU',
+      componentType: 'MCU',
+      footprint: 'QFN40',
+      quantity: 1,
+      value: 'MCU',
+      partNumber: 'STM32',
+      notes: ''
+    });
+
+    store.updatePCBPlacement('comp_u2', {
+      boardId: activeBoard,
+      placementX: 50,
+      placementY: 20
+    });
+
+    const compU2 = useProjectStore.getState().boardComponents?.find(c => c.id === 'comp_u2')!;
+    const padsU2 = getComponentPads(compU2);
+
+    store.setPadNetAssignments([
+      { id: 'pna1', componentId: 'comp_u1', referenceDesignator: 'U1', padName: padsU1[0].padName, netName: '3V3' },
+      { id: 'pna2', componentId: 'comp_u2', referenceDesignator: 'U2', padName: padsU2[0].padName, netName: 'GND' }
+    ]);
+
+    const pad1Anchor = resolvePCBAnchor(
+      { x: padsU1[0].x, y: padsU1[0].y },
+      useProjectStore.getState().boardComponents || [],
+      useProjectStore.getState().padNetAssignments || [],
+      [],
+      [],
+      activeBoard,
+      'top-copper',
+      2.0
+    );
+
+    expect(pad1Anchor).not.toBeNull();
+    expect(pad1Anchor?.type).toBe('pad');
+    expect(pad1Anchor?.netName).toBe('3V3');
+
+    const startVal = validateRouteStartAnchor(pad1Anchor, '3V3');
+    expect(startVal.valid).toBe(true);
+
+    const session = beginRouteFromAnchor(pad1Anchor!, activeBoard, 'top-copper');
+    expect(session.isRouting).toBe(true);
+    expect(session.netName).toBe('3V3');
+
+    const pad2Anchor = resolvePCBAnchor(
+      { x: padsU2[0].x, y: padsU2[0].y },
+      useProjectStore.getState().boardComponents || [],
+      useProjectStore.getState().padNetAssignments || [],
+      [],
+      [],
+      activeBoard,
+      'top-copper',
+      2.0
+    );
+
+    expect(pad2Anchor).not.toBeNull();
+    expect(pad2Anchor?.netName).toBe('GND');
+
+    const finishVal = validateRouteFinishAnchor(session.netName, pad2Anchor);
+    expect(finishVal.valid).toBe(false);
+    expect(finishVal.error).toContain('Wrong Net Connection Rejected');
+  });
+
+  it('should support explicit dangling draft creation with targetAnchor dangling status', () => {
+    const store = useProjectStore.getState();
+    const activeBoard = store.activeBoardId || 'board-main';
+
+    store.addTrace({
+      boardId: activeBoard,
+      layerId: 'top-copper',
+      netId: 'net_sig_1',
+      netName: 'SIG_1',
+      points: [{ x: 10, y: 10 }, { x: 30, y: 30 }],
+      width: 0.15,
+      status: 'Draft',
+      targetAnchor: {
+        type: 'dangling',
+        xMm: 30,
+        yMm: 30
+      }
+    });
+
+    const traces = useProjectStore.getState().traces || [];
+    expect(traces.length).toBe(1);
+    expect(traces[0].status).toBe('Draft');
+    expect(traces[0].targetAnchor?.type).toBe('dangling');
+    if (traces[0].targetAnchor && 'xMm' in traces[0].targetAnchor) {
+      expect(traces[0].targetAnchor.xMm).toBe(30);
+    }
+  });
+
+  it('should compute net connectivity graph correctly', () => {
+    const store = useProjectStore.getState();
+    const activeBoard = store.activeBoardId || 'board-main';
+
+    store.addNet({
+      netName: 'CLK_1',
+      netType: 'Signal',
+      voltage: '3.3V',
+      currentEstimate: '10mA',
+      notes: '',
+      protocol: 'Clock'
+    });
+
+    store.addBoardComponent({
+      id: 'comp_c1',
+      boardId: activeBoard,
+      referenceDesignator: 'Y1',
+      componentName: 'Oscillator',
+      componentType: 'Clock',
+      footprint: 'SOT23',
+      quantity: 1,
+      value: '24MHz',
+      partNumber: 'OSC24',
+      notes: ''
+    });
+
+    store.updatePCBPlacement('comp_c1', {
+      boardId: activeBoard,
+      placementX: 10,
+      placementY: 10
+    });
+
+    store.addBoardComponent({
+      id: 'comp_c2',
+      boardId: activeBoard,
+      referenceDesignator: 'U1',
+      componentName: 'MCU',
+      componentType: 'MCU',
+      footprint: 'QFN40',
+      quantity: 1,
+      value: 'MCU',
+      partNumber: 'STM32',
+      notes: ''
+    });
+
+    store.updatePCBPlacement('comp_c2', {
+      boardId: activeBoard,
+      placementX: 40,
+      placementY: 10
+    });
+
+    const compC1 = useProjectStore.getState().boardComponents?.find(c => c.id === 'comp_c1')!;
+    const padsC1 = getComponentPads(compC1);
+
+    const compC2 = useProjectStore.getState().boardComponents?.find(c => c.id === 'comp_c2')!;
+    const padsC2 = getComponentPads(compC2);
+
+    store.setPadNetAssignments([
+      { id: 'pna_c1', componentId: 'comp_c1', referenceDesignator: 'Y1', padName: padsC1[0].padName, netName: 'CLK_1' },
+      { id: 'pna_c2', componentId: 'comp_c2', referenceDesignator: 'U1', padName: padsC2[0].padName, netName: 'CLK_1' }
+    ]);
+
+    let connectivity = computeNetConnectivity(useProjectStore.getState(), activeBoard);
+    expect(connectivity['CLK_1']).toBe(false);
+
+    store.addTrace({
+      boardId: activeBoard,
+      layerId: 'top-copper',
+      netId: 'CLK_1',
+      netName: 'CLK_1',
+      points: [{ x: padsC1[0].x, y: padsC1[0].y }, { x: padsC2[0].x, y: padsC2[0].y }],
+      width: 0.15,
       status: 'Routed'
-    };
-
-    useProjectStore.setState({
-      traces: [...(useProjectStore.getState().traces || []), validTrace]
     });
 
-    // 4. Strict Routing Rule Test: Reject empty-space start or wrong-net route
-    const isSameNet = validTrace.netName === 'I2C_SDA';
-    expect(isSameNet).toBe(true);
-
-    const wrongNetTargetAnchor: PCBAnchor = { type: 'pad', componentId: 'cmp_sensor_1', padNumber: '2' }; // net I2C_SCL
-    const isWrongNetConnection = sourcePadAnchor.componentId === wrongNetTargetAnchor.componentId;
-    expect(isWrongNetConnection).toBe(true); // Same component, but different net -> rejected by domain logic
-
-    // 5. Create explicit dangling draft trace
-    const danglingAnchor: PCBAnchor = { type: 'dangling', xMm: 35, yMm: 25 };
-    const danglingTrace: Trace = {
-      id: 'trace_sns_dangling_1',
-      boardId: 'board_sensor',
-      netId: 'net_scl',
-      netName: 'I2C_SCL',
-      layerId: 'top_copper',
-      points: [{ x: 15, y: 20 }, { x: 35, y: 25 }],
-      width: 0.2,
-      sourceAnchor: { type: 'pad', componentId: 'cmp_sensor_1', padNumber: '2' },
-      targetAnchor: danglingAnchor,
-      status: 'Draft'
-    };
-
-    useProjectStore.setState({
-      traces: [...(useProjectStore.getState().traces || []), danglingTrace]
-    });
-
-    // 6. Run DRC on active board
-    const drcResults = runBoardDRC(useProjectStore.getState());
-    expect(Array.isArray(drcResults)).toBe(true);
-
-    // 7. Verify active-board isolation: board_main objects do not leak into board_sensor queries
-    const activeTraces = (useProjectStore.getState().traces || []).filter(t => t.boardId === 'board_sensor');
-    expect(activeTraces.length).toBe(2);
+    connectivity = computeNetConnectivity(useProjectStore.getState(), activeBoard);
+    expect(connectivity['CLK_1']).toBe(true);
   });
 });

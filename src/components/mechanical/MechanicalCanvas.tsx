@@ -59,6 +59,27 @@ export const MechanicalCanvas: React.FC<MechanicalCanvasProps> = ({ selectedObje
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }, []);
 
+  // Cancel active pointer transaction on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (dragging) {
+          store.cancelCommand();
+          setDragging(null);
+        }
+        if (resizing) {
+          store.cancelCommand();
+          setResizing(null);
+        }
+        if (creating) {
+          setCreating(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dragging, resizing, creating, store]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const pos = getMousePos(e);
     const mm = screenToMm(pos.x, pos.y);
@@ -94,10 +115,12 @@ export const MechanicalCanvas: React.FC<MechanicalCanvasProps> = ({ selectedObje
     if (dragging) {
       const dx = (pos.x - dragging.startX) / view.scale;
       const dy = (pos.y - dragging.startY) / view.scale;
-      store.updateMechanicalObject(dragging.id, {
-        xMm: Math.round(dragging.objStartX + dx),
-        yMm: Math.round(dragging.objStartY + dy),
-      });
+      const newX = Math.round(dragging.objStartX + dx);
+      const newY = Math.round(dragging.objStartY + dy);
+      const updated = mechanicalObjects.map(o =>
+        o.id === dragging.id ? { ...o, xMm: newX, yMm: newY } : o
+      );
+      store.updateTransientPreview({ mechanicalObjects: updated });
       return;
     }
 
@@ -106,14 +129,19 @@ export const MechanicalCanvas: React.FC<MechanicalCanvasProps> = ({ selectedObje
       const dy = (pos.y - resizing.startY) / view.scale;
       const obj = resizing.objStart;
 
+      let patch: Partial<MechanicalObject> = {};
       if (obj.shape === 'circle') {
-        const newR = Math.max(2, Math.round((obj.radiusMm || 10) + Math.max(dx, dy)));
-        store.updateMechanicalObject(resizing.id, { radiusMm: newR });
+        patch = { radiusMm: Math.max(2, Math.round((obj.radiusMm || 10) + Math.max(dx, dy))) };
       } else {
-        const newW = Math.max(5, Math.round((obj.widthMm || 10) + dx));
-        const newH = Math.max(5, Math.round((obj.heightMm || 10) + dy));
-        store.updateMechanicalObject(resizing.id, { widthMm: newW, heightMm: newH });
+        patch = {
+          widthMm: Math.max(5, Math.round((obj.widthMm || 10) + dx)),
+          heightMm: Math.max(5, Math.round((obj.heightMm || 10) + dy)),
+        };
       }
+      const updated = mechanicalObjects.map(o =>
+        o.id === resizing.id ? { ...o, ...patch } : o
+      );
+      store.updateTransientPreview({ mechanicalObjects: updated });
       return;
     }
   }, [panning, dragging, resizing, getMousePos, view.scale, store]);
@@ -123,12 +151,12 @@ export const MechanicalCanvas: React.FC<MechanicalCanvasProps> = ({ selectedObje
     const mm = screenToMm(pos.x, pos.y);
 
     if (dragging) {
-      store.executeProjectCommand('MOVE_MECH_OBJ', 'Move mechanical object', () => {});
+      store.commitCommand();
       setDragging(null);
       return;
     }
     if (resizing) {
-      store.executeProjectCommand('RESIZE_MECH_OBJ', 'Resize mechanical object', () => {});
+      store.commitCommand();
       setResizing(null);
       return;
     }
@@ -202,14 +230,16 @@ export const MechanicalCanvas: React.FC<MechanicalCanvasProps> = ({ selectedObje
 
     const pos = getMousePos(e);
     onSelectObject(obj.id);
+    store.beginCommand('MOVE_MECH_OBJ', `Move ${obj.name}`);
     setDragging({ id: obj.id, startX: pos.x, startY: pos.y, objStartX: obj.xMm, objStartY: obj.yMm });
-  }, [tool, getMousePos, onSelectObject]);
+  }, [tool, getMousePos, onSelectObject, store]);
 
   const handleResizeHandleMouseDown = useCallback((e: React.MouseEvent, obj: MechanicalObject, handle: string) => {
     e.stopPropagation();
     const pos = getMousePos(e);
+    store.beginCommand('RESIZE_MECH_OBJ', `Resize ${obj.name}`);
     setResizing({ id: obj.id, handle, startX: pos.x, startY: pos.y, objStart: { ...obj } });
-  }, [getMousePos]);
+  }, [getMousePos, store]);
 
   // Render grid
   const gridSpacingMm = view.scale > 8 ? 1 : view.scale > 3 ? 5 : 10;

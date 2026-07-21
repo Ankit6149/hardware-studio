@@ -17,6 +17,16 @@ export class HardwareStudioMCPServer {
       updatedAt: new Date().toISOString(),
       version: '1.0.0',
       activeView: 'master',
+      activeBoardId: 'board_main',
+      boards: [
+        {
+          id: 'board_main',
+          name: 'Main Motherboard',
+          boardType: 'Rigid PCB',
+          layerCount: 4,
+          status: 'Concept'
+        }
+      ],
       nodes: [],
       edges: [],
       bom: [],
@@ -42,20 +52,21 @@ export class HardwareStudioMCPServer {
       this.recordAudit(toolName, params, 'RECEIVED');
 
       switch (toolName) {
+        case 'get_product_summary':
         case 'get_project_summary': {
           return {
             success: true,
             data: {
               id: this.projectState.id,
               projectName: this.projectState.projectName,
+              description: this.projectState.description,
               componentsCount: (this.projectState.boardComponents || []).length,
               boardsCount: (this.projectState.boards || []).length,
               wiresCount: (this.projectState.schematicWires || []).length,
               netsCount: (this.projectState.nets || []).length,
               mechanicalObjectsCount: (this.projectState.mechanicalObjects || []).length,
               mechanicalBodiesCount: (this.projectState.mechanicalBodies || []).length,
-              firmwareModulesCount: (this.projectState.firmwareModules || []).length,
-              firmwareFilesCount: (this.projectState.firmwareSourceFiles || []).length,
+              firmwareTasksCount: (this.projectState.firmwareTasks || []).length,
               validationTestsCount: (this.projectState.validationTests || []).length,
               validationRunsCount: (this.projectState.validationRuns || []).length,
               proposalsCount: (this.projectState.mcpProposals || []).length
@@ -63,22 +74,72 @@ export class HardwareStudioMCPServer {
           };
         }
 
+        case 'get_requirements': {
+          return {
+            success: true,
+            data: {
+              requirements: this.projectState.requirements || [],
+              count: (this.projectState.requirements || []).length
+            }
+          };
+        }
+
+        case 'get_architecture': {
+          return {
+            success: true,
+            data: {
+              nodes: this.projectState.nodes || [],
+              edges: this.projectState.edges || [],
+              architectureNodes: this.projectState.architectureNodes || [],
+              architectureConnections: this.projectState.architectureConnections || []
+            }
+          };
+        }
+
+        case 'get_mechanical_layout': {
+          return {
+            success: true,
+            data: {
+              mechanicalObjects: this.projectState.mechanicalObjects || [],
+              mechanicalBodies: this.projectState.mechanicalBodies || [],
+              mechanicalZones: this.projectState.mechanicalZones || [],
+              assemblyLayers: this.projectState.assemblyLayers || []
+            }
+          };
+        }
+
+        case 'get_components': {
+          return {
+            success: true,
+            data: {
+              boardComponents: this.projectState.boardComponents || [],
+              bom: this.projectState.bom || []
+            }
+          };
+        }
+
+        case 'get_schematic':
         case 'get_schematic_netlist': {
           return {
             success: true,
             data: {
               nets: this.projectState.nets || [],
               schematicWires: this.projectState.schematicWires || [],
+              schematicSymbols: this.projectState.schematicSymbols || [],
               padNetAssignments: this.projectState.padNetAssignments || []
             }
           };
         }
 
+        case 'get_pcb_status':
         case 'get_pcb_drc_issues': {
           const drcIssues = runBoardDRC(this.projectState);
           return {
             success: true,
             data: {
+              activeBoardId: this.projectState.activeBoardId || 'board_main',
+              tracesCount: (this.projectState.traces || []).length,
+              viasCount: (this.projectState.vias || []).length,
               drcIssuesCount: drcIssues.length,
               drcIssues
             }
@@ -103,6 +164,7 @@ export class HardwareStudioMCPServer {
           };
         }
 
+        case 'draft_requirement':
         case 'propose_engineering_change': {
           const proposalId = `prop_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
           const proposal: MCPProposal = {
@@ -110,16 +172,16 @@ export class HardwareStudioMCPServer {
             proposalId,
             timestamp: new Date().toISOString(),
             proposedBy: params.proposedBy || 'MCP Agent',
-            description: params.description || 'Proposed Engineering Change',
-            domain: params.domain || 'Schematic',
-            patch: params.patch || {},
-            diffSummary: params.diffSummary || 'Modification patch proposed',
+            description: params.description || params.title || 'Proposed Engineering Change',
+            domain: params.domain || 'Requirements',
+            patch: params.patch || { title: params.title, description: params.description, priority: params.priority },
+            diffSummary: params.diffSummary || `Proposed change: ${params.title || params.description}`,
             status: 'Pending'
           };
 
           const updatedProposals = [...(this.projectState.mcpProposals || []), proposal];
           this.projectState = { ...this.projectState, mcpProposals: updatedProposals };
-          this.recordAudit('propose_engineering_change', { proposalId }, 'PROPOSAL_CREATED');
+          this.recordAudit(toolName, { proposalId }, 'PROPOSAL_CREATED');
 
           return {
             success: true,
@@ -127,6 +189,7 @@ export class HardwareStudioMCPServer {
           };
         }
 
+        case 'apply_draft':
         case 'apply_engineering_change': {
           const proposalId = params.proposalId;
           const proposals = this.projectState.mcpProposals || [];
@@ -139,7 +202,6 @@ export class HardwareStudioMCPServer {
             return { success: false, error: `Proposal ${proposalId} is already ${prop.status}` };
           }
 
-          // Apply patch to project state
           const patch = prop.patch || {};
           const updatedProject: Project = {
             ...this.projectState,
@@ -148,7 +210,7 @@ export class HardwareStudioMCPServer {
           };
 
           this.projectState = updatedProject;
-          this.recordAudit('apply_engineering_change', { proposalId }, 'PROPOSAL_APPLIED');
+          this.recordAudit(toolName, { proposalId }, 'PROPOSAL_APPLIED');
 
           return {
             success: true,
@@ -175,6 +237,22 @@ export class HardwareStudioMCPServer {
           };
         }
 
+        case 'delete_component': {
+          const componentId = params.componentId;
+          if (!params.userApproved) {
+            return { success: false, error: `Deletion of component ${componentId} requires user approval.` };
+          }
+
+          const remainingComps = (this.projectState.boardComponents || []).filter(c => c.id !== componentId);
+          this.projectState = { ...this.projectState, boardComponents: remainingComps };
+          this.recordAudit('delete_component', { componentId }, 'COMPONENT_DELETED');
+
+          return {
+            success: true,
+            data: { componentId, status: 'Deleted' }
+          };
+        }
+
         default:
           return { success: false, error: `Unknown MCP tool: ${toolName}` };
       }
@@ -190,7 +268,7 @@ export class HardwareStudioMCPServer {
       tool,
       params,
       resultStatus: status,
-      requiresApproval: tool.includes('apply') || tool.includes('propose'),
+      requiresApproval: tool.includes('apply') || tool.includes('delete') || tool.includes('propose'),
       approved: true
     };
     const records = [...(this.projectState.mcpAuditRecords || []), record];
@@ -198,17 +276,23 @@ export class HardwareStudioMCPServer {
   }
 
   public getResource(uri: string): any {
-    if (uri === 'hardware-studio://summary') {
-      return this.callTool('get_project_summary').data;
+    if (uri === 'hardware-studio://product/current' || uri === 'hardware-studio://summary') {
+      return this.callTool('get_product_summary').data;
     }
-    if (uri === 'hardware-studio://schematic/netlist') {
+    if (uri === 'hardware-studio://requirements') {
+      return this.callTool('get_requirements').data;
+    }
+    if (uri === 'hardware-studio://schematic' || uri === 'hardware-studio://schematic/netlist') {
       return this.callTool('get_schematic_netlist').data;
     }
-    if (uri === 'hardware-studio://pcb/drc') {
+    if (uri === 'hardware-studio://pcb' || uri === 'hardware-studio://pcb/drc') {
       return this.callTool('get_pcb_drc_issues').data;
     }
-    if (uri === 'hardware-studio://mechanical/interferences') {
+    if (uri === 'hardware-studio://mechanical' || uri === 'hardware-studio://mechanical/interferences') {
       return this.callTool('get_mechanical_interferences').data;
+    }
+    if (uri === 'hardware-studio://validation') {
+      return this.callTool('get_validation_status').data;
     }
     if (uri === 'hardware-studio://audit') {
       return this.projectState.mcpAuditRecords || [];

@@ -177,8 +177,8 @@ describe('Slice 1 Mandatory Canonical Store Persistence Tests', () => {
         timestamp: '2026-07-21T00:00:00Z',
         operator: 'QA Test Lead',
         status: 'Passed',
+        logs: [],
         stepResults: [],
-        measurementEvaluations: [],
         evidence: [{ id: 'ev_1', type: 'log', title: 'i2c_ping.log', content: 'ACK received at 0x68' }]
       }],
       revisions: [{

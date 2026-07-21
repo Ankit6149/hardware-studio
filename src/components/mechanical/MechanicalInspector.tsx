@@ -119,8 +119,77 @@ export const MechanicalInspector: React.FC<Props> = ({ selectedObjectId }) => {
         </label>
       </div>
 
+      <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ fontWeight: 700, fontSize: 12, color: '#334155', marginBottom: 6 }}>
+          Lightweight Geometric Constraints
+        </div>
+        <label style={labelStyle}>Constraint Type</label>
+        <select
+          id="mech-constraint-type"
+          style={inputStyle}
+          defaultValue="centre-align"
+        >
+          <option value="centre-align">Centre Align</option>
+          <option value="fixed-distance">Fixed Distance</option>
+          <option value="equal-width">Equal Width</option>
+          <option value="equal-height">Equal Height</option>
+        </select>
+
+        <label style={labelStyle}>Reference Object</label>
+        <select id="mech-ref-object" style={inputStyle} defaultValue="">
+          <option value="">Select Reference Object</option>
+          {mechanicalObjects.filter(o => o.id !== obj.id).map(o => (
+            <option key={o.id} value={o.id}>{o.name}</option>
+          ))}
+        </select>
+
+        <label style={labelStyle}>Offset (mm)</label>
+        <input id="mech-constraint-dist" style={inputStyle} type="number" defaultValue={10} />
+
+        <button
+          onClick={() => {
+            const typeEl = document.getElementById('mech-constraint-type') as HTMLSelectElement;
+            const refEl = document.getElementById('mech-ref-object') as HTMLSelectElement;
+            const distEl = document.getElementById('mech-constraint-dist') as HTMLInputElement;
+
+            const cType = (typeEl?.value || 'centre-align') as 'centre-align' | 'fixed-distance' | 'equal-width' | 'equal-height';
+            const refId = refEl?.value;
+            const dist = parseFloat(distEl?.value || '10') || 10;
+
+            const refObj = mechanicalObjects.find(o => o.id === refId);
+            if (!refObj) return;
+
+            const { applyLightweightConstraint } = require('../../lib/mechanical/mechanicalGeometry');
+            const updated = applyLightweightConstraint(cType, obj, refObj, dist);
+
+            store.executeProjectCommand('APPLY_CONSTRAINT', `Apply ${cType} constraint`, () => {
+              store.updateMechanicalObject(obj.id, {
+                xMm: updated.xMm,
+                yMm: updated.yMm,
+                widthMm: updated.widthMm,
+                heightMm: updated.heightMm
+              });
+            });
+          }}
+          style={{
+            marginTop: 8,
+            padding: '6px 12px',
+            background: '#2563eb',
+            color: 'white',
+            border: 'none',
+            borderRadius: 4,
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+            width: '100%'
+          }}
+        >
+          Apply Constraint
+        </button>
+      </div>
+
       <button onClick={() => store.executeProjectCommand('DELETE_MECH', 'Delete object', () => store.deleteMechanicalObject(obj.id))}
-        style={{ marginTop: 12, padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 4, fontSize: 11, cursor: 'pointer', width: '100%' }}>
+        style={{ marginTop: 16, padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 4, fontSize: 11, cursor: 'pointer', width: '100%' }}>
         Delete Object
       </button>
     </div>

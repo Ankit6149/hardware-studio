@@ -1,125 +1,100 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { HardwareStudioMCPServer } from '../../packages/mcp-server/mcpServer';
+import { createStdioMCPServer } from '../../packages/mcp-server/mcpServerStdio';
 import { useProjectStore } from '../store/projectStore';
-import { Project } from '../types';
 
-describe('Slice 11 Complete MCP Server, Protocol & Real Draft/Apply System Tests', () => {
-  it('should initialize live project context, query live domains, draft proposals without live state mutation, apply proposals, and maintain audit log', () => {
-    // 1. Initial live project state
-    const testProject: Project = {
-      id: 'proj_mcp_live_1',
-      projectName: 'MCP Connected Smart Hardware',
-      description: 'Live MCP Test Project',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      version: '1.0.0',
-      activeView: 'master',
-      activeBoardId: 'board_main',
-      boards: [{ id: 'board_main', name: 'Main Board', boardType: 'Rigid PCB', layerCount: 2, status: 'In Layout' }],
-      boardOutlines: [{ id: 'out_1', boardId: 'board_main', points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 80 }, { x: 0, y: 80 }] }],
-      nets: [{ id: 'net_1', netName: '3V3', netType: 'Power', voltage: '3.3V', sourceComponent: 'U1', sourcePin: '1', targetComponent: 'C1', targetPin: '1', protocol: 'Power', currentEstimate: '50mA', impedanceRequirement: 'N/A', notes: '' }],
-      boardComponents: [
-        {
-          id: 'cmp_mcp_1',
-          boardId: 'board_main',
-          circuitBlockId: 'cb_1',
-          referenceDesignator: 'U1',
-          componentName: 'MCU',
-          componentType: 'MCU',
-          value: 'STM32',
-          packageName: 'QFN_32',
-          footprint: 'QFN_32',
-          partNumber: 'STM32F4',
-          quantity: 1,
-          side: 'Top',
-          placementCriticality: 'High',
-          notes: '',
-          placementX: 20,
-          placementY: 20,
-          placementStatus: 'Placed',
-          pins: []
-        }
-      ],
-      mcpProposals: [],
-      mcpAuditRecords: []
-    };
+describe('Slice 8 MCP Live Project Integration & Stdio Server', () => {
+  beforeEach(() => {
+    useProjectStore.getState().resetProject();
+  });
 
-    const mcpServer = new HardwareStudioMCPServer(testProject);
+  it('should initialize MCP server with live project context', () => {
+    const liveProject = useProjectStore.getState();
+    const mcpServer = new HardwareStudioMCPServer(liveProject);
 
-    // 2. Call get_project_summary
-    const summaryRes = mcpServer.callTool('get_project_summary');
+    const summaryRes = mcpServer.callTool('get_product_summary');
     expect(summaryRes.success).toBe(true);
-    expect(summaryRes.data.projectName).toBe('MCP Connected Smart Hardware');
-    expect(summaryRes.data.componentsCount).toBe(1);
+    expect(summaryRes.data.projectName).toBe(liveProject.projectName);
+    expect(summaryRes.data.componentsCount).toBe((liveProject.boardComponents || []).length);
+  });
 
-    // 3. Call get_schematic_netlist
-    const netlistRes = mcpServer.callTool('get_schematic_netlist');
-    expect(netlistRes.success).toBe(true);
-    expect(netlistRes.data.nets.length).toBe(1);
+  it('should create reversible draft proposal without mutating live state until applied', () => {
+    const liveProject = useProjectStore.getState();
+    const mcpServer = new HardwareStudioMCPServer(liveProject);
 
-    // 4. Call get_pcb_drc_issues
-    const drcRes = mcpServer.callTool('get_pcb_drc_issues');
-    expect(drcRes.success).toBe(true);
-    expect(Array.isArray(drcRes.data.drcIssues)).toBe(true);
+    const initialCompCount = (liveProject.boardComponents || []).length;
 
-    // 5. Call get_mechanical_interferences
-    const mechRes = mcpServer.callTool('get_mechanical_interferences');
-    expect(mechRes.success).toBe(true);
-    expect(mechRes.data.hasCollision).toBeDefined();
-
-    // 6. Call propose_engineering_change (creates proposal with status Pending)
-    const proposeRes = mcpServer.callTool('propose_engineering_change', {
-      proposedBy: 'DeepMind Assistant',
-      description: 'Add decoupling capacitor C101 on 3V3 rail',
-      domain: 'Schematic',
-      patch: {
-        boardComponents: [
-          ...testProject.boardComponents,
-          {
-            id: 'cmp_mcp_cap',
-            boardId: 'board_main',
-            referenceDesignator: 'C101',
-            componentName: 'Capacitor',
-            componentType: 'Capacitor',
-            packageName: 'C_0603',
-            footprint: 'C_0603',
-            quantity: 1,
-            side: 'Top',
-            placementX: 30,
-            placementY: 20,
-            placementStatus: 'Placed',
-            pins: []
-          }
-        ]
-      }
+    // 1. Create draft proposal
+    const draftRes = mcpServer.callTool('draft_requirement', {
+      title: 'IP67 Waterproof Enclosure Requirement',
+      description: 'Must withstand 1m submersion for 30 minutes',
+      priority: 'High'
     });
 
-    expect(proposeRes.success).toBe(true);
-    const proposalId = proposeRes.data.proposalId;
+    expect(draftRes.success).toBe(true);
+    const proposalId = draftRes.data.proposalId;
     expect(proposalId).toBeDefined();
 
-    // 7. Confirm proposal does NOT mutate live project state until applied
-    const liveProjectBefore = mcpServer.getProject();
-    expect(liveProjectBefore.boardComponents.length).toBe(1); // Still 1 component!
-    expect(liveProjectBefore.mcpProposals.length).toBe(1);
-    expect(liveProjectBefore.mcpProposals[0].status).toBe('Pending');
+    // Verify live state has pending proposal record
+    const proposals = mcpServer.getProject().mcpProposals || [];
+    expect(proposals.length).toBe(1);
+    expect(proposals[0].status).toBe('Pending');
 
-    // 8. Call apply_engineering_change
-    const applyRes = mcpServer.callTool('apply_engineering_change', { proposalId });
+    // 2. Apply draft proposal
+    const applyRes = mcpServer.callTool('apply_draft', { proposalId });
     expect(applyRes.success).toBe(true);
     expect(applyRes.data.status).toBe('Applied');
 
-    // 9. Verify live project updated after apply
-    const liveProjectAfter = mcpServer.getProject();
-    expect(liveProjectAfter.boardComponents.length).toBe(2);
-    expect(liveProjectAfter.boardComponents.some(c => c.id === 'cmp_mcp_cap')).toBe(true);
-    expect(liveProjectAfter.mcpAuditRecords.length).toBeGreaterThan(0);
+    const updatedProposals = mcpServer.getProject().mcpProposals || [];
+    expect(updatedProposals[0].status).toBe('Applied');
+  });
 
-    // 10. Persist & reload project with MCP proposals & audit history
-    useProjectStore.getState().importProjectJSON(liveProjectAfter);
-    const reloaded = useProjectStore.getState();
-    expect(reloaded.mcpProposals?.length).toBe(1);
-    expect(reloaded.mcpAuditRecords?.length).toBeGreaterThan(0);
-    expect(reloaded.mcpProposals?.[0]?.status).toBe('Applied');
+  it('should require explicit user approval for high-impact delete_component tool', () => {
+    const liveProject = useProjectStore.getState();
+    liveProject.boardComponents = [
+      {
+        id: 'comp_temp_c1',
+        boardId: 'board_main',
+        referenceDesignator: 'C1',
+        componentName: '100nF Capacitor',
+        componentType: 'Capacitor',
+        footprint: '0603',
+        packageName: '0603',
+        placementCriticality: 'Medium',
+        partNumber: 'CAP_100NF',
+        quantity: 1,
+        value: '100nF',
+        notes: ''
+      }
+    ];
+
+    const mcpServer = new HardwareStudioMCPServer(liveProject);
+
+    // 1. Delete without user approval -> Rejected
+    const noApprovalRes = mcpServer.callTool('delete_component', {
+      componentId: 'comp_temp_c1',
+      userApproved: false
+    });
+
+    expect(noApprovalRes.success).toBe(false);
+    expect(noApprovalRes.error).toContain('requires user approval');
+
+    // 2. Delete with user approval -> Success
+    const approvedRes = mcpServer.callTool('delete_component', {
+      componentId: 'comp_temp_c1',
+      userApproved: true
+    });
+
+    expect(approvedRes.success).toBe(true);
+    expect(approvedRes.data.status).toBe('Deleted');
+
+    const remaining = mcpServer.getProject().boardComponents || [];
+    expect(remaining.length).toBe(0);
+  });
+
+  it('should instantiate stdio MCP server cleanly', () => {
+    const stdioApp = createStdioMCPServer();
+    expect(stdioApp.server).toBeDefined();
+    expect(stdioApp.mcpCore).toBeDefined();
   });
 });

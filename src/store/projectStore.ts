@@ -146,11 +146,12 @@ interface ProjectState extends Project {
   updateCircuitBlock: (id: string, data: Partial<CircuitBlock>) => void;
   deleteCircuitBlock: (id: string) => void;
 
-  addBoardComponent: (item: Omit<BoardComponent, 'id'> & { id?: string }) => void;
+  addBoardComponent: (item: Partial<Omit<BoardComponent, 'id'>> & { id?: string }) => void;
   updateBoardComponent: (id: string, data: Partial<BoardComponent>) => void;
+  updatePCBPlacement: (componentId: string, placement: Partial<BoardComponent>) => void;
   deleteBoardComponent: (id: string) => void;
 
-  addNet: (item: Omit<NetItem, 'id'>) => void;
+  addNet: (item: Partial<Omit<NetItem, 'id'>> & { netName: string }) => void;
   updateNet: (id: string, data: Partial<NetItem>) => void;
   deleteNet: (id: string) => void;
 
@@ -294,7 +295,7 @@ interface ProjectState extends Project {
   updateArchitectureConnection: (id: string, data: Partial<ProductArchitectureConnection>) => void;
   deleteArchitectureConnection: (id: string) => void;
 
-  addMechanicalObject: (obj: Omit<MechanicalObject, 'id'>) => void;
+  addMechanicalObject: (obj: Omit<MechanicalObject, 'id'> & { id?: string }) => void;
   updateMechanicalObject: (id: string, data: Partial<MechanicalObject>) => void;
   deleteMechanicalObject: (id: string) => void;
 
@@ -1385,26 +1386,103 @@ mcpProposals: state.mcpProposals || [],
     },
 
     addBoardComponent: (item) => {
-      const id = item.id || `cmp_${Date.now()}_${Math.random()}`;
-      const newItem: BoardComponent = { ...item, id };
-      const boardComponents = [...(get().boardComponents || []), newItem];
+      const id = item.id || `comp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const newComp: BoardComponent = {
+        boardId: get().activeBoardId || 'board_main',
+        referenceDesignator: 'U1',
+        componentName: 'Component',
+        componentType: 'General',
+        footprint: 'SOIC-8',
+        packageName: 'SOIC-8',
+        placementCriticality: 'Medium',
+        value: '',
+        partNumber: '',
+        notes: '',
+        side: 'Top',
+        placementStatus: 'Unplaced',
+        quantity: 1,
+        ...item,
+        id
+      };
+      const boardComponents = [...(get().boardComponents || []), newComp];
       persistChange({ boardComponents });
+      get().markDerivedArtifactsStale(`Add board component ${newComp.referenceDesignator}`);
     },
 
-    updateBoardComponent: (id, fields) => {
-      const boardComponents = (get().boardComponents || []).map(bc => bc.id === id ? { ...bc, ...fields } : bc);
+    updateBoardComponent: (id, data) => {
+      const boardComponents = (get().boardComponents || []).map(c => c.id === id ? { ...c, ...data } : c);
       persistChange({ boardComponents });
+      get().markDerivedArtifactsStale(`Update component ${id}`);
+    },
+
+    updatePCBPlacement: (componentId, placement) => {
+      const state = get();
+      const currentComp = (state.boardComponents || []).find(c => c.id === componentId);
+      if (!currentComp) return;
+
+      const targetX = placement.placementX ?? placement.pcb?.xMm ?? currentComp.placementX ?? 0;
+      const targetY = placement.placementY ?? placement.pcb?.yMm ?? currentComp.placementY ?? 0;
+      const targetSide = placement.side ?? placement.pcb?.side ?? currentComp.side ?? 'Top';
+      const targetStatus = placement.placementStatus ?? currentComp.placementStatus ?? 'Placed';
+
+      const updatedComp: BoardComponent = {
+        ...currentComp,
+        ...placement,
+        placementX: targetX,
+        placementY: targetY,
+        side: targetSide,
+        placementStatus: targetStatus,
+        pcb: {
+          ...currentComp.pcb,
+          ...placement.pcb,
+          placed: true,
+          xMm: targetX,
+          yMm: targetY,
+          side: (targetSide === 'Bottom' ? 'Bottom' : 'Top') as 'Top' | 'Bottom',
+          locked: placement.pcb?.locked ?? currentComp.pcb?.locked ?? false,
+          placementStatus: targetStatus
+        }
+      };
+
+      const boardComponents = (state.boardComponents || []).map(c => c.id === componentId ? updatedComp : c);
+      
+      let mechanicalObjects = state.mechanicalObjects;
+      const linkedMechId = (currentComp as any).mechanicalObjectId || (currentComp as any).linkedMechanicalObjectId;
+      if (linkedMechId && mechanicalObjects) {
+        mechanicalObjects = mechanicalObjects.map(mo => mo.id === linkedMechId ? { ...mo, xMm: targetX, yMm: targetY } : mo);
+      }
+
+      persistChange({
+        boardComponents,
+        mechanicalObjects
+      });
+
+      get().markDerivedArtifactsStale(`Update PCB placement for ${currentComp.referenceDesignator}`);
     },
 
     deleteBoardComponent: (id) => {
       const boardComponents = (get().boardComponents || []).filter(bc => bc.id !== id);
       persistChange({ boardComponents });
+      get().markDerivedArtifactsStale(`Delete board component ${id}`);
     },
 
     addNet: (item) => {
-      const id = `net_${Date.now()}_${Math.random()}`;
-      const newItem: NetItem = { ...item, id };
-      const nets = [...(get().nets || []), newItem];
+      const id = `net_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const newNet: NetItem = {
+        netType: 'Signal',
+        voltage: '3.3V',
+        currentEstimate: '10mA',
+        sourceComponent: '',
+        sourcePin: '',
+        targetComponent: '',
+        targetPin: '',
+        impedanceRequirement: '50 Ohm',
+        notes: '',
+        protocol: 'GPIO',
+        ...item,
+        id
+      };
+      const nets = [...(get().nets || []), newNet];
       persistChange({ nets });
     },
 

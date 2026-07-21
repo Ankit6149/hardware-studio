@@ -6,8 +6,12 @@ describe('Slice 8 Secure Local Bridge Workspace Operations Tests', () => {
   let server: http.Server;
   let port: number;
 
+  const mockSpawn = async (cmd: string, args: string[]) => {
+    return { exitCode: 0, stdout: 'SUCCESS: PlatformIO build completed', stderr: '' };
+  };
+
   beforeAll(async () => {
-    server = createServer('workspace-ops-token-888');
+    server = createServer('workspace-ops-token-888', mockSpawn);
     await new Promise<void>((resolve) => {
       server.listen(0, '127.0.0.1', () => {
         const addr = server.address() as any;
@@ -21,14 +25,14 @@ describe('Slice 8 Secure Local Bridge Workspace Operations Tests', () => {
     server.close();
   });
 
-  const makeRequest = (pathStr: string, headers: Record<string, string> = {}) => {
+  const makeRequest = (pathStr: string, headers: Record<string, string> = {}, method: string = 'GET') => {
     return new Promise<{ statusCode: number; body: any }>((resolve) => {
       const req = http.request(
         {
           hostname: '127.0.0.1',
           port,
           path: pathStr,
-          method: 'GET',
+          method,
           headers: {
             'X-Hardware-Studio-Token': 'workspace-ops-token-888',
             ...headers
@@ -68,7 +72,11 @@ describe('Slice 8 Secure Local Bridge Workspace Operations Tests', () => {
     const noApproval = await makeRequest('/api/workspace/overwrite');
     expect(noApproval.statusCode).toBe(403);
 
-    const withApproval = await makeRequest('/api/workspace/overwrite', { 'X-Approval-Token': 'approved-user-action' });
+    // Request single-use approval token
+    const tokenRes = await makeRequest('/api/request-approval', {}, 'POST');
+    expect(tokenRes.statusCode).toBe(200);
+
+    const withApproval = await makeRequest('/api/workspace/overwrite', { 'X-Approval-Token': tokenRes.body.token });
     expect(withApproval.statusCode).toBe(200);
     expect(withApproval.body.success).toBe(true);
   });

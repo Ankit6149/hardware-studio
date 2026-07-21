@@ -1,13 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createServer, SESSION_TOKEN } from '../../packages/local-bridge/bridgeServer';
+import { createServer } from '../../packages/local-bridge/bridgeServer';
 import http from 'http';
 
 describe('Slice 8 Secure Local Bridge Authentication & Security Tests', () => {
   let server: http.Server;
   let port: number;
 
+  const mockSpawn = async (cmd: string, args: string[]) => {
+    return { exitCode: 0, stdout: 'SUCCESS', stderr: '' };
+  };
+
   beforeAll(async () => {
-    server = createServer('secure-test-token-777');
+    server = createServer('secure-test-token-777', mockSpawn);
     await new Promise<void>((resolve) => {
       server.listen(0, '127.0.0.1', () => {
         const addr = server.address() as any;
@@ -21,14 +25,14 @@ describe('Slice 8 Secure Local Bridge Authentication & Security Tests', () => {
     server.close();
   });
 
-  const makeRequest = (pathStr: string, headers: Record<string, string> = {}) => {
+  const makeRequest = (pathStr: string, headers: Record<string, string> = {}, method: string = 'GET') => {
     return new Promise<{ statusCode: number; body: any }>((resolve) => {
       const req = http.request(
         {
           hostname: '127.0.0.1',
           port,
           path: pathStr,
-          method: 'GET',
+          method,
           headers
         },
         (res) => {
@@ -79,13 +83,19 @@ describe('Slice 8 Secure Local Bridge Authentication & Security Tests', () => {
   it('should REJECT high-risk upload without approval token', async () => {
     const res = await makeRequest('/api/upload', { 'X-Hardware-Studio-Token': 'secure-test-token-777' });
     expect(res.statusCode).toBe(403);
-    expect(res.body.error).toContain('Explicit user approval token required');
+    expect(res.body.error).toContain('approval token required');
   });
 
   it('should ACCEPT high-risk upload WITH approval token', async () => {
+    // 1. Request single-use approval token
+    const tokenRes = await makeRequest('/api/request-approval', { 'X-Hardware-Studio-Token': 'secure-test-token-777' }, 'POST');
+    expect(tokenRes.statusCode).toBe(200);
+    const approvalToken = tokenRes.body.token;
+
+    // 2. Perform upload
     const res = await makeRequest('/api/upload', {
       'X-Hardware-Studio-Token': 'secure-test-token-777',
-      'X-Approval-Token': 'approved-user-action'
+      'X-Approval-Token': approvalToken
     });
     expect(res.statusCode).toBe(200);
     expect(res.body.status).toBe('Completed');

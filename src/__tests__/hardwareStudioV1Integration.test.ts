@@ -96,7 +96,7 @@ describe('Hardware Studio V1 Full Integration & Readiness Suite (20 Acceptance G
 
     // Gate 18: Manufacturing Outputs & SHA-256 Release Manifest
     const manifestJson = generateReleasePackageManifest(useProjectStore.getState());
-    expect(manifestJson).toContain('sha256_');
+    expect(manifestJson).toContain('"sha256": "');
 
     // Gate 19: Readiness Engine Overall Score
     const report = calculateReadinessScore(useProjectStore.getState());

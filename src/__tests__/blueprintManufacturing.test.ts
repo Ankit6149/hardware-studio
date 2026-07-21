@@ -67,7 +67,7 @@ describe('Slice 12 Complete Blueprints & Manufacturing Release Workflow Tests', 
 
     expect(manifest.releaseManifestVersion).toBe('1.0.0');
     expect(manifest.artifacts.length).toBe(5);
-    expect(manifest.artifacts[0].sha256).toContain('sha256_');
+    expect(manifest.artifacts[0].sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(manifest.artifacts[0].sizeBytes).toBeGreaterThan(0);
   });
 });

@@ -14,6 +14,7 @@ export const WebGL3DView: React.FC = () => {
   const [explodedView, setExplodedView] = useState<boolean>(false);
   const [explosionFactor, setExplosionFactor] = useState<number>(0);
   const [showCollisionWarning, setShowCollisionWarning] = useState<boolean>(false);
+  const [missingDimensions, setMissingDimensions] = useState<string[]>([]);
 
   const mechanicalObjects = store.mechanicalObjects || [];
   const boardOutlines = store.boardOutlines || [];
@@ -94,21 +95,36 @@ export const WebGL3DView: React.FC = () => {
     pcbMesh.position.set(pcbW / 2 + 10, 5, pcbH / 2 + 10);
     mainGroup.add(pcbMesh);
 
+    // Track components missing real package dimensions
+    const missingDimensionComps: string[] = [];
+
     // 3. Component Bodies
     (boardComponents || []).forEach((c, idx) => {
-      const cx = (c.placementX || (idx * 20 + 20));
-      const cy = (c.placementY || (idx * 15 + 20));
-      const compW = c.packageName?.includes('QFN') ? 8 : c.packageName?.includes('SOIC') ? 10 : 4;
-      const compH = c.packageName?.includes('QFN') ? 8 : c.packageName?.includes('SOIC') ? 6 : 4;
-      const compZ = c.packageName?.includes('QFN') ? 1.2 : c.packageName?.includes('SOIC') ? 2.5 : 1.5;
+      const cx = c.pcb?.xMm ?? c.placementX ?? (idx * 20 + 20);
+      const cy = c.pcb?.yMm ?? c.placementY ?? (idx * 15 + 20);
+
+      const pkg = c.packageDimensions;
+      if (!pkg || !pkg.widthMm || !pkg.heightMm || !pkg.heightZMm) {
+        missingDimensionComps.push(c.referenceDesignator || c.componentName || `Comp #${idx + 1}`);
+      }
+
+      const compW = pkg?.widthMm || 6;
+      const compH = pkg?.heightMm || 6;
+      const compZ = pkg?.heightZMm || 2;
 
       const compGeo = new THREE.BoxGeometry(compW, compZ, compH);
-      const compMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.5 });
+      const compMat = new THREE.MeshStandardMaterial({
+        color: pkg ? 0x1e293b : 0x94a3b8,
+        metalness: 0.5,
+        roughness: 0.3
+      });
       const compMesh = new THREE.Mesh(compGeo, compMat);
       const explodeY = explodedView ? (idx + 1) * explosionFactor * 5 : 0;
       compMesh.position.set(cx, 5 + pcbThick / 2 + compZ / 2 + explodeY, cy);
       mainGroup.add(compMesh);
     });
+
+    setMissingDimensions(missingDimensionComps);
 
     scene.add(mainGroup);
 
@@ -192,6 +208,21 @@ export const WebGL3DView: React.FC = () => {
       <div className="flex-1 relative overflow-hidden bg-slate-950">
         <div ref={mountRef} className="w-full h-full" />
         
+        {missingDimensions.length > 0 && (
+          <div className="absolute bottom-4 left-4 rounded-lg p-2.5 max-w-md text-xs shadow-xl bg-amber-950/90 border border-amber-500/50 text-amber-200 backdrop-blur-sm z-10 flex items-start gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-amber-300 block">Missing Package Dimensions Warning</span>
+              <span className="text-[11px] text-amber-200/90 block mt-0.5">
+                The following {missingDimensions.length} component(s) do not have explicit package dimensions:
+              </span>
+              <span className="text-[10px] font-mono text-amber-300 block mt-1 break-all">
+                {missingDimensions.join(', ')}
+              </span>
+            </div>
+          </div>
+        )}
+
         {showCollisionWarning && (() => {
           const result = checkMechanicalInterference(store);
           return (

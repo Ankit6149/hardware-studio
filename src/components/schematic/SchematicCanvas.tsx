@@ -5,6 +5,7 @@ import { SchematicUIState } from './schematicInteraction';
 import { getSymbolPinLayouts, snapToGrid } from './schematicGeometry';
 import { ReviewResult } from '../../types';
 import { SchematicSymbolRenderer } from './SchematicSymbolRenderer';
+import { useEffect } from 'react';
 
 interface SchematicCanvasProps {
   viewState: SchematicUIState;
@@ -81,31 +82,46 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
       points[points.length - 1] = coords;
       onViewStateChange({ wirePoints: points });
     }
-    // If dragging component
+    // If dragging component — use transient preview instead of persisting every pixel
     else if (draggedCompId) {
       const coords = getCanvasCoords(e);
       const targetX = snapToGrid(coords.x - dragOffset.x, 10);
       const targetY = snapToGrid(coords.y - dragOffset.y, 10);
       
-      const comp = (boardComponents || []).find(c => c.id === draggedCompId);
-      if (comp) {
-        updateBoardComponent(draggedCompId, {
+      const updated = (boardComponents || []).map(c => {
+        if (c.id !== draggedCompId) return c;
+        return {
+          ...c,
           schematic: {
-            ...comp.schematic,
+            ...c.schematic,
             placed: true,
             x: targetX,
             y: targetY
           }
-        });
-      }
+        };
+      });
+      project.updateTransientPreview({ boardComponents: updated });
     }
-  }, [isDrawingWire, wirePoints, draggedCompId, dragOffset, boardComponents, updateBoardComponent, getCanvasCoords, onViewStateChange]);
+  }, [isDrawingWire, wirePoints, draggedCompId, dragOffset, boardComponents, getCanvasCoords, onViewStateChange, project]);
 
   const handleMouseUp = useCallback(() => {
     if (draggedCompId) {
+      project.commitCommand();
       setDraggedCompId(null);
     }
-  }, [draggedCompId]);
+  }, [draggedCompId, project]);
+
+  // Cancel drag on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && draggedCompId) {
+        project.cancelCommand();
+        setDraggedCompId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [draggedCompId, project]);
 
   const handleComponentMouseDown = useCallback((e: React.MouseEvent, compId: string) => {
     if (activeTool !== 'select') return;
@@ -115,6 +131,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
     e.stopPropagation();
     const coords = getCanvasCoords(e);
     
+    project.beginCommand('MOVE_SCHEMATIC_SYMBOL', `Move ${comp.componentName}`);
     setDraggedCompId(compId);
     setDragOffset({
       x: coords.x - (comp.schematic?.x || 150),
@@ -125,7 +142,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
       selectedComponentId: compId,
       selectedWireId: null
     });
-  }, [activeTool, boardComponents, getCanvasCoords, onViewStateChange]);
+  }, [activeTool, boardComponents, getCanvasCoords, onViewStateChange, project]);
 
   const handlePinClick = useCallback((e: React.MouseEvent, compId: string, pinNum: string, defaultNet?: string) => {
     e.stopPropagation();

@@ -9,6 +9,19 @@ export interface ReleaseBlocker {
   message: string;
 }
 
+export interface MergeConflict {
+  entityType: string;
+  id: string;
+  sourceValue: any;
+  targetValue: any;
+}
+
+export interface MergeResult {
+  success: boolean;
+  conflicts: MergeConflict[];
+  mergedProject?: Project;
+}
+
 /** Check if project state is eligible for Release Candidate approval */
 export function validateReleaseEligibility(project: Project): ReleaseBlocker[] {
   const blockers: ReleaseBlocker[] = [];
@@ -62,6 +75,123 @@ export function createBranch(sourceRevision: ProductRevision, newBranchName: str
     description: `Branched from ${sourceRevision.name}`,
     projectSnapshot: JSON.parse(JSON.stringify(sourceRevision.projectSnapshot)),
     status: 'Working'
+  };
+}
+
+/** Create a new working branch from a Released revision */
+export function createWorkingBranchFromRelease(
+  releasedRevision: ProductRevision,
+  newBranchName: string
+): ProductRevision {
+  if (releasedRevision.status !== 'Released') {
+    throw new Error('Working branch can only be created from a Released revision.');
+  }
+
+  return {
+    id: `rev_branch_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    name: `Working Branch: ${newBranchName}`,
+    parentRevisionId: releasedRevision.id,
+    branchName: newBranchName,
+    createdAt: new Date().toISOString(),
+    description: `Branched from release ${releasedRevision.name}`,
+    projectSnapshot: JSON.parse(JSON.stringify(releasedRevision.projectSnapshot)),
+    status: 'Working'
+  };
+}
+
+/** Switch branch by retrieving target branch revision snapshot and restoring project data */
+export function switchBranchState(
+  project: Project,
+  targetBranchName: string
+): { success: boolean; updatedProject?: Project; error?: string } {
+  const revisions = project.revisions || [];
+  const branchRevs = revisions.filter(r => r.branchName === targetBranchName);
+  if (branchRevs.length === 0 && targetBranchName !== 'main') {
+    return { success: false, error: `Branch '${targetBranchName}' not found.` };
+  }
+
+  const latestRev = branchRevs[branchRevs.length - 1];
+  if (latestRev && latestRev.projectSnapshot) {
+    const restored = JSON.parse(JSON.stringify(latestRev.projectSnapshot));
+    return {
+      success: true,
+      updatedProject: {
+        ...restored,
+        activeBranch: targetBranchName,
+        activeBranchName: targetBranchName,
+        revisions: project.revisions
+      }
+    };
+  }
+
+  return {
+    success: true,
+    updatedProject: {
+      ...project,
+      activeBranch: targetBranchName,
+      activeBranchName: targetBranchName
+    }
+  };
+}
+
+/** Merge source branch snapshot into target branch snapshot */
+export function mergeBranches(
+  sourceRevision: ProductRevision,
+  targetProject: Project
+): MergeResult {
+  const sourceProject = sourceRevision.projectSnapshot;
+  if (!sourceProject) {
+    return { success: false, conflicts: [{ entityType: 'Revision', id: sourceRevision.id, sourceValue: null, targetValue: 'Missing snapshot' }] };
+  }
+
+  const conflicts: MergeConflict[] = [];
+  const merged: Project = JSON.parse(JSON.stringify(targetProject));
+
+  const targetMechs = merged.mechanicalObjects || [];
+  const sourceMechs = sourceProject.mechanicalObjects || [];
+
+  sourceMechs.forEach((sObj: any) => {
+    const tObj = targetMechs.find((t: any) => t.id === sObj.id);
+    if (!tObj) {
+      targetMechs.push(sObj);
+    } else if (JSON.stringify(tObj) !== JSON.stringify(sObj)) {
+      conflicts.push({
+        entityType: 'MechanicalObject',
+        id: sObj.id,
+        sourceValue: sObj,
+        targetValue: tObj
+      });
+    }
+  });
+
+  const targetComps = merged.boardComponents || [];
+  const sourceComps = sourceProject.boardComponents || [];
+
+  sourceComps.forEach((sComp: any) => {
+    const tComp = targetComps.find((t: any) => t.id === sComp.id);
+    if (!tComp) {
+      targetComps.push(sComp);
+    } else if (JSON.stringify(tComp) !== JSON.stringify(sComp)) {
+      conflicts.push({
+        entityType: 'BoardComponent',
+        id: sComp.id,
+        sourceValue: sComp,
+        targetValue: tComp
+      });
+    }
+  });
+
+  if (conflicts.length > 0) {
+    return { success: false, conflicts };
+  }
+
+  merged.mechanicalObjects = targetMechs;
+  merged.boardComponents = targetComps;
+
+  return {
+    success: true,
+    conflicts: [],
+    mergedProject: merged
   };
 }
 

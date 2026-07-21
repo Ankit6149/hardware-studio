@@ -137,18 +137,20 @@ export const ProductArchitectureCanvas: React.FC<ProductArchitectureCanvasProps>
     }));
   }, [architectureConnections]);
 
+  const onNodeDragStart = useCallback((_event: any, _node: any) => {
+    store.beginCommand('MOVE_ARCHITECTURE_NODE', 'Move architecture block');
+  }, [store]);
+
   const onNodesChange = useCallback((changes: NodeChange[]) => {
-    // Handle drag end to persist positions
+    // Handle drag end to persist positions via commitCommand
     for (const change of changes) {
       if (change.type === 'position' && change.position && !change.dragging) {
-        store.executeProjectCommand(
-          'MOVE_ARCHITECTURE_NODE',
-          `Move architecture block`,
-          () => store.updateArchitectureNode(change.id, {
-            x: change.position!.x,
-            y: change.position!.y,
-          })
+        // Update the architecture node position as a transient preview, then commit
+        const updated = (store.architectureNodes || []).map(n =>
+          n.id === change.id ? { ...n, x: change.position!.x, y: change.position!.y } : n
         );
+        store.updateTransientPreview({ architectureNodes: updated });
+        store.commitCommand();
       }
     }
   }, [store]);
@@ -193,6 +195,7 @@ export const ProductArchitectureCanvas: React.FC<ProductArchitectureCanvasProps>
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}
+        onNodeDragStart={onNodeDragStart}
         nodeTypes={nodeTypes}
         fitView
         snapToGrid

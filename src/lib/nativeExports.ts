@@ -824,15 +824,10 @@ export const generateFactoryReviewReadme = (project: Project): string => {
   return rm;
 };
 
-// Simple hash helper for manufacturing package manifest checksums
-function hashString(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
-  }
-  return 'sha256_' + Math.abs(hash).toString(16).padStart(16, '0');
+import crypto from 'crypto';
+
+function computeCryptoSHA256(str: string): string {
+  return crypto.createHash('sha256').update(str, 'utf8').digest('hex');
 }
 
 export function generateReleasePackageManifest(project: Project): string {
@@ -846,14 +841,14 @@ export function generateReleasePackageManifest(project: Project): string {
     releaseManifestVersion: '1.0.0',
     projectName: project.projectName,
     projectVersion: project.version || '1.0.0',
-    activeBranch: project.activeBranch || 'main',
+    activeBranch: (project as any).activeBranchName || (project as any).activeBranch || 'main',
     generatedAt: new Date().toISOString(),
     artifacts: [
-      { filename: 'gerber_copper_top.gbr', sizeBytes: gerber.length, sha256: hashString(gerber) },
-      { filename: 'drill_holes.drl', sizeBytes: drill.length, sha256: hashString(drill) },
-      { filename: 'ipc_netlist.ipc', sizeBytes: netlist.length, sha256: hashString(netlist) },
-      { filename: 'cpl_placement.csv', sizeBytes: cpl.length, sha256: hashString(cpl) },
-      { filename: 'bom_components.csv', sizeBytes: bom.length, sha256: hashString(bom) }
+      { filename: 'gerber_copper_top.gbr', sizeBytes: gerber.length, sha256: computeCryptoSHA256(gerber) },
+      { filename: 'drill_holes.drl', sizeBytes: drill.length, sha256: computeCryptoSHA256(drill) },
+      { filename: 'ipc_netlist.ipc', sizeBytes: netlist.length, sha256: computeCryptoSHA256(netlist) },
+      { filename: 'cpl_placement.csv', sizeBytes: cpl.length, sha256: computeCryptoSHA256(cpl) },
+      { filename: 'bom_components.csv', sizeBytes: bom.length, sha256: computeCryptoSHA256(bom) }
     ]
   };
 

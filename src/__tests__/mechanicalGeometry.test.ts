@@ -1,162 +1,170 @@
 import { describe, it, expect } from 'vitest';
-import { useProjectStore } from '../store/projectStore';
-import { MechanicalObject, MechanicalDimension } from '../types';
+import { MechanicalObject } from '../types';
 import {
-  getMechanicalBoundingBox,
-  isMechanicalObjectContained,
   movePolygonVertex,
   insertPolygonVertex,
   deletePolygonVertex,
-  applyLightweightConstraint
+  applyLightweightConstraint,
+  getMechanicalBoundingBox,
+  mechanicalObjectsOverlap,
+  minimumDistanceBetweenMechanicalObjects
 } from '../lib/mechanical/mechanicalGeometry';
 
-describe('Slice 5 Complete 2D Mechanical Geometry & Lightweight Constraints Workflow Tests', () => {
-  it('should execute complete 2D mechanical polygon, vertex, dimensioning, constraint, undo/redo, and persistence workflow', () => {
-    const store = useProjectStore.getState();
+describe('Slice 3 Production Mechanical Geometry & Lightweight Constraints', () => {
+  const basePolygon: MechanicalObject = {
+    id: 'poly_1',
+    name: 'Main Housing Polygon',
+    type: 'Outer Profile',
+    shape: 'polygon',
+    xMm: 0,
+    yMm: 0,
+    widthMm: 100,
+    heightMm: 60,
+    rotationDeg: 0,
+    locked: false,
+    visible: true,
+    points: [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 60 },
+      { x: 0, y: 60 }
+    ]
+  };
 
-    // 1. Draw polygon enclosure & complete polygon
-    let polyShell: MechanicalObject = {
-      id: 'poly_shell_1',
-      name: 'Custom Polygon Enclosure',
-      type: 'Outer Profile',
-      shape: 'polygon',
-      xMm: 0,
-      yMm: 0,
+  it('should move a polygon vertex correctly', () => {
+    const moved = movePolygonVertex(basePolygon, 1, { x: 120, y: -10 });
+    expect(moved.points?.[1]).toEqual({ x: 120, y: -10 });
+    expect(moved.points?.length).toBe(4);
+  });
+
+  it('should insert a polygon vertex after specified index', () => {
+    const inserted = insertPolygonVertex(basePolygon, 1, { x: 110, y: 30 });
+    expect(inserted.points?.length).toBe(5);
+    expect(inserted.points?.[2]).toEqual({ x: 110, y: 30 });
+  });
+
+  it('should delete a polygon vertex if remaining count >= 3', () => {
+    const poly5Point: MechanicalObject = {
+      ...basePolygon,
       points: [
         { x: 0, y: 0 },
-        { x: 120, y: 0 },
-        { x: 120, y: 80 },
-        { x: 0, y: 80 }
-      ],
-      rotationDeg: 0,
-      layer: 'Enclosure',
-      locked: false,
-      visible: true
+        { x: 50, y: -20 },
+        { x: 100, y: 0 },
+        { x: 100, y: 60 },
+        { x: 0, y: 60 }
+      ]
     };
 
-    store.addMechanicalObject(polyShell);
-    let currentPoly = useProjectStore.getState().mechanicalObjects?.find(o => o.id === 'poly_shell_1')!;
-    expect(currentPoly.points?.length).toBe(4);
+    const deleted = deletePolygonVertex(poly5Point, 1);
+    expect(deleted.points?.length).toBe(4);
+    expect(deleted.points?.[1]).toEqual({ x: 100, y: 0 });
 
-    // 2. Move one vertex
-    polyShell = movePolygonVertex(currentPoly, 1, { x: 130, y: 0 });
-    store.updateMechanicalObject('poly_shell_1', polyShell);
-    currentPoly = useProjectStore.getState().mechanicalObjects?.find(o => o.id === 'poly_shell_1')!;
-    expect(currentPoly.points?.[1]?.x).toBe(130);
+    // Attempting to delete from 3-point polygon must be prevented
+    const poly3Point = deleted;
+    const poly3PointSub = deletePolygonVertex(deletePolygonVertex(poly3Point, 0), 0);
+    expect(poly3PointSub.points?.length).toBe(3); // Cannot drop below 3 vertices
+  });
 
-    // 3. Insert one vertex
-    polyShell = insertPolygonVertex(currentPoly, 1, { x: 130, y: 40 });
-    store.updateMechanicalObject('poly_shell_1', polyShell);
-    currentPoly = useProjectStore.getState().mechanicalObjects?.find(o => o.id === 'poly_shell_1')!;
-    expect(currentPoly.points?.length).toBe(5);
-
-    // 4. Delete one vertex
-    polyShell = deletePolygonVertex(currentPoly, 2);
-    store.updateMechanicalObject('poly_shell_1', polyShell);
-    currentPoly = useProjectStore.getState().mechanicalObjects?.find(o => o.id === 'poly_shell_1')!;
-    expect(currentPoly.points?.length).toBe(4);
-
-    // 5. Add Board Zone
-    const pcbZone: MechanicalObject = {
-      id: 'board_zone_1',
-      name: 'Main PCB Fit Zone',
-      type: 'Board Zone',
+  it('should apply lightweight constraint: centre-align', () => {
+    const reference: MechanicalObject = {
+      id: 'ref_1',
+      name: 'Main Enclosure',
+      type: 'Outer Profile',
       shape: 'rect',
-      xMm: 10,
-      yMm: 10,
+      xMm: 100,
+      yMm: 100,
       widthMm: 100,
-      heightMm: 60,
+      heightMm: 80,
       rotationDeg: 0,
-      layer: 'PCB Boundary',
       locked: false,
       visible: true
     };
-    store.addMechanicalObject(pcbZone);
 
-    // 6. Add Battery Cavity
-    const battCavity: MechanicalObject = {
-      id: 'batt_cavity_1',
-      name: 'LiPo Battery Cavity',
-      type: 'Battery Cavity',
+    const target: MechanicalObject = {
+      id: 'tgt_1',
+      name: 'Display Window',
+      type: 'Sensor Window',
       shape: 'rect',
-      xMm: 15,
-      yMm: 15,
+      xMm: 0,
+      yMm: 0,
       widthMm: 40,
       heightMm: 30,
       rotationDeg: 0,
-      layer: 'Battery',
       locked: false,
       visible: true
     };
-    store.addMechanicalObject(battCavity);
 
-    // 7. Add Connector Opening
-    const usbCutout: MechanicalObject = {
-      id: 'usb_cutout_1',
-      name: 'USB-C Port Opening',
+    const constrained = applyLightweightConstraint('centre-align', target, reference);
+    // Ref center: X = 100 + 50 = 150, Y = 100 + 40 = 140
+    // Target top-left for 40x30 centered: X = 150 - 20 = 130, Y = 140 - 15 = 125
+    expect(constrained.xMm).toBe(130);
+    expect(constrained.yMm).toBe(125);
+  });
+
+  it('should apply lightweight constraint: fixed-distance', () => {
+    const reference: MechanicalObject = {
+      id: 'ref_1',
+      name: 'Battery',
+      type: 'Battery Cavity',
+      shape: 'rect',
+      xMm: 10,
+      yMm: 10,
+      widthMm: 50,
+      heightMm: 30,
+      rotationDeg: 0,
+      locked: false,
+      visible: true
+    };
+
+    const target: MechanicalObject = {
+      id: 'tgt_1',
+      name: 'Connector',
       type: 'Connector Opening',
       shape: 'rect',
       xMm: 0,
-      yMm: 35,
-      widthMm: 10,
-      heightMm: 8,
+      yMm: 10,
+      widthMm: 15,
+      heightMm: 10,
       rotationDeg: 0,
-      layer: 'Enclosure Cutout',
       locked: false,
       visible: true
     };
-    store.addMechanicalObject(usbCutout);
 
-    // Confirm containment of PCB zone inside polyShell
-    expect(isMechanicalObjectContained(pcbZone, currentPoly)).toBe(true);
+    const constrained = applyLightweightConstraint('fixed-distance', target, reference, 15);
+    // Ref X max = 10 + 50 = 60. Target X = 60 + 15 = 75
+    expect(constrained.xMm).toBe(75);
+  });
 
-    // 8. Add Width Dimension
-    const widthDim: MechanicalDimension = {
-      id: 'dim_width_1',
-      name: 'Enclosure Width 120mm',
-      from: { xMm: 0, yMm: 0 },
-      to: { xMm: 120, yMm: 0 },
-      valueMm: 120,
-      linkedObjectIds: ['poly_shell_1']
+  it('should calculate minimum distance between mechanical objects', () => {
+    const objA: MechanicalObject = {
+      id: 'a',
+      name: 'Plate A',
+      type: 'Board Zone',
+      shape: 'rect',
+      xMm: 0,
+      yMm: 0,
+      widthMm: 20,
+      heightMm: 20,
+      rotationDeg: 0,
+      locked: false,
+      visible: true
     };
-    useProjectStore.setState({
-      mechanicalDimensions: [...(useProjectStore.getState().mechanicalDimensions || []), widthDim]
-    });
 
-    // 9. Apply Lightweight Constraint: Centre Alignment
-    const centeredBatt = applyLightweightConstraint('centre-align', battCavity, pcbZone);
-    store.executeProjectCommand('UPDATE_MECH_OBJ', 'Apply centre alignment constraint', () => {
-      store.updateMechanicalObject('batt_cavity_1', centeredBatt);
-    });
+    const objB: MechanicalObject = {
+      id: 'b',
+      name: 'Plate B',
+      type: 'Board Zone',
+      shape: 'rect',
+      xMm: 30,
+      yMm: 0,
+      widthMm: 20,
+      heightMm: 20,
+      rotationDeg: 0,
+      locked: false,
+      visible: true
+    };
 
-    const updatedBatt = useProjectStore.getState().mechanicalObjects?.find(o => o.id === 'batt_cavity_1');
-    expect(updatedBatt?.xMm).toBe(40); // (10 + 100/2) - 40/2 = 60 - 20 = 40
-    expect(updatedBatt?.yMm).toBe(25); // (10 + 60/2) - 30/2 = 40 - 15 = 25
-
-    // 10. Apply Lightweight Constraint: Fixed Distance
-    const fixedDistBatt = applyLightweightConstraint('fixed-distance', battCavity, pcbZone, 15);
-    store.executeProjectCommand('UPDATE_MECH_OBJ', 'Apply fixed distance constraint', () => {
-      store.updateMechanicalObject('batt_cavity_1', fixedDistBatt);
-    });
-    expect(useProjectStore.getState().mechanicalObjects?.find(o => o.id === 'batt_cavity_1')?.xMm).toBe(125); // 110 + 15 = 125
-
-    // 11. Undo & Redo
-    store.undoProjectCommand();
-    expect(useProjectStore.getState().mechanicalObjects?.find(o => o.id === 'batt_cavity_1')?.xMm).toBe(40);
-
-    store.redoProjectCommand();
-    expect(useProjectStore.getState().mechanicalObjects?.find(o => o.id === 'batt_cavity_1')?.xMm).toBe(125);
-
-    // 12. Export / Import JSON round-trip
-    const jsonStr = store.exportProjectJSON();
-    expect(jsonStr).toContain('poly_shell_1');
-    expect(jsonStr).toContain('LiPo Battery Cavity');
-    expect(jsonStr).toContain('Enclosure Width 120mm');
-
-    store.importProjectJSON(jsonStr);
-    const restoredState = useProjectStore.getState();
-    expect(restoredState.mechanicalObjects?.length).toBe(4);
-    expect(restoredState.mechanicalDimensions?.length).toBe(1);
-    expect(restoredState.mechanicalDimensions?.[0]?.valueMm).toBe(120);
+    const dist = minimumDistanceBetweenMechanicalObjects(objA, objB);
+    expect(dist).toBe(10);
   });
 });

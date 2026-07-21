@@ -423,11 +423,21 @@ export interface CopperShape {
   notes?: string;
 }
 
-export type PCBAnchor =
-  | { type: 'pad'; componentId: string; padNumber: string }
-  | { type: 'via'; viaId: string }
-  | { type: 'trace-end'; traceId: string; endpoint: 'start' | 'end' }
-  | { type: 'dangling'; xMm: number; yMm: number };
+export type PCBAnchorType = 'pad' | 'via' | 'trace-end' | 'dangling';
+
+export interface PCBAnchor {
+  type: PCBAnchorType;
+  componentId?: string;
+  padName?: string;
+  padNumber?: string;
+  viaId?: string;
+  traceId?: string;
+  endpoint?: 'start' | 'end';
+  xMm: number;
+  yMm: number;
+  netName?: string;
+  layer?: string;
+}
 
 export interface Trace {
   id: string;
@@ -486,6 +496,8 @@ export interface ValidationRun {
   status: 'Pass' | 'Fail' | 'Inconclusive' | 'Passed' | 'Failed' | 'In Progress' | 'Needs Review';
   measuredValue?: number | string;
   passCriteria?: string;
+  evidenceLink?: string;
+  evidence?: any[];
   stepResults?: any[];
   logs: string[];
   runBy?: string;
@@ -604,6 +616,7 @@ export interface Project {
   releaseCandidates?: ProductRevision[];
   releases?: ProductRevision[];
   activeBranch?: string;
+  activeBranchName?: string;
   isFrozen?: boolean;
   activeView: string;
   nodes: CustomNode[];

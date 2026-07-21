@@ -81,12 +81,18 @@ export const FirmwareStateMachineCanvas: React.FC<Props> = ({ onStateSelect, onT
     };
   }), [firmwareTransitions, firmwareStates]);
 
+  const onNodeDragStart = useCallback((_event: any, _node: any) => {
+    store.beginCommand('MOVE_STATE', 'Move firmware state');
+  }, [store]);
+
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     for (const change of changes) {
       if (change.type === 'position' && change.position && !change.dragging) {
-        store.executeProjectCommand('MOVE_STATE', 'Move state', () =>
-          store.updateFirmwareState(change.id, { x: change.position!.x, y: change.position!.y })
+        const updated = (store.firmwareStates || []).map(s =>
+          s.id === change.id ? { ...s, x: change.position!.x, y: change.position!.y } : s
         );
+        store.updateTransientPreview({ firmwareStates: updated });
+        store.commitCommand();
       }
     }
   }, [store]);
@@ -108,6 +114,7 @@ export const FirmwareStateMachineCanvas: React.FC<Props> = ({ onStateSelect, onT
       <ReactFlow
         nodes={flowNodes} edges={flowEdges}
         onNodesChange={onNodesChange} onConnect={onConnect}
+        onNodeDragStart={onNodeDragStart}
         onNodeClick={(_, n) => { onStateSelect(n.id); onTransitionSelect(null); }}
         onEdgeClick={(_, e) => { onTransitionSelect(e.id); onStateSelect(null); }}
         onPaneClick={() => { onStateSelect(null); onTransitionSelect(null); }}
