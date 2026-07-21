@@ -79,9 +79,9 @@ describe('Slice 4 & 5 Active-Board Strict Pad-Aware PCB Routing & DRC Tests', ()
     expect(useProjectStore.getState().activeBoardId).toBe('board_sensor');
 
     // 2. Add via, drill hole, keepout zone, and copper shape on active board (board_sensor)
-    store.addVia({ boardId: 'board_sensor', layerId: 'top', xMm: 10, yMm: 10, padDiameterMm: 0.8, drillDiameterMm: 0.4, netName: 'I2C_SDA' });
-    store.addDrillHole({ boardId: 'board_sensor', xMm: 5, yMm: 5, diameterMm: 2.0, plated: false, holeType: 'Mounting' });
-    store.addKeepoutZone({ boardId: 'board_sensor', zoneName: 'RF Keepout', xMm: 25, yMm: 5, widthMm: 10, heightMm: 10, restrictTraces: true, restrictVias: true });
+    store.addVia({ boardId: 'board_sensor', x: 10, y: 10, outerDiameter: 0.8, drillDiameter: 0.4 });
+    store.addDrillHole({ boardId: 'board_sensor', x: 5, y: 5, diameter: 2.0, plated: false });
+    store.addKeepoutZone({ boardId: 'board_sensor', zoneName: 'RF Keepout', x: 25, y: 5, width: 10, height: 10, restrictTraces: true, restrictVias: true });
 
     const pState = useProjectStore.getState();
     const sensorVias = (pState.vias || []).filter(v => v.boardId === 'board_sensor');

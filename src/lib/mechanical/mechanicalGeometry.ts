@@ -188,6 +188,14 @@ export function applyLightweightConstraint(
   }
 }
 
+export function minimumDistanceBetweenMechanicalObjects(a: MechanicalObject, b: MechanicalObject): number {
+  const bbA = getMechanicalBoundingBox(a);
+  const bbB = getMechanicalBoundingBox(b);
+  const dx = Math.max(0, Math.max(bbA.xMin - bbB.xMax, bbB.xMin - bbA.xMax));
+  const dy = Math.max(0, Math.max(bbA.yMin - bbB.yMax, bbB.yMin - bbA.yMax));
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
 export interface BoundingBox3D {
   xMin: number; xMax: number;
   yMin: number; yMax: number;

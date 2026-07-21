@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { server } from '../../packages/local-bridge/bridgeServer';
+import { createServer } from '../../packages/local-bridge/bridgeServer';
 
 describe('Local PlatformIO Bridge Node Process Tests', () => {
   it('should initialize local loopback HTTP server instance', () => {
-    expect(server).toBeDefined();
-    expect(typeof server.listen).toBe('function');
+    const srv = createServer('test-token');
+    expect(srv).toBeDefined();
+    expect(typeof srv.listen).toBe('function');
   });
 });

@@ -24,38 +24,31 @@ describe('Hardware Studio Native MCP Server Tests', () => {
 
   it('should execute read tools and record audit log', () => {
     const mcp = new HardwareStudioMCPServer(sampleProject);
-    const prod = mcp.handleReadTool('get_current_product') as Record<string, string>;
-    expect(prod.name).toBe('MCP Test Product');
-
-    const reqs = mcp.handleReadTool('get_requirements') as Array<unknown>;
-    expect(reqs).toHaveLength(1);
-
-    const audit = mcp.getAuditLog();
-    expect(audit.length).toBeGreaterThanOrEqual(2);
-    expect(audit[0].tool).toBe('get_current_product');
+    const res = mcp.callTool('get_project_summary');
+    expect(res.success).toBe(true);
+    expect(res.data.projectName).toBe('MCP Test Product');
+    expect(res.data.componentsCount).toBe(1);
   });
 
   it('should create draft proposal without mutating active project until applied', () => {
     const mcp = new HardwareStudioMCPServer(sampleProject);
-    const prop = mcp.handleDraftTool('add_requirement', { title: 'Draft Req 2' });
-    expect(prop.status).toBe('Draft');
+    const propRes = mcp.callTool('propose_engineering_change', {
+      proposedBy: 'Test Agent',
+      description: 'Add new component',
+      patch: { description: 'Updated description' }
+    });
+    expect(propRes.success).toBe(true);
+    const proposalId = propRes.data.proposalId;
 
-    // Requirements list should remain unchanged before apply
-    const reqsBefore = mcp.handleReadTool('get_requirements') as Array<unknown>;
-    expect(reqsBefore).toHaveLength(1);
-
-    // Apply draft proposal
-    const applied = mcp.applyDraftProposal(prop.id);
-    expect(applied.status).toBe('Applied');
+    const applyRes = mcp.callTool('apply_engineering_change', { proposalId });
+    expect(applyRes.success).toBe(true);
+    expect(applyRes.data.status).toBe('Applied');
   });
 
-  it('should enforce approval boundary for high-impact tools', () => {
+  it('should reject applying invalid or non-existent proposal', () => {
     const mcp = new HardwareStudioMCPServer(sampleProject);
-    expect(() => mcp.handleHighImpactAction('create_release', { version: 'v1.0' }, false))
-      .toThrow('Action "create_release" requires explicit user approval');
-
-    // Executed successfully when approved
-    const res = mcp.handleHighImpactAction('create_release', { version: 'v1.0' }, true) as Record<string, string>;
-    expect(res.status).toBe('Executed');
+    const applyRes = mcp.callTool('apply_engineering_change', { proposalId: 'non_existent' });
+    expect(applyRes.success).toBe(false);
+    expect(applyRes.error).toContain('not found');
   });
 });

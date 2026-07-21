@@ -196,4 +196,23 @@ export class HardwareStudioMCPServer {
     const records = [...(this.projectState.mcpAuditRecords || []), record];
     this.projectState = { ...this.projectState, mcpAuditRecords: records };
   }
+
+  public getResource(uri: string): any {
+    if (uri === 'hardware-studio://summary') {
+      return this.callTool('get_project_summary').data;
+    }
+    if (uri === 'hardware-studio://schematic/netlist') {
+      return this.callTool('get_schematic_netlist').data;
+    }
+    if (uri === 'hardware-studio://pcb/drc') {
+      return this.callTool('get_pcb_drc_issues').data;
+    }
+    if (uri === 'hardware-studio://mechanical/interferences') {
+      return this.callTool('get_mechanical_interferences').data;
+    }
+    if (uri === 'hardware-studio://audit') {
+      return this.projectState.mcpAuditRecords || [];
+    }
+    return { error: 'Unknown URI' };
+  }
 }

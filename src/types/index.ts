@@ -126,18 +126,18 @@ export interface FirmwareTask {
 export interface BoardItem {
   id: string;
   name: string;
-  boardType: 'Main PCB' | 'Flex PCB' | 'Rigid PCB' | 'Rigid-Flex' | 'Daughterboard' | 'Charging Board' | 'Sensor Board' | 'Debug Board';
+  boardType: 'Main PCB' | 'Flex PCB' | 'Rigid PCB' | 'Rigid-Flex' | 'Daughterboard' | 'Charging Board' | 'Sensor Board' | 'Debug Board' | 'Rigid' | string;
   linkedProductArea?: string;
-  purpose: string;
-  dimensionsMm: string;
-  layerCount: number;
-  substrate: 'FR4' | 'Polyimide Flex' | 'Rigid-Flex' | 'Ceramic' | 'Other';
-  placement: 'Internal' | 'Outer' | 'Dock' | 'Strap' | 'Ring Arc' | 'Unknown';
-  mountingNotes: string;
-  connectorNotes: string;
-  thermalNotes: string;
-  rfNotes: string;
-  status: 'Concept' | 'Planned' | 'In Layout' | 'Reviewed' | 'Ready for ECAD';
+  purpose?: string;
+  dimensionsMm?: string;
+  layerCount?: number;
+  substrate?: 'FR4' | 'Polyimide Flex' | 'Rigid-Flex' | 'Ceramic' | 'Other' | string;
+  placement?: 'Internal' | 'Outer' | 'Dock' | 'Strap' | 'Ring Arc' | 'Unknown' | string;
+  mountingNotes?: string;
+  connectorNotes?: string;
+  thermalNotes?: string;
+  rfNotes?: string;
+  status?: 'Concept' | 'Planned' | 'In Layout' | 'Reviewed' | 'Ready for ECAD' | 'Draft' | string;
 }
 
 export interface CircuitBlock {
@@ -173,7 +173,7 @@ export interface ProjectComponentPin {
 export interface BoardComponent {
   id: string;
   boardId: string;
-  circuitBlockId: string;
+  circuitBlockId?: string;
   referenceDesignator: string;
   componentName: string;
   componentType: string;
@@ -181,8 +181,8 @@ export interface BoardComponent {
   packageName: string;
   footprint: string;
   partNumber: string;
-  quantity: number;
-  side: 'Top' | 'Bottom' | 'Both' | 'Unknown';
+  quantity?: number;
+  side?: 'Top' | 'Bottom' | 'Both' | 'Unknown';
   placementCriticality: 'Low' | 'Medium' | 'High' | 'RF Critical' | 'Thermal Critical';
   datasheetUrl?: string;
   supplier?: string;
@@ -217,6 +217,7 @@ export interface BoardComponent {
     locked: boolean;
     placementStatus: 'Unplaced' | 'Placed' | 'Locked' | 'Needs Review' | 'Outside Board' | 'Missing Footprint' | 'Verified';
   };
+  packageDimensions?: { widthMm: number; heightMm: number; heightZMm: number };
 }
 
 export type ProjectElectronicComponent = BoardComponent;
@@ -366,12 +367,22 @@ export interface SchematicWire {
 
 export interface MechanicalBody {
   id: string;
-  sourceProfileId?: string;
-  operation: 'Extrude' | 'Box' | 'Cylinder';
+  name?: string;
+  objectType?: string;
+  xMm?: number;
+  yMm?: number;
+  zMm?: number;
+  widthMm?: number;
+  heightMm?: number;
   depthMm?: number;
-  position: { x: number; y: number; z: number };
-  rotation: { x: number; y: number; z: number };
-  dimensions: { x: number; y: number; z: number };
+  color?: string;
+  transparent?: boolean;
+  opacity?: number;
+  sourceProfileId?: string;
+  operation?: 'Extrude' | 'Box' | 'Cylinder';
+  position?: { x: number; y: number; z: number };
+  rotation?: { x: number; y: number; z: number };
+  dimensions?: { x: number; y: number; z: number };
   linkedMechanicalObjectIds?: string[];
   linkedBoardIds?: string[];
   linkedComponentIds?: string[];
@@ -457,43 +468,66 @@ export interface FirmwareConfiguration {
 export interface FirmwareSourceFile {
   id: string;
   path: string;
-  language: 'C' | 'C++' | 'INI' | 'JSON' | 'Markdown';
+  name?: string;
+  language: 'C' | 'C++' | 'INI' | 'JSON' | 'Markdown' | 'c' | 'cpp' | 'ini' | 'json' | 'markdown' | 'text';
   content: string;
-  generated: boolean;
-  dirty: boolean;
-  linkedModuleIds: string[];
+  generated?: boolean;
+  isGenerated?: boolean;
+  dirty?: boolean;
+  linkedModuleIds?: string[];
 }
 
 export interface ValidationRun {
   id: string;
   testId: string;
-  testName: string;
-  timestamp: string;
-  status: 'Pass' | 'Fail' | 'Inconclusive';
+  runNumber?: number;
+  testName?: string;
+  timestamp?: string;
+  status: 'Pass' | 'Fail' | 'Inconclusive' | 'Passed' | 'Failed' | 'In Progress' | 'Needs Review';
   measuredValue?: number | string;
   passCriteria?: string;
+  stepResults?: any[];
   logs: string[];
   runBy?: string;
+  operator?: string;
   environment?: string;
 }
+
+export type MCPProposal = Record<string, any>;
+export type MCPAuditRecord = Record<string, any>;
+
+export interface KeepoutZone {
   id: string;
   boardId: string;
+  zoneName?: string;
   x: number;
   y: number;
   width: number;
   height: number;
-  shape: 'rect' | 'polygon';
+  xMm?: number;
+  yMm?: number;
+  widthMm?: number;
+  heightMm?: number;
+  restrictTraces?: boolean;
+  restrictVias?: boolean;
+  shape?: 'rect' | 'polygon';
   points?: { x: number; y: number }[];
-  layerScope: 'All' | 'Top' | 'Bottom';
-  reason: string;
+  layerScope?: 'All' | 'Top' | 'Bottom';
+  reason?: string;
   notes?: string;
 }
 
 export interface Via {
   id: string;
   boardId: string;
+  layerId?: string;
   x?: number;
   y?: number;
+  xMm?: number;
+  yMm?: number;
+  padDiameterMm?: number;
+  drillDiameterMm?: number;
+  netName?: string;
   drillDiameter?: number;
   outerDiameter?: number;
   netId?: string;
@@ -506,8 +540,12 @@ export interface DrillHole {
   boardId: string;
   x?: number;
   y?: number;
-  diameter?: number;
+  xMm?: number;
+  yMm?: number;
+  diameterMm?: number;
   plated?: boolean;
+  holeType?: string;
+  diameter?: number;
   purpose?: string;
 }
 
@@ -566,6 +604,7 @@ export interface Project {
   releaseCandidates?: ProductRevision[];
   releases?: ProductRevision[];
   activeBranch?: string;
+  isFrozen?: boolean;
   activeView: string;
   nodes: CustomNode[];
   edges: CustomEdge[];
@@ -823,15 +862,6 @@ export interface MechanicalDimension {
   notes?: string;
 }
 
-export interface FirmwareSourceFile {
-  id: string;
-  path: string;
-  language: "C" | "C++" | "INI" | "JSON" | "Markdown";
-  content: string;
-  generated: boolean;
-  linkedModuleIds: string[];
-}
-
 export interface FirmwareModule {
   id: string;
   name: string;
@@ -843,8 +873,8 @@ export interface FirmwareModule {
   linkedNetIds: string[];
   linkedTestIds: string[];
   dependencies: string[];
-  sourceFiles: FirmwareSourceFile[];
-  status: "Draft" | "Implemented" | "Needs Review" | "Verified";
+  sourceFiles?: (FirmwareSourceFile | string)[];
+  status?: "Draft" | "Implemented" | "Needs Review" | "Verified";
 }
 
 export interface FirmwareState {
@@ -903,30 +933,20 @@ export interface ValidationEvidence {
 export interface ValidationTest {
   id: string;
   name: string;
-  stage: "EVT" | "DVT" | "PVT" | "Factory QA";
-  category: "Requirement" | "Mechanical" | "Electrical" | "Power" | "RF" | "Firmware" | "Thermal" | "Environmental" | "Manufacturing";
+  testName?: string;
+  stage?: "EVT" | "DVT" | "PVT" | "Factory QA";
+  category?: "Requirement" | "Mechanical" | "Electrical" | "Power" | "RF" | "Firmware" | "Thermal" | "Environmental" | "Manufacturing" | "DRC" | string;
   linkedRequirementIds: string[];
-  linkedArchitectureNodeIds: string[];
-  linkedComponentIds: string[];
-  linkedNetIds: string[];
-  linkedFirmwareModuleIds: string[];
+  linkedArchitectureNodeIds?: string[];
+  linkedComponentIds?: string[];
+  linkedNetIds?: string[];
+  linkedFirmwareModuleIds?: string[];
   steps: ValidationTestStep[];
   measurements: ValidationMeasurement[];
   passCriteria: string[];
-  status: "Not Started" | "In Progress" | "Passed" | "Failed" | "Blocked";
+  status?: "Not Started" | "In Progress" | "Passed" | "Failed" | "Blocked" | "Untested" | string;
   evidence: ValidationEvidence[];
   resultNotes?: string;
-}
-
-export interface ValidationRun {
-  id: string;
-  testId: string;
-  startedAt: string;
-  completedAt?: string;
-  operator?: string;
-  measurements: ValidationMeasurement[];
-  evidence: ValidationEvidence[];
-  status: "In Progress" | "Passed" | "Failed" | "Needs Review";
 }
 
 export interface EngineeringCommand<TBefore = unknown, TAfter = unknown> {

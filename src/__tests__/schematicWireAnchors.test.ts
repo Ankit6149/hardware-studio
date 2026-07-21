@@ -25,6 +25,8 @@ describe('Slice 3 Complete Schematic Wire Anchor & Workflow Tests', () => {
       ],
       quantity: 1,
       side: 'Top',
+      placementCriticality: 'Low',
+      notes: '',
       placementStatus: 'Placed',
       schematic: { placed: true, x: 100, y: 100, rotation: 0, locked: false }
     };
@@ -38,14 +40,16 @@ describe('Slice 3 Complete Schematic Wire Anchor & Workflow Tests', () => {
       componentName: 'Temperature Sensor',
       componentType: 'Sensor',
       value: 'TMP117',
-      packageName: 'WSON_6',
-      footprint: 'WSON_6',
-      partNumber: 'TMP117_WSON',
+      packageName: 'SOT_23',
+      footprint: 'SOT_23',
+      partNumber: 'TMP117_SOT23',
       pins: [
         { id: 'pin_u2_1', componentId: 'comp_u2_sensor', pinNumber: '1', pinName: 'SDA', electricalType: 'Bidirectional', netName: '' }
       ],
       quantity: 1,
       side: 'Top',
+      placementCriticality: 'Low',
+      notes: '',
       placementStatus: 'Placed',
       schematic: { placed: true, x: 400, y: 100, rotation: 0, locked: false }
     };
