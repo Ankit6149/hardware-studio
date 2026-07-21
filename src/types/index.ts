@@ -412,6 +412,12 @@ export interface CopperShape {
   notes?: string;
 }
 
+export type PCBAnchor =
+  | { type: 'pad'; componentId: string; padNumber: string }
+  | { type: 'via'; viaId: string }
+  | { type: 'trace-end'; traceId: string; endpoint: 'start' | 'end' }
+  | { type: 'dangling'; xMm: number; yMm: number };
+
 export interface Trace {
   id: string;
   boardId: string;
@@ -421,6 +427,8 @@ export interface Trace {
   points?: { x: number; y: number }[];
   width?: number;
   viaIds?: string[];
+  sourceAnchor?: PCBAnchor;
+  targetAnchor?: PCBAnchor;
   locked?: boolean;
   lengthEstimate?: number;
   impedanceNote?: string;
