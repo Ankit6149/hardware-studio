@@ -579,14 +579,17 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       releaseCandidates: state.releaseCandidates || [],
       releases: state.releases || [],
       activeBranch: state.activeBranch || 'main',
-      mcpProposals: state.mcpProposals || [],
+mcpProposals: state.mcpProposals || [],
       mcpAuditRecords: state.mcpAuditRecords || []
     };
   };
 
-  const persistChange = (updatedState: Partial<ProjectState>) => {
-    const currentState = { ...get(), ...updatedState };
-    const cleanProject = getCleanProjectData(currentState as ProjectState);
+  const persistChange = (changes: Partial<ProjectState>) => {
+    if (get().isFrozen) {
+      throw new Error("Cannot modify an immutable frozen release. Create a new branch or revision to continue edits.");
+    }
+    const updatedState = { ...get(), ...changes };
+    const cleanProject = getCleanProjectData(updatedState as ProjectState);
     const saved = getSavedProjects();
     saved[cleanProject.id] = cleanProject;
     saveProjectsToStorage(saved, cleanProject.id);
