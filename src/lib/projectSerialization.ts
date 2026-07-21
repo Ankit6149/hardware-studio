@@ -57,10 +57,22 @@ export function serializeProject(project: Project): string {
     architectureConnections: project.architectureConnections || [],
     mechanicalObjects: project.mechanicalObjects || [],
     mechanicalDimensions: project.mechanicalDimensions || [],
+    mechanicalBodies: project.mechanicalBodies || [],
     firmwareModules: project.firmwareModules || [],
     firmwareStates: project.firmwareStates || [],
     firmwareTransitions: project.firmwareTransitions || [],
-    validationTests: project.validationTests || []
+    firmwareConfiguration: project.firmwareConfiguration || undefined,
+    firmwareSourceFiles: project.firmwareSourceFiles || [],
+    firmwareBuildRecords: project.firmwareBuildRecords || [],
+    validationTests: project.validationTests || [],
+    validationRuns: project.validationRuns || [],
+    revisions: project.revisions || [],
+    branches: project.branches || [],
+    releaseCandidates: project.releaseCandidates || [],
+    releases: project.releases || [],
+    activeBranch: project.activeBranch || 'main',
+    mcpProposals: project.mcpProposals || [],
+    mcpAuditRecords: project.mcpAuditRecords || []
   };
 
   return JSON.stringify(cleanProject, null, 2);
@@ -89,8 +101,19 @@ export function migrateProjectSchema(raw: unknown): Project {
   const pRecord = project as unknown as Record<string, unknown>;
   if (!pRecord.architectureConnections) pRecord.architectureConnections = [];
   if (!pRecord.mechanicalDimensions) pRecord.mechanicalDimensions = [];
+  if (!pRecord.mechanicalBodies) pRecord.mechanicalBodies = [];
   if (!pRecord.firmwareStates) pRecord.firmwareStates = [];
   if (!pRecord.firmwareTransitions) pRecord.firmwareTransitions = [];
+  if (!pRecord.firmwareSourceFiles) pRecord.firmwareSourceFiles = [];
+  if (!pRecord.firmwareBuildRecords) pRecord.firmwareBuildRecords = [];
+  if (!pRecord.validationRuns) pRecord.validationRuns = [];
+  if (!pRecord.revisions) pRecord.revisions = [];
+  if (!pRecord.branches) pRecord.branches = [];
+  if (!pRecord.releaseCandidates) pRecord.releaseCandidates = [];
+  if (!pRecord.releases) pRecord.releases = [];
+  if (!pRecord.activeBranch) pRecord.activeBranch = 'main';
+  if (!pRecord.mcpProposals) pRecord.mcpProposals = [];
+  if (!pRecord.mcpAuditRecords) pRecord.mcpAuditRecords = [];
   if (!pRecord.customComponentLibrary) pRecord.customComponentLibrary = [];
 
   project.version = String(CURRENT_SCHEMA_VERSION);

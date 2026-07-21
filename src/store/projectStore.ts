@@ -330,118 +330,131 @@ const PROJECTS_KEY = 'hardware_studio_projects_v1';
 const ACTIVE_ID_KEY = 'hardware_studio_active_project_id_v1';
 const OLD_KEY = 'hardware_studio_system_alpha_project';
 
+const inMemoryProjectsStore: Record<string, Project> = {};
+let inMemoryActiveId: string = 'the-ring';
+
 // Helpers to load/save list of projects from local storage
 const getSavedProjects = (): Record<string, Project> => {
-  if (typeof window === 'undefined') return {};
-  try {
-    const savedStr = window.localStorage.getItem(PROJECTS_KEY);
-    if (savedStr) {
-      return JSON.parse(savedStr);
-    }
-    
-    // Check old single-project localStorage key for backwards compatibility
-    const oldStr = window.localStorage.getItem(OLD_KEY);
-    if (oldStr) {
-      const oldObj = JSON.parse(oldStr);
-      const ringTpl = templates.find(t => t.id === 'the-ring')?.project;
-      const converted: Project = {
-        id: 'project_default',
-        projectName: oldObj.projectName || 'The Ring',
-        description: 'Imported from your previous workspace session.',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        templateName: 'The Ring',
-        version: '1.0',
-        activeView: oldObj.activeView || 'master',
-        nodes: oldObj.nodes || ringTpl?.nodes || [],
-        edges: oldObj.edges || ringTpl?.edges || [],
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        bom: (oldObj.bom || []).map((b: any) => ({
-          id: b.id || `bom_${Math.random()}`,
-          blockName: b.blockName || '',
-          candidateComponent: b.candidateComponent || '',
-          partNumber: b.partNumber || '',
-          stage: b.stage || 'Prototype',
-          quantity: typeof b.quantity === 'number' ? b.quantity : 1,
-          voltage: b.voltage || '',
-          currentEstimate: b.currentEstimate || '',
-          interface: b.interface || '',
-          packageSize: b.packageSize || '',
-          dimensions: b.dimensions || '',
-          costEstimate: b.costEstimate || '0.00',
-          supplier: b.supplier || '',
-          supplierUrl: b.supplierUrl || '',
-          datasheetUrl: b.datasheetUrl || '',
-          status: b.status || 'Not Started',
-          risk: b.risk || '',
-          alternative: b.alternative || '',
-          notes: b.notes || ''
-        })),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        testing: (oldObj.testing || []).map((t: any) => ({
-          id: t.id || `stage_${Math.random()}`,
-          name: t.name || '',
-          goal: t.goal || '',
-          partsNeeded: t.partsNeeded || '',
-          steps: t.steps || '',
-          passCriteria: t.passCriteria || '',
-          risks: t.risks || '',
-          status: t.status || 'Not Started',
-          notes: t.notes || '',
-          category: t.category || 'General',
-          linkedBlocks: t.linkedBlocks || [],
-          resultNotes: t.resultNotes || '',
-          evidenceLink: t.evidenceLink || '',
-          order: t.order || 0
-        })),
-        powerBudget: ringTpl?.powerBudget || [],
-        pinMap: ringTpl?.pinMap || [],
-        firmwareTasks: ringTpl?.firmwareTasks || [],
-        batteryCapacityMah: oldObj.batteryCapacityMah || 18
-      };
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const savedStr = window.localStorage.getItem(PROJECTS_KEY);
+      if (savedStr) {
+        const parsed = JSON.parse(savedStr);
+        Object.assign(inMemoryProjectsStore, parsed);
+        return parsed;
+      }
       
-      const newProjects = { 'project_default': converted };
-      window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(newProjects));
-      window.localStorage.setItem(ACTIVE_ID_KEY, 'project_default');
-      // Clean up old key to avoid repeated migration
-      window.localStorage.removeItem(OLD_KEY);
-      return newProjects;
-    }
+      // Check old single-project localStorage key for backwards compatibility
+      const oldStr = window.localStorage.getItem(OLD_KEY);
+      if (oldStr) {
+        const oldObj = JSON.parse(oldStr);
+        const ringTpl = templates.find(t => t.id === 'the-ring')?.project;
+        const converted: Project = {
+          id: 'project_default',
+          projectName: oldObj.projectName || 'The Ring',
+          description: 'Imported from your previous workspace session.',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          templateName: 'The Ring',
+          version: '1.0',
+          activeView: oldObj.activeView || 'master',
+          nodes: oldObj.nodes || ringTpl?.nodes || [],
+          edges: oldObj.edges || ringTpl?.edges || [],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          bom: (oldObj.bom || []).map((b: any) => ({
+            id: b.id || `bom_${Math.random()}`,
+            blockName: b.blockName || '',
+            candidateComponent: b.candidateComponent || '',
+            partNumber: b.partNumber || '',
+            stage: b.stage || 'Prototype',
+            quantity: typeof b.quantity === 'number' ? b.quantity : 1,
+            voltage: b.voltage || '',
+            currentEstimate: b.currentEstimate || '',
+            interface: b.interface || '',
+            packageSize: b.packageSize || '',
+            dimensions: b.dimensions || '',
+            costEstimate: b.costEstimate || '0.00',
+            supplier: b.supplier || '',
+            supplierUrl: b.supplierUrl || '',
+            datasheetUrl: b.datasheetUrl || '',
+            status: b.status || 'Not Started',
+            risk: b.risk || '',
+            alternative: b.alternative || '',
+            notes: b.notes || ''
+          })),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          testing: (oldObj.testing || []).map((t: any) => ({
+            id: t.id || `stage_${Math.random()}`,
+            name: t.name || '',
+            goal: t.goal || '',
+            partsNeeded: t.partsNeeded || '',
+            steps: t.steps || '',
+            passCriteria: t.passCriteria || '',
+            risks: t.risks || '',
+            status: t.status || 'Not Started',
+            notes: t.notes || '',
+            category: t.category || 'General',
+            linkedBlocks: t.linkedBlocks || [],
+            resultNotes: t.resultNotes || '',
+            evidenceLink: t.evidenceLink || '',
+            order: t.order || 0
+          })),
+          powerBudget: ringTpl?.powerBudget || [],
+          pinMap: ringTpl?.pinMap || [],
+          firmwareTasks: ringTpl?.firmwareTasks || [],
+          batteryCapacityMah: oldObj.batteryCapacityMah || 18
+        };
+        
+        const newProjects = { 'project_default': converted };
+        inMemoryProjectsStore['project_default'] = converted;
+        window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(newProjects));
+        window.localStorage.setItem(ACTIVE_ID_KEY, 'project_default');
+        // Clean up old key to avoid repeated migration
+        window.localStorage.removeItem(OLD_KEY);
+        return newProjects;
+      }
 
-    // Default to 'The Ring' template if nothing exists
-    const ringTemplate = templates.find(t => t.id === 'the-ring')?.project;
-    if (ringTemplate) {
-      const initial = JSON.parse(JSON.stringify(ringTemplate)) as Project;
-      
-      // Pre-generate CAD layout coordinates and initial manufacturing status checks
-      const { layouts, connections } = generateEditorLayouts(initial);
-      initial.editorLayouts = layouts;
-      initial.editorConnections = connections;
-      initial.factoryFiles = getInitialFactoryFiles(initial);
+      // Default to 'The Ring' template if nothing exists
+      const ringTemplate = templates.find(t => t.id === 'the-ring')?.project;
+      if (ringTemplate) {
+        const initial = JSON.parse(JSON.stringify(ringTemplate)) as Project;
+        
+        // Pre-generate CAD layout coordinates and initial manufacturing status checks
+        const { layouts, connections } = generateEditorLayouts(initial);
+        initial.editorLayouts = layouts;
+        initial.editorConnections = connections;
+        initial.factoryFiles = getInitialFactoryFiles(initial);
 
-      const initialProjects = { [initial.id]: initial };
-      window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(initialProjects));
-      window.localStorage.setItem(ACTIVE_ID_KEY, initial.id);
-      return initialProjects;
+        const initialProjects = { [initial.id]: initial };
+        inMemoryProjectsStore[initial.id] = initial;
+        window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(initialProjects));
+        window.localStorage.setItem(ACTIVE_ID_KEY, initial.id);
+        return initialProjects;
+      }
+    } catch (e) {
+      console.error("Failed to load projects from storage:", e);
     }
-  } catch (e) {
-    console.error("Failed to load projects from storage:", e);
   }
-  return {};
+  return inMemoryProjectsStore;
 };
 
 const getActiveId = (): string => {
-  if (typeof window === 'undefined') return 'the-ring';
-  return window.localStorage.getItem(ACTIVE_ID_KEY) || 'the-ring';
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage.getItem(ACTIVE_ID_KEY) || inMemoryActiveId;
+  }
+  return inMemoryActiveId;
 };
 
 const saveProjectsToStorage = (projects: Record<string, Project>, activeId: string) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-    window.localStorage.setItem(ACTIVE_ID_KEY, activeId);
-  } catch (e) {
-    console.error("Failed to save projects to storage:", e);
+  Object.assign(inMemoryProjectsStore, projects);
+  inMemoryActiveId = activeId;
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+      window.localStorage.setItem(ACTIVE_ID_KEY, activeId);
+    } catch (e) {
+      console.error("Failed to save projects to storage:", e);
+    }
   }
 };
 
@@ -547,10 +560,22 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       architectureConnections: state.architectureConnections || [],
       mechanicalObjects: state.mechanicalObjects || [],
       mechanicalDimensions: state.mechanicalDimensions || [],
+      mechanicalBodies: state.mechanicalBodies || [],
       firmwareModules: state.firmwareModules || [],
       firmwareStates: state.firmwareStates || [],
       firmwareTransitions: state.firmwareTransitions || [],
-      validationTests: state.validationTests || []
+      firmwareConfiguration: state.firmwareConfiguration || undefined,
+      firmwareSourceFiles: state.firmwareSourceFiles || [],
+      firmwareBuildRecords: state.firmwareBuildRecords || [],
+      validationTests: state.validationTests || [],
+      validationRuns: state.validationRuns || [],
+      revisions: state.revisions || [],
+      branches: state.branches || [],
+      releaseCandidates: state.releaseCandidates || [],
+      releases: state.releases || [],
+      activeBranch: state.activeBranch || 'main',
+      mcpProposals: state.mcpProposals || [],
+      mcpAuditRecords: state.mcpAuditRecords || []
     };
   };
 
@@ -1195,44 +1220,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const rawProj = saved[id];
       if (rawProj) {
         const proj = migrateProjectSchema(rawProj);
-        // Safe check and default arrays to prevent crashes on legacy loads
         set({
-          id: proj.id,
-          projectName: proj.projectName,
-          description: proj.description || "",
-          createdAt: proj.createdAt || new Date().toISOString(),
-          updatedAt: proj.updatedAt || new Date().toISOString(),
-          templateName: proj.templateName,
-          version: proj.version || "1.0",
-          activeView: proj.activeView || "master",
-          nodes: proj.nodes || [],
-          edges: proj.edges || [],
-          bom: proj.bom || [],
-          testing: proj.testing || [],
-          powerBudget: proj.powerBudget || [],
-          pinMap: proj.pinMap || [],
-          firmwareTasks: proj.firmwareTasks || [],
-          batteryCapacityMah: proj.batteryCapacityMah || 100,
-          boards: proj.boards || [],
-          circuitBlocks: proj.circuitBlocks || [],
-          boardComponents: proj.boardComponents || [],
-          nets: proj.nets || [],
-          pcbConstraints: proj.pcbConstraints || [],
-          manufacturingChecklist: proj.manufacturingChecklist || [],
-          mechanicalZones: proj.mechanicalZones || [],
-          assemblyLayers: proj.assemblyLayers || [],
-          schematicSymbols: proj.schematicSymbols || [],
-          schematicConnections: proj.schematicConnections || [],
-          schematicWires: proj.schematicWires || [],
-          pcbLayers: proj.pcbLayers || [],
-          copperShapes: proj.copperShapes || [],
-          traces: proj.traces || [],
-          vias: proj.vias || [],
-          drillHoles: proj.drillHoles || [],
-          boardOutlines: proj.boardOutlines || [],
-          pcbRules: proj.pcbRules || [],
-          padNetAssignments: proj.padNetAssignments || [],
-          keepoutZones: proj.keepoutZones || [],
+          ...proj,
           selectedNodeId: null,
           projectsList: syncProjectsList(saved)
         });

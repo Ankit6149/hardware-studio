@@ -624,10 +624,17 @@ export interface Project {
   architectureConnections?: ProductArchitectureConnection[];
   mechanicalObjects?: MechanicalObject[];
   mechanicalDimensions?: MechanicalDimension[];
+  mechanicalBodies?: MechanicalBody[];
   firmwareModules?: FirmwareModule[];
   firmwareStates?: FirmwareState[];
   firmwareTransitions?: FirmwareTransition[];
+  firmwareConfiguration?: FirmwareConfiguration;
+  firmwareSourceFiles?: FirmwareSourceFile[];
+  firmwareBuildRecords?: any[];
   validationTests?: ValidationTest[];
+  validationRuns?: ValidationRun[];
+  mcpProposals?: any[];
+  mcpAuditRecords?: any[];
 
   // Blueprint Generation System
   blueprintPack?: BlueprintPack;
