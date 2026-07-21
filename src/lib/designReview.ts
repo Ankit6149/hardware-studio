@@ -393,7 +393,7 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
     }
 
     // Check layer counts
-    if (board.layerCount < 2) {
+    if ((board.layerCount || 1) < 2) {
       results.push({
         id: `rev_drc_layers_${board.id}`,
         category: "PCB DRC",

@@ -34,7 +34,7 @@ export const BoardSpecsSheet: React.FC<SheetProps> = ({ project }) => {
           </div>
         ) : (
           boards.slice(0, 2).map(b => {
-            const dims = parseDimensions(b.dimensionsMm);
+            const dims = parseDimensions(b.dimensionsMm || '');
             const isFlex = b.substrate?.toLowerCase().includes("flex");
             const hasAntenna = project.circuitBlocks?.some(cb => cb.boardId === b.id && cb.circuitType === 'RF');
             const hasBend = pcbConstraints.some(c => c.boardId === b.id && c.constraintType === 'Flex Bend');
@@ -79,7 +79,7 @@ export const BoardSpecsSheet: React.FC<SheetProps> = ({ project }) => {
                 {/* Metadata details */}
                 <div className="text-[9.5px] leading-relaxed space-y-1 pt-2 border-t border-dashed">
                   <div><strong>Substrate Substrate</strong>: {b.substrate || "SUBSTRATE REQUIRED"}</div>
-                  <div><strong>PCB Layer Build</strong>: {b.layerCount > 0 ? `${b.layerCount} Layers` : "LAYER COUNT REQUIRED"}</div>
+                  <div><strong>PCB Layer Build</strong>: {(b.layerCount || 0) > 0 ? `${b.layerCount} Layers` : "Unspecified Layers"}</div>
                   <div><strong>Mounting Placement</strong>: {b.placement}</div>
                   
                   {isFlex && !hasBend && (
@@ -159,7 +159,7 @@ export const StackupConstraintsSheet: React.FC<SheetProps> = ({ project }) => {
               <div className="flex-1 h-full bg-amber-500/10 border border-amber-300 flex items-center justify-center text-slate-500 text-[6px] uppercase font-bold">Dielectric Substrate Core</div>
             </div>
 
-            {selectedBoard && selectedBoard.layerCount >= 4 && (
+            {selectedBoard && (selectedBoard.layerCount || 0) >= 4 && (
               <>
                 <div className="flex items-center space-x-2 my-0.5">
                   <span className="w-16 font-bold text-blue-800 text-right">L2 (GND):</span>

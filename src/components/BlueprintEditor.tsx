@@ -58,7 +58,7 @@ export const BlueprintEditor: React.FC = () => {
         const isRing = store.projectName.toLowerCase().includes("ring") || store.templateName?.toLowerCase().includes("ring");
         if (isRing) {
           const mainBoard = boards[0];
-          if (mainBoard && !mainBoard.substrate.toLowerCase().includes('flex')) {
+          if (mainBoard && !mainBoard.substrate?.toLowerCase().includes('flex')) {
             list.push("DFM: Wearable rings require polyimide flexible FPC boards to fit contours.");
           }
           if (!activeLayoutObjects.some(o => o.id.includes('seal'))) {
@@ -76,7 +76,7 @@ export const BlueprintEditor: React.FC = () => {
           if (!b.dimensionsMm || b.dimensionsMm.toLowerCase().includes('required') || b.dimensionsMm === '0 x 0') {
             list.push(`DRC: Board [${b.name}] lacks physical size (dimensionsMm required).`);
           }
-          if (b.layerCount < 2) {
+          if ((b.layerCount || 1) < 2) {
             list.push(`DRC: Multi-layer boards require at least 2 layers stack configuration.`);
           }
         });

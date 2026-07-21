@@ -108,17 +108,17 @@ export const BoardStudio: React.FC = () => {
   const handleStartEditBoard = (board: BoardItem) => {
     setEditingBoardId(board.id);
     setBoardName(board.name);
-    setBoardType(board.boardType);
-    setSubstrate(board.substrate);
-    setLayerCount(board.layerCount);
-    setDimensionsMm(board.dimensionsMm);
-    setPlacement(board.placement);
-    setPurpose(board.purpose);
-    setMountingNotes(board.mountingNotes);
-    setConnectorNotes(board.connectorNotes);
-    setThermalNotes(board.thermalNotes);
-    setRfNotes(board.rfNotes);
-    setStatus(board.status);
+    setBoardType(board.boardType || 'Main PCB');
+    setSubstrate(board.substrate || 'FR4');
+    setLayerCount(board.layerCount || 2);
+    setDimensionsMm(board.dimensionsMm || '');
+    setPlacement(board.placement || 'Internal');
+    setPurpose(board.purpose || '');
+    setMountingNotes(board.mountingNotes || '');
+    setConnectorNotes(board.connectorNotes || '');
+    setThermalNotes(board.thermalNotes || '');
+    setRfNotes(board.rfNotes || '');
+    setStatus(board.status || 'Draft');
   };
 
   const handleSaveComponent = (e: React.FormEvent) => {
@@ -181,7 +181,8 @@ export const BoardStudio: React.FC = () => {
     if (!c.referenceDesignator) warnings.push("Missing Reference Designator (e.g. U1, R1)");
     if (!c.footprint || !c.packageName) warnings.push("Missing packaging/footprint layout (e.g. 0402, QFN-32)");
     if (!c.boardId) warnings.push("Component is not assigned to a physical PCB board layout");
-    if (c.placementCriticality === 'RF Critical' && !c.notes.toLowerCase().includes("rf") && !c.notes.toLowerCase().includes("antenna")) {
+    const notes = c.notes?.toLowerCase() || '';
+    if (c.placementCriticality === 'RF Critical' && !notes.includes("rf") && !notes.includes("antenna")) {
       warnings.push("RF Critical component lacks specific layout antenna notes or trace requirements");
     }
     return warnings;

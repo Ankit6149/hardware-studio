@@ -42,16 +42,16 @@ export const BoardInspector: React.FC<BoardObjectInspectorProps> = ({ viewState 
           <div className="space-y-2 text-[10px]">
             <Field label="Name" value={board.name} />
             <Field label="Type" value={board.boardType} />
-            <Field label="Substrate" value={board.substrate} />
-            <Field label="Layers" value={String(board.layerCount)} />
-            <Field label="Dimensions" value={board.dimensionsMm} />
+            <Field label="Substrate" value={board.substrate || 'FR4'} />
+            <Field label="Layers" value={String(board.layerCount || 2)} />
+            <Field label="Dimensions" value={board.dimensionsMm || '—'} />
             {outline && (
               <>
                 <Field label="Width" value={`${outline.width?.toFixed(1) || '—'}mm`} />
                 <Field label="Height" value={`${outline.height?.toFixed(1) || '—'}mm`} />
               </>
             )}
-            <Field label="Status" value={board.status} />
+            <Field label="Status" value={board.status || 'Draft'} />
           </div>
         ) : (
           <div className="text-[10px] text-slate-600">No board defined. Generate Full Product Plan first.</div>
@@ -64,7 +64,7 @@ export const BoardInspector: React.FC<BoardObjectInspectorProps> = ({ viewState 
   if (selectedObjectType === 'component') {
     const comp = (boardComponents || []).find(c => c.id === selectedObjectId);
     if (!comp) return <NoSelection />;
-    const fp = getFootprint(comp.footprint);
+    const fp = getFootprint(comp.footprint || '');
     return (
       <div className="p-3">
         <div className="flex items-center gap-1.5 mb-3">
@@ -75,10 +75,10 @@ export const BoardInspector: React.FC<BoardObjectInspectorProps> = ({ viewState 
           <Field label="RefDes" value={comp.referenceDesignator} />
           <Field label="Name" value={comp.componentName} />
           <Field label="Type" value={comp.componentType} />
-          <Field label="Footprint" value={comp.footprint} />
-          <Field label="Package" value={comp.packageName} />
-          <Field label="Value" value={comp.value} />
-          <Field label="Side" value={comp.side} />
+          <Field label="Footprint" value={comp.footprint || ''} />
+          <Field label="Package" value={comp.packageName || ''} />
+          <Field label="Value" value={comp.value || ''} />
+          <Field label="Side" value={comp.side || 'Top'} />
           <EditField label="X (mm)" value={String(comp.placementX?.toFixed(2) || '0')} onChange={v => updateBoardComponent(comp.id, { placementX: parseFloat(v) || 0 })} />
           <EditField label="Y (mm)" value={String(comp.placementY?.toFixed(2) || '0')} onChange={v => updateBoardComponent(comp.id, { placementY: parseFloat(v) || 0 })} />
           <EditField label="Rotation" value={String(comp.rotationDeg || 0)} onChange={v => updateBoardComponent(comp.id, { rotationDeg: parseFloat(v) || 0 })} />
@@ -102,8 +102,8 @@ export const BoardInspector: React.FC<BoardObjectInspectorProps> = ({ viewState 
               {comp.lockedPlacement ? 'Unlock' : 'Lock'}
             </button>
           </div>
-          <Field label="Criticality" value={comp.placementCriticality} />
-          <Field label="Part #" value={comp.partNumber} />
+          <Field label="Criticality" value={comp.placementCriticality || 'Low'} />
+          <Field label="Part #" value={comp.partNumber || ''} />
           <Field label="Pads" value={String(fp.pads.length)} />
           <Field label="Body" value={`${fp.bodyWidthMm}×${fp.bodyHeightMm}mm`} />
           <div className="pt-1.5 border-t border-slate-850 flex items-center justify-between">

@@ -282,9 +282,9 @@ export const generateEditorLayouts = (project: Project): {
       layer: "Board outlines",
       metadata: {
         type: b.boardType,
-        substrate: b.substrate,
-        layers: b.layerCount,
-        dimensions: b.dimensionsMm
+        substrate: b.substrate || 'FR4',
+        layers: b.layerCount || 2,
+        dimensions: b.dimensionsMm || ''
       }
     });
 
@@ -352,8 +352,8 @@ export const generateEditorLayouts = (project: Project): {
         layer: c.side === 'Bottom' ? "Bottom SMT" : "Top SMT",
         metadata: {
           partName: c.componentName,
-          footprint: c.footprint || c.packageName,
-          criticality: c.placementCriticality
+          footprint: c.footprint || c.packageName || 'STD',
+          criticality: c.placementCriticality || 'Low'
         }
       });
     });
@@ -972,7 +972,7 @@ export const autoCreateHandoffChecklist = (project: Project): ManufacturingCheck
   addIfUnique("Run board ERC rules checker and tie all unused logical gate pins explicitly", "Schematic", "Ensure no floating input gates.");
   addIfUnique("Run DRC matching flex PCB fabrication tolerance capabilities (4mil limits)", "PCB Layout", "Flex layout rules clearance.");
   
-  if (boards.some(b => b.substrate.toLowerCase().includes("flex"))) {
+  if (boards.some(b => b.substrate?.toLowerCase().includes("flex"))) {
     addIfUnique("Audit bend radius keepout voids to shield traces from fatigue fractures", "PCB Layout", "No solder joints within bend line boundaries.");
   }
 

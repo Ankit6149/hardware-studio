@@ -194,9 +194,11 @@ export function runSchematicERC(project: Project): ReviewResult[] {
     });
     if (hasI2C && isMcu) {
       const hasPullups = comps.some(
-        other =>
-          other.referenceDesignator.startsWith('R') &&
-          (other.notes.toLowerCase().includes('pullup') || other.notes.toLowerCase().includes('pull-up') || other.value === '4.7k' || other.value === '10k')
+        other => {
+          const notes = other.notes?.toLowerCase() || '';
+          return other.referenceDesignator.startsWith('R') &&
+            (notes.includes('pullup') || notes.includes('pull-up') || other.value === '4.7k' || other.value === '10k');
+        }
       );
       if (!hasPullups) {
         addIssue(

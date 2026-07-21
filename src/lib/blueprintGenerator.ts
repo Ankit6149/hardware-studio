@@ -325,7 +325,7 @@ function generateSchematicSheet(p: Project, reviewResults: ReturnType<typeof run
 
   const symbolTable: BlueprintTable = {
     id: tblId(), title: "Placed Schematic Components", columns: ["Designator", "Type", "Value", "Pins", "Footprint"],
-    rows: components.map(c => [c.referenceDesignator, c.componentType, c.value || "—", String(c.pins?.length || 0), c.footprint])
+    rows: components.map(c => [c.referenceDesignator, c.componentType, c.value || "—", String(c.pins?.length || 0), c.footprint || "—"])
   };
 
   return {
@@ -365,7 +365,7 @@ function generatePCBLayoutSheet(p: Project, reviewResults: ReturnType<typeof run
       id: objId(), type: "board", label: boards[0].name,
       x: startX, y: startY, width: boardW * scale, height: boardH * scale,
       sourceType: "board", sourceId: boards[0].id,
-      metadata: { boardType: boards[0].boardType, dimensions: boards[0].dimensionsMm || "", layers: boards[0].layerCount, substrate: boards[0].substrate, status: boards[0].status }
+      metadata: { boardType: boards[0].boardType, dimensions: boards[0].dimensionsMm || "", layers: boards[0].layerCount || 2, substrate: boards[0].substrate || "FR4", status: boards[0].status || "Draft" }
     });
   }
 
@@ -412,7 +412,7 @@ function generatePCBLayoutSheet(p: Project, reviewResults: ReturnType<typeof run
 
   const boardTable: BlueprintTable = {
     id: tblId(), title: "Board Specifications", columns: ["Board", "Type", "Dimensions", "Layers", "Substrate", "Status"],
-    rows: boards.map(b => [b.name, b.boardType, b.dimensionsMm || "—", String(b.layerCount), b.substrate, b.status])
+    rows: boards.map(b => [b.name, b.boardType, b.dimensionsMm || "—", String(b.layerCount || 2), b.substrate || "FR4", b.status || "Draft"])
   };
   const layerTable: BlueprintTable = {
     id: tblId(), title: "PCB Layer Stack", columns: ["Layer", "Type", "Order", "Copper", "Thickness µm"],
@@ -470,7 +470,7 @@ function generateComponentPlacementSheet(p: Project): BlueprintSheet {
         y: startY + (c.placementY - h / 2) * scale,
         width: w * scale, height: h * scale,
         rotation: c.rotationDeg, sourceType: "component", sourceId: c.id,
-        metadata: { footprint: c.footprint || "", value: c.value || "", side: c.side, packageName: c.packageName || "" }
+        metadata: { footprint: c.footprint || "", value: c.value || "", side: c.side || "Top", packageName: c.packageName || "" }
       });
     }
   });
@@ -481,7 +481,7 @@ function generateComponentPlacementSheet(p: Project): BlueprintSheet {
 
   const placementTable: BlueprintTable = {
     id: tblId(), title: "Component Placement", columns: ["RefDes", "Component", "Footprint", "X", "Y", "Rotation", "Side", "Status"],
-    rows: components.map(c => [c.referenceDesignator, c.componentName, c.footprint || "—", String(c.placementX ?? "—"), String(c.placementY ?? "—"), String(c.rotationDeg ?? 0), c.side, c.placementX != null ? "Placed" : "Unplaced"])
+    rows: components.map(c => [c.referenceDesignator, c.componentName, c.footprint || "—", String(c.placementX ?? "—"), String(c.placementY ?? "—"), String(c.rotationDeg ?? 0), c.side || "Top", c.placementX != null ? "Placed" : "Unplaced"])
   };
 
   return {
@@ -565,7 +565,7 @@ function generateRoutingSheet(p: Project): BlueprintSheet {
 
   const netTable: BlueprintTable = {
     id: tblId(), title: "Net List", columns: ["Net", "Type", "Voltage", "Source", "Target", "Protocol", "Routed"],
-    rows: nets.map(n => [n.netName, n.netType, n.voltage || "—", n.sourceComponent, n.targetComponent, n.protocol || "—", traces.some(t => t.netName === n.netName || t.netId === n.id) ? "Yes" : "No"])
+    rows: nets.map(n => [n.netName, n.netType, n.voltage || "—", n.sourceComponent || "—", n.targetComponent || "—", n.protocol || "—", traces.some(t => t.netName === n.netName || t.netId === n.id) ? "Yes" : "No"])
   };
 
   return {

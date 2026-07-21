@@ -1957,7 +1957,7 @@ mcpProposals: state.mcpProposals || [],
         addIfUnique({
           boardId: mainBoard.id,
           constraintType: "Board Outline",
-          value: mainBoard.dimensionsMm,
+          value: mainBoard.dimensionsMm || '100x60',
           unit: "mm",
           description: "Board geometry outline size constraint bounds.",
           severity: "Info"
