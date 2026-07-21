@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useProjectStore } from '../../store/projectStore';
+import { checkMechanicalInterference } from '../../lib/mechanical/mechanicalGeometry';
 import { Layers, Eye, ShieldAlert, RotateCcw } from 'lucide-react';
 
 export const WebGL3DView: React.FC = () => {
@@ -191,14 +192,30 @@ export const WebGL3DView: React.FC = () => {
       <div className="flex-1 relative overflow-hidden bg-slate-950">
         <div ref={mountRef} className="w-full h-full" />
         
-        {showCollisionWarning && (
-          <div className="absolute top-4 right-4 bg-amber-950/90 border border-amber-500/50 rounded-lg p-3 max-w-xs text-amber-200 text-xs shadow-xl backdrop-blur-sm">
-            <span className="font-bold flex items-center gap-1 text-amber-400 mb-1">
-              <ShieldAlert className="w-4 h-4" /> 3D Bounding-Box Interference
-            </span>
-            <span>No 3D bounding-box spatial collisions detected between PCB components and enclosure body. Clearance margin: &gt; 1.5mm.</span>
-          </div>
-        )}
+        {showCollisionWarning && (() => {
+          const result = checkMechanicalInterference(store);
+          return (
+            <div className={`absolute top-4 right-4 rounded-lg p-3 max-w-xs text-xs shadow-xl backdrop-blur-sm border ${
+              result.hasCollision ? 'bg-red-950/90 border-red-500/50 text-red-200' : 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
+            }`}>
+              <span className={`font-bold flex items-center gap-1 mb-1 ${result.hasCollision ? 'text-red-400' : 'text-emerald-400'}`}>
+                <ShieldAlert className="w-4 h-4" /> 3D Bounding-Box Interference
+              </span>
+              {result.hasCollision ? (
+                <div>
+                  <div className="font-semibold text-red-300">Collisions Detected ({result.collisions.length}):</div>
+                  {result.collisions.slice(0, 3).map((c, idx) => (
+                    <div key={idx} className="mt-1 text-[10px]">
+                      • {c.bodyA} ↔ {c.bodyB} ({c.overlapX}×{c.overlapY}×{c.overlapZ}mm overlap)
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span>No 3D spatial collisions detected between mechanical bodies and PCB components. Minimum clearance: {result.minClearanceMm}mm.</span>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

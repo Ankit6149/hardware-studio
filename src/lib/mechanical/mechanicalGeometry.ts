@@ -183,13 +183,173 @@ export function applyLightweightConstraint(
         widthMm: reference.widthMm || refBbox.width
       };
     }
-    case 'equal-height': {
-      return {
-        ...target,
-        heightMm: reference.heightMm || refBbox.height
-      };
-    }
     default:
       return target;
   }
+}
+
+export interface BoundingBox3D {
+  xMin: number; xMax: number;
+  yMin: number; yMax: number;
+  zMin: number; zMax: number;
+}
+
+export interface CollisionPair {
+  bodyA: string;
+  bodyB: string;
+  overlapX: number;
+  overlapY: number;
+  overlapZ: number;
+  distanceMm: number;
+}
+
+export interface CollisionResult {
+  hasCollision: boolean;
+  collisions: CollisionPair[];
+  minClearanceMm: number;
+}
+
+/** Check 3D Spatial Interference between all internal bodies, components, battery, and enclosure boundaries */
+export function checkMechanicalInterference(project: any): CollisionResult {
+  const enclosures: { id: string; name: string; bbox: BoundingBox3D }[] = [];
+  const internalBodies: { id: string; name: string; bbox: BoundingBox3D }[] = [];
+
+  // 1. Separate Enclosure Shells vs Internal Bodies
+  (project.mechanicalBodies || []).forEach((b: any) => {
+    const w = b.widthMm || 100;
+    const h = b.heightMm || 60;
+    const d = b.depthMm || 20;
+    const item = {
+      id: b.id || 'body_enc',
+      name: b.name || 'Enclosure Shell',
+      bbox: {
+        xMin: b.xMm || 0,
+        xMax: (b.xMm || 0) + w,
+        yMin: b.yMm || 0,
+        yMax: (b.yMm || 0) + h,
+        zMin: b.zMm || 0,
+        zMax: (b.zMm || 0) + d
+      }
+    };
+    if (b.objectType === 'Enclosure' || b.name?.toLowerCase().includes('enclosure')) {
+      enclosures.push(item);
+    } else {
+      internalBodies.push(item);
+    }
+  });
+
+  // 2. Mechanical Objects
+  (project.mechanicalObjects || []).forEach((obj: any) => {
+    const bbox2d = getMechanicalBoundingBox(obj);
+    const zDepth = obj.depthMm || (obj.layer === 'Enclosure' ? 25 : obj.layer === 'Battery' ? 10 : 5);
+    const zBase = obj.layer === 'Battery' ? 2 : 0;
+    const item = {
+      id: obj.id,
+      name: obj.name || 'Mechanical Component',
+      bbox: {
+        xMin: bbox2d.xMin,
+        xMax: bbox2d.xMax,
+        yMin: bbox2d.yMin,
+        yMax: bbox2d.yMax,
+        zMin: zBase,
+        zMax: zBase + zDepth
+      }
+    };
+    if (obj.layer === 'Enclosure' || obj.type === 'Outer Profile') {
+      enclosures.push(item);
+    } else {
+      internalBodies.push(item);
+    }
+  });
+
+  // 3. Placed Board Components with Package Dimensions
+  const activeBoardId = project.activeBoardId || 'board_main';
+  (project.boardComponents || [])
+    .filter((c: any) => c.boardId === activeBoardId && c.pcb?.placed !== false)
+    .forEach((c: any) => {
+      const cx = c.pcb?.xMm ?? c.placementX ?? 0;
+      const cy = c.pcb?.yMm ?? c.placementY ?? 0;
+      const packageDim = c.packageDimensions || { widthMm: 8, heightMm: 8, heightZMm: 3 };
+      const compW = packageDim.widthMm || 8;
+      const compH = packageDim.heightMm || 8;
+      const compZ = packageDim.heightZMm || 3;
+      const pcbZBase = 5;
+
+      internalBodies.push({
+        id: c.id,
+        name: `${c.referenceDesignator || 'U'} (${c.componentName || 'Component'})`,
+        bbox: {
+          xMin: cx - compW / 2,
+          xMax: cx + compW / 2,
+          yMin: cy - compH / 2,
+          yMax: cy + compH / 2,
+          zMin: pcbZBase,
+          zMax: pcbZBase + compZ
+        }
+      });
+    });
+
+  const collisions: CollisionPair[] = [];
+  let minClearanceMm = Infinity;
+
+  // A. Internal Object vs Internal Object Collisions (e.g. Component ↔ Battery, Component A ↔ Component B)
+  for (let i = 0; i < internalBodies.length; i++) {
+    for (let j = i + 1; j < internalBodies.length; j++) {
+      const a = internalBodies[i].bbox;
+      const b = internalBodies[j].bbox;
+
+      const overlapX = Math.min(a.xMax, b.xMax) - Math.max(a.xMin, b.xMin);
+      const overlapY = Math.min(a.yMax, b.yMax) - Math.max(a.yMin, b.yMin);
+      const overlapZ = Math.min(a.zMax, b.zMax) - Math.max(a.zMin, b.zMin);
+
+      if (overlapX > 0 && overlapY > 0 && overlapZ > 0) {
+        collisions.push({
+          bodyA: internalBodies[i].name,
+          bodyB: internalBodies[j].name,
+          overlapX: Math.round(overlapX * 100) / 100,
+          overlapY: Math.round(overlapY * 100) / 100,
+          overlapZ: Math.round(overlapZ * 100) / 100,
+          distanceMm: 0
+        });
+        minClearanceMm = 0;
+      } else {
+        const dx = Math.max(0, Math.max(a.xMin - b.xMax, b.xMin - a.xMax));
+        const dy = Math.max(0, Math.max(a.yMin - b.yMax, b.yMin - a.yMax));
+        const dz = Math.max(0, Math.max(a.zMin - b.zMax, b.zMin - a.zMax));
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist < minClearanceMm) minClearanceMm = dist;
+      }
+    }
+  }
+
+  // B. Enclosure Boundary Protrusion Checks (Component/Battery extends OUTSIDE Enclosure)
+  for (const enc of enclosures) {
+    for (const body of internalBodies) {
+      const a = body.bbox;
+      const e = enc.bbox;
+
+      if (a.xMin < e.xMin || a.xMax > e.xMax || a.yMin < e.yMin || a.yMax > e.yMax || a.zMax > e.zMax) {
+        const pX = Math.max(0, e.xMin - a.xMin, a.xMax - e.xMax);
+        const pY = Math.max(0, e.yMin - a.yMin, a.yMax - e.yMax);
+        const pZ = Math.max(0, a.zMax - e.zMax);
+        collisions.push({
+          bodyA: body.name,
+          bodyB: `${enc.name} (Boundary Protrusion)`,
+          overlapX: Math.round(pX * 100) / 100,
+          overlapY: Math.round(pY * 100) / 100,
+          overlapZ: Math.round(pZ * 100) / 100,
+          distanceMm: 0
+        });
+        minClearanceMm = 0;
+      }
+    }
+  }
+
+  if (minClearanceMm === Infinity) minClearanceMm = 5.0;
+
+  return {
+    hasCollision: collisions.length > 0,
+    collisions,
+    minClearanceMm: Math.round(minClearanceMm * 100) / 100
+  };
 }
