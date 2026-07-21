@@ -3115,7 +3115,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         return c;
       });
 
-      // Create schematic wire
+      // Create schematic wire with structured anchors
       const wireId = `wire_${Date.now()}_${Math.random()}`;
       const wire: SchematicWire = {
         id: wireId,
@@ -3123,7 +3123,10 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         netName: net.netName,
         points: points || [],
         sourcePinId: `${sourceComponentId}_${sourcePinNumber}`,
-        targetPinId: `${targetComponentId}_${targetPinNumber}`
+        targetPinId: `${targetComponentId}_${targetPinNumber}`,
+        sourceAnchor: { type: 'pin', componentId: sourceComponentId, pinNumber: String(sourcePinNumber) },
+        targetAnchor: { type: 'pin', componentId: targetComponentId, pinNumber: String(targetPinNumber) },
+        status: 'Connected'
       };
 
       const updatedWires = [...(get().schematicWires || []), wire];
