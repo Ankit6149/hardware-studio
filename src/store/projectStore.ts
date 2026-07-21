@@ -3291,7 +3291,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     },
 
     addMechanicalObject: (obj) => {
-      const id = `mech_obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const id = (obj as any).id || `mech_obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       const list = get().mechanicalObjects || [];
       persistChange({ mechanicalObjects: [...list, { ...obj, id }] });
     },

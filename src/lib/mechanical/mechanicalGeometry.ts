@@ -118,16 +118,78 @@ export function isMechanicalObjectContained(
   );
 }
 
-/** Minimum axis-aligned distance between two objects (0 if overlapping) */
-export function minimumDistanceBetweenMechanicalObjects(
-  a: MechanicalObject,
-  b: MechanicalObject
-): number {
-  const bbA = getMechanicalBoundingBox(a);
-  const bbB = getMechanicalBoundingBox(b);
+/** Polygon vertex manipulation helpers */
+export function movePolygonVertex(
+  obj: MechanicalObject,
+  vertexIndex: number,
+  newPoint: { x: number; y: number }
+): MechanicalObject {
+  if (!obj.points || vertexIndex < 0 || vertexIndex >= obj.points.length) return obj;
+  const updatedPoints = [...obj.points];
+  updatedPoints[vertexIndex] = newPoint;
+  return { ...obj, points: updatedPoints };
+}
 
-  const dx = Math.max(0, Math.max(bbA.xMin - bbB.xMax, bbB.xMin - bbA.xMax));
-  const dy = Math.max(0, Math.max(bbA.yMin - bbB.yMax, bbB.yMin - bbA.yMax));
+export function insertPolygonVertex(
+  obj: MechanicalObject,
+  afterIndex: number,
+  newPoint: { x: number; y: number }
+): MechanicalObject {
+  const points = obj.points || [];
+  const updatedPoints = [...points];
+  const idx = Math.min(Math.max(0, afterIndex + 1), points.length);
+  updatedPoints.splice(idx, 0, newPoint);
+  return { ...obj, points: updatedPoints };
+}
 
-  return Math.sqrt(dx * dx + dy * dy);
+export function deletePolygonVertex(
+  obj: MechanicalObject,
+  vertexIndex: number
+): MechanicalObject {
+  if (!obj.points || obj.points.length <= 3 || vertexIndex < 0 || vertexIndex >= obj.points.length) return obj;
+  const updatedPoints = obj.points.filter((_, i) => i !== vertexIndex);
+  return { ...obj, points: updatedPoints };
+}
+
+/** Lightweight Geometric Constraint Solver */
+export function applyLightweightConstraint(
+  type: 'centre-align' | 'fixed-distance' | 'equal-width' | 'equal-height',
+  target: MechanicalObject,
+  reference: MechanicalObject,
+  distanceMm: number = 10
+): MechanicalObject {
+  const refBbox = getMechanicalBoundingBox(reference);
+  const tgtBbox = getMechanicalBoundingBox(target);
+
+  switch (type) {
+    case 'centre-align': {
+      const refCenterX = refBbox.xMin + refBbox.width / 2;
+      const refCenterY = refBbox.yMin + refBbox.height / 2;
+      return {
+        ...target,
+        xMm: refCenterX - tgtBbox.width / 2,
+        yMm: refCenterY - tgtBbox.height / 2
+      };
+    }
+    case 'fixed-distance': {
+      return {
+        ...target,
+        xMm: refBbox.xMax + distanceMm
+      };
+    }
+    case 'equal-width': {
+      return {
+        ...target,
+        widthMm: reference.widthMm || refBbox.width
+      };
+    }
+    case 'equal-height': {
+      return {
+        ...target,
+        heightMm: reference.heightMm || refBbox.height
+      };
+    }
+    default:
+      return target;
+  }
 }
