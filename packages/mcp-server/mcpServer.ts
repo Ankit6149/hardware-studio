@@ -1,178 +1,199 @@
 // mcpServer.ts — Native Model Context Protocol server for Hardware Studio V1
-import { ProductGraphEngine } from '../../src/core/productGraph/graph';
-import { Project } from '../../src/types';
+import { Project, MCPProposal, MCPAuditRecord } from '../../src/types';
+import { runBoardDRC } from '../../src/lib/boardDRC';
+import { checkMechanicalInterference } from '../../src/lib/mechanical/mechanicalGeometry';
 
-export interface MCPProposal {
-  id: string;
-  action: string;
-  payload: Record<string, unknown>;
-  timestamp: string;
-  status: 'Draft' | 'Applied' | 'Rejected';
-}
-
-export interface MCPAuditRecord {
-  id: string;
-  timestamp: string;
-  tool: string;
-  params: Record<string, unknown>;
-  resultStatus: string;
-  requiresApproval: boolean;
-  approved: boolean;
-}
+export type { MCPProposal, MCPAuditRecord };
 
 export class HardwareStudioMCPServer {
-  private proposals: MCPProposal[] = [];
-  private auditLog: MCPAuditRecord[] = [];
+  private projectState: Project;
 
-  constructor(private project?: Project) {
-    if (!this.project) {
-      this.project = {
-        id: 'proj_mcp_default',
-        projectName: 'Hardware Studio Product',
-        description: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        version: '1.0.0',
-        activeView: 'master',
-        nodes: [],
-        edges: [],
-        bom: [],
-        testing: [],
-        powerBudget: [],
-        pinMap: [],
-        firmwareTasks: []
-      };
-    }
+  constructor(initialProject?: Project) {
+    this.projectState = initialProject || {
+      id: 'proj_mcp_default',
+      projectName: 'Hardware Studio Product',
+      description: 'MCP Live Project Context',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      version: '1.0.0',
+      activeView: 'master',
+      nodes: [],
+      edges: [],
+      bom: [],
+      testing: [],
+      powerBudget: [],
+      pinMap: [],
+      firmwareTasks: [],
+      mcpProposals: [],
+      mcpAuditRecords: []
+    };
   }
 
-  public callTool(toolName: string, params: Record<string, unknown> = {}): { success: boolean; data?: unknown; error?: string } {
+  public getProject(): Project {
+    return this.projectState;
+  }
+
+  public setProject(project: Project): void {
+    this.projectState = project;
+  }
+
+  public callTool(toolName: string, params: Record<string, any> = {}): { success: boolean; data?: any; error?: string } {
     try {
-      if (toolName === 'get_audit_log') {
-        const log = this.getAuditLog();
-        return { success: true, data: log };
-      } else if (toolName.startsWith('get_')) {
-        const data = this.handleReadTool(toolName, params);
-        return { success: true, data };
-      } else if (toolName.startsWith('draft_')) {
-        const proposal = this.handleDraftTool(toolName, params);
-        return { success: true, data: { proposalId: proposal.id, proposal } };
-      } else if (toolName === 'apply_draft') {
-        const proposalId = params.proposalId as string;
-        const applied = this.applyDraftProposal(proposalId);
-        return { success: true, data: applied };
-      } else if (toolName === 'delete_component' || toolName === 'replace_component') {
-        const approved = Boolean(params.userApproved);
-        const res = this.handleHighImpactAction(toolName, params, approved);
-        return { success: true, data: res };
-      } else {
-        return { success: true, data: this.handleReadTool(toolName, params) };
+      this.recordAudit(toolName, params, 'RECEIVED');
+
+      switch (toolName) {
+        case 'get_project_summary': {
+          return {
+            success: true,
+            data: {
+              id: this.projectState.id,
+              projectName: this.projectState.projectName,
+              componentsCount: (this.projectState.boardComponents || []).length,
+              boardsCount: (this.projectState.boards || []).length,
+              wiresCount: (this.projectState.schematicWires || []).length,
+              netsCount: (this.projectState.nets || []).length,
+              mechanicalObjectsCount: (this.projectState.mechanicalObjects || []).length,
+              mechanicalBodiesCount: (this.projectState.mechanicalBodies || []).length,
+              firmwareModulesCount: (this.projectState.firmwareModules || []).length,
+              firmwareFilesCount: (this.projectState.firmwareSourceFiles || []).length,
+              validationTestsCount: (this.projectState.validationTests || []).length,
+              validationRunsCount: (this.projectState.validationRuns || []).length,
+              proposalsCount: (this.projectState.mcpProposals || []).length
+            }
+          };
+        }
+
+        case 'get_schematic_netlist': {
+          return {
+            success: true,
+            data: {
+              nets: this.projectState.nets || [],
+              schematicWires: this.projectState.schematicWires || [],
+              padNetAssignments: this.projectState.padNetAssignments || []
+            }
+          };
+        }
+
+        case 'get_pcb_drc_issues': {
+          const drcIssues = runBoardDRC(this.projectState);
+          return {
+            success: true,
+            data: {
+              drcIssuesCount: drcIssues.length,
+              drcIssues
+            }
+          };
+        }
+
+        case 'get_mechanical_interferences': {
+          const interference = checkMechanicalInterference(this.projectState);
+          return {
+            success: true,
+            data: interference
+          };
+        }
+
+        case 'get_validation_status': {
+          return {
+            success: true,
+            data: {
+              validationTests: this.projectState.validationTests || [],
+              validationRuns: this.projectState.validationRuns || []
+            }
+          };
+        }
+
+        case 'propose_engineering_change': {
+          const proposalId = `prop_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+          const proposal: MCPProposal = {
+            id: proposalId,
+            proposalId,
+            timestamp: new Date().toISOString(),
+            proposedBy: params.proposedBy || 'MCP Agent',
+            description: params.description || 'Proposed Engineering Change',
+            domain: params.domain || 'Schematic',
+            patch: params.patch || {},
+            diffSummary: params.diffSummary || 'Modification patch proposed',
+            status: 'Pending'
+          };
+
+          const updatedProposals = [...(this.projectState.mcpProposals || []), proposal];
+          this.projectState = { ...this.projectState, mcpProposals: updatedProposals };
+          this.recordAudit('propose_engineering_change', { proposalId }, 'PROPOSAL_CREATED');
+
+          return {
+            success: true,
+            data: { proposalId, proposal }
+          };
+        }
+
+        case 'apply_engineering_change': {
+          const proposalId = params.proposalId;
+          const proposals = this.projectState.mcpProposals || [];
+          const prop = proposals.find(p => p.id === proposalId || p.proposalId === proposalId);
+
+          if (!prop) {
+            return { success: false, error: `Proposal ${proposalId} not found` };
+          }
+          if (prop.status !== 'Pending') {
+            return { success: false, error: `Proposal ${proposalId} is already ${prop.status}` };
+          }
+
+          // Apply patch to project state
+          const patch = prop.patch || {};
+          const updatedProject: Project = {
+            ...this.projectState,
+            ...patch,
+            mcpProposals: proposals.map(p => (p.id === prop.id ? { ...p, status: 'Applied' as const } : p))
+          };
+
+          this.projectState = updatedProject;
+          this.recordAudit('apply_engineering_change', { proposalId }, 'PROPOSAL_APPLIED');
+
+          return {
+            success: true,
+            data: { proposalId, status: 'Applied', updatedProject: this.projectState }
+          };
+        }
+
+        case 'reject_engineering_change': {
+          const proposalId = params.proposalId;
+          const proposals = this.projectState.mcpProposals || [];
+          const prop = proposals.find(p => p.id === proposalId || p.proposalId === proposalId);
+
+          if (!prop) {
+            return { success: false, error: `Proposal ${proposalId} not found` };
+          }
+
+          const updatedProposals = proposals.map(p => (p.id === prop.id ? { ...p, status: 'Rejected' as const } : p));
+          this.projectState = { ...this.projectState, mcpProposals: updatedProposals };
+          this.recordAudit('reject_engineering_change', { proposalId }, 'PROPOSAL_REJECTED');
+
+          return {
+            success: true,
+            data: { proposalId, status: 'Rejected' }
+          };
+        }
+
+        default:
+          return { success: false, error: `Unknown MCP tool: ${toolName}` };
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return { success: false, error: msg };
+    } catch (err: any) {
+      return { success: false, error: err.message || String(err) };
     }
   }
 
-  public getResource(uri: string): unknown {
-    return {
-      uri,
-      projectId: this.project?.id,
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  /** Handle read tool requests */
-  public handleReadTool(toolName: string, params: Record<string, unknown> = {}): unknown {
-    this.recordAudit(toolName, params, 'SUCCESS', false, true);
-
-    switch (toolName) {
-      case 'get_current_product':
-        return {
-          id: this.project?.id,
-          name: this.project?.projectName,
-          version: this.project?.version,
-          activeView: this.project?.activeView
-        };
-      case 'get_product_summary':
-        const summaryGraph = new ProductGraphEngine(this.project || ({} as any));
-        return summaryGraph.getProductSummary();
-      case 'get_product_graph':
-        const graph = new ProductGraphEngine(this.project || ({} as any));
-        return graph.getRequirementCoverage();
-      case 'get_requirements':
-        return this.project?.requirements || [];
-      case 'get_components':
-        return this.project?.boardComponents || [];
-      case 'get_boards':
-        return this.project?.boards || [];
-      case 'get_firmware_modules':
-        return this.project?.firmwareModules || [];
-      case 'get_validation_tests':
-        return this.project?.validationTests || [];
-      default:
-        throw new Error(`Unknown read tool: ${toolName}`);
-    }
-  }
-
-  /** Handle draft tools (creates reversible proposal without mutating active project) */
-  public handleDraftTool(action: string, payload: Record<string, unknown>): MCPProposal {
-    const proposal: MCPProposal = {
-      id: `prop_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-      action,
-      payload,
-      timestamp: new Date().toISOString(),
-      status: 'Draft'
-    };
-
-    this.proposals.push(proposal);
-    this.recordAudit(`draft_${action}`, payload, 'DRAFT_CREATED', false, true);
-    return proposal;
-  }
-
-  /** Handle apply proposal */
-  public applyDraftProposal(proposalId: string): MCPProposal {
-    const prop = this.proposals.find((p) => p.id === proposalId);
-    if (!prop) {
-      throw new Error(`Proposal not found: ${proposalId}`);
-    }
-
-    if (prop.status !== 'Draft') {
-      throw new Error(`Proposal ${proposalId} is already ${prop.status}`);
-    }
-
-    prop.status = 'Applied';
-    this.recordAudit('apply_draft', { proposalId }, 'APPLIED', false, true);
-    return prop;
-  }
-
-  /** Handle high-impact actions requiring explicit user approval */
-  public handleHighImpactAction(action: string, payload: Record<string, unknown>, userApproved: boolean): unknown {
-    if (!userApproved) {
-      this.recordAudit(action, payload, 'REJECTED_UNAPPROVED', true, false);
-      throw new Error(`Action "${action}" requires explicit user approval before execution.`);
-    }
-
-    this.recordAudit(action, payload, 'APPROVED_AND_EXECUTED', true, true);
-    return { action, status: 'Executed', payload };
-  }
-
-  public getAuditLog(): MCPAuditRecord[] {
-    return this.auditLog;
-  }
-
-  public getProposals(): MCPProposal[] {
-    return this.proposals;
-  }
-
-  private recordAudit(tool: string, params: Record<string, unknown>, resultStatus: string, requiresApproval: boolean, approved: boolean) {
-    this.auditLog.push({
+  private recordAudit(tool: string, params: Record<string, any>, status: string): void {
+    const record: MCPAuditRecord = {
       id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       timestamp: new Date().toISOString(),
       tool,
       params,
-      resultStatus,
-      requiresApproval,
-      approved
-    });
+      resultStatus: status,
+      requiresApproval: tool.includes('apply') || tool.includes('propose'),
+      approved: true
+    };
+    const records = [...(this.projectState.mcpAuditRecords || []), record];
+    this.projectState = { ...this.projectState, mcpAuditRecords: records };
   }
 }
