@@ -319,6 +319,11 @@ interface ProjectState extends Project {
   deleteValidationTest: (id: string) => void;
 
   // Command History System
+  activeTransaction?: { type: string; description: string; beforeSnapshot: Partial<Project> } | null;
+  beginCommand: (type: string, description: string) => void;
+  updateTransientPreview: (patch: Partial<Project>) => void;
+  commitCommand: (finalPatch?: Partial<Project>) => void;
+  cancelCommand: () => void;
   executeProjectCommand: (type: string, description: string, applyChange: () => void) => void;
   undoProjectCommand: () => void;
   redoProjectCommand: () => void;
@@ -3419,8 +3424,100 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     },
 
     // ----------------------------------------------------
-    // Command History System
+    // Command History & Pointer Transaction System
     // ----------------------------------------------------
+    activeTransaction: null,
+
+    beginCommand: (type: string, description: string) => {
+      const snapshotKeys: (keyof Project)[] = [
+        'nodes', 'edges', 'bom', 'testing', 'powerBudget', 'pinMap', 'firmwareTasks',
+        'boards', 'circuitBlocks', 'boardComponents', 'nets', 'pcbConstraints',
+        'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
+        'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
+        'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
+        'requirements', 'architectureNodes', 'architectureConnections', 'mechanicalObjects', 'mechanicalDimensions',
+        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
+      ];
+
+      const state = get();
+      const beforeSnapshot: Partial<Project> = {};
+      snapshotKeys.forEach(k => {
+        if (state[k] !== undefined) {
+          beforeSnapshot[k] = JSON.parse(JSON.stringify(state[k]));
+        }
+      });
+
+      set({
+        activeTransaction: {
+          type,
+          description,
+          beforeSnapshot
+        }
+      });
+    },
+
+    updateTransientPreview: (patch: Partial<Project>) => {
+      set(patch);
+    },
+
+    commitCommand: (finalPatch?: Partial<Project>) => {
+      const tx = (get() as any).activeTransaction;
+      if (finalPatch) {
+        set(finalPatch);
+      }
+      
+      const snapshotKeys: (keyof Project)[] = [
+        'nodes', 'edges', 'bom', 'testing', 'powerBudget', 'pinMap', 'firmwareTasks',
+        'boards', 'circuitBlocks', 'boardComponents', 'nets', 'pcbConstraints',
+        'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
+        'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
+        'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
+        'requirements', 'architectureNodes', 'architectureConnections', 'mechanicalObjects', 'mechanicalDimensions',
+        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
+      ];
+
+      const updatedState = get();
+      const afterSnapshot: Partial<Project> = {};
+      snapshotKeys.forEach(k => {
+        if (updatedState[k] !== undefined) {
+          afterSnapshot[k] = JSON.parse(JSON.stringify(updatedState[k]));
+        }
+      });
+
+      const beforeSnapshot = tx?.beforeSnapshot || {};
+      const type = tx?.type || 'USER_ACTION';
+      const description = tx?.description || 'User interaction';
+
+      const newPast = [
+        ...(get().pastCommands || []),
+        {
+          type,
+          description,
+          snapshot: JSON.stringify({ before: beforeSnapshot, after: afterSnapshot })
+        }
+      ];
+
+      set({ activeTransaction: null });
+      persistChange({
+        pastCommands: newPast,
+        futureCommands: []
+      });
+
+      get().markDerivedArtifactsStale(description);
+    },
+
+    cancelCommand: () => {
+      const tx = (get() as any).activeTransaction;
+      if (tx && tx.beforeSnapshot) {
+        set({
+          ...tx.beforeSnapshot,
+          activeTransaction: null
+        });
+      } else {
+        set({ activeTransaction: null });
+      }
+    },
+
     executeProjectCommand: (type, description, applyChange) => {
       const snapshotKeys: (keyof Project)[] = [
         'nodes', 'edges', 'bom', 'testing', 'powerBudget', 'pinMap', 'firmwareTasks',
@@ -3429,7 +3526,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
         'requirements', 'architectureNodes', 'architectureConnections', 'mechanicalObjects', 'mechanicalDimensions',
-        'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
+        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
       ];
 
       const state = get();
