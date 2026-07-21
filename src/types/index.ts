@@ -464,7 +464,18 @@ export interface FirmwareSourceFile {
   linkedModuleIds: string[];
 }
 
-export interface KeepoutZone {
+export interface ValidationRun {
+  id: string;
+  testId: string;
+  testName: string;
+  timestamp: string;
+  status: 'Pass' | 'Fail' | 'Inconclusive';
+  measuredValue?: number | string;
+  passCriteria?: string;
+  logs: string[];
+  runBy?: string;
+  environment?: string;
+}
   id: string;
   boardId: string;
   x: number;
