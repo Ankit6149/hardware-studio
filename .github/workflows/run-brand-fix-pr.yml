@@ -21,15 +21,32 @@ jobs:
       - name: Extract and run the reviewed correction
         shell: bash
         run: |
-          set -o pipefail
+          set +e
           awk '
             /python - <<.PY./ { capture=1; next }
             capture && /^          PY$/ { capture=0; exit }
             capture { sub(/^          /, ""); print }
           ' .github/workflows/apply-brand-scale-fix.yml > /tmp/apply-brand-scale-fix.py
-          echo "Extracted $(wc -l < /tmp/apply-brand-scale-fix.py) Python lines"
-          python -m py_compile /tmp/apply-brand-scale-fix.py
-          python /tmp/apply-brand-scale-fix.py 2>&1 | tail -n 80
+          python -m py_compile /tmp/apply-brand-scale-fix.py > /tmp/brand-fix-result.log 2>&1
+          code=$?
+          if [ "$code" -eq 0 ]; then
+            python /tmp/apply-brand-scale-fix.py >> /tmp/brand-fix-result.log 2>&1
+            code=$?
+          fi
+          echo "$code" > /tmp/brand-fix-exit-code.txt
+          exit 0
+
+      - name: Upload correction diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: brand-fix-diagnostics
+          path: |
+            /tmp/apply-brand-scale-fix.py
+            /tmp/brand-fix-result.log
+            /tmp/brand-fix-exit-code.txt
+
+      - name: Require successful correction
+        run: test "$(cat /tmp/brand-fix-exit-code.txt)" = "0"
 
       - name: Verify application
         run: |
