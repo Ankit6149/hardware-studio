@@ -24,7 +24,7 @@ export const templates: TemplateMetadata[] = [
   {
     id: "the-ring",
     name: "The Ring",
-    description: "System Alpha's signature wearable device. Advanced wearable design mapping tactile input, MCU, battery management, flex FPC routing, and companion software integrations.",
+    description: "Hardware Studio's signature wearable device. Advanced wearable design mapping tactile input, MCU, battery management, flex FPC routing, and companion software integrations.",
     difficulty: "Advanced",
     includes: { blueprint: true, bom: true, tests: true, power: true, pins: true },
     project: theRingTemplate

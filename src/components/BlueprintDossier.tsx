@@ -175,7 +175,7 @@ export const BlueprintDossier: React.FC = () => {
       {/* PRINT COVER PAGE - ONLY DISPLAY ON PRINT */}
       <div className="hidden print:flex flex-col justify-between h-[100vh] p-16 border-4 border-double border-slate-400 select-none page-break-after">
         <div className="space-y-6">
-          <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">SYSTEM ALPHA LABS &bull; HARDWARE PLANNING</span>
+          <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">HARDWARE STUDIO &bull; PRODUCT ENGINEERING</span>
           <h1 className="text-4xl font-extrabold text-slate-900 font-sans tracking-tight uppercase mt-12">{projectName}</h1>
           <p className="text-sm text-slate-500 font-sans leading-relaxed max-w-2xl mt-4">{description || 'Engineering workspace concept overview.'}</p>
         </div>
@@ -880,7 +880,7 @@ export const BlueprintDossier: React.FC = () => {
           )}
         </div>
 
-        {/* 8. SYSTEM ALPHA INTEGRATION ACCORDION */}
+        {/* 8. EXTERNAL SOFTWARE INTEGRATION ACCORDION */}
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm print:shadow-none print:border-slate-300">
           <button 
             onClick={() => toggleSection('alpha')}
@@ -888,7 +888,7 @@ export const BlueprintDossier: React.FC = () => {
           >
             <span className="flex items-center space-x-2">
               <Layers className="w-4 h-4 text-slate-500" />
-              <span>8. System Alpha Integration Blueprint</span>
+              <span>8. Hardware Studio Integration Blueprint</span>
             </span>
             <span className="print:hidden">
               {expandedSections.alpha ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -913,7 +913,7 @@ export const BlueprintDossier: React.FC = () => {
                 {/* Cloud/Phone side */}
                 <div className="bg-white border border-indigo-200 p-4 rounded shadow-sm space-y-3">
                   <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest block flex items-center">
-                    <span>System Alpha Host Bridge</span>
+                    <span>Hardware Studio Host Bridge</span>
                     <Badge variant="info" className="ml-2 scale-90">External Software</Badge>
                   </span>
                   <div className="space-y-2 text-[10px] leading-relaxed text-slate-650">
@@ -924,7 +924,7 @@ export const BlueprintDossier: React.FC = () => {
               </div>
 
               <div className="text-[11px] leading-relaxed text-slate-600">
-                <strong>Attention</strong>: The System Alpha engine runs entirely on external host infrastructure (the companion mobile client or gateway hub) and communication occurs via Bluetooth BLE protocols. It does not occupy space or power rails within the physical ring wearable client.
+                <strong>Attention</strong>: The Hardware Studio engine runs entirely on external host infrastructure (the companion mobile client or gateway hub) and communication occurs via Bluetooth BLE protocols. It does not occupy space or power rails within the physical ring wearable client.
               </div>
 
             </div>

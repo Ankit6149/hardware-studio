@@ -91,7 +91,7 @@ export const PropertiesPanel: React.FC = () => {
     { id: 'electronics', label: 'Electronics' },
     { id: 'firmware', label: 'Firmware' },
     { id: 'power', label: 'Power System' },
-    { id: 'system-alpha', label: 'System Alpha' }
+    { id: 'hardware-studio', label: 'Hardware Studio' }
   ];
 
   return (

@@ -62,7 +62,7 @@ export const BlueprintPageLayout: React.FC<BlueprintPageLayoutProps> = ({
             <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight font-mono">{sheetTitle}</h2>
           </div>
           <span className="text-[8px] font-bold font-mono text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded uppercase">
-            BY SYSTEM ALPHA HARDWARE STUDIO
+            CONNECTED ENGINEERING WORKSPACE HARDWARE STUDIO
           </span>
         </div>
 

@@ -16,19 +16,19 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
   >
     <svg viewBox="0 0 64 64" className="h-full w-full" aria-hidden="true">
       <rect width="64" height="64" rx="16" fill="#11110f" />
-      <path
-        d="M19 17v10m0 10v10M45 17v10m0 10v10M19 27h9m8 0h9M19 37h9m8 0h9M28 27v10h8V27"
+      <g
         fill="none"
         stroke="#f3f0e8"
-        strokeWidth="3.25"
+        strokeWidth="3.4"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-      <circle cx="19" cy="14" r="3" fill="#f3f0e8" />
-      <circle cx="45" cy="14" r="3" fill="#f3f0e8" />
-      <circle cx="19" cy="50" r="3" fill="#f3f0e8" />
-      <circle cx="45" cy="50" r="3" fill="#f3f0e8" />
-      <circle cx="32" cy="32" r="3.5" fill="#9de4c2" />
+      >
+        <rect x="14" y="14" width="36" height="36" rx="4" />
+        <path d="M30 26h8a4 4 0 0 0 4-4v-8" />
+        <circle cx="26" cy="26" r="4" />
+        <path d="M22 50v-8a4 4 0 0 1 4-4h8" />
+        <circle cx="38" cy="38" r="4" />
+      </g>
     </svg>
   </span>
 );

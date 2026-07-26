@@ -281,7 +281,7 @@ const BlueprintCanvasContent: React.FC = () => {
 
   return (
     <div ref={reactFlowWrapper} className="w-full h-full relative" onDragOver={onDragOver} onDrop={onDrop}>
-      {activeView === 'system-alpha' && (
+      {activeView === 'hardware-studio' && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-amber-50 text-amber-800 border border-amber-200 rounded px-3 py-1 text-[10px] font-bold uppercase tracking-wider z-10 shadow-sm pointer-events-none">
           External Software Layer — Not inside physical wearable device
         </div>
