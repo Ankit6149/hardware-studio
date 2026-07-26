@@ -1,7 +1,7 @@
 name: Apply Brand And Scale Fix
 
 on:
-  push:
+  pull_request:
     branches: [ master ]
 
 permissions:
@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: master
+          ref: visual-identity-fix
           fetch-depth: 0
 
       - name: Restore original mark and reduce landing scale
@@ -79,8 +79,6 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
 '''
           Path('src/app/icon.svg').write_text(icon_svg)
 
-          # Add explicit icon metadata so browsers consistently prefer the ICO while
-          # retaining the SVG for high-density surfaces.
           layout_path = Path('src/app/layout.tsx')
           layout = layout_path.read_text()
           marker = "  robots: {\n    index: true,\n    follow: true,\n  },\n"
@@ -91,7 +89,6 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
               layout = layout.replace(marker, marker + icons)
           layout_path.write_text(layout)
 
-          # Reduce landing-page visual scale without altering its composition.
           page_path = Path('src/app/page.tsx')
           page = page_path.read_text()
           replacements = {
@@ -141,7 +138,6 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
                   page = page.replace(old, new)
           page_path.write_text(page)
 
-          # Remove all remaining private legacy branding from repository text.
           targeted = [
               ('by System Alpha', 'connected engineering workspace'),
               ('By System Alpha', 'Connected engineering workspace'),
@@ -173,8 +169,6 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
               if updated != text:
                   file.write_text(updated)
 
-          # Produce a real ICO file with the same restored mark using only stdlib.
-          # Render at 256px, then box-average to 64px for antialiased edges.
           high = 256
           out = 64
           scale = high / 64
@@ -199,7 +193,6 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
                       blend_pixel(x, y, (17, 17, 15, 255))
 
           white = (243, 240, 232, 255)
-          stroke = 3.4 * scale
 
           def dist_segment(px, py, x1, y1, x2, y2):
               vx, vy = x2 - x1, y2 - y1
@@ -234,7 +227,6 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
                       if abs(d - radius) <= half:
                           blend_pixel(xx, yy, white)
 
-          # Rounded inner frame approximated with straight segments and quarter-circle arcs.
           draw_segment(18, 14, 46, 14, 3.4)
           draw_segment(50, 18, 50, 46, 3.4)
           draw_segment(46, 50, 18, 50, 3.4)
@@ -248,7 +240,6 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
                   draw_segment(*p1, *p2, 3.4)
 
           draw_segment(30, 26, 38, 26, 3.4)
-          # top-right bend
           pts = [(38,26),(39.5,25.7),(40.8,24.8),(41.7,23.5),(42,22),(42,14)]
           for p1, p2 in zip(pts, pts[1:]): draw_segment(*p1, *p2, 3.4)
           draw_circle(26, 26, 4, 3.4)
@@ -285,11 +276,8 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
           ico_entry = struct.pack('<BBBBHHII', out, out, 0, 0, 1, 32, len(png), 22)
           Path('src/app/favicon.ico').write_bytes(ico_header + ico_entry + png)
 
-          # The self-removing workflow leaves no maintenance artifact behind.
-          workflow = Path('.github/workflows/apply-brand-scale-fix.yml')
-          workflow.unlink()
+          Path('.github/workflows/apply-brand-scale-fix.yml').unlink()
 
-          # Fail rather than commit if any private legacy branding remains.
           remaining = []
           pattern = re.compile(r'system[\s_-]*alpha', re.IGNORECASE)
           for file in root.rglob('*'):
@@ -307,10 +295,18 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
               raise SystemExit('Legacy branding remains in: ' + ', '.join(remaining))
           PY
 
-      - name: Commit complete visual identity fix
+      - name: Verify application
+        run: |
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run build
+
+      - name: Commit verified visual identity fix
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "fix(brand): restore original mark favicon and compact landing scale"
-          git push origin master
+          git push origin visual-identity-fix
