@@ -18,6 +18,32 @@ jobs:
           fetch-depth: 1
           show-progress: false
 
+      - name: Normalize remaining legacy identifiers
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              'SystemAlpha': 'HardwareStudio',
+              'systemAlpha': 'hardwareStudio',
+              'SYSTEM_ALPHA': 'HARDWARE_STUDIO',
+              'systemalpha': 'hardwarestudio',
+          }
+          suffixes = {'.ts', '.tsx', '.js', '.jsx', '.json', '.md', '.txt', '.yml', '.yaml', '.html', '.css'}
+          for file in Path('.').rglob('*'):
+              if not file.is_file() or '.git' in file.parts or file.suffix.lower() not in suffixes:
+                  continue
+              if file == Path('.github/workflows/apply-brand-scale-fix.yml'):
+                  continue
+              text = file.read_text()
+              updated = text
+              for old, new in replacements.items():
+                  updated = updated.replace(old, new)
+              if updated != text:
+                  file.write_text(updated)
+          PY
+
       - name: Extract and run the reviewed correction
         shell: bash
         run: |
@@ -58,6 +84,7 @@ jobs:
 
       - name: Commit verified correction
         run: |
+          rm -f .github/brand-fix-trigger.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
