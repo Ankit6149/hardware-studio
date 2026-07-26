@@ -1,0 +1,19 @@
+name: CI Diagnostic
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  npm-ci-diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reproduce npm ci failure
+        shell: bash
+        run: |
+          set -o pipefail
+          git clone --depth 1 --branch ci-diagnostic https://github.com/Ankit6149/hardware-studio.git repo
+          cd repo
+          node --version
+          npm --version
+          npm ci 2>&1 | tail -n 60
