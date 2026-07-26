@@ -59,6 +59,24 @@ jobs:
             python /tmp/apply-brand-scale-fix.py >> /tmp/brand-fix-result.log 2>&1
             code=$?
           fi
+          python - <<'PY' >> /tmp/brand-fix-result.log 2>&1
+          from pathlib import Path
+          import re
+
+          pattern = re.compile(r'system[\s_-]*alpha', re.IGNORECASE)
+          suffixes = {'.ts', '.tsx', '.js', '.jsx', '.json', '.md', '.txt', '.yml', '.yaml', '.html', '.css'}
+          print('\nExact remaining matches:')
+          for file in Path('.').rglob('*'):
+              if not file.is_file() or '.git' in file.parts or file.suffix.lower() not in suffixes:
+                  continue
+              try:
+                  lines = file.read_text().splitlines()
+              except UnicodeDecodeError:
+                  continue
+              for number, line in enumerate(lines, 1):
+                  if pattern.search(line):
+                      print(f'{file}:{number}: {line.strip()}')
+          PY
           echo "$code" > /tmp/brand-fix-exit-code.txt
           exit 0
 
