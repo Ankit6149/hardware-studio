@@ -4,7 +4,7 @@
 
 ### Design the whole product—not disconnected files.
 
-**An experimental engineering workspace by System Alpha**
+**An experimental engineering workspace by Ankit Bhardwaj**
 
 [Explore the development build](https://hardware-studio.vercel.app/studio) · [Read the product vision](docs/PRODUCT_VISION.md) · [See current status](docs/CURRENT_STATUS.md) · [View the roadmap](docs/ROADMAP.md)
 
