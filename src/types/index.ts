@@ -510,10 +510,13 @@ export interface ValidationRun {
 export interface MCPProposal {
   id: string;
   proposalId?: string;
-  timestamp: string;
+  timestamp?: string;
+  createdAt?: string;
   proposedBy?: string;
   description?: string;
   domain?: string;
+  toolName?: string;
+  args?: Record<string, unknown>;
   patch?: Partial<Project>;
   diffSummary?: string;
   status: 'Pending' | 'Applied' | 'Rejected';
@@ -522,11 +525,15 @@ export interface MCPProposal {
 export interface MCPAuditRecord {
   id: string;
   timestamp: string;
-  tool: string;
-  params: Record<string, unknown>;
-  resultStatus: string;
-  requiresApproval: boolean;
-  approved: boolean;
+  tool?: string;
+  action?: string;
+  params?: Record<string, unknown>;
+  proposalId?: string;
+  executedBy?: string;
+  resultStatus?: string;
+  status?: string;
+  requiresApproval?: boolean;
+  approved?: boolean;
 }
 
 export interface KeepoutZone {
