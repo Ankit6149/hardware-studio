@@ -1,31 +1,31 @@
 <div align="center">
 
+<img src="public/hardware-studio-mark.svg" width="76" alt="Hardware Studio logo" />
+
 # Hardware Studio
 
 ### Design the whole product—not disconnected files.
 
-**An experimental engineering workspace by Ankit Bhardwaj**
+**An experimental, local-first engineering workspace by [Ankit Bhardwaj](https://github.com/Ankit6149)**
 
-[Explore the development build](https://hardware-studio.vercel.app/studio) · [Read the product vision](docs/PRODUCT_VISION.md) · [See current status](docs/CURRENT_STATUS.md) · [View the roadmap](docs/ROADMAP.md)
+[Landing page](https://hardware-studio.vercel.app/) · [Development workspace](https://hardware-studio.vercel.app/studio) · [Product vision](docs/PRODUCT_VISION.md) · [Current status](docs/CURRENT_STATUS.md) · [Roadmap](docs/ROADMAP.md)
 
 </div>
 
 ---
 
 > [!WARNING]
-> **Hardware Studio is not ready for production use.** The base engineering engines and several cross-domain workflows are still incomplete. Current PCB, mechanical, firmware, validation, blueprint, and manufacturing outputs must not be used directly for fabrication, certification, safety decisions, or production hardware.
+> **Hardware Studio is not ready for production use.** The base engineering engines and several cross-domain workflows are incomplete. Current PCB, mechanical, firmware, validation, blueprint, and manufacturing outputs must not be used directly for fabrication, certification, safety decisions, or production hardware.
 
-## What is Hardware Studio?
+## Overview
 
-Hardware Studio is an attempt to build a unified operating environment for designing, validating, and releasing complete physical products.
+Hardware Studio is an attempt to build one operating environment for designing, validating, and releasing complete physical products.
 
-Modern hardware development is fragmented across CAD files, schematic and PCB projects, firmware repositories, spreadsheets, supplier portals, test documents, release folders, and manufacturing packages. Important relationships are usually maintained manually—or lost entirely.
+Hardware development is usually fragmented across mechanical CAD, schematic and PCB tools, firmware repositories, spreadsheets, test documents, supplier portals, revision folders, and manufacturing packages. Important relationships are maintained manually—or lost entirely.
 
-Hardware Studio is being designed around a different model:
+Hardware Studio explores a different model:
 
 > **One durable product graph shared by every engineering workbench.**
-
-The long-term goal is to connect:
 
 ```text
 Product requirements
@@ -43,11 +43,25 @@ Validation evidence and retests
 Blueprints, manufacturing, and releases
 ```
 
-It is inspired by the depth of tools such as Autodesk Fusion, KiCad, Altium, Onshape, PlatformIO, FreeCAD, and product lifecycle systems—but it is **not currently a replacement for any of them**.
+The project is inspired by the depth of Autodesk Fusion, KiCad, Altium, Onshape, PlatformIO, FreeCAD, and product-lifecycle systems—but it is **not currently a replacement for any of them**.
+
+## At a glance
+
+| Area | Direction | Current state |
+|---|---|---|
+| Product | Requirements, architecture, interfaces, risks, traceability | Foundation |
+| Mechanical | 2D layout, enclosure intent, assemblies, dimensions, 3D coordination | Partial |
+| Electronics | Components, symbols, nets, schematic, PCB, ERC and DRC | Partial |
+| Firmware | Hardware mapping, state machines, source, PlatformIO workflows | Partial |
+| Validation | EVT, DVT, PVT, evidence, measurements, retests | Partial |
+| Release | Revisions, branches, blueprints, factory packages, approvals | Partial |
+| MCP | Typed, reviewable engineering operations over the live product | Foundation |
+
+Detailed reality—not promotional status—is maintained in [Current Status](docs/CURRENT_STATUS.md).
 
 ## The core idea: one product graph
 
-A component should not exist as unrelated records in multiple tools. It should be one connected engineering entity with links to its:
+A component should not exist as unrelated records in different tools. It should be one connected engineering entity with links to its:
 
 - requirement and system role
 - architecture block and interfaces
@@ -58,19 +72,19 @@ A component should not exist as unrelated records in multiple tools. It should b
 - firmware driver, protocol, and pin mapping
 - power and thermal assumptions
 - validation tests, measurements, and evidence
-- release and manufacturing status
+- release and manufacturing state
 
-Eventually, replacing a component should expose the effects across the complete product instead of silently breaking downstream files.
+Eventually, replacing one component should reveal the effects across the complete product instead of silently breaking downstream files.
 
-## Planned workbenches
+## Workbenches
 
 ### Product
 
-Requirements, system architecture, interfaces, risks, decisions, and requirement coverage.
+Requirements, system architecture, interfaces, constraints, risks, decisions, and requirement coverage.
 
 ### Mechanical
 
-2D layouts, enclosure intent, assembly stacks, dimensions, lightweight constraints, clearances, 3D visualization, and future parametric geometry.
+2D layouts, enclosure intent, assembly stacks, dimensions, lightweight constraints, clearances, WebGL visualization, and future parametric geometry.
 
 ### Electronics
 
@@ -78,7 +92,7 @@ Component definitions, symbols, pins, nets, schematic connectivity, PCB footprin
 
 ### Firmware
 
-Hardware mappings, state machines, source files, generated code, PlatformIO configuration, builds, uploads, serial monitoring, and test links.
+Hardware mappings, state machines, source files, generated code, PlatformIO configuration, builds, uploads, serial monitoring, and validation links.
 
 ### Validate
 
@@ -93,44 +107,35 @@ Named revisions, branches, comparisons, approvals, blueprints, manufacturing pac
 ```mermaid
 flowchart TB
     UI[Engineering Workbenches]
-    CMD[Reversible Engineering Command Layer]
+    MCP[MCP Server]
+    CMD[Reversible Engineering Commands]
     GRAPH[Canonical Product Graph]
-
-    GEO[Mechanical Geometry Engine]
-    ELEC[Electrical Connectivity Engine]
-    PCB[PCB Geometry & Routing Engine]
-    FW[Firmware Workspace Engine]
-    VAL[Validation Engine]
-    OUT[Derived Output Engine]
-
-    MCP[Hardware Studio MCP Server]
     BRIDGE[Approved Local Machine Bridge]
 
     UI --> CMD
     MCP --> CMD
     CMD --> GRAPH
-
-    GRAPH --> GEO
-    GRAPH --> ELEC
-    GRAPH --> PCB
-    GRAPH --> FW
-    GRAPH --> VAL
-    GRAPH --> OUT
-
+    GRAPH --> PRODUCT[Product & Systems]
+    GRAPH --> MECH[Mechanical Geometry]
+    GRAPH --> ELEC[Electrical Connectivity]
+    GRAPH --> PCB[PCB Geometry & Routing]
+    GRAPH --> FW[Firmware Workspace]
+    GRAPH --> VAL[Validation]
+    GRAPH --> OUT[Derived Outputs & Releases]
     FW --> BRIDGE
     MCP --> BRIDGE
 ```
 
 The project is intended to work in two directions:
 
-1. **Hardware Studio as an MCP server** — allowing approved AI clients to inspect and operate the product through semantic engineering tools.
-2. **Hardware Studio as an MCP host/client** — connecting to external engineering tools, supplier systems, local devices, and future adapters.
+1. **Hardware Studio as an MCP server** — approved AI clients inspect and operate the product through semantic engineering tools.
+2. **Hardware Studio as an MCP host/client** — the workspace connects to engineering tools, component services, suppliers, and local devices.
 
 MCP actions should represent real operations such as `add_component`, `connect_component_pins`, `route_net`, `build_firmware`, or `create_validation_run`—not mouse-coordinate automation.
 
 ## What exists today
 
-The repository currently contains early foundations for:
+The repository contains early foundations for:
 
 - a multi-workbench browser application
 - a canonical local project model and project persistence
@@ -144,31 +149,29 @@ The repository currently contains early foundations for:
 - an MCP server foundation
 - readiness scoring and project exports
 
-These are active development systems. Some workflows are real, some are partial, and some remain architectural foundations.
+Some workflows are real, some are partial, and some remain architectural foundations.
 
 ## What is not ready
 
 The following areas still require substantial production work:
 
-- complete pointer-correct undo/redo across every editor
+- pointer-correct undo and redo across every editor
 - robust polygon, dimension, constraint, and parametric mechanical workflows
 - fully anchored PCB traces and a true electrical connectivity graph
 - comprehensive DRC/ERC and strict multi-board isolation
 - canonical 3D geometry without guessed package or board dimensions
-- complete PlatformIO operations, serial monitoring, cancellation, and durable operation history
-- validation execution, measurement tolerances, evidence review, retest comparison, and UI
+- complete PlatformIO operations, serial monitoring, cancellation, and durable history
+- validation execution, tolerances, evidence review, retest comparison, and UI
 - real branch switching, merging, conflicts, and immutable release workflows
 - MCP connection to the live durable application project and typed command execution
 - fabrication-grade manufacturing outputs
 - complete CI coverage for the application, bridge, and MCP packages
 
-See [Current Status](docs/CURRENT_STATUS.md) for the maintained status model.
-
 ## Product principles
 
 ### Truthful engineering state
 
-Hardware Studio must never mark a workflow complete simply because a type, test, button, or document exists. Status should derive from real project state and verified production behavior.
+A workflow must not be called complete merely because a type, test, button, or document exists. Status must derive from real production behavior and evidence.
 
 ### Local-first direction
 
@@ -176,25 +179,25 @@ Projects should remain usable locally. Machine-level operations should be mediat
 
 ### Reversible by default
 
-Engineering changes should be versioned, reviewable, undoable, and traceable—whether initiated through the UI or through MCP.
+Engineering changes should be versioned, reviewable, undoable, and traceable—whether initiated through the UI or MCP.
 
 ### Intent-driven operations
 
-The system should expose semantic engineering actions instead of depending on brittle browser or mouse automation.
+The system should expose semantic engineering actions instead of brittle browser or mouse automation.
 
 ### One source of product truth
 
 Every workbench should operate on the same canonical project document, with migrations and deterministic derived outputs.
 
-## Development build
+## Explore
 
-The public landing page is available at:
+Public landing page:
 
 ```text
 https://hardware-studio.vercel.app/
 ```
 
-The experimental workspace is available at:
+Experimental workspace:
 
 ```text
 https://hardware-studio.vercel.app/studio
@@ -210,26 +213,16 @@ The development build is provided for exploration only. It is not a stable relea
 - npm
 - PlatformIO CLI only when testing local firmware operations
 
-### Install and run
+### Install
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open:
+Open `http://localhost:3000` for the landing page and `http://localhost:3000/studio` for the workspace.
 
-```text
-http://localhost:3000
-```
-
-The studio route is:
-
-```text
-http://localhost:3000/studio
-```
-
-### Verification commands
+### Verify
 
 ```bash
 npm run lint
@@ -238,19 +231,20 @@ npm test
 npm run build
 ```
 
-The current repository does not yet provide complete dedicated MCP and bridge build/test scripts. These remain part of the roadmap.
+Dedicated MCP and bridge build/test scripts are not yet complete.
 
 ## Repository map
 
 ```text
-src/app/                     Next.js routes and public landing page
+src/app/                     Next.js routes, metadata, and landing page
 src/components/              Product and engineering workbenches
 src/store/                   Canonical project state and command history
 src/lib/                     Engineering engines, validation, exports, and utilities
 src/types/                   Shared product-domain models
 packages/local-bridge/       Approved local machine operations
 packages/mcp-server/         Model Context Protocol foundation
-docs/                        Vision, architecture, roadmap, status, and development notes
+public/                      Public identity assets
+docs/                        Vision, architecture, roadmap, status, and safety
 ```
 
 ## Documentation
@@ -265,11 +259,11 @@ docs/                        Vision, architecture, roadmap, status, and developm
 
 ## Safety and fabrication notice
 
-Hardware Studio currently generates planning artifacts and manufacturing drafts. These outputs require:
+Current output requires:
 
 - independent electrical engineering review
 - independent mechanical engineering review
-- a real Gerber/CAM viewer inspection
+- real Gerber/CAM viewer inspection
 - fab-house DFM validation
 - verified component footprints and package geometry
 - physical prototype testing
@@ -280,29 +274,23 @@ Never submit current generated output directly to manufacturing without qualifie
 ## Project status
 
 **Stage:** Research and active development  
-**Release status:** No stable production release  
+**Stable release:** None  
 **Primary goal:** Build a truthful connected foundation before presenting the platform as complete  
-**Maintainer:** [Ankit Bhardwaj](https://github.com/Ankit6149) / System Alpha
+**Maintainer:** [Ankit Bhardwaj](https://github.com/Ankit6149)
 
 ## Contributing
 
-Thoughtful engineering feedback is welcome, especially around:
+Thoughtful engineering feedback is welcome, especially around product-graph architecture, computational geometry, schematic and PCB connectivity, local-first storage, firmware tooling, validation, revisions, manufacturing, and MCP safety.
 
-- product-graph architecture
-- geometry and electrical connectivity engines
-- PCB routing and DRC/ERC
-- local-first storage and revision systems
-- firmware and PlatformIO integration
-- validation and manufacturing workflows
-- MCP tool design and safety
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening changes.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a change.
 
 ---
 
 <div align="center">
 
-**Hardware Studio by System Alpha**
+<img src="public/hardware-studio-mark.svg" width="34" alt="Hardware Studio mark" />
+
+**Hardware Studio**
 
 Building toward one connected environment for the complete physical-product lifecycle.
 
