@@ -81,7 +81,7 @@ export const FirmwareStateMachineCanvas: React.FC<Props> = ({ onStateSelect, onT
     };
   }), [firmwareTransitions, firmwareStates]);
 
-  const onNodeDragStart = useCallback((_event: any, _node: any) => {
+  const onNodeDragStart = useCallback(() => {
     store.beginCommand('MOVE_STATE', 'Move firmware state');
   }, [store]);
 

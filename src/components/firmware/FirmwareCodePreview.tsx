@@ -16,22 +16,16 @@ export const FirmwareCodePreview: React.FC = () => {
   const [isAddingFile, setIsAddingFile] = useState<boolean>(false);
   const [saveNotification, setSaveNotification] = useState<string | null>(null);
 
-  // Initialize workspace if empty
+  // Initialize only the external project workspace. Selection is derived below.
   useEffect(() => {
     if (sourceFiles.length === 0) {
-      const initialFiles = generateFirmwareWorkspace(store);
-      store.updateProjectState({ firmwareSourceFiles: initialFiles });
-      if (initialFiles.length > 0) {
-        setSelectedFileId(initialFiles[0].id);
-        setEditingContent(initialFiles[0].content);
-      }
-    } else if (!selectedFileId && sourceFiles.length > 0) {
-      setSelectedFileId(sourceFiles[0].id);
-      setEditingContent(sourceFiles[0].content);
+      store.updateProjectState({ firmwareSourceFiles: generateFirmwareWorkspace(store) });
     }
-  }, [sourceFiles.length]);
+  }, [sourceFiles.length, store]);
 
-  const activeFile = sourceFiles.find(f => f.id === selectedFileId);
+  const effectiveSelectedFileId = selectedFileId ?? sourceFiles[0]?.id ?? null;
+  const activeFile = sourceFiles.find(file => file.id === effectiveSelectedFileId);
+  const editorContent = selectedFileId ? editingContent : (activeFile?.content ?? '');
 
   const handleSelectFile = (file: FirmwareSourceFile) => {
     setSelectedFileId(file.id);
@@ -40,15 +34,18 @@ export const FirmwareCodePreview: React.FC = () => {
 
   const handleContentChange = (val: string) => {
     setEditingContent(val);
-    if (selectedFileId) {
-      const updated = sourceFiles.map(f => f.id === selectedFileId ? { ...f, content: val, dirty: true } : f);
+    const fileId = effectiveSelectedFileId;
+    if (fileId) {
+      if (!selectedFileId) setSelectedFileId(fileId);
+      const updated = sourceFiles.map(file => file.id === fileId ? { ...file, content: val, dirty: true } : file);
       store.updateProjectState({ firmwareSourceFiles: updated });
     }
   };
 
   const handleSaveFile = () => {
-    if (!selectedFileId) return;
-    const updated = sourceFiles.map(f => f.id === selectedFileId ? { ...f, content: editingContent, dirty: false } : f);
+    const fileId = effectiveSelectedFileId;
+    if (!fileId) return;
+    const updated = sourceFiles.map(file => file.id === fileId ? { ...file, content: editorContent, dirty: false } : file);
     store.updateProjectState({ firmwareSourceFiles: updated });
     setSaveNotification(`Saved ${activeFile?.name || 'file'}`);
     setTimeout(() => setSaveNotification(null), 2000);
@@ -58,7 +55,7 @@ export const FirmwareCodePreview: React.FC = () => {
     if (!newFilePath.trim()) return;
     const name = newFilePath.split('/').pop() || newFilePath;
     const ext = name.split('.').pop() || '';
-    const lang = ext === 'cpp' || ext === 'c' || ext === 'h' ? 'cpp' : ext === 'ini' ? 'ini' : 'text';
+    const lang: FirmwareSourceFile['language'] = ext === 'cpp' || ext === 'c' || ext === 'h' ? 'cpp' : ext === 'ini' ? 'ini' : 'text';
     const newFile: FirmwareSourceFile = {
       id: `fw_file_${Date.now()}`,
       path: newFilePath.trim(),
@@ -66,7 +63,7 @@ export const FirmwareCodePreview: React.FC = () => {
       content: `// Source file: ${newFilePath.trim()}\n\n`,
       isGenerated: false,
       dirty: false,
-      language: lang as any
+      language: lang
     };
     const updated = [...sourceFiles, newFile];
     store.updateProjectState({ firmwareSourceFiles: updated });
@@ -155,7 +152,7 @@ export const FirmwareCodePreview: React.FC = () => {
               key={file.id}
               onClick={() => handleSelectFile(file)}
               className={`group flex items-center justify-between px-2.5 py-1.5 rounded text-xs cursor-pointer transition-colors ${
-                selectedFileId === file.id
+                effectiveSelectedFileId === file.id
                   ? 'bg-indigo-600/20 text-indigo-300 font-medium border border-indigo-500/30'
                   : 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200'
               }`}
@@ -221,7 +218,7 @@ export const FirmwareCodePreview: React.FC = () => {
 
             <div className="flex-1 relative overflow-hidden p-2 bg-slate-950">
               <textarea
-                value={editingContent}
+                value={editorContent}
                 onChange={(e) => handleContentChange(e.target.value)}
                 className="w-full h-full bg-slate-950 text-slate-200 font-mono text-xs p-3 focus:outline-none resize-none leading-relaxed"
                 spellCheck={false}

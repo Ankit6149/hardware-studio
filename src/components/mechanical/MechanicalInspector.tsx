@@ -3,6 +3,7 @@
 import React from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { MechanicalObject } from '../../types';
+import { applyLightweightConstraint } from '../../lib/mechanical/mechanicalGeometry';
 
 interface Props {
   selectedObjectId: string | null;
@@ -159,7 +160,6 @@ export const MechanicalInspector: React.FC<Props> = ({ selectedObjectId }) => {
             const refObj = mechanicalObjects.find(o => o.id === refId);
             if (!refObj) return;
 
-            const { applyLightweightConstraint } = require('../../lib/mechanical/mechanicalGeometry');
             const updated = applyLightweightConstraint(cType, obj, refObj, dist);
 
             store.executeProjectCommand('APPLY_CONSTRAINT', `Apply ${cType} constraint`, () => {

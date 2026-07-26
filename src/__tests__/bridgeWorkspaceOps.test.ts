@@ -1,6 +1,21 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createServer } from '../../packages/local-bridge/bridgeServer';
 import http from 'http';
+import type { AddressInfo } from 'node:net';
+
+interface BridgeResponseBody {
+  [key: string]: unknown;
+  status?: string;
+  error?: string;
+  token?: string;
+  available?: boolean;
+  version?: string;
+  valid?: boolean;
+  success?: boolean;
+  exitCode?: number;
+  stdout?: string;
+  raw?: string;
+}
 
 describe('Slice 8 Secure Local Bridge Workspace Operations Tests', () => {
   let server: http.Server;
@@ -14,7 +29,7 @@ describe('Slice 8 Secure Local Bridge Workspace Operations Tests', () => {
     server = createServer('workspace-ops-token-888', mockSpawn);
     await new Promise<void>((resolve) => {
       server.listen(0, '127.0.0.1', () => {
-        const addr = server.address() as any;
+        const addr = server.address() as AddressInfo;
         port = addr.port;
         resolve();
       });
@@ -26,7 +41,7 @@ describe('Slice 8 Secure Local Bridge Workspace Operations Tests', () => {
   });
 
   const makeRequest = (pathStr: string, headers: Record<string, string> = {}, method: string = 'GET') => {
-    return new Promise<{ statusCode: number; body: any }>((resolve) => {
+    return new Promise<{ statusCode: number; body: BridgeResponseBody }>((resolve) => {
       const req = http.request(
         {
           hostname: '127.0.0.1',
@@ -45,7 +60,7 @@ describe('Slice 8 Secure Local Bridge Workspace Operations Tests', () => {
             try {
               resolve({ statusCode: res.statusCode || 500, body: JSON.parse(data) });
             } catch {
-              resolve({ statusCode: res.statusCode || 500, body: data });
+              resolve({ statusCode: res.statusCode || 500, body: { raw: data } });
             }
           });
         }
@@ -76,7 +91,11 @@ describe('Slice 8 Secure Local Bridge Workspace Operations Tests', () => {
     const tokenRes = await makeRequest('/api/request-approval', {}, 'POST');
     expect(tokenRes.statusCode).toBe(200);
 
-    const withApproval = await makeRequest('/api/workspace/overwrite', { 'X-Approval-Token': tokenRes.body.token });
+    const approvalToken = tokenRes.body.token;
+    expect(typeof approvalToken).toBe('string');
+    if (typeof approvalToken !== 'string') throw new Error('Approval token was not returned');
+
+    const withApproval = await makeRequest('/api/workspace/overwrite', { 'X-Approval-Token': approvalToken });
     expect(withApproval.statusCode).toBe(200);
     expect(withApproval.body.success).toBe(true);
   });

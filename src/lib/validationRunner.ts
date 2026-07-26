@@ -73,7 +73,7 @@ export function runValidationTest(
   }
 
   // If evidence link was provided, record and validate format
-  let evidenceLink = options?.evidenceLink;
+  const evidenceLink = options?.evidenceLink;
   if (evidenceLink) {
     logs.push(`Evidence attached: ${evidenceLink}`);
   }

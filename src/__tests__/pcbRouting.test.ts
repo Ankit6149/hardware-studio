@@ -8,8 +8,16 @@ import {
   computeNetConnectivity
 } from '../lib/pcb/pcbRoutingEngine';
 import { getComponentPads } from '../components/board/boardGeometry';
+import type { BoardComponent } from '../types';
 
 describe('Slice 2 Production PCB Editor & Routing Engine', () => {
+  const requireBoardComponent = (id: string): BoardComponent => {
+    const component = (useProjectStore.getState().boardComponents || []).find(item => item.id === id);
+    expect(component).toBeDefined();
+    if (!component) throw new Error(`Board component ${id} was not created`);
+    return component;
+  };
+
   beforeEach(() => {
     useProjectStore.getState().resetProject();
     useProjectStore.setState({
@@ -159,7 +167,7 @@ describe('Slice 2 Production PCB Editor & Routing Engine', () => {
       placementY: 20
     });
 
-    const compU1 = useProjectStore.getState().boardComponents?.find(c => c.id === 'comp_u1')!;
+    const compU1 = requireBoardComponent('comp_u1');
     const padsU1 = getComponentPads(compU1);
 
     store.addBoardComponent({
@@ -181,7 +189,7 @@ describe('Slice 2 Production PCB Editor & Routing Engine', () => {
       placementY: 20
     });
 
-    const compU2 = useProjectStore.getState().boardComponents?.find(c => c.id === 'comp_u2')!;
+    const compU2 = requireBoardComponent('comp_u2');
     const padsU2 = getComponentPads(compU2);
 
     store.setPadNetAssignments([
@@ -309,10 +317,10 @@ describe('Slice 2 Production PCB Editor & Routing Engine', () => {
       placementY: 10
     });
 
-    const compC1 = useProjectStore.getState().boardComponents?.find(c => c.id === 'comp_c1')!;
+    const compC1 = requireBoardComponent('comp_c1');
     const padsC1 = getComponentPads(compC1);
 
-    const compC2 = useProjectStore.getState().boardComponents?.find(c => c.id === 'comp_c2')!;
+    const compC2 = requireBoardComponent('comp_c2');
     const padsC2 = getComponentPads(compC2);
 
     store.setPadNetAssignments([

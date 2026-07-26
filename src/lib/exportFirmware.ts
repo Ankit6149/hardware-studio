@@ -1,4 +1,4 @@
-import { Project } from '../types';
+import { FirmwareSourceFile, Project } from '../types';
 
 export const generateFirmwareSkeleton = (project: Project): string => {
   const pinMap = project.pinMap || [];
@@ -201,7 +201,7 @@ void loop() {
 };
 
 // Helper to generate full workspace source file collection
-export function generateFirmwareWorkspace(project: Project): any[] {
+export function generateFirmwareWorkspace(project: Project): FirmwareSourceFile[] {
   const pioIniContent = `; PlatformIO Project Configuration File
 [env:esp32s3]
 platform = espressif32

@@ -841,7 +841,7 @@ export function generateReleasePackageManifest(project: Project): string {
     releaseManifestVersion: '1.0.0',
     projectName: project.projectName,
     projectVersion: project.version || '1.0.0',
-    activeBranch: (project as any).activeBranchName || (project as any).activeBranch || 'main',
+    activeBranch: project.activeBranchName || project.activeBranch || 'main',
     generatedAt: new Date().toISOString(),
     artifacts: [
       { filename: 'gerber_copper_top.gbr', sizeBytes: gerber.length, sha256: computeCryptoSHA256(gerber) },
