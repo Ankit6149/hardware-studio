@@ -1,1 +1,1 @@
-Run the complete verified visual identity correction.
+Print the exact remaining legacy brand matches.
