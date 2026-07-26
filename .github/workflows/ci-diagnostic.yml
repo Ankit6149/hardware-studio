@@ -5,15 +5,22 @@ on:
     branches: [ master ]
 
 jobs:
-  npm-ci-diagnostic:
+  regenerate-lockfile:
     runs-on: ubuntu-latest
     steps:
-      - name: Reproduce npm ci failure
+      - name: Regenerate and validate package lock
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           git clone --depth 1 --branch ci-diagnostic https://github.com/Ankit6149/hardware-studio.git repo
           cd repo
           node --version
           npm --version
-          npm ci 2>&1 | tail -n 60
+          npm install --package-lock-only --ignore-scripts
+          npm ci
+      - name: Upload validated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-package-lock
+          path: repo/package-lock.json
+          if-no-files-found: error
