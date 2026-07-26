@@ -137,7 +137,7 @@ export const ProductArchitectureCanvas: React.FC<ProductArchitectureCanvasProps>
     }));
   }, [architectureConnections]);
 
-  const onNodeDragStart = useCallback((_event: any, _node: any) => {
+  const onNodeDragStart = useCallback(() => {
     store.beginCommand('MOVE_ARCHITECTURE_NODE', 'Move architecture block');
   }, [store]);
 

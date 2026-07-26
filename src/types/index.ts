@@ -198,6 +198,8 @@ export interface BoardComponent {
   pins?: ProjectComponentPin[];
   architectureNodeId?: string;
   bomItemId?: string;
+  mechanicalObjectId?: string;
+  linkedMechanicalObjectId?: string;
   manufacturer?: string;
   status?: 'Draft' | 'Selected' | 'Needs Review' | 'Verified' | 'Concept' | 'In Progress' | 'Complete';
   schematic?: {
@@ -497,16 +499,35 @@ export interface ValidationRun {
   measuredValue?: number | string;
   passCriteria?: string;
   evidenceLink?: string;
-  evidence?: any[];
-  stepResults?: any[];
+  evidence?: unknown[];
+  stepResults?: unknown[];
   logs: string[];
   runBy?: string;
   operator?: string;
   environment?: string;
 }
 
-export type MCPProposal = Record<string, any>;
-export type MCPAuditRecord = Record<string, any>;
+export interface MCPProposal {
+  id: string;
+  proposalId?: string;
+  timestamp: string;
+  proposedBy?: string;
+  description?: string;
+  domain?: string;
+  patch?: Partial<Project>;
+  diffSummary?: string;
+  status: 'Pending' | 'Applied' | 'Rejected';
+}
+
+export interface MCPAuditRecord {
+  id: string;
+  timestamp: string;
+  tool: string;
+  params: Record<string, unknown>;
+  resultStatus: string;
+  requiresApproval: boolean;
+  approved: boolean;
+}
 
 export interface KeepoutZone {
   id: string;
@@ -701,11 +722,11 @@ export interface Project {
   firmwareTransitions?: FirmwareTransition[];
   firmwareConfiguration?: FirmwareConfiguration;
   firmwareSourceFiles?: FirmwareSourceFile[];
-  firmwareBuildRecords?: any[];
+  firmwareBuildRecords?: Record<string, unknown>[];
   validationTests?: ValidationTest[];
   validationRuns?: ValidationRun[];
-  mcpProposals?: any[];
-  mcpAuditRecords?: any[];
+  mcpProposals?: MCPProposal[];
+  mcpAuditRecords?: MCPAuditRecord[];
 
   // Blueprint Generation System
   blueprintPack?: BlueprintPack;

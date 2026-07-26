@@ -334,7 +334,7 @@ interface ProjectState extends Project {
 
 const PROJECTS_KEY = 'hardware_studio_projects_v1';
 const ACTIVE_ID_KEY = 'hardware_studio_active_project_id_v1';
-const OLD_KEY = 'hardware_studio_system_alpha_project';
+const OLD_KEY = 'hardware_studio_legacy_project';
 
 const inMemoryProjectsStore: Record<string, Project> = {};
 let inMemoryActiveId: string = 'the-ring';
@@ -1447,7 +1447,7 @@ mcpProposals: state.mcpProposals || [],
       const boardComponents = (state.boardComponents || []).map(c => c.id === componentId ? updatedComp : c);
       
       let mechanicalObjects = state.mechanicalObjects;
-      const linkedMechId = (currentComp as any).mechanicalObjectId || (currentComp as any).linkedMechanicalObjectId;
+      const linkedMechId = currentComp.mechanicalObjectId || currentComp.linkedMechanicalObjectId;
       if (linkedMechId && mechanicalObjects) {
         mechanicalObjects = mechanicalObjects.map(mo => mo.id === linkedMechId ? { ...mo, xMm: targetX, yMm: targetY } : mo);
       }
@@ -3379,7 +3379,7 @@ mcpProposals: state.mcpProposals || [],
     },
 
     addMechanicalObject: (obj) => {
-      const id = (obj as any).id || `mech_obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const id = obj.id || `mech_obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       const list = get().mechanicalObjects || [];
       persistChange({ mechanicalObjects: [...list, { ...obj, id }] });
     },
@@ -3552,7 +3552,7 @@ mcpProposals: state.mcpProposals || [],
     },
 
     commitCommand: (finalPatch?: Partial<Project>) => {
-      const tx = (get() as any).activeTransaction;
+      const tx = get().activeTransaction;
       if (finalPatch) {
         set(finalPatch);
       }
@@ -3598,7 +3598,7 @@ mcpProposals: state.mcpProposals || [],
     },
 
     cancelCommand: () => {
-      const tx = (get() as any).activeTransaction;
+      const tx = get().activeTransaction;
       if (tx && tx.beforeSnapshot) {
         set({
           ...tx.beforeSnapshot,

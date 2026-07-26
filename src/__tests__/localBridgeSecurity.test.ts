@@ -1,7 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import http from 'http';
+import { createServer, isPathContained } from '../../packages/local-bridge/bridgeServer';
 
-const { createServer, isPathContained } = require('../../packages/local-bridge/bridgeServer');
+interface BridgeResponseBody {
+  [key: string]: unknown;
+  status?: string;
+  error?: string;
+  token?: string;
+  available?: boolean;
+  version?: string;
+  valid?: boolean;
+  success?: boolean;
+  exitCode?: number;
+  stdout?: string;
+  raw?: string;
+}
 
 describe('Slice 5 Local Bridge Security & Process Execution', () => {
   let server: http.Server;
@@ -32,10 +45,14 @@ describe('Slice 5 Local Bridge Security & Process Execution', () => {
     });
   });
 
-  const getPort = () => (server.address() as any).port;
+  const getPort = () => {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Bridge server has no TCP address');
+    return address.port;
+  };
 
   const request = (method: string, pathStr: string, headers: Record<string, string> = {}) => {
-    return new Promise<{ status: number; body: any }>((resolve, reject) => {
+    return new Promise<{ status: number; body: BridgeResponseBody }>((resolve, reject) => {
       const req = http.request({
         hostname: '127.0.0.1',
         port: getPort(),
@@ -49,7 +66,7 @@ describe('Slice 5 Local Bridge Security & Process Execution', () => {
           try {
             resolve({ status: res.statusCode || 500, body: JSON.parse(raw) });
           } catch {
-            resolve({ status: res.statusCode || 500, body: raw });
+            resolve({ status: res.statusCode || 500, body: { raw } });
           }
         });
       });
@@ -92,7 +109,8 @@ describe('Slice 5 Local Bridge Security & Process Execution', () => {
     });
     expect(reqApprovalRes.status).toBe(200);
     const approvalToken = reqApprovalRes.body.token;
-    expect(approvalToken).toBeDefined();
+    expect(typeof approvalToken).toBe('string');
+    if (typeof approvalToken !== 'string') throw new Error('Approval token was not returned');
 
     // 3. Upload with approval token -> 200 SUCCESS
     const uploadRes = await request('POST', '/api/upload', {

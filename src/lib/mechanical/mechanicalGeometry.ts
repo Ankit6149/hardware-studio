@@ -1,4 +1,4 @@
-import { MechanicalObject } from '../../types';
+import { MechanicalObject, Project } from '../../types';
 
 export interface ViewState {
   offsetX: number;
@@ -218,12 +218,12 @@ export interface CollisionResult {
 }
 
 /** Check 3D Spatial Interference between all internal bodies, components, battery, and enclosure boundaries */
-export function checkMechanicalInterference(project: any): CollisionResult {
+export function checkMechanicalInterference(project: Project): CollisionResult {
   const enclosures: { id: string; name: string; bbox: BoundingBox3D }[] = [];
   const internalBodies: { id: string; name: string; bbox: BoundingBox3D }[] = [];
 
   // 1. Separate Enclosure Shells vs Internal Bodies
-  (project.mechanicalBodies || []).forEach((b: any) => {
+  (project.mechanicalBodies || []).forEach((b) => {
     const w = b.widthMm || 100;
     const h = b.heightMm || 60;
     const d = b.depthMm || 20;
@@ -247,7 +247,7 @@ export function checkMechanicalInterference(project: any): CollisionResult {
   });
 
   // 2. Mechanical Objects
-  (project.mechanicalObjects || []).forEach((obj: any) => {
+  (project.mechanicalObjects || []).forEach((obj) => {
     const bbox2d = getMechanicalBoundingBox(obj);
     const zDepth = obj.depthMm || (obj.layer === 'Enclosure' ? 25 : obj.layer === 'Battery' ? 10 : 5);
     const zBase = obj.layer === 'Battery' ? 2 : 0;
@@ -273,8 +273,8 @@ export function checkMechanicalInterference(project: any): CollisionResult {
   // 3. Placed Board Components with Package Dimensions
   const activeBoardId = project.activeBoardId || 'board_main';
   (project.boardComponents || [])
-    .filter((c: any) => c.boardId === activeBoardId && c.pcb?.placed !== false)
-    .forEach((c: any) => {
+    .filter((c) => c.boardId === activeBoardId && c.pcb?.placed !== false)
+    .forEach((c) => {
       const cx = c.pcb?.xMm ?? c.placementX ?? 0;
       const cy = c.pcb?.yMm ?? c.placementY ?? 0;
       const packageDim = c.packageDimensions || { widthMm: 8, heightMm: 8, heightZMm: 3 };

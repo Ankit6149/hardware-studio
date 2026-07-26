@@ -12,8 +12,8 @@ export interface ReleaseBlocker {
 export interface MergeConflict {
   entityType: string;
   id: string;
-  sourceValue: any;
-  targetValue: any;
+  sourceValue: unknown;
+  targetValue: unknown;
 }
 
 export interface MergeResult {
@@ -139,7 +139,7 @@ export function mergeBranches(
   sourceRevision: ProductRevision,
   targetProject: Project
 ): MergeResult {
-  const sourceProject = sourceRevision.projectSnapshot;
+  const sourceProject = sourceRevision.projectSnapshot as Project | undefined;
   if (!sourceProject) {
     return { success: false, conflicts: [{ entityType: 'Revision', id: sourceRevision.id, sourceValue: null, targetValue: 'Missing snapshot' }] };
   }
@@ -150,8 +150,8 @@ export function mergeBranches(
   const targetMechs = merged.mechanicalObjects || [];
   const sourceMechs = sourceProject.mechanicalObjects || [];
 
-  sourceMechs.forEach((sObj: any) => {
-    const tObj = targetMechs.find((t: any) => t.id === sObj.id);
+  sourceMechs.forEach((sObj) => {
+    const tObj = targetMechs.find((t) => t.id === sObj.id);
     if (!tObj) {
       targetMechs.push(sObj);
     } else if (JSON.stringify(tObj) !== JSON.stringify(sObj)) {
@@ -167,8 +167,8 @@ export function mergeBranches(
   const targetComps = merged.boardComponents || [];
   const sourceComps = sourceProject.boardComponents || [];
 
-  sourceComps.forEach((sComp: any) => {
-    const tComp = targetComps.find((t: any) => t.id === sComp.id);
+  sourceComps.forEach((sComp) => {
+    const tComp = targetComps.find((t) => t.id === sComp.id);
     if (!tComp) {
       targetComps.push(sComp);
     } else if (JSON.stringify(tComp) !== JSON.stringify(sComp)) {

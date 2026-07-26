@@ -58,7 +58,7 @@ export function resolvePCBAnchor(
   if (nearestPad) {
     return {
       type: 'pad',
-      componentId: (nearestPad as any).componentId,
+      componentId: nearestPad.componentId,
       padName: nearestPad.padName,
       xMm: nearestPad.x,
       yMm: nearestPad.y,

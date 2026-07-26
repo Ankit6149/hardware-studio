@@ -1,6 +1,21 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createServer } from '../../packages/local-bridge/bridgeServer';
 import http from 'http';
+import type { AddressInfo } from 'node:net';
+
+interface BridgeResponseBody {
+  [key: string]: unknown;
+  status?: string;
+  error?: string;
+  token?: string;
+  available?: boolean;
+  version?: string;
+  valid?: boolean;
+  success?: boolean;
+  exitCode?: number;
+  stdout?: string;
+  raw?: string;
+}
 
 describe('Slice 8 Secure Local Bridge Authentication & Security Tests', () => {
   let server: http.Server;
@@ -14,7 +29,7 @@ describe('Slice 8 Secure Local Bridge Authentication & Security Tests', () => {
     server = createServer('secure-test-token-777', mockSpawn);
     await new Promise<void>((resolve) => {
       server.listen(0, '127.0.0.1', () => {
-        const addr = server.address() as any;
+        const addr = server.address() as AddressInfo;
         port = addr.port;
         resolve();
       });
@@ -26,7 +41,7 @@ describe('Slice 8 Secure Local Bridge Authentication & Security Tests', () => {
   });
 
   const makeRequest = (pathStr: string, headers: Record<string, string> = {}, method: string = 'GET') => {
-    return new Promise<{ statusCode: number; body: any }>((resolve) => {
+    return new Promise<{ statusCode: number; body: BridgeResponseBody }>((resolve) => {
       const req = http.request(
         {
           hostname: '127.0.0.1',
@@ -42,7 +57,7 @@ describe('Slice 8 Secure Local Bridge Authentication & Security Tests', () => {
             try {
               resolve({ statusCode: res.statusCode || 500, body: JSON.parse(data) });
             } catch {
-              resolve({ statusCode: res.statusCode || 500, body: data });
+              resolve({ statusCode: res.statusCode || 500, body: { raw: data } });
             }
           });
         }
@@ -91,6 +106,8 @@ describe('Slice 8 Secure Local Bridge Authentication & Security Tests', () => {
     const tokenRes = await makeRequest('/api/request-approval', { 'X-Hardware-Studio-Token': 'secure-test-token-777' }, 'POST');
     expect(tokenRes.statusCode).toBe(200);
     const approvalToken = tokenRes.body.token;
+    expect(typeof approvalToken).toBe('string');
+    if (typeof approvalToken !== 'string') throw new Error('Approval token was not returned');
 
     // 2. Perform upload
     const res = await makeRequest('/api/upload', {
