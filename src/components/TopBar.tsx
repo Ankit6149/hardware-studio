@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
+import { FolderOpen, LayoutTemplate, RotateCcw } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
-import { 
-  FolderOpen, 
-  LayoutTemplate, 
-  RotateCcw
-} from 'lucide-react';
+import { Button } from '../ui/Button';
+import { BrandMark } from './BrandMark';
 import { ProjectManager } from './ProjectManager';
 import { TemplatePicker } from './TemplatePicker';
-import { Button } from '../ui/Button';
 
 export const TopBar: React.FC = () => {
   const {
@@ -15,7 +12,7 @@ export const TopBar: React.FC = () => {
     templateName,
     setProjectName,
     saveActiveProject,
-    resetProject
+    resetProject,
   } = useProjectStore();
 
   const [localName, setLocalName] = useState(projectName);
@@ -38,60 +35,59 @@ export const TopBar: React.FC = () => {
   };
 
   const handleReset = () => {
-    if (window.confirm(`Reset current project "${projectName}" to its default template configuration? All modifications will be lost.`)) {
+    if (
+      window.confirm(
+        `Reset current project "${projectName}" to its default template configuration? All modifications will be lost.`,
+      )
+    ) {
       resetProject();
     }
   };
 
   return (
-    <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-5 shrink-0 shadow-sm z-30 font-mono">
-      {/* Brand area */}
-      <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-2.5">
-          <div className="flex items-center justify-center bg-slate-900 text-white w-8 h-8 rounded-lg font-bold text-sm shadow-sm select-none">
-            A
-          </div>
-          <div className="flex flex-col">
-            <span className="text-slate-950 text-xs font-extrabold tracking-tight leading-none uppercase">Hardware Studio</span>
-            <span className="text-slate-400 text-[9px] font-bold uppercase tracking-widest mt-0.5">by System Alpha</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Center project renaming box */}
-      <div className="flex items-center space-x-3 flex-1 max-w-sm mx-6">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={localName}
-            onChange={(e) => setLocalName(e.target.value)}
-            onBlur={handleNameBlur}
-            onKeyDown={(e) => e.key === 'Enter' && handleNameBlur()}
-            className="w-full bg-slate-50 border border-slate-250 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:ring-1 focus:ring-slate-400 rounded px-2.5 py-1.5 text-xs font-semibold text-slate-800 placeholder-slate-400 transition-all font-mono"
-            placeholder="Unnamed Project"
-          />
-        </div>
-        <div className="flex items-center space-x-1.5 px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded-full text-[8px] text-emerald-700 font-extrabold tracking-wide uppercase shrink-0 select-none">
-          <span className="relative flex h-1 w-1">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-1 w-1 bg-emerald-500"></span>
+    <header className="z-30 flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm">
+      <div className="flex min-w-[190px] items-center gap-2.5">
+        <BrandMark className="h-7 w-7" />
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate text-[11px] font-extrabold leading-none tracking-[-0.015em] text-slate-950">
+            Hardware Studio
           </span>
-          <span>Offline Active</span>
+          <span className="mt-1 text-[7px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            Connected engineering workspace
+          </span>
         </div>
       </div>
 
-      {/* Right controls */}
-      <div className="flex items-center space-x-2">
-        <div className="flex items-center space-x-1 px-2.5 py-1 bg-slate-100 border border-slate-200 rounded text-[9px] text-slate-600 font-bold uppercase tracking-wider select-none max-w-[150px] truncate">
-          <span className="text-slate-400">TPL:</span>
-          <span>{templateName || 'Custom'}</span>
+      <div className="mx-4 flex max-w-[360px] flex-1 items-center gap-2.5">
+        <input
+          type="text"
+          value={localName}
+          onChange={(event) => setLocalName(event.target.value)}
+          onBlur={handleNameBlur}
+          onKeyDown={(event) => event.key === 'Enter' && handleNameBlur()}
+          className="min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-mono text-[10px] font-semibold text-slate-800 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus:border-slate-400 focus:bg-white focus:ring-1 focus:ring-slate-300"
+          placeholder="Unnamed Project"
+        />
+        <div className="hidden shrink-0 items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-[7px] font-extrabold uppercase tracking-[0.12em] text-emerald-700 sm:flex">
+          <span className="relative flex h-1 w-1">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-1 w-1 rounded-full bg-emerald-500" />
+          </span>
+          Local
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <div className="hidden max-w-[120px] items-center gap-1 rounded border border-slate-200 bg-slate-100 px-2 py-1 font-mono text-[7px] font-bold uppercase tracking-[0.1em] text-slate-600 lg:flex">
+          <span className="text-slate-400">TPL</span>
+          <span className="truncate">{templateName || 'Custom'}</span>
         </div>
 
         <Button
           onClick={() => setIsProjOpen(true)}
           variant="secondary"
           size="sm"
-          icon={<FolderOpen className="w-3.5 h-3.5 text-slate-500" />}
+          icon={<FolderOpen className="h-3.5 w-3.5 text-slate-500" />}
         >
           Workspaces
         </Button>
@@ -100,7 +96,8 @@ export const TopBar: React.FC = () => {
           onClick={() => setIsTplOpen(true)}
           variant="secondary"
           size="sm"
-          icon={<LayoutTemplate className="w-3.5 h-3.5 text-slate-500" />}
+          className="hidden md:inline-flex"
+          icon={<LayoutTemplate className="h-3.5 w-3.5 text-slate-500" />}
         >
           Templates
         </Button>
@@ -110,13 +107,12 @@ export const TopBar: React.FC = () => {
           variant="ghost"
           size="sm"
           className="border border-rose-100 text-rose-700 hover:bg-rose-50"
-          icon={<RotateCcw className="w-3.5 h-3.5 text-rose-500" />}
+          icon={<RotateCcw className="h-3.5 w-3.5 text-rose-500" />}
         >
           Reset
         </Button>
       </div>
 
-      {/* Modals overlays */}
       <ProjectManager isOpen={isProjOpen} onClose={() => setIsProjOpen(false)} />
       <TemplatePicker isOpen={isTplOpen} onClose={() => setIsTplOpen(false)} />
     </header>
