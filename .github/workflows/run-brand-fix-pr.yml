@@ -29,6 +29,12 @@ jobs:
               'systemAlpha': 'hardwareStudio',
               'SYSTEM_ALPHA': 'HARDWARE_STUDIO',
               'systemalpha': 'hardwarestudio',
+              'SYSTEM ALPHA INTEGRATION BLUEPRINT': 'EXTERNAL SOFTWARE INTEGRATION BLUEPRINT',
+              'hasNameOrId(n, "system alpha")': 'hasNameOrId(n, "external software")',
+              'SYSTEM ALPHA LABS &bull; HARDWARE PLANNING': 'HARDWARE STUDIO &bull; PRODUCT ENGINEERING',
+              'SYSTEM ALPHA INTEGRATION ACCORDION': 'EXTERNAL SOFTWARE INTEGRATION ACCORDION',
+              'SYSTEM ALPHA VIEW (Host & Cloud Integration)': 'EXTERNAL COMPANION VIEW (Host & Cloud Integration)',
+              'SYSTEM ALPHA VIEW EDGES': 'EXTERNAL COMPANION VIEW EDGES',
           }
           suffixes = {'.ts', '.tsx', '.js', '.jsx', '.json', '.md', '.txt', '.yml', '.yaml', '.html', '.css'}
           for file in Path('.').rglob('*'):
