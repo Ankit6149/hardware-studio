@@ -8,11 +8,17 @@ jobs:
   lint-diagnostic:
     runs-on: ubuntu-latest
     steps:
-      - name: Reproduce lint failure
+      - name: Generate complete ESLint report
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           git clone --depth 1 --branch ci-diagnostic https://github.com/Ankit6149/hardware-studio.git repo
           cd repo
           npm ci >/dev/null 2>&1
-          npm run lint 2>&1 | awk '/^\/home\/runner\// {file=$0} / error / {print file; print}'
+          npx eslint src -f json -o eslint-report.json || true
+      - name: Upload ESLint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-report
+          path: repo/eslint-report.json
+          if-no-files-found: error
