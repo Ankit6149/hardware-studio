@@ -105,18 +105,18 @@ export default function Home() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f3f0e8] text-[#11110f] selection:bg-[#11110f] selection:text-[#f3f0e8]">
       <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f3f0e8]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2.5" aria-label="Hardware Studio home">
-            <BrandMark className="h-8 w-8" />
+        <div className="mx-auto flex h-12 max-w-[1120px] items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex items-center gap-2" aria-label="Hardware Studio home">
+            <BrandMark className="h-7 w-7" />
             <div>
-              <div className="text-[13px] font-semibold tracking-[-0.02em]">Hardware Studio</div>
-              <div className="mt-0.5 text-[8px] uppercase tracking-[0.18em] text-black/40">
+              <div className="text-[12px] font-semibold tracking-[-0.02em]">Hardware Studio</div>
+              <div className="mt-0.5 text-[7px] uppercase tracking-[0.17em] text-black/40">
                 Connected engineering workspace
               </div>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-[11px] font-medium text-black/55 lg:flex">
+          <nav className="hidden items-center gap-5 text-[10px] font-medium text-black/55 lg:flex">
             <a href="#vision" className="transition-colors hover:text-black">Vision</a>
             <a href="#workbenches" className="transition-colors hover:text-black">Workbenches</a>
             <a href="#architecture" className="transition-colors hover:text-black">Architecture</a>
@@ -125,7 +125,7 @@ export default function Home() {
 
           <Link
             href="/studio"
-            className="group inline-flex items-center gap-1.5 rounded-full border border-black/15 bg-white/55 px-3.5 py-2 text-[10px] font-semibold transition hover:border-black/30 hover:bg-white sm:text-[11px]"
+            className="group inline-flex items-center gap-1.5 rounded-full border border-black/15 bg-white/55 px-3 py-1.5 text-[10px] font-semibold transition hover:border-black/30 hover:bg-white sm:text-[11px]"
           >
             Development build
             <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
@@ -133,29 +133,29 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="relative mx-auto max-w-[1280px] px-4 pb-14 pt-10 sm:px-6 sm:pb-16 sm:pt-14 lg:px-8 lg:pb-20 lg:pt-16">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[760px] max-w-[110vw] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.78),rgba(255,255,255,0)_68%)]" />
+      <section className="relative mx-auto max-w-[1120px] px-4 pb-10 pt-8 sm:px-6 sm:pb-12 sm:pt-10 lg:px-8 lg:pb-14 lg:pt-12">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-[340px] w-[650px] max-w-[110vw] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.78),rgba(255,255,255,0)_68%)]" />
 
-        <div className="relative grid items-center gap-10 lg:grid-cols-[0.96fr_1.04fr] lg:gap-14">
-          <div className="max-w-[650px]">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-amber-900/20 bg-amber-100/55 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-amber-950 sm:text-[10px]">
+        <div className="relative grid items-center gap-8 lg:grid-cols-[0.94fr_1.06fr] lg:gap-10">
+          <div className="max-w-[540px]">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-900/20 bg-amber-100/55 px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-amber-950 sm:text-[10px]">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-600" />
               Foundation under active construction
             </div>
 
-            <h1 className="max-w-[760px] text-[clamp(2.75rem,5.4vw,5.45rem)] font-semibold leading-[0.93] tracking-[-0.062em]">
+            <h1 className="max-w-[760px] text-[clamp(2.35rem,4.25vw,4.25rem)] font-semibold leading-[0.93] tracking-[-0.062em]">
               Design the whole product.
               <span className="block text-black/34">Not disconnected files.</span>
             </h1>
 
-            <p className="mt-6 max-w-[610px] text-[15px] leading-7 text-black/60 sm:text-base">
+            <p className="mt-4 max-w-[520px] text-[13px] leading-6 text-black/60 sm:text-[14px]">
               Hardware Studio is an ambitious attempt to unify product requirements, mechanical design, electronics, PCB, firmware, validation, and manufacturing release around one connected product graph.
             </p>
 
-            <div className="mt-7 flex flex-col gap-2.5 sm:flex-row">
+            <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
               <Link
                 href="/studio"
-                className="group inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#11110f] px-5 text-[12px] font-semibold text-[#f3f0e8] shadow-[0_16px_42px_rgba(0,0,0,0.15)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_52px_rgba(0,0,0,0.2)]"
+                className="group inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#11110f] px-4 text-[11px] font-semibold text-[#f3f0e8] shadow-[0_16px_42px_rgba(0,0,0,0.15)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_52px_rgba(0,0,0,0.2)]"
               >
                 Explore the development build
                 <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
@@ -164,14 +164,14 @@ export default function Home() {
                 href="https://github.com/Ankit6149/hardware-studio"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-black/15 bg-white/48 px-5 text-[12px] font-semibold transition hover:border-black/30 hover:bg-white"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-black/15 bg-white/48 px-4 text-[11px] font-semibold transition hover:border-black/30 hover:bg-white"
               >
                 View the repository
                 <ChevronRight size={14} />
               </a>
             </div>
 
-            <div className="mt-6 flex max-w-[610px] items-start gap-3 rounded-2xl border border-red-950/15 bg-red-50/55 p-3.5 text-[12px] leading-5 text-red-950/72 sm:text-[13px] sm:leading-6">
+            <div className="mt-5 flex max-w-[520px] items-start gap-2.5 rounded-xl border border-red-950/15 bg-red-50/55 p-3 text-[11px] leading-5 text-red-950/72 sm:text-[13px] sm:leading-6">
               <ShieldAlert size={16} className="mt-0.5 shrink-0 text-red-800" />
               <p>
                 <strong className="font-semibold text-red-950">Not ready for production.</strong>{' '}
@@ -180,9 +180,9 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[570px]">
-            <div className="absolute -inset-6 rounded-[40px] bg-white/45 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[24px] border border-black/12 bg-[#151512] p-3 shadow-[0_36px_82px_rgba(24,22,16,0.2)]">
+          <div className="relative mx-auto w-full max-w-[500px]">
+            <div className="absolute -inset-4 rounded-[34px] bg-white/45 blur-3xl" />
+            <div className="relative overflow-hidden rounded-[22px] border border-black/12 bg-[#151512] p-2.5 shadow-[0_36px_82px_rgba(24,22,16,0.2)]">
               <div className="flex items-center justify-between border-b border-white/10 px-1 pb-2.5">
                 <div className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-[#ee6a5f]" />
@@ -194,18 +194,18 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="relative min-h-[350px] overflow-hidden rounded-[17px] border border-white/8 bg-[#0c0c0b] p-4 sm:min-h-[410px] sm:p-5">
+              <div className="relative min-h-[300px] overflow-hidden rounded-[16px] border border-white/8 bg-[#0c0c0b] p-3.5 sm:min-h-[350px] sm:p-4">
                 <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:28px_28px]" />
                 <div className="absolute left-1/2 top-1/2 h-[180px] w-[180px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-emerald-300/20" />
                 <div className="absolute left-1/2 top-1/2 h-[290px] w-[290px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5" />
 
-                <div className="relative z-10 flex min-h-[318px] flex-col justify-between sm:min-h-[368px]">
+                <div className="relative z-10 flex min-h-[270px] flex-col justify-between sm:min-h-[310px]">
                   <div className="grid grid-cols-2 gap-2.5">
                     <GraphNode icon={Blocks} eyebrow="PRODUCT" title="Requirements" state="linked" />
                     <GraphNode icon={Box} eyebrow="MECHANICAL" title="Enclosure" state="draft" />
                   </div>
 
-                  <div className="mx-auto my-4 w-[76%] rounded-[20px] border border-emerald-300/30 bg-emerald-300/10 p-4 text-center shadow-[0_0_70px_rgba(110,231,183,0.08)] backdrop-blur-sm">
+                  <div className="mx-auto my-3 w-[78%] rounded-[18px] border border-emerald-300/30 bg-emerald-300/10 p-3.5 text-center shadow-[0_0_70px_rgba(110,231,183,0.08)] backdrop-blur-sm">
                     <BrandMark className="mx-auto h-9 w-9" />
                     <div className="mt-3 text-[8px] font-semibold uppercase tracking-[0.19em] text-emerald-200/65">
                       Canonical product graph
@@ -232,12 +232,12 @@ export default function Home() {
       </section>
 
       <section id="vision" className="border-y border-black/10 bg-[#11110f] text-[#f3f0e8]">
-        <div className="mx-auto grid max-w-[1280px] gap-8 px-4 py-14 sm:px-6 sm:py-16 lg:grid-cols-[0.82fr_1.18fr] lg:px-8 lg:py-20">
+        <div className="mx-auto grid max-w-[1120px] gap-7 px-4 py-11 sm:px-6 sm:py-12 lg:grid-cols-[0.82fr_1.18fr] lg:px-8 lg:py-14">
           <div>
             <div className="mb-4 flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/38">
               <Sparkles size={13} /> The long-term vision
             </div>
-            <h2 className="max-w-[520px] text-3xl font-semibold leading-[1.04] tracking-[-0.042em] sm:text-4xl">
+            <h2 className="max-w-[520px] text-[1.75rem] font-semibold leading-[1.04] tracking-[-0.042em] sm:text-3xl">
               An operating environment for complete physical products.
             </h2>
           </div>
@@ -258,15 +258,15 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="workbenches" className="mx-auto max-w-[1280px] px-4 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-        <div className="mb-9 max-w-[720px]">
+      <section id="workbenches" className="mx-auto max-w-[1120px] px-4 py-11 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
+        <div className="mb-7 max-w-[680px]">
           <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.18em] text-black/40">
             Shared workbenches
           </div>
-          <h2 className="text-3xl font-semibold tracking-[-0.042em] sm:text-4xl">
+          <h2 className="text-[1.75rem] font-semibold tracking-[-0.042em] sm:text-3xl">
             Move through the product, not between disconnected tools.
           </h2>
-          <p className="mt-4 max-w-[650px] text-[13px] leading-6 text-black/55 sm:text-[14px] sm:leading-7">
+          <p className="mt-4 max-w-[540px] text-[13px] leading-6 text-black/55 sm:text-[14px] sm:leading-7">
             Each workbench is intended to operate on the same durable product model. The current repository contains early foundations for these areas—not complete replacements for established engineering suites.
           </p>
         </div>
@@ -275,7 +275,7 @@ export default function Home() {
           {workbenches.map(({ icon: Icon, name, description, items }, index) => (
             <article
               key={name}
-              className="group rounded-[20px] border border-black/10 bg-white/42 p-5 transition hover:-translate-y-0.5 hover:border-black/20 hover:bg-white/72 hover:shadow-[0_20px_48px_rgba(20,18,12,0.07)]"
+              className="group rounded-[18px] border border-black/10 bg-white/42 p-4 transition hover:-translate-y-0.5 hover:border-black/20 hover:bg-white/72 hover:shadow-[0_20px_48px_rgba(20,18,12,0.07)]"
             >
               <div className="flex items-start justify-between">
                 <div className="grid h-9 w-9 place-items-center rounded-xl border border-black/10 bg-[#11110f] text-[#f3f0e8]">
@@ -283,7 +283,7 @@ export default function Home() {
                 </div>
                 <span className="font-mono text-[8px] text-black/25">0{index + 1}</span>
               </div>
-              <h3 className="mt-5 text-[17px] font-semibold tracking-[-0.025em]">{name}</h3>
+              <h3 className="mt-4 text-[15px] font-semibold tracking-[-0.025em]">{name}</h3>
               <p className="mt-2 min-h-[56px] text-[12px] leading-5 text-black/52">{description}</p>
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {items.map((item) => (
@@ -298,13 +298,13 @@ export default function Home() {
       </section>
 
       <section id="architecture" className="border-y border-black/10 bg-white/38">
-        <div className="mx-auto max-w-[1280px] px-4 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+        <div className="mx-auto max-w-[1120px] px-4 py-11 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
           <div className="grid gap-8 lg:grid-cols-[0.86fr_1.14fr] lg:gap-10">
             <div className="max-w-[500px]">
               <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.18em] text-black/40">
                 Design principles
               </div>
-              <h2 className="text-3xl font-semibold tracking-[-0.042em] sm:text-4xl">
+              <h2 className="text-[1.75rem] font-semibold tracking-[-0.042em] sm:text-3xl">
                 Built around engineering state, not screenshots.
               </h2>
               <p className="mt-4 text-[13px] leading-6 text-black/55 sm:text-[14px] sm:leading-7">
@@ -323,7 +323,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-10 overflow-hidden rounded-[22px] border border-black/10 bg-[#11110f] p-5 text-[#f3f0e8] sm:p-6">
+          <div className="mt-8 overflow-hidden rounded-[20px] border border-black/10 bg-[#11110f] p-4 text-[#f3f0e8] sm:p-5">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-[560px]">
                 <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-white/35">
@@ -346,15 +346,15 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="status" className="mx-auto max-w-[1280px] px-4 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-        <div className="mb-9 max-w-[720px]">
+      <section id="status" className="mx-auto max-w-[1120px] px-4 py-11 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
+        <div className="mb-7 max-w-[680px]">
           <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.18em] text-black/40">
             Current development status
           </div>
-          <h2 className="text-3xl font-semibold tracking-[-0.042em] sm:text-4xl">
+          <h2 className="text-[1.75rem] font-semibold tracking-[-0.042em] sm:text-3xl">
             The vision is large. The foundation is still early.
           </h2>
-          <p className="mt-4 max-w-[650px] text-[13px] leading-6 text-black/55 sm:text-[14px] sm:leading-7">
+          <p className="mt-4 max-w-[540px] text-[13px] leading-6 text-black/55 sm:text-[14px] sm:leading-7">
             This repository is public so the system can be built in the open. It should be evaluated as an active engineering experiment—not as finished CAD, EDA, PLM, firmware, or manufacturing software.
           </p>
         </div>
@@ -378,14 +378,14 @@ export default function Home() {
       </section>
 
       <section className="border-t border-black/10 bg-[#d9d4c7]">
-        <div className="mx-auto max-w-[1280px] px-4 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-          <div className="overflow-hidden rounded-[24px] border border-black/12 bg-[#11110f] px-5 py-8 text-[#f3f0e8] shadow-[0_28px_74px_rgba(20,18,12,0.15)] sm:px-8 sm:py-10 lg:px-10">
+        <div className="mx-auto max-w-[1120px] px-4 py-11 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
+          <div className="overflow-hidden rounded-[22px] border border-black/12 bg-[#11110f] px-5 py-7 text-[#f3f0e8] shadow-[0_28px_74px_rgba(20,18,12,0.15)] sm:px-7 sm:py-8 lg:px-8">
             <div className="grid gap-7 lg:grid-cols-[1fr_auto] lg:items-end">
               <div className="max-w-[700px]">
                 <div className="mb-3 flex items-center gap-2 text-[8px] font-semibold uppercase tracking-[0.18em] text-white/35">
                   <Cpu size={12} /> Building in public
                 </div>
-                <h2 className="text-3xl font-semibold leading-[1.04] tracking-[-0.042em] sm:text-4xl">
+                <h2 className="text-[1.75rem] font-semibold leading-[1.04] tracking-[-0.042em] sm:text-3xl">
                   Follow the attempt to connect the entire hardware lifecycle.
                 </h2>
                 <p className="mt-4 max-w-[620px] text-[12px] leading-6 text-white/52 sm:text-[13px]">
@@ -393,11 +393,11 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex flex-col gap-2.5 sm:flex-row lg:flex-col">
-                <Link href="/studio" className="group inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f3f0e8] px-5 text-[12px] font-semibold text-[#11110f] transition hover:bg-white">
+                <Link href="/studio" className="group inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#f3f0e8] px-4 text-[11px] font-semibold text-[#11110f] transition hover:bg-white">
                   Open development build
                   <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
                 </Link>
-                <a href="https://github.com/Ankit6149/hardware-studio" target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/15 px-5 text-[12px] font-semibold text-white/75 transition hover:border-white/30 hover:text-white">
+                <a href="https://github.com/Ankit6149/hardware-studio" target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/15 px-4 text-[11px] font-semibold text-white/75 transition hover:border-white/30 hover:text-white">
                   Inspect the source
                   <ChevronRight size={14} />
                 </a>
@@ -408,7 +408,7 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-black/10 bg-[#d9d4c7]">
-        <div className="mx-auto flex max-w-[1280px] flex-col gap-4 px-4 py-6 text-[10px] text-black/48 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+        <div className="mx-auto flex max-w-[1120px] flex-col gap-4 px-4 py-6 text-[10px] text-black/48 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div className="flex items-center gap-2.5">
             <BrandMark className="h-7 w-7" />
             <div>

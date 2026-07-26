@@ -601,13 +601,13 @@ export const blockLibrary: Record<string, BlockLibraryItem[]> = {
       type: "blockNode"
     },
     {
-      name: "System Alpha Integration",
+      name: "Hardware Studio Integration",
       category: "Software",
       status: "MVP",
-      description: "Link to local System Alpha developer workspace.",
+      description: "Link to local Hardware Studio developer workspace.",
       purpose: "Integrates physical ring inputs with local files.",
       requirements: "Low lag (<50ms delay).",
-      candidateComponents: "System Alpha WebSocket interface.",
+      candidateComponents: "Hardware Studio WebSocket interface.",
       risks: "Connection failures on local loops.",
       notes: "Requires background process setup.",
       testingNotes: "Run automation script via ring press.",

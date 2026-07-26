@@ -13,7 +13,7 @@ export type NodeData = {
   risks: string;
   notes: string;
   testingNotes: string;
-  views: string[]; // e.g. ["master", "electronics", "power", "firmware", "system-alpha", "internal", "outer", "pin-map", "power-budget", "firmware-plan", "readiness"]
+  views: string[]; // e.g. ["master", "electronics", "power", "firmware", "hardware-studio", "internal", "outer", "pin-map", "power-budget", "firmware-plan", "readiness"]
   positions?: Record<string, { x: number; y: number }>;
   
   // Feature 5 Expansion

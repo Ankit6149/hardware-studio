@@ -255,11 +255,11 @@ ${firmwareTasks.map(t => {
 
 ---
 
-## 9. SYSTEM ALPHA INTEGRATION BLUEPRINT
+## 9. EXTERNAL SOFTWARE INTEGRATION BLUEPRINT
 External software bridge and cloud services layer mapping.
 
 > [!NOTE]
-> **EXTERNAL INFRASTRUCTURE**: All System Alpha execution systems, permissions managers, command structures, and companion mobile apps reside **OUTSIDE** the physical ring wearable client. Communication occurs via encrypted Bluetooth command packets.
+> **EXTERNAL INFRASTRUCTURE**: All Hardware Studio execution systems, permissions managers, command structures, and companion mobile apps reside **OUTSIDE** the physical ring wearable client. Communication occurs via encrypted Bluetooth command packets.
 
 - **Mobile Client Host**: Handshakes with the local host system.
 - **Intent Gateway API**: Maps physical gestures to active external actions.

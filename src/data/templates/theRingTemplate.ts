@@ -84,17 +84,17 @@ export const theRingTemplate: Project = {
       }
     },
     {
-      id: "system-alpha-external",
+      id: "companion-software-external",
       type: "blockNode",
       position: { x: 650, y: 200 },
       data: {
-        name: "System Alpha External Logic",
+        name: "External Companion Logic",
         category: "Software",
         status: "External",
         description: "The cloud/companion software brain that decodes gesture commands and executes workflows.",
         purpose: "Handles heavy processing, auth, and external actions.",
         requirements: "High availability, secure permission layer.",
-        candidateComponents: "System Alpha Local Engine / API Server.",
+        candidateComponents: "Local companion engine / API server.",
         risks: "Network latency, unauthorized remote command injection.",
         notes: "Strict separation of concerns: Ring has zero business logic.",
         testingNotes: "Inject mock events to verify response time.",
@@ -150,7 +150,7 @@ export const theRingTemplate: Project = {
         name: "Later Phase Scope",
         category: "Boundaries",
         status: "Later",
-        description: "Integration with real System Alpha host software and haptic reply engines.",
+        description: "Integration with a real companion host and haptic reply engines.",
         purpose: "Outlines second-stage software integration.",
         requirements: "",
         candidateComponents: "",
@@ -675,7 +675,7 @@ export const theRingTemplate: Project = {
         name: "Microphone (Later)",
         category: "Electronics",
         status: "Later",
-        description: "Miniature microphone for local voice commands routed to System Alpha.",
+        description: "Miniature microphone for local voice commands routed to Hardware Studio.",
         purpose: "Captures user voice when command mode is triggered.",
         requirements: "I2S digital output, compact size, ultra-low power standby.",
         candidateComponents: "INMP441 or ICS-43434 MEMS mic.",
@@ -912,10 +912,10 @@ export const theRingTemplate: Project = {
         risks: "RF interference, packet collision.",
         notes: "Maintains BLE connection alive or uses BLE Advertisements.",
         testingNotes: "Log BLE throughput using sniffer.",
-        views: ["firmware", "system-alpha"],
+        views: ["firmware", "hardware-studio"],
         positions: {
           firmware: { x: 770, y: 180 },
-          "system-alpha": { x: 50, y: 100 }
+          "hardware-studio": { x: 50, y: 100 }
         }
       }
     },
@@ -928,16 +928,16 @@ export const theRingTemplate: Project = {
         category: "Firmware",
         status: "MVP",
         description: "Handles incoming BLE writes instructing the ring to vibrate.",
-        purpose: "Receives feedback commands from System Alpha.",
+        purpose: "Receives feedback commands from Hardware Studio.",
         requirements: "BLE Write listener, instant trigger (<10ms).",
         candidateComponents: "GATT Read/Write event hooks.",
         risks: "Buffer overflow if server sends commands too fast.",
         notes: "Extracts feedback code (0: Success, 1: Error, 2: Alert).",
         testingNotes: "Verify haptic triggers within 15ms of BLE write.",
-        views: ["firmware", "system-alpha"],
+        views: ["firmware", "hardware-studio"],
         positions: {
           firmware: { x: 770, y: 300 },
-          "system-alpha": { x: 750, y: 380 }
+          "hardware-studio": { x: 750, y: 380 }
         }
       }
     },
@@ -1061,7 +1061,7 @@ export const theRingTemplate: Project = {
       }
     },
 
-    // --- SYSTEM ALPHA VIEW (Host & Cloud Integration) ---
+    // --- EXTERNAL COMPANION VIEW (Host & Cloud Integration) ---
     {
       id: "sa-device-mgr",
       type: "blockNode",
@@ -1077,8 +1077,8 @@ export const theRingTemplate: Project = {
         risks: "Reconnection lag, OS Bluetooth stacks stalling.",
         notes: "Automatically reconnects when ring is in range.",
         testingNotes: "Verify reconnection time is under 1.5 seconds.",
-        views: ["system-alpha"],
-        positions: { "system-alpha": { x: 220, y: 100 } }
+        views: ["hardware-studio"],
+        positions: { "hardware-studio": { x: 220, y: 100 } }
       }
     },
     {
@@ -1096,8 +1096,8 @@ export const theRingTemplate: Project = {
         risks: "Event race conditions if multiple triggers occur.",
         notes: "Event list: CLICK, DOUBLE_CLICK, HOLD_START, HOLD_RELEASE.",
         testingNotes: "Verify incoming codes map to correct output strings.",
-        views: ["system-alpha"],
-        positions: { "system-alpha": { x: 380, y: 100 } }
+        views: ["hardware-studio"],
+        positions: { "hardware-studio": { x: 380, y: 100 } }
       }
     },
     {
@@ -1111,12 +1111,12 @@ export const theRingTemplate: Project = {
         description: "Trigger state on the host while HOLD_START is active, capturing audio or keyboard inputs.",
         purpose: "Signals the host brain that user intent is active.",
         requirements: "Visual feedback on screen (glow overlay) while active.",
-        candidateComponents: "Host UI layer (System Alpha Client).",
+        candidateComponents: "Host UI layer (Hardware Studio Client).",
         risks: "Recording user audio without active intent (privacy leak).",
         notes: "Audio stream MUST terminate instantly on HOLD_RELEASE.",
         testingNotes: "Verify microphone icon vanishes when release event is logged.",
-        views: ["system-alpha"],
-        positions: { "system-alpha": { x: 550, y: 100 } }
+        views: ["hardware-studio"],
+        positions: { "hardware-studio": { x: 550, y: 100 } }
       }
     },
     {
@@ -1127,15 +1127,15 @@ export const theRingTemplate: Project = {
         name: "Local AI Reasoning",
         category: "Software",
         status: "MVP",
-        description: "System Alpha's offline brain that parses voice commands or user actions.",
+        description: "Hardware Studio's offline brain that parses voice commands or user actions.",
         purpose: "Understands intent and converts it to actionable system instructions.",
         requirements: "Runs in less than 500ms on local CPU.",
         candidateComponents: "Local LLM runner (llama.cpp) or intent match regex.",
         risks: "Hallucinating dangerous commands (e.g. 'delete all files').",
         notes: "Strict confidence threshold (e.g. >85%) required.",
         testingNotes: "Verify accuracy across a command test suite.",
-        views: ["system-alpha"],
-        positions: { "system-alpha": { x: 550, y: 220 } }
+        views: ["hardware-studio"],
+        positions: { "hardware-studio": { x: 550, y: 220 } }
       }
     },
     {
@@ -1153,8 +1153,8 @@ export const theRingTemplate: Project = {
         risks: "Security bypass, rule logic loopholes.",
         notes: "Risky actions (e.g., execute shell script) require interactive double-click verification.",
         testingNotes: "Ensure dangerous script blocks trigger warning.",
-        views: ["system-alpha"],
-        positions: { "system-alpha": { x: 380, y: 220 } }
+        views: ["hardware-studio"],
+        positions: { "hardware-studio": { x: 380, y: 220 } }
       }
     },
     {
@@ -1172,8 +1172,8 @@ export const theRingTemplate: Project = {
         risks: "Malicious command execution leading to system compromise.",
         notes: "Runs sandbox wrappers where possible.",
         testingNotes: "Verify execution of simple shell script mockup.",
-        views: ["system-alpha"],
-        positions: { "system-alpha": { x: 220, y: 220 } }
+        views: ["hardware-studio"],
+        positions: { "hardware-studio": { x: 220, y: 220 } }
       }
     },
     {
@@ -1191,8 +1191,8 @@ export const theRingTemplate: Project = {
         risks: "Failed transmission leaves user wondering if command worked.",
         notes: "Writes 0x01 for success, 0x02 for error, 0x03 for warning.",
         testingNotes: "Observe response latency under loaded BLE channel.",
-        views: ["system-alpha"],
-        positions: { "system-alpha": { x: 220, y: 380 } }
+        views: ["hardware-studio"],
+        positions: { "hardware-studio": { x: 220, y: 380 } }
       }
     },
     {
@@ -1210,8 +1210,8 @@ export const theRingTemplate: Project = {
         risks: "Overwriting default safety commands.",
         notes: "Users can pair new rings and configure vibration intensities.",
         testingNotes: "Verify settings changes are saved and loaded correctly.",
-        views: ["system-alpha"],
-        positions: { "system-alpha": { x: 550, y: 380 } }
+        views: ["hardware-studio"],
+        positions: { "hardware-studio": { x: 550, y: 380 } }
       }
     },
     {
@@ -1291,13 +1291,13 @@ export const theRingTemplate: Project = {
     {
       id: "edge-fw-sa",
       source: "ring-firmware",
-      target: "system-alpha-external",
+      target: "companion-software-external",
       label: "BLE GATT Event",
       views: ["master"]
     },
     {
       id: "edge-sa-fb",
-      source: "system-alpha-external",
+      source: "companion-software-external",
       target: "user-feedback",
       label: "BLE Haptic Cmd",
       views: ["master"]
@@ -1429,61 +1429,61 @@ export const theRingTemplate: Project = {
       views: ["power"]
     },
 
-    // --- SYSTEM ALPHA VIEW EDGES ---
+    // --- EXTERNAL COMPANION VIEW EDGES ---
     {
       id: "edge-sa-ble-dm",
       source: "fw-ble-sender",
       target: "sa-device-mgr",
       label: "RF Link",
-      views: ["system-alpha"]
+      views: ["hardware-studio"]
     },
     {
       id: "edge-sa-dm-er",
       source: "sa-device-mgr",
       target: "sa-event-router",
-      views: ["system-alpha"]
+      views: ["hardware-studio"]
     },
     {
       id: "edge-sa-er-lm",
       source: "sa-event-router",
       target: "sa-listening-mode",
       label: "Hold State",
-      views: ["system-alpha"]
+      views: ["hardware-studio"]
     },
     {
       id: "edge-sa-lm-ai",
       source: "sa-listening-mode",
       target: "sa-local-ai",
       label: "Audio Buffer",
-      views: ["system-alpha"]
+      views: ["hardware-studio"]
     },
     {
       id: "edge-sa-ai-pl",
       source: "sa-local-ai",
       target: "sa-permission-layer",
       label: "Decoded Intent",
-      views: ["system-alpha"]
+      views: ["hardware-studio"]
     },
     {
       id: "edge-sa-pl-ar",
       source: "sa-permission-layer",
       target: "sa-action-router",
       label: "Verified Safe",
-      views: ["system-alpha"]
+      views: ["hardware-studio"]
     },
     {
       id: "edge-sa-ar-hs",
       source: "sa-action-router",
       target: "sa-haptic-sender",
       label: "Outcome Status",
-      views: ["system-alpha"]
+      views: ["hardware-studio"]
     },
     {
       id: "edge-sa-hs-rec",
       source: "sa-haptic-sender",
       target: "fw-haptic-rec",
       label: "RF Feedback",
-      views: ["system-alpha"]
+      views: ["hardware-studio"]
     }
   ],
   bom: [
@@ -1632,13 +1632,13 @@ export const theRingTemplate: Project = {
     {
       id: "stage-0",
       name: "Stage 0: Product Blueprint",
-      goal: "Finalize block diagram, verify logic loop matches System Alpha specs.",
+      goal: "Finalize block diagram, verify logic loop matches Hardware Studio specs.",
       partsNeeded: "None (Hardware Studio Workspace)",
       steps: "Review architectural layout, verify MVP vs Later boundaries. Check warning indicators.",
       passCriteria: "All warnings addressed. Schema matches input requirements.",
       risks: "Underestimating layout dimensions before CAD design.",
       status: "Passed",
-      notes: "Blueprint complete in System Alpha Hardware Studio!"
+      notes: "Blueprint complete in Hardware Studio Hardware Studio!"
     },
     {
       id: "stage-1",
@@ -1675,10 +1675,10 @@ export const theRingTemplate: Project = {
     },
     {
       id: "stage-4",
-      name: "Stage 4: System Alpha Fake Ring Event",
-      goal: "Prove System Alpha core software can process commands and trigger haptics.",
-      partsNeeded: "System Alpha Host Client, mock BLE event generator script.",
-      steps: "Run script to send fake BLE events to System Alpha. Observe AI listening state activation, permission checks, and output commands.",
+      name: "Stage 4: Hardware Studio Fake Ring Event",
+      goal: "Prove Hardware Studio core software can process commands and trigger haptics.",
+      partsNeeded: "Hardware Studio Host Client, mock BLE event generator script.",
+      steps: "Run script to send fake BLE events to Hardware Studio. Observe AI listening state activation, permission checks, and output commands.",
       passCriteria: "input_hold_start starts recording; input_hold_end processes audio; risky scripts trigger permission dialog and haptic warning commands.",
       risks: "Host OS blocking fake event inject scripts.",
       status: "Not Started",
@@ -1686,11 +1686,11 @@ export const theRingTemplate: Project = {
     },
     {
       id: "stage-5",
-      name: "Stage 5: System Alpha Real BLE Event",
-      goal: "Connect the ESP32 physical prototype directly to System Alpha Client.",
-      partsNeeded: "ESP32 breadboard prototype, System Alpha Host Client.",
-      steps: "Pair ESP32 with host. Perform mechanical single, double, and hold commands. Confirm System Alpha acts and triggers haptic vibrations on the coin motor.",
-      passCriteria: "Whole loop functions wirelessly: user press -> BLE transmission -> System Alpha parsing -> haptic confirmation.",
+      name: "Stage 5: Hardware Studio Real BLE Event",
+      goal: "Connect the ESP32 physical prototype directly to Hardware Studio Client.",
+      partsNeeded: "ESP32 breadboard prototype, Hardware Studio Host Client.",
+      steps: "Pair ESP32 with host. Perform mechanical single, double, and hold commands. Confirm Hardware Studio acts and triggers haptic vibrations on the coin motor.",
+      passCriteria: "Whole loop functions wirelessly: user press -> BLE transmission -> Hardware Studio parsing -> haptic confirmation.",
       risks: "RF matching drops in crowded rooms.",
       status: "Not Started",
       notes: "End-to-end MVP milestone check."

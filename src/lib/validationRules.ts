@@ -90,17 +90,17 @@ export const runValidationRules = (
     });
   }
 
-  // 5. If System Alpha Integration exists but no Permission Layer exists, show warning.
-  const hasSystemAlpha = nodeExists(n => 
-    hasNameOrId(n, "system alpha") || 
+  // 5. If Hardware Studio Integration exists but no Permission Layer exists, show warning.
+  const hasHardwareStudio = nodeExists(n => 
+    hasNameOrId(n, "external software") || 
     n.id.startsWith("sa-") || 
     hasNameOrId(n, "external software")
   );
   const hasPermissionLayer = nodeExists(n => hasNameOrId(n, "permission"));
-  if (hasSystemAlpha && !hasPermissionLayer) {
+  if (hasHardwareStudio && !hasPermissionLayer) {
     warnings.push({
       id: "warn-sa-permission",
-      message: "System Alpha software integration is active, but no Permission or Security Layer is configured.",
+      message: "Hardware Studio software integration is active, but no Permission or Security Layer is configured.",
       severity: "warning"
     });
   }
