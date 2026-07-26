@@ -1,0 +1,18 @@
+name: Lint Diagnostic
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  lint-diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reproduce lint failure
+        shell: bash
+        run: |
+          set -o pipefail
+          git clone --depth 1 --branch ci-diagnostic https://github.com/Ankit6149/hardware-studio.git repo
+          cd repo
+          npm ci >/dev/null 2>&1
+          npm run lint 2>&1 | tail -n 120
