@@ -1,0 +1,32 @@
+name: Source Audit Snapshot
+
+on:
+  push:
+    branches: [ audit-snapshot ]
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Create source snapshot
+        run: |
+          rm -rf .git node_modules .next
+          zip -r hardware-studio-audit.zip . \
+            -x 'hardware-studio-audit.zip' \
+            -x '.git/*' \
+            -x 'node_modules/*' \
+            -x '.next/*'
+
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardware-studio-source-audit
+          path: hardware-studio-audit.zip
+          retention-days: 1
