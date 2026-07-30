@@ -1,1 +1,1 @@
-Rerun the reviewable verification with unique single-byte transport repair and full SHA-256 checks.
+Capture the raw staged payload for byte-level comparison before verification.
