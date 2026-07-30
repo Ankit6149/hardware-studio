@@ -21,6 +21,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          for path in sorted(Path('.github/ux-batch-payload').glob('part-*')):
+              data = path.read_bytes()
+              normalized = data.rstrip(b'\r\n')
+              if normalized != data:
+                  print(f'Normalized transport line ending in {path.name}')
+                  path.write_bytes(normalized)
+          PY
           declare -A expected=(
             [part-00]=7298ee4f3c59dd0130753523f74450d8d506e4b6a3eeb7d02d03e44f4ebd342c
             [part-01]=3cfc3306faa74665c4906155b1f3f8f474835a47a1d869bea6c7c083eafa9a0a
