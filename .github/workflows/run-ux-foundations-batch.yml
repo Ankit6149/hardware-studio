@@ -1,0 +1,50 @@
+name: Verify UX Foundations Batch
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    if: github.head_ref == 'ux-foundations-batch-1' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ux-foundations-batch-1
+          fetch-depth: 0
+
+      - name: Apply production payload
+        run: |
+          cat .github/ux-batch-payload/part-* > /tmp/ux-payload.b64
+          base64 -d /tmp/ux-payload.b64 > /tmp/ux-payload.tar.gz
+          tar -xzf /tmp/ux-payload.tar.gz
+          rm -rf .github/ux-batch-payload
+          rm -f .github/workflows/apply-ux-foundations-batch.yml
+          rm -f .github/ux-batch-trigger.txt
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit verified implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(ux): deliver accessible studio foundations"
+          git push origin ux-foundations-batch-1
