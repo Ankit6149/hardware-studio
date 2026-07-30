@@ -17,6 +17,12 @@ jobs:
           ref: ux-foundations-batch-1
           fetch-depth: 0
 
+      - name: Capture raw staged payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ux-payload-raw
+          path: .github/ux-batch-payload
+
       - name: Validate staged payload chunks
         shell: bash
         run: |
