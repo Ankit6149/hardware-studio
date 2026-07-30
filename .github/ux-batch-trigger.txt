@@ -1,1 +1,1 @@
-Rerun the reviewable verification with transport normalization and full SHA-256 checks.
+Rerun the reviewable verification with unique single-byte transport repair and full SHA-256 checks.
