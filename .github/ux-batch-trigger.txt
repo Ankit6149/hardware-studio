@@ -1,1 +1,1 @@
-Rerun the reviewable verification with per-chunk integrity checks.
+Rerun the reviewable verification with transport normalization and full SHA-256 checks.
