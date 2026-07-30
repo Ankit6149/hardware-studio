@@ -1,0 +1,1 @@
+Trigger complete ESLint JSON diagnostics for the reconstructed production source.
