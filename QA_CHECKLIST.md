@@ -1,63 +1,51 @@
-# Hardware Studio - V5 QA Verification Checklist
+# Hardware Studio Verification Checklist
 
-This checklist documents the quality assurance and verification protocols used to test the local-first Hardware Studio Factory Package Builder.
+This checklist describes the evidence currently required before a change may be merged. It is a repository verification checklist—not a product qualification certificate.
 
----
+## Automated merge gates
 
-## 1. Footprint Presets Library Verification (`src/lib/footprints.ts`)
-- [x] Defined 18 footprint presets (R_0603, C_0805, SOT23, SOIC_8, QFN_32, POGO_PAD, etc.).
-- [x] Verified body sizes, pad dimensions, pin counts, and courtyard offsets for each package.
-- [x] Enabled default custom rectangle fallback (`CUSTOM_RECT`) for unrecognized footprint packages.
+The canonical GitHub Actions workflow must pass all of the following from a clean checkout:
 
----
+- [ ] `npm ci`
+- [ ] `npm run lint`
+- [ ] `npm run typecheck`
+- [ ] `npm test`
+- [ ] `npm run build`
+- [ ] repository workflow-hygiene guard
 
-## 2. Hardened Design Review Engine (`src/lib/designReview.ts`)
-- [x] **ERC Schematic Verification**:
-  - Missing power/GND rails.
-  - SMT LEDs lacking current-limiting resistors.
-  - I2C lines pull-up resistor missing warning.
-  - Haptic drivers lacking flyback clamp protection.
-  - MCU SWD programming/debug test points checks.
-  - RF microstrip impedance notes coverage.
-  - PMIC reverse polarity input protection.
-- [x] **DRC PCB Verification**:
-  - Missing outlines or physical dimensions.
-  - Placed components colliding / overlapping.
-  - Placed footprints, vias, and drill holes inside board boundary checks.
-  - Minimum trace widths and thin power lanes.
-- [x] **Factory Verification**:
-  - Unchecked items in package checklist.
-  - Draft vs verified package release states.
+A passing root workflow proves only that the checked source satisfies these automated gates. It does not prove that every product workflow is reachable, usable, safe, or professionally qualified.
 
----
+## Required change evidence
 
-## 3. Advanced Gerber & Excellon Exporters (`src/lib/nativeExports.ts`)
-- [x] **Outline Gerber**: Draws outline lines based on outline points or dimensions to a separate mechanical edge layer.
-- [x] **Top Silkscreen**: Outputs component bounding boxes and reference designator text.
-- [x] **Top/Bottom Solder Mask**: Flashes solder mask void clearances.
-- [x] **Excellon NC Drills**: Emits tool list headers grouped by drill hole diameter, metric units, coordinate lines, and standard `M30` terminations.
-- [x] **Disclaimers Phrasing**: Removed altium/kicad/solidworks naming dependencies. Labeled all drafts: *"Generated In App — Needs Engineering Review"*.
+For each implementation pull request:
 
----
+- [ ] the linked issue has bounded acceptance criteria;
+- [ ] the source diff is directly reviewable and contains no reconstructed payload;
+- [ ] changed behavior has focused automated tests where practical;
+- [ ] user-visible states include loading, empty, error, recovery, and destructive-action behavior where relevant;
+- [ ] engineering outputs are classified as authoritative, derived, draft, estimated, placeholder, or unavailable;
+- [ ] documentation is updated when product status, architecture, or limitations change;
+- [ ] no issue is closed while acceptance criteria remain partial.
 
-## 4. Factory Package Builder View (`src/components/FactoryPackageBuilder.tsx`)
-- [x] Displays package release status badge.
-- [x] Renders checklist interface with 10 manual verification tick elements.
-- [x] Renders list of 11 in-app generated files and 7 missing factory stencils.
-- [x] Integrates action buttons to compile drafts, verify package release status, or reset checks.
+## Missing verification layers
 
----
+The repository does not yet have complete automated coverage for:
 
-## 5. Export Center Reorganization (`src/components/ExportCenter.tsx`)
-- [x] Structured center into 6 distinct categories:
-  1. Project Backup
-  2. Blueprint Documents
-  3. Native Editor Data
-  4. Manufacturing Draft Files
-  5. Review & Readiness
-  6. Firmware
-- [x] Placed disclaimers explicitly near downloads: *"Generated In App — Needs Engineering Review"*.
+- browser component behavior;
+- end-to-end user journeys;
+- accessibility scanning and keyboard navigation;
+- visual regression and responsive layouts;
+- persistence corruption, quota, and multi-project recovery;
+- complete local bridge and MCP lifecycle integration;
+- external CAD/EDA parser validation;
+- independent electrical, mechanical, firmware, safety, DFM, or manufacturing qualification.
 
----
+These gaps must be stated in pull requests and status documents. They must not be replaced by manually checked boxes or an agent assertion.
 
-> Verified by Antigravity IDE Agent
+## Engineering output guard
+
+Generated Gerber, drill, placement, BOM, blueprint, firmware, 3D, validation, and release artifacts remain draft or derived unless a domain-specific issue defines and proves a stronger qualification gate. Independent toolchain and engineering review remain mandatory.
+
+## Authoritative status
+
+See [`docs/CURRENT_STATUS.md`](docs/CURRENT_STATUS.md). Historical V1/V5 checklists are not active verification evidence.
