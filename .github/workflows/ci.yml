@@ -2,35 +2,73 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [master, main]
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
 
-    - name: Install Dependencies
-      run: npm ci
+      - name: Reject retired source-transport workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          retired_paths=(
+            ".github/ux-batch-payload"
+            ".github/workflows/run-ux-foundations-batch.yml"
+            ".github/workflows/diagnose-ux-lint.yml"
+            ".github/workflows/repair-ux-part08.yml"
+            ".github/workflows/commit-ux-lint-diagnostics.yml"
+          )
 
-    - name: Run Linter
-      run: npm run lint
+          for retired_path in "${retired_paths[@]}"; do
+            if [[ -e "$retired_path" ]]; then
+              echo "Retired source-transport path must not exist: $retired_path" >&2
+              exit 1
+            fi
+          done
 
-    - name: Run Typecheck
-      run: npm run typecheck
+          while IFS= read -r workflow; do
+            if [[ "$workflow" == ".github/workflows/ci.yml" ]]; then
+              continue
+            fi
 
-    - name: Run Tests
-      run: npm test
+            if grep --line-number -E 'git push|contents:[[:space:]]*write|base64[[:space:]]+-d' "$workflow"; then
+              echo "Verification workflow must not reconstruct source, request write access, or push commits: $workflow" >&2
+              exit 1
+            fi
+          done < <(find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) -print)
 
-    - name: Run Production Build
-      run: npm run build
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run production build
+        run: npm run build
