@@ -22,12 +22,12 @@ jobs:
             --exclude=.next \
             --exclude=node_modules \
             --exclude='*.log' \
-            -czf hardware-studio-current-source.tar.gz .
+            -czf /tmp/hardware-studio-current-source.tar.gz .
 
       - name: Upload source archive
         uses: actions/upload-artifact@v4
         with:
           name: hardware-studio-current-source
-          path: hardware-studio-current-source.tar.gz
+          path: /tmp/hardware-studio-current-source.tar.gz
           if-no-files-found: error
           retention-days: 1
