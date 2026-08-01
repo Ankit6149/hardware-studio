@@ -1,9 +1,9 @@
 name: Current Source Audit Snapshot
 
 on:
-  push:
+  pull_request:
     branches:
-      - audit/current-repository-2026-08-02
+      - master
 
 permissions:
   contents: read
