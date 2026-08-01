@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FolderOpen, LayoutTemplate, RotateCcw } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { Button } from '../ui/Button';
@@ -16,14 +16,12 @@ export const TopBar: React.FC = () => {
   } = useProjectStore();
 
   const [localName, setLocalName] = useState(projectName);
-  const [prevProjectName, setPrevProjectName] = useState(projectName);
   const [isProjOpen, setIsProjOpen] = useState(false);
   const [isTplOpen, setIsTplOpen] = useState(false);
 
-  if (projectName !== prevProjectName) {
+  useEffect(() => {
     setLocalName(projectName);
-    setPrevProjectName(projectName);
-  }
+  }, [projectName]);
 
   const handleNameBlur = () => {
     if (localName.trim()) {
@@ -64,7 +62,11 @@ export const TopBar: React.FC = () => {
           value={localName}
           onChange={(event) => setLocalName(event.target.value)}
           onBlur={handleNameBlur}
-          onKeyDown={(event) => event.key === 'Enter' && handleNameBlur()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.currentTarget.blur();
+            }
+          }}
           className="min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-mono text-[10px] font-semibold text-slate-800 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus:border-slate-400 focus:bg-white focus:ring-1 focus:ring-slate-300"
           placeholder="Unnamed Project"
         />
