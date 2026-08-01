@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
+import { getNavigationItem, isCanvasNavigationItem, NavigationSurface } from '../lib/navigationRegistry';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { BlueprintCanvas } from './BlueprintCanvas';
@@ -25,8 +27,91 @@ import { MechanicalStudio } from './mechanical/MechanicalStudio';
 import { FirmwareStudio } from './firmware/FirmwareStudio';
 import { ValidationStudio } from './validation/ValidationStudio';
 
+function renderSurface(surface: NavigationSurface): React.ReactNode {
+  switch (surface) {
+    case 'dashboard':
+      return <ProjectDashboard />;
+    case 'legacy-blueprint':
+      return <BlueprintCanvas />;
+    case 'product-studio':
+      return <ProductStudio />;
+    case 'readiness':
+      return <ReadinessDashboard />;
+    case 'mechanical-canvas':
+      return <MechanicalStudio initialMode="canvas" />;
+    case 'mechanical-assembly':
+      return <MechanicalStudio initialMode="assembly" />;
+    case 'component-library':
+      return <ComponentLibrary />;
+    case 'schematic-editor':
+      return <SchematicEditor />;
+    case 'power-budget':
+      return <PowerBudgetTable />;
+    case 'pin-map':
+      return <PinMapTable />;
+    case 'bom':
+      return <BOMTable />;
+    case 'board-designer':
+      return <BoardDesigner />;
+    case 'board-studio':
+      return <BoardStudio />;
+    case 'pcb-constraints':
+      return <PCBConstraints />;
+    case 'firmware-modules':
+      return <FirmwareStudio initialMode="modules" />;
+    case 'firmware-state-machine':
+      return <FirmwareStudio initialMode="state-machine" />;
+    case 'firmware-hardware-map':
+      return <FirmwareStudio initialMode="hardware-map" />;
+    case 'firmware-source':
+      return <FirmwareStudio initialMode="source" />;
+    case 'validation-tests':
+      return <ValidationStudio initialMode="tests" />;
+    case 'validation-coverage':
+      return <ValidationStudio initialMode="coverage" />;
+    case 'validation-factory-qa':
+      return <ValidationStudio initialMode="factory-qa" />;
+    case 'blueprint-sheets':
+      return <BlueprintSheets />;
+    case 'exports':
+      return <ExportCenter />;
+    case 'revisions':
+      return <RevisionsStudio />;
+    case 'factory-builder':
+      return <FactoryPackageBuilder />;
+  }
+}
+
+const UnavailableWorkspace: React.FC<{ viewId: string; onReturn: () => void }> = ({ viewId, onReturn }) => (
+  <section className="flex h-full min-h-0 flex-1 items-center justify-center bg-slate-50 px-6 py-10">
+    <div className="w-full max-w-xl rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-700">
+          <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-700">Workspace unavailable</p>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">This view is not registered.</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            The saved view ID <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-800">{viewId}</code>{' '}
+            does not match a current Hardware Studio workbench. No project data was changed and no unrelated editor was opened.
+          </p>
+          <button
+            type="button"
+            onClick={onReturn}
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-950 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Return to project dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+);
+
 export const AppShell: React.FC = () => {
-  const { activeView, loadProjectFromLocalStorage } = useProjectStore();
+  const { activeView, loadProjectFromLocalStorage, setActiveView } = useProjectStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -37,103 +122,32 @@ export const AppShell: React.FC = () => {
     return () => clearTimeout(timer);
   }, [loadProjectFromLocalStorage]);
 
-  const renderContent = () => {
-    switch (activeView) {
-      case 'dashboard':
-        return <ProjectDashboard />;
-      case 'product-studio':
-      case 'requirements':
-      case 'risks-interfaces':
-      case 'electronics':
-      case 'product-architecture':
-        return <ProductStudio />;
-      case 'mechanical-studio':
-        return <MechanicalStudio initialMode="canvas" />;
-      case 'assembly-stack':
-        return <MechanicalStudio initialMode="assembly" />;
-      case 'component-library':
-        return <ComponentLibrary />;
-      case 'schematic-editor':
-        return <SchematicEditor />;
-      case 'power-tree':
-      case 'power-budget':
-        return <PowerBudgetTable />;
-      case 'pin-map':
-        return <PinMapTable />;
-      case 'hardware-mapping':
-        return <FirmwareStudio initialMode="hardware-map" />;
-      case 'bom':
-        return <BOMTable />;
-      case 'board-designer':
-        return <BoardDesigner />;
-      case 'board-settings':
-      case 'board-studio':
-      case 'board-components':
-        return <BoardStudio />;
-      case 'pcb-constraints':
-        return <PCBConstraints />;
-      case 'pcb-drc':
-        return <BoardDesigner />;
-      case 'readiness':
-        return <ReadinessDashboard />;
-      case 'firmware-studio':
-        return <FirmwareStudio initialMode="modules" />;
-      case 'state-machines':
-        return <FirmwareStudio initialMode="state-machine" />;
-      case 'source-skeleton':
-        return <FirmwareStudio initialMode="source" />;
-      case 'validation-studio':
-        return <ValidationStudio initialMode="tests" />;
-      case 'requirement-coverage':
-        return <ValidationStudio initialMode="coverage" />;
-      case 'factory-qa':
-        return <ValidationStudio initialMode="factory-qa" />;
-      case 'blueprint-sheets':
-        return <BlueprintSheets />;
-      case 'exports':
-        return <ExportCenter />;
-      case 'revisions':
-      case 'branches':
-      case 'releases':
-        return <RevisionsStudio />;
-      case 'factory-builder':
-        return <FactoryPackageBuilder />;
-      default:
-        return <BlueprintCanvas />;
-    }
-  };
-
-  // Canvas views are drawing-board views
-  const tabularViews = [
-    'dashboard', 'product-studio', 'readiness', 'requirements', 'risks-interfaces',
-    'electronics', 'product-architecture',
-    'mechanical-studio', 'assembly-stack', 'component-library', 'schematic-editor',
-    'power-tree', 'power-budget', 'pin-map', 'hardware-mapping', 'bom', 'board-designer',
-    'board-settings', 'board-studio', 'board-components', 'pcb-constraints', 'pcb-drc',
-    'firmware-studio', 'state-machines', 'source-skeleton', 'validation-studio',
-    'requirement-coverage', 'factory-qa', 'blueprint-sheets', 'exports', 'factory-builder'
-  ];
-  const isCanvasView = !tabularViews.includes(activeView);
-  const showVisualizer = !tabularViews.includes(activeView);
+  const activeNavigationItem = getNavigationItem(activeView);
+  const isCanvasView = isCanvasNavigationItem(activeNavigationItem);
+  const showVisualizer = Boolean(activeNavigationItem?.showVisualizer);
 
   if (!mounted) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-50 text-slate-450 font-mono text-[9px] uppercase tracking-widest select-none">
+      <div className="flex h-screen w-screen select-none items-center justify-center bg-slate-50 font-mono text-[10px] uppercase tracking-widest text-slate-500">
         Initializing workspace...
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-slate-50 font-sans text-slate-900">
       <TopBar />
-      <div className="flex flex-1 min-h-0 relative">
+      <div className="relative flex min-h-0 flex-1">
         <Sidebar />
-        <main className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden">
-          <div className="flex-1 flex min-h-0 relative">
+        <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="relative flex min-h-0 flex-1">
             {showVisualizer && <ProductVisualizer />}
-            <div className="flex-1 h-full flex flex-col relative min-w-0">
-              {renderContent()}
+            <div className="relative flex h-full min-w-0 flex-1 flex-col">
+              {activeNavigationItem ? (
+                renderSurface(activeNavigationItem.surface)
+              ) : (
+                <UnavailableWorkspace viewId={activeView} onReturn={() => setActiveView('dashboard')} />
+              )}
             </div>
             {isCanvasView && <PropertiesPanel />}
           </div>
