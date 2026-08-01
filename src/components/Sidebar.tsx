@@ -1,30 +1,78 @@
 import React, { useState } from 'react';
 import {
   Binary,
+  Blocks,
   Boxes,
+  Box,
   CheckSquare,
   ChevronDown,
   ChevronRight,
+  CircuitBoard,
   Cpu,
   Download,
   FileCheck2,
   FileText,
+  GitBranch,
   Layers,
   LayoutDashboard,
+  Network,
   Package,
   Palette,
   Plus,
   Ruler,
   ShieldAlert,
   Table,
+  Tags,
+  TestTube2,
+  Workflow,
   Zap,
+  type LucideIcon,
 } from 'lucide-react';
 import { blockLibrary, BlockLibraryItem } from '../data/blockLibrary';
+import {
+  getNavigationItem,
+  isCanvasNavigationItem,
+  navigationDomains,
+  NavigationIconKey,
+} from '../lib/navigationRegistry';
 import { useProjectStore } from '../store/projectStore';
 
 interface SidebarProps {
   onAddBlock?: (item: BlockLibraryItem) => void;
 }
+
+const iconByKey: Record<NavigationIconKey, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  product: Cpu,
+  readiness: FileCheck2,
+  requirements: CheckSquare,
+  architecture: Network,
+  risk: ShieldAlert,
+  blueprint: Blocks,
+  mechanical: Palette,
+  assembly: Layers,
+  components: Boxes,
+  schematic: Workflow,
+  power: Zap,
+  'pin-map': Tags,
+  bom: Table,
+  board: CircuitBoard,
+  layers: Layers,
+  rules: Ruler,
+  drc: ShieldAlert,
+  firmware: Binary,
+  'state-machine': Workflow,
+  mapping: Cpu,
+  source: FileText,
+  validation: TestTube2,
+  coverage: FileCheck2,
+  'factory-qa': CheckSquare,
+  exports: Download,
+  'factory-package': Package,
+  revisions: FileText,
+  branches: GitBranch,
+  releases: Box,
+};
 
 export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
   const { activeView, setActiveView, addNode } = useProjectStore();
@@ -33,106 +81,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     Electronics: true,
   });
 
-  const sidebarGroups = [
-    {
-      title: 'Overview',
-      items: [
-        { id: 'dashboard', label: 'Project Dashboard', icon: LayoutDashboard },
-        { id: 'product-studio', label: 'Product Studio', icon: Cpu },
-        { id: 'readiness', label: 'Release Readiness', icon: FileCheck2 },
-      ],
-    },
-    {
-      title: 'Product',
-      items: [
-        { id: 'requirements', label: 'Requirements', icon: CheckSquare },
-        { id: 'product-architecture', label: 'Product Architecture', icon: Cpu },
-        { id: 'risks-interfaces', label: 'Risks & Interfaces', icon: ShieldAlert },
-      ],
-    },
-    {
-      title: 'Mechanical',
-      items: [
-        { id: 'mechanical-studio', label: 'Mechanical Studio', icon: Palette },
-        { id: 'assembly-stack', label: 'Assembly Stack', icon: Layers },
-      ],
-    },
-    {
-      title: 'Electronics',
-      items: [
-        { id: 'component-library', label: 'Component Library', icon: Boxes },
-        { id: 'schematic-editor', label: 'Schematic Editor', icon: Cpu },
-        { id: 'power-tree', label: 'Power Tree', icon: Zap },
-        { id: 'pin-map', label: 'Pin Map', icon: Cpu },
-        { id: 'bom', label: 'BOM', icon: Table },
-      ],
-    },
-    {
-      title: 'PCB',
-      items: [
-        { id: 'board-designer', label: 'Board Designer', icon: Cpu },
-        { id: 'board-settings', label: 'Board Settings', icon: Layers },
-        { id: 'pcb-constraints', label: 'PCB Rules', icon: Ruler },
-        { id: 'pcb-drc', label: 'DRC', icon: ShieldAlert },
-      ],
-    },
-    {
-      title: 'Firmware',
-      items: [
-        { id: 'firmware-studio', label: 'Firmware Studio', icon: Binary },
-        { id: 'state-machines', label: 'State Machines', icon: Cpu },
-        { id: 'hardware-mapping', label: 'Hardware Mapping', icon: Cpu },
-        { id: 'source-skeleton', label: 'Source Skeleton', icon: FileText },
-      ],
-    },
-    {
-      title: 'Validation',
-      items: [
-        { id: 'validation-studio', label: 'Validation Studio', icon: CheckSquare },
-        { id: 'requirement-coverage', label: 'Requirement Coverage', icon: FileCheck2 },
-        { id: 'factory-qa', label: 'Factory QA', icon: CheckSquare },
-      ],
-    },
-    {
-      title: 'Outputs',
-      items: [
-        { id: 'blueprint-sheets', label: 'Blueprint Studio', icon: FileText },
-        { id: 'exports', label: 'Export Center', icon: Download },
-        { id: 'factory-builder', label: 'Factory Package Builder', icon: Package },
-      ],
-    },
-  ];
-
-  const tabularViews = [
-    'dashboard',
-    'product-studio',
-    'readiness',
-    'requirements',
-    'risks-interfaces',
-    'mechanical-studio',
-    'assembly-stack',
-    'component-library',
-    'schematic-editor',
-    'power-tree',
-    'pin-map',
-    'bom',
-    'board-designer',
-    'board-settings',
-    'pcb-constraints',
-    'pcb-drc',
-    'firmware-studio',
-    'state-machines',
-    'hardware-mapping',
-    'source-skeleton',
-    'validation-studio',
-    'requirement-coverage',
-    'factory-qa',
-    'blueprint-sheets',
-    'exports',
-    'factory-builder',
-  ];
-
-  const isCanvasView = !tabularViews.includes(activeView);
+  const activeNavigationItem = getNavigationItem(activeView);
+  const isCanvasView = isCanvasNavigationItem(activeNavigationItem);
 
   const toggleCategory = (category: string) => {
     setExpandedCategories((previous) => ({
@@ -173,56 +123,61 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
   };
 
   return (
-    <aside className="z-20 flex h-full w-[228px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-sm">
-      <div className="max-h-[67vh] shrink-0 overflow-y-auto border-b border-slate-100 px-2.5 py-2.5 select-none">
-        <nav className="space-y-2.5">
-          {sidebarGroups.map((group) => (
-            <div key={group.title} className="space-y-0.5">
-              <h3 className="mb-1 px-2 text-[7px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
-                {group.title}
-              </h3>
-              <div className="space-y-px">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
+    <aside className="z-20 flex h-full w-[272px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-sm">
+      <div className="max-h-[72vh] shrink-0 overflow-y-auto border-b border-slate-100 px-3 py-3 select-none">
+        <nav className="space-y-4" aria-label="Engineering workbenches">
+          {navigationDomains.map((domain) => (
+            <section key={domain.id} aria-labelledby={`nav-${domain.id}`}>
+              <div className="mb-1.5 px-2">
+                <h2 id={`nav-${domain.id}`} className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-slate-500">
+                  {domain.label}
+                </h2>
+                <p className="mt-0.5 text-[9px] leading-4 text-slate-400">{domain.purpose}</p>
+              </div>
+
+              <div className="space-y-1">
+                {domain.items.map((item) => {
+                  const Icon = iconByKey[item.icon];
                   const isActive = activeView === item.id;
-                  const isTable = tabularViews.includes(item.id);
 
                   return (
                     <button
-                      key={`${group.title}-${item.id}`}
+                      key={item.id}
+                      type="button"
                       onClick={() => setActiveView(item.id)}
-                      className={`group flex w-full items-center justify-between rounded-md border px-2 py-1.5 text-[9.5px] font-semibold leading-none tracking-[0.01em] transition-colors ${
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`group flex w-full items-start gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 ${
                         isActive
                           ? 'border-slate-950 bg-slate-900 text-white shadow-sm'
-                          : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+                          : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-950'
                       }`}
                     >
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <Icon
-                          className={`h-3 w-3 shrink-0 ${
-                            isActive ? 'text-emerald-300' : 'text-slate-400 group-hover:text-slate-600'
-                          }`}
-                        />
-                        <span className="truncate">{item.label}</span>
-                      </span>
-                      {isTable && (
-                        <span
-                          className={`ml-1 rounded px-1 py-0.5 font-mono text-[6px] font-bold uppercase tracking-[0.08em] ${
-                            isActive ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-400'
-                          }`}
-                        >
-                          {item.id === 'bom'
-                            ? 'BOM'
-                            : ['board-designer', 'board-settings', 'pcb-constraints', 'pcb-drc'].includes(item.id)
-                              ? 'PCB'
-                              : 'DOC'}
+                      <Icon
+                        className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
+                          isActive ? 'text-emerald-300' : 'text-slate-400 group-hover:text-slate-600'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="truncate text-[11px] font-semibold leading-4">{item.label}</span>
+                          <span
+                            className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[7px] font-bold uppercase tracking-[0.08em] ${
+                              isActive ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-500'
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
                         </span>
-                      )}
+                        <span className={`mt-0.5 block text-[9px] leading-4 ${isActive ? 'text-slate-300' : 'text-slate-450'}`}>
+                          {item.purpose}
+                        </span>
+                      </span>
                     </button>
                   );
                 })}
               </div>
-            </div>
+            </section>
           ))}
         </nav>
       </div>
@@ -231,10 +186,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
         {isCanvasView ? (
           <div className="p-3">
             <div className="mb-2.5 flex items-center justify-between px-0.5">
-              <h2 className="text-[7px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                Block Library
-              </h2>
-              <span className="rounded bg-slate-200/70 px-1.5 py-0.5 text-[6px] font-bold uppercase tracking-[0.08em] text-slate-500">
+              <h2 className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Block Library</h2>
+              <span className="rounded bg-slate-200/70 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.08em] text-slate-500">
                 Drag or click
               </span>
             </div>
@@ -244,45 +197,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
                 const isExpanded = Boolean(expandedCategories[category]);
 
                 return (
-                  <div
-                    key={category}
-                    className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
-                  >
+                  <div key={category} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                     <button
+                      type="button"
                       onClick={() => toggleCategory(category)}
-                      className="flex w-full items-center justify-between border-b border-slate-100 bg-slate-50 px-2.5 py-1.5 text-left transition-colors hover:bg-slate-100"
+                      className="flex w-full items-center justify-between border-b border-slate-100 bg-slate-50 px-2.5 py-2 text-left transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-400"
+                      aria-expanded={isExpanded}
                     >
-                      <span className="text-[8px] font-extrabold uppercase tracking-[0.12em] text-slate-700">
-                        {category}
-                      </span>
+                      <span className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-slate-700">{category}</span>
                       {isExpanded ? (
-                        <ChevronDown className="h-3 w-3 text-slate-500" />
+                        <ChevronDown className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
                       ) : (
-                        <ChevronRight className="h-3 w-3 text-slate-500" />
+                        <ChevronRight className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
                       )}
                     </button>
 
                     {isExpanded && (
                       <div className="space-y-1 p-1.5">
-                        {items.map((item, index) => (
+                        {items.map((libraryItem, index) => (
                           <div
-                            key={`${item.name}-${index}`}
+                            key={`${libraryItem.name}-${index}`}
                             draggable
-                            onDragStart={(event) => handleDragStart(event, item)}
-                            onClick={() => handleAddBlock(item)}
-                            className="group flex cursor-grab items-center justify-between rounded border border-slate-100 p-1.5 text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
-                            title={`${item.name}: ${item.description}`}
+                            onDragStart={(event) => handleDragStart(event, libraryItem)}
+                            onClick={() => handleAddBlock(libraryItem)}
+                            className="group flex cursor-grab items-center justify-between rounded-md border border-slate-100 p-2 text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                            title={`${libraryItem.name}: ${libraryItem.description}`}
                           >
                             <div className="min-w-0 pr-1">
-                              <div className="truncate text-[8.5px] font-bold leading-tight text-slate-800">
-                                {item.name}
-                              </div>
-                              <div className="mt-0.5 truncate text-[7.5px] text-slate-400">
-                                {item.description}
-                              </div>
+                              <div className="truncate text-[10px] font-bold leading-tight text-slate-800">{libraryItem.name}</div>
+                              <div className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-500">{libraryItem.description}</div>
                             </div>
-                            <span className="grid h-4 w-4 shrink-0 place-items-center rounded bg-slate-900 text-white opacity-0 transition-opacity group-hover:opacity-100">
-                              <Plus className="h-2.5 w-2.5" />
+                            <span className="grid h-5 w-5 shrink-0 place-items-center rounded bg-slate-900 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                              <Plus className="h-3 w-3" aria-hidden="true" />
                             </span>
                           </div>
                         ))}
@@ -295,12 +241,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center p-5 text-center text-slate-400">
-            <Table className="mb-2 h-6 w-6 text-slate-300" />
-            <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-500">
-              Table view active
-            </p>
-            <p className="mt-1 max-w-[160px] text-[8px] leading-4 text-slate-400">
-              The block library is available in graphic blueprint views.
+            <Table className="mb-2 h-7 w-7 text-slate-300" aria-hidden="true" />
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Work area active</p>
+            <p className="mt-1 max-w-[190px] text-[10px] leading-5 text-slate-500">
+              The block library appears only in the System Blueprint canvas, where blocks can be placed and connected.
             </p>
           </div>
         )}
