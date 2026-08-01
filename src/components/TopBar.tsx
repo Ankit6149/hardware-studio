@@ -1,10 +1,49 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { FolderOpen, LayoutTemplate, RotateCcw } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { Button } from '../ui/Button';
 import { BrandMark } from './BrandMark';
 import { ProjectManager } from './ProjectManager';
 import { TemplatePicker } from './TemplatePicker';
+
+interface ProjectNameEditorProps {
+  projectName: string;
+  onCommit: (name: string) => void;
+}
+
+const ProjectNameEditor: React.FC<ProjectNameEditorProps> = ({ projectName, onCommit }) => {
+  const [draftName, setDraftName] = useState(projectName);
+
+  const commitDraft = () => {
+    const nextName = draftName.trim();
+    if (nextName) {
+      onCommit(nextName);
+      return;
+    }
+    setDraftName(projectName);
+  };
+
+  return (
+    <input
+      type="text"
+      value={draftName}
+      onChange={(event) => setDraftName(event.target.value)}
+      onBlur={commitDraft}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.currentTarget.blur();
+        }
+        if (event.key === 'Escape') {
+          setDraftName(projectName);
+          event.currentTarget.blur();
+        }
+      }}
+      className="min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-mono text-[10px] font-semibold text-slate-800 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus:border-slate-400 focus:bg-white focus:ring-1 focus:ring-slate-300"
+      placeholder="Unnamed Project"
+      aria-label="Project name"
+    />
+  );
+};
 
 export const TopBar: React.FC = () => {
   const {
@@ -15,21 +54,12 @@ export const TopBar: React.FC = () => {
     resetProject,
   } = useProjectStore();
 
-  const [localName, setLocalName] = useState(projectName);
   const [isProjOpen, setIsProjOpen] = useState(false);
   const [isTplOpen, setIsTplOpen] = useState(false);
 
-  useEffect(() => {
-    setLocalName(projectName);
-  }, [projectName]);
-
-  const handleNameBlur = () => {
-    if (localName.trim()) {
-      setProjectName(localName.trim());
-      saveActiveProject();
-    } else {
-      setLocalName(projectName);
-    }
+  const handleNameCommit = (name: string) => {
+    setProjectName(name);
+    saveActiveProject();
   };
 
   const handleReset = () => {
@@ -57,19 +87,7 @@ export const TopBar: React.FC = () => {
       </div>
 
       <div className="mx-4 flex max-w-[360px] flex-1 items-center gap-2.5">
-        <input
-          type="text"
-          value={localName}
-          onChange={(event) => setLocalName(event.target.value)}
-          onBlur={handleNameBlur}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.currentTarget.blur();
-            }
-          }}
-          className="min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-mono text-[10px] font-semibold text-slate-800 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus:border-slate-400 focus:bg-white focus:ring-1 focus:ring-slate-300"
-          placeholder="Unnamed Project"
-        />
+        <ProjectNameEditor key={projectName} projectName={projectName} onCommit={handleNameCommit} />
         <div className="hidden shrink-0 items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-[7px] font-extrabold uppercase tracking-[0.12em] text-emerald-700 sm:flex">
           <span className="relative flex h-1 w-1">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
