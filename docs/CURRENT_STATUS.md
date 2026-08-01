@@ -1,9 +1,11 @@
 # Hardware Studio Current Status
 
-**Last reviewed:** July 26, 2026  
-**Engineering implementation baseline reviewed:** `84415a2354d2005567358cdb34cc405d655d8756`  
+**Last reviewed:** August 2, 2026  
+**Engineering implementation baseline reviewed:** `04f0f7b01576eba8bf0bcd1562607ad656deaeb0`  
 **Stage:** Research and active development  
 **Stable release:** None
+
+> This is the single authoritative implementation-status document. Root summaries and historical development audits must link here and must not override it. A passing CI run, helper test, generated file, UI screen, manual checkbox, or agent assertion is not by itself evidence of professional product readiness.
 
 ## Summary
 
