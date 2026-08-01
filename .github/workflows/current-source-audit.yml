@@ -1,0 +1,33 @@
+name: Current Source Audit Snapshot
+
+on:
+  push:
+    branches:
+      - audit/current-repository-2026-08-02
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Create source archive
+        run: |
+          tar \
+            --exclude=.git \
+            --exclude=.next \
+            --exclude=node_modules \
+            --exclude='*.log' \
+            -czf hardware-studio-current-source.tar.gz .
+
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardware-studio-current-source
+          path: hardware-studio-current-source.tar.gz
+          if-no-files-found: error
+          retention-days: 1
