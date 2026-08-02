@@ -24,13 +24,13 @@ import { ProjectDashboard } from './ProjectDashboard';
 import { BlueprintSheets } from './BlueprintSheets';
 import { FactoryPackageBuilder } from './FactoryPackageBuilder';
 import { RevisionsStudio } from './revisions/RevisionsStudio';
-import { BoardDesigner } from './board/BoardDesigner';
 import { ProductStudio } from './product/ProductStudio';
 import { FirmwareStudio } from './firmware/FirmwareStudio';
 import { ValidationStudio } from './validation/ValidationStudio';
 import { StudioBuildMap } from './studio/StudioBuildMap';
 import { EngineeringContextBar } from './studio/EngineeringContextBar';
 import {
+  UnifiedBoardDesignerWorkbench,
   UnifiedComponentLibraryWorkbench,
   UnifiedMechanicalWorkbench,
   UnifiedSchematicWorkbench,
@@ -49,7 +49,7 @@ function renderSurface(surface: NavigationSurface): React.ReactNode {
     case 'power-budget': return <PowerBudgetTable />;
     case 'pin-map': return <PinMapTable />;
     case 'bom': return <BOMTable />;
-    case 'board-designer': return <BoardDesigner />;
+    case 'board-designer': return <UnifiedBoardDesignerWorkbench />;
     case 'board-studio': return <BoardStudio />;
     case 'pcb-constraints': return <PCBConstraints />;
     case 'firmware-modules': return <FirmwareStudio initialMode="modules" />;
