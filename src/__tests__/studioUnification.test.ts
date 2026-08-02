@@ -25,7 +25,7 @@ describe('unified Hardware Studio build map', () => {
     expect(new Set(BUILD_STAGES.map((stage) => stage.viewId)).size).toBe(BUILD_STAGES.length);
   });
 
-  it('defines a single connected electronics golden path including real 3D entry', () => {
+  it('defines a single connected electronics golden path including real 3D and Checks entries', () => {
     expect(ELECTRONICS_FLOW.map((step) => step.id)).toEqual([
       'component-library',
       'schematic-editor',
@@ -35,6 +35,7 @@ describe('unified Hardware Studio build map', () => {
       'pcb-drc',
     ]);
     expect(ELECTRONICS_FLOW.find((step) => step.id === 'mechanical-studio')?.label).toBe('Assembly / 3D');
+    expect(ELECTRONICS_FLOW.find((step) => step.id === 'pcb-drc')?.label).toBe('Checks');
   });
 });
 
@@ -100,6 +101,8 @@ describe('golden-path regression guards', () => {
     expect(appShell).toContain('UnifiedMechanicalWorkbench');
     expect(appShell).toContain('<UnifiedBOMWorkbench />');
     expect(appShell).toContain('<UnifiedValidationWorkbench initialMode="tests" />');
+    expect(appShell).toContain("viewId === 'pcb-drc'");
+    expect(appShell).toContain('<UnifiedBoardDRCWorkbench />');
   });
 
   it('adapts editors to the selected canonical definition and component instance', () => {
@@ -141,6 +144,16 @@ describe('golden-path regression guards', () => {
     expect(validation).toContain('linkedNetIds: selectedNetIds');
     expect(validation).toContain('selectedComponent.architectureNodeId');
     expect(validation).toContain("executeProjectCommand('ADD_COMPONENT_TEST'");
+  });
+
+  it('routes board checks back to the responsible shared object', () => {
+    const drc = source('../components/studio/UnifiedBoardDRCWorkbench.tsx');
+    expect(drc).toContain('runBoardDRC(useProjectStore.getState())');
+    expect(drc).toContain("result.linkedObjectType === 'component'");
+    expect(drc).toContain('setActiveComponent(result.linkedObjectId)');
+    expect(drc).toContain("result.linkedObjectType === 'net'");
+    expect(drc).toContain('setActiveNet');
+    expect(drc).toContain("setActiveView('board-designer')");
   });
 
   it('uses an event-driven selected-board 3D preview instead of permanent animation', () => {
