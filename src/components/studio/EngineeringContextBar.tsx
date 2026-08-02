@@ -36,6 +36,7 @@ export const EngineeringContextBar: React.FC = () => {
     activeView,
     setActiveView,
     setActiveBoard,
+    placeComponentOnSchematic,
     boards = [],
     boardComponents = [],
     nets = [],
@@ -70,13 +71,28 @@ export const EngineeringContextBar: React.FC = () => {
   }, [activeBoardId, resolvedBoardId, setContextBoard]);
 
   useEffect(() => {
-    if (!activeComponentId && componentsForBoard[0]) setActiveComponent(componentsForBoard[0].id);
+    const selectedStillExists = activeComponentId
+      ? componentsForBoard.some((component) => component.id === activeComponentId)
+      : false;
+    if ((!activeComponentId || !selectedStillExists) && componentsForBoard[0]) {
+      setActiveComponent(componentsForBoard[0].id);
+    }
   }, [activeComponentId, componentsForBoard, setActiveComponent]);
 
   if (!visible) return null;
 
   const navigate = (viewId: string) => {
     beginHandoff(activeView, activeView);
+    if (viewId === 'schematic-editor' && selectedComponent && !selectedComponent.schematic?.placed) {
+      const placedCount = componentsForBoard.filter((component) => component.schematic?.placed).length;
+      const column = placedCount % 4;
+      const row = Math.floor(placedCount / 4);
+      placeComponentOnSchematic(selectedComponent.id, 140 + column * 180, 140 + row * 140);
+    }
+    if (viewId === 'board-designer' && !selectedBoard) {
+      setActiveView('board-settings');
+      return;
+    }
     setActiveView(viewId);
   };
 
@@ -87,6 +103,9 @@ export const EngineeringContextBar: React.FC = () => {
     setActiveComponent(firstComponent?.id || null);
   };
 
+  const schematicActionLabel = selectedComponent?.schematic?.placed ? 'Schematic' : 'Place in schematic';
+  const pcbActionLabel = selectedBoard ? 'PCB' : 'Create board';
+
   return (
     <section className="shrink-0 border-b border-slate-200 bg-slate-50 px-3 py-2" aria-label="Shared engineering context">
       <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
@@ -96,11 +115,7 @@ export const EngineeringContextBar: React.FC = () => {
           <label className="flex min-w-[180px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
             <CircuitBoard className="h-3.5 w-3.5 shrink-0 text-indigo-600" aria-hidden="true" />
             <span className="sr-only">Active board</span>
-            <select
-              value={resolvedBoardId}
-              onChange={(event) => changeBoard(event.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-800 outline-none"
-            >
+            <select value={resolvedBoardId} onChange={(event) => changeBoard(event.target.value)} className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-800 outline-none">
               {boards.length === 0 && <option value="">No board yet</option>}
               {boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
             </select>
@@ -109,26 +124,16 @@ export const EngineeringContextBar: React.FC = () => {
           <label className="flex min-w-[220px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
             <Boxes className="h-3.5 w-3.5 shrink-0 text-indigo-600" aria-hidden="true" />
             <span className="sr-only">Active component instance</span>
-            <select
-              value={selectedComponent?.id || ''}
-              onChange={(event) => setActiveComponent(event.target.value || null)}
-              className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-800 outline-none"
-            >
+            <select value={selectedComponent?.id || ''} onChange={(event) => setActiveComponent(event.target.value || null)} className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-800 outline-none">
               {componentsForBoard.length === 0 && <option value="">No component instance</option>}
-              {componentsForBoard.map((component) => (
-                <option key={component.id} value={component.id}>{component.referenceDesignator} · {component.componentName}</option>
-              ))}
+              {componentsForBoard.map((component) => <option key={component.id} value={component.id}>{component.referenceDesignator} · {component.componentName}</option>)}
             </select>
           </label>
 
           <label className="flex min-w-[150px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
             <ListTree className="h-3.5 w-3.5 shrink-0 text-indigo-600" aria-hidden="true" />
             <span className="sr-only">Active net</span>
-            <select
-              value={activeNetName || ''}
-              onChange={(event) => setActiveNet(event.target.value || null)}
-              className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-800 outline-none"
-            >
+            <select value={activeNetName || ''} onChange={(event) => setActiveNet(event.target.value || null)} className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-800 outline-none">
               <option value="">No net selected</option>
               {nets.map((net) => <option key={net.id} value={net.netName}>{net.netName}</option>)}
             </select>
@@ -138,8 +143,8 @@ export const EngineeringContextBar: React.FC = () => {
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {[
             { viewId: 'component-library', label: 'Components', Icon: Boxes },
-            { viewId: 'schematic-editor', label: 'Schematic', Icon: PenTool },
-            { viewId: 'board-designer', label: 'PCB', Icon: CircuitBoard },
+            { viewId: 'schematic-editor', label: schematicActionLabel, Icon: PenTool },
+            { viewId: 'board-designer', label: pcbActionLabel, Icon: CircuitBoard },
             { viewId: 'mechanical-studio', label: 'Assembly / 3D', Icon: Layers3 },
           ].map(({ viewId, label, Icon }, index) => (
             <React.Fragment key={viewId}>
