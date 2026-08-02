@@ -26,7 +26,7 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
     useStudioContextStore.getState().clearContext();
   });
 
-  it('keeps the same component IDs, pins, net, board, sourcing, and validation links', () => {
+  it('keeps the same component IDs, representations, pins, net, board, sourcing, and validation links', () => {
     const store = useProjectStore.getState();
     const definitions = defaultComponents.filter((definition) => definition.pins.length > 0).slice(0, 2);
     expect(definitions).toHaveLength(2);
@@ -57,6 +57,9 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
     expect(source.id).not.toBe(target.id);
     expect(source.libraryId).toBe(definitions[0].libraryId);
     expect(target.libraryId).toBe(definitions[1].libraryId);
+    expect(source.packageDimensions).toEqual(definitions[0].packageDimensions);
+    expect(source.footprintSvg).toBe(definitions[0].footprintSvg);
+    expect(source.manufacturer).toBe(definitions[0].manufacturer);
 
     store.placeComponentOnSchematic(source.id, 120, 160);
     store.placeComponentOnSchematic(target.id, 360, 160);
@@ -136,6 +139,9 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
       schematic: expect.objectContaining({ placed: true }),
       pcb: expect.objectContaining({ placed: true, xMm: 12, yMm: 16, side: 'Top' }),
     });
+    expect(finalSource?.packageDimensions).toEqual(definitions[0].packageDimensions);
+    expect(finalSource?.footprintSvg).toBe(definitions[0].footprintSvg);
+    expect(finalSource?.manufacturer).toBe(definitions[0].manufacturer);
     expect(finalTarget).toMatchObject({
       id: target.id,
       boardId: board.id,
