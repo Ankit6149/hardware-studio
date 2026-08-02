@@ -16,7 +16,7 @@ import type { BOMItem } from '../../types';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
 
-const statusOptions = ['Not Started', 'Sourced', 'Ordered', 'Received', 'Tested'] as const;
+const statusOptions = ['Not Started', 'Sourced', 'Ordered', 'Received', 'Tested', 'Rejected'] as const satisfies readonly NonNullable<BOMItem['status']>[];
 
 export const UnifiedBOMWorkbench: React.FC = () => {
   const store = useProjectStore();
@@ -56,24 +56,24 @@ export const UnifiedBOMWorkbench: React.FC = () => {
       id,
       blockName: selectedComponent.componentName,
       candidateComponent: selectedComponent.value || selectedComponent.componentName,
-      partNumber: '',
+      partNumber: selectedComponent.partNumber || '',
       stage: 'Prototype',
-      quantity: 1,
-      voltage: selectedComponent.electrical?.supplyVoltage || '',
-      currentEstimate: selectedComponent.electrical?.currentDraw || '',
-      interface: selectedComponent.electrical?.interface || '',
-      packageSize: selectedComponent.footprint || '',
+      quantity: selectedComponent.quantity || 1,
+      voltage: '',
+      currentEstimate: '',
+      interface: '',
+      packageSize: selectedComponent.footprint || selectedComponent.packageName || '',
       dimensions: selectedComponent.packageDimensions
         ? `${selectedComponent.packageDimensions.widthMm} × ${selectedComponent.packageDimensions.heightMm} × ${selectedComponent.packageDimensions.heightZMm} mm`
         : '',
       costEstimate: '0.00',
-      supplier: '',
+      supplier: selectedComponent.supplier || '',
       supplierUrl: '',
-      datasheetUrl: '',
+      datasheetUrl: selectedComponent.datasheetUrl || '',
       status: 'Not Started',
       risk: '',
       alternative: '',
-      notes: `Linked to ${selectedComponent.referenceDesignator} (${selectedComponent.id}).`,
+      notes: `Linked to ${selectedComponent.referenceDesignator} (${selectedComponent.id}). Electrical values remain blank until explicitly qualified.`,
     };
     updateProjectState({ bom: [...bom, item] });
     updateBoardComponent(selectedComponent.id, { bomItemId: id });
@@ -125,7 +125,7 @@ export const UnifiedBOMWorkbench: React.FC = () => {
                 <thead className="bg-white text-[9px] font-bold uppercase tracking-wide text-slate-500"><tr className="border-b border-slate-200"><th className="px-3 py-2.5">Component</th><th className="px-3 py-2.5">Part number</th><th className="px-3 py-2.5">Package</th><th className="px-3 py-2.5">Qty</th><th className="px-3 py-2.5">Supplier</th><th className="px-3 py-2.5">Unit cost</th><th className="px-3 py-2.5">Status</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">{orderedBom.map((item) => {
                   const highlighted = item.id === selectedBomItem?.id;
-                  return <tr key={item.id} className={highlighted ? 'bg-indigo-50' : 'hover:bg-slate-50'}><td className="px-3 py-2"><input value={item.blockName} onChange={(event) => updateBOMItem(item.id, { blockName: event.target.value })} className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 font-semibold text-slate-900 hover:border-slate-200 focus:border-indigo-400 focus:bg-white focus:outline-none" /></td><td className="px-3 py-2"><input value={item.partNumber || ''} onChange={(event) => updateBOMItem(item.id, { partNumber: event.target.value })} className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 font-mono text-slate-700 hover:border-slate-200 focus:border-indigo-400 focus:bg-white focus:outline-none" placeholder="Manufacturer PN" /></td><td className="px-3 py-2"><input value={item.packageSize || ''} onChange={(event) => updateBOMItem(item.id, { packageSize: event.target.value })} className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 font-mono text-slate-700 hover:border-slate-200 focus:border-indigo-400 focus:bg-white focus:outline-none" placeholder="Footprint/package" /></td><td className="px-3 py-2"><input type="number" min={1} value={item.quantity} onChange={(event) => updateBOMItem(item.id, { quantity: Math.max(1, Number(event.target.value) || 1) })} className="w-16 rounded border border-slate-200 bg-white px-2 py-1 text-center" /></td><td className="px-3 py-2"><input value={item.supplier || ''} onChange={(event) => updateBOMItem(item.id, { supplier: event.target.value })} className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-slate-700 hover:border-slate-200 focus:border-indigo-400 focus:bg-white focus:outline-none" placeholder="Supplier" /></td><td className="px-3 py-2"><input value={item.costEstimate || ''} onChange={(event) => updateBOMItem(item.id, { costEstimate: event.target.value })} className="w-24 rounded border border-slate-200 bg-white px-2 py-1 text-right font-mono" placeholder="0.00" /></td><td className="px-3 py-2"><select value={item.status} onChange={(event) => updateBOMItem(item.id, { status: event.target.value })} className="rounded border border-slate-200 bg-white px-2 py-1">{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</select></td></tr>;
+                  return <tr key={item.id} className={highlighted ? 'bg-indigo-50' : 'hover:bg-slate-50'}><td className="px-3 py-2"><input value={item.blockName} onChange={(event) => updateBOMItem(item.id, { blockName: event.target.value })} className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 font-semibold text-slate-900 hover:border-slate-200 focus:border-indigo-400 focus:bg-white focus:outline-none" /></td><td className="px-3 py-2"><input value={item.partNumber || ''} onChange={(event) => updateBOMItem(item.id, { partNumber: event.target.value })} className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 font-mono text-slate-700 hover:border-slate-200 focus:border-indigo-400 focus:bg-white focus:outline-none" placeholder="Manufacturer PN" /></td><td className="px-3 py-2"><input value={item.packageSize || ''} onChange={(event) => updateBOMItem(item.id, { packageSize: event.target.value })} className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 font-mono text-slate-700 hover:border-slate-200 focus:border-indigo-400 focus:bg-white focus:outline-none" placeholder="Footprint/package" /></td><td className="px-3 py-2"><input type="number" min={1} value={item.quantity} onChange={(event) => updateBOMItem(item.id, { quantity: Math.max(1, Number(event.target.value) || 1) })} className="w-16 rounded border border-slate-200 bg-white px-2 py-1 text-center" /></td><td className="px-3 py-2"><input value={item.supplier || ''} onChange={(event) => updateBOMItem(item.id, { supplier: event.target.value })} className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-slate-700 hover:border-slate-200 focus:border-indigo-400 focus:bg-white focus:outline-none" placeholder="Supplier" /></td><td className="px-3 py-2"><input value={item.costEstimate || ''} onChange={(event) => updateBOMItem(item.id, { costEstimate: event.target.value })} className="w-24 rounded border border-slate-200 bg-white px-2 py-1 text-right font-mono" placeholder="0.00" /></td><td className="px-3 py-2"><select value={item.status} onChange={(event) => updateBOMItem(item.id, { status: event.target.value as NonNullable<BOMItem['status']> })} className="rounded border border-slate-200 bg-white px-2 py-1">{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</select></td></tr>;
                 })}</tbody>
               </table>
               {bom.length === 0 && <div className="p-10 text-center"><FileSpreadsheet className="mx-auto h-7 w-7 text-slate-400" /><p className="mt-2 text-sm font-bold text-slate-800">No BOM records yet</p><p className="mt-1 text-xs text-slate-500">Select a project component and create its linked sourcing record. Generic architecture blocks are not silently converted into purchasable parts.</p></div>}
