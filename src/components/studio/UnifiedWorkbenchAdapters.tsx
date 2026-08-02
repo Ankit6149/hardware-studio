@@ -6,6 +6,7 @@ import { useStudioContextStore, type MechanicalWorkbenchMode } from '../../store
 import { ComponentLibraryWorkbench } from '../component-library/ComponentLibraryWorkbench';
 import { UnifiedSchematicEditor } from '../schematic/UnifiedSchematicEditor';
 import { MechanicalStudio } from '../mechanical/MechanicalStudio';
+import { UnifiedBoard3DView } from '../mechanical/UnifiedBoard3DView';
 
 export const UnifiedComponentLibraryWorkbench: React.FC = () => {
   const boardComponents = useProjectStore((state) => state.boardComponents || []);
@@ -51,5 +52,6 @@ export const UnifiedSchematicWorkbench: React.FC = () => {
 export const UnifiedMechanicalWorkbench: React.FC<{ defaultMode: MechanicalWorkbenchMode }> = ({ defaultMode }) => {
   const requestedMode = useStudioContextStore((state) => state.requestedMechanicalMode);
   const resolvedMode = requestedMode || defaultMode;
+  if (resolvedMode === 'webgl-3d') return <UnifiedBoard3DView />;
   return <MechanicalStudio key={resolvedMode} initialMode={resolvedMode} />;
 };
