@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore, type MechanicalWorkbenchMode } from '../../store/studioContextStore';
 import { ComponentLibraryWorkbench } from '../component-library/ComponentLibraryWorkbench';
+import { BoardDesigner } from '../board/BoardDesigner';
 import { UnifiedSchematicEditor } from '../schematic/UnifiedSchematicEditor';
 import { MechanicalStudio } from '../mechanical/MechanicalStudio';
 import { UnifiedBoard3DView } from '../mechanical/UnifiedBoard3DView';
@@ -29,6 +30,7 @@ export const UnifiedComponentLibraryWorkbench: React.FC = () => {
 export const UnifiedSchematicWorkbench: React.FC = () => {
   const activeComponentId = useStudioContextStore((state) => state.activeComponentId);
   const activeBoardId = useStudioContextStore((state) => state.activeBoardId);
+  const activeNetName = useStudioContextStore((state) => state.activeNetName);
   const boardComponents = useProjectStore((state) => state.boardComponents || []);
   const placeComponentOnSchematic = useProjectStore((state) => state.placeComponentOnSchematic);
   const setActiveComponent = useStudioContextStore((state) => state.setActiveComponent);
@@ -46,7 +48,14 @@ export const UnifiedSchematicWorkbench: React.FC = () => {
     placeComponentOnSchematic(selected.id, 140 + column * 180, 140 + row * 140);
   }, [activeBoardId, activeComponentId, boardComponents, placeComponentOnSchematic, setActiveComponent]);
 
-  return <UnifiedSchematicEditor />;
+  return <UnifiedSchematicEditor key={`${activeBoardId || ''}:${activeComponentId || ''}:${activeNetName || ''}`} />;
+};
+
+export const UnifiedBoardDesignerWorkbench: React.FC = () => {
+  const activeBoardId = useStudioContextStore((state) => state.activeBoardId);
+  const activeComponentId = useStudioContextStore((state) => state.activeComponentId);
+  const activeNetName = useStudioContextStore((state) => state.activeNetName);
+  return <BoardDesigner key={`${activeBoardId || ''}:${activeComponentId || ''}:${activeNetName || ''}`} />;
 };
 
 export const UnifiedMechanicalWorkbench: React.FC<{ defaultMode: MechanicalWorkbenchMode }> = ({ defaultMode }) => {
