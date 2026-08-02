@@ -1,0 +1,55 @@
+'use client';
+
+import React, { useEffect, useRef } from 'react';
+import { useProjectStore } from '../../store/projectStore';
+import { useStudioContextStore, type MechanicalWorkbenchMode } from '../../store/studioContextStore';
+import { ComponentLibraryWorkbench } from '../component-library/ComponentLibraryWorkbench';
+import { SchematicEditor } from '../schematic/SchematicEditor';
+import { MechanicalStudio } from '../mechanical/MechanicalStudio';
+
+export const UnifiedComponentLibraryWorkbench: React.FC = () => {
+  const boardComponents = useProjectStore((state) => state.boardComponents || []);
+  const previousIds = useRef(new Set(boardComponents.map((component) => component.id)));
+  const setActiveBoard = useStudioContextStore((state) => state.setActiveBoard);
+  const setActiveComponent = useStudioContextStore((state) => state.setActiveComponent);
+
+  useEffect(() => {
+    const previous = previousIds.current;
+    const added = boardComponents.find((component) => !previous.has(component.id));
+    previousIds.current = new Set(boardComponents.map((component) => component.id));
+    if (!added) return;
+    setActiveBoard(added.boardId || null);
+    setActiveComponent(added.id);
+  }, [boardComponents, setActiveBoard, setActiveComponent]);
+
+  return <ComponentLibraryWorkbench />;
+};
+
+export const UnifiedSchematicWorkbench: React.FC = () => {
+  const activeComponentId = useStudioContextStore((state) => state.activeComponentId);
+  const activeBoardId = useStudioContextStore((state) => state.activeBoardId);
+  const boardComponents = useProjectStore((state) => state.boardComponents || []);
+  const placeComponentOnSchematic = useProjectStore((state) => state.placeComponentOnSchematic);
+  const setActiveComponent = useStudioContextStore((state) => state.setActiveComponent);
+
+  useEffect(() => {
+    const selected = boardComponents.find((component) => component.id === activeComponentId)
+      || boardComponents.find((component) => !activeBoardId || component.boardId === activeBoardId);
+    if (!selected) return;
+    if (!activeComponentId) setActiveComponent(selected.id);
+    if (selected.schematic?.placed) return;
+
+    const boardPeers = boardComponents.filter((component) => component.boardId === selected.boardId && component.schematic?.placed);
+    const column = boardPeers.length % 4;
+    const row = Math.floor(boardPeers.length / 4);
+    placeComponentOnSchematic(selected.id, 140 + column * 180, 140 + row * 140);
+  }, [activeBoardId, activeComponentId, boardComponents, placeComponentOnSchematic, setActiveComponent]);
+
+  return <SchematicEditor />;
+};
+
+export const UnifiedMechanicalWorkbench: React.FC<{ defaultMode: MechanicalWorkbenchMode }> = ({ defaultMode }) => {
+  const requestedMode = useStudioContextStore((state) => state.requestedMechanicalMode);
+  const resolvedMode = requestedMode || defaultMode;
+  return <MechanicalStudio key={resolvedMode} initialMode={resolvedMode} />;
+};
