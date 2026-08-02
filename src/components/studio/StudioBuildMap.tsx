@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { getDomainIdForView, type WorkflowDomainId } from '../../lib/workflowProfiles';
 import { useProjectStore } from '../../store/projectStore';
+import { useStudioContextStore } from '../../store/studioContextStore';
 import { useWorkflowPreferencesStore } from '../../store/workflowPreferencesStore';
 
 export interface BuildStage {
@@ -41,7 +42,7 @@ export const ELECTRONICS_FLOW = [
   { id: 'schematic-editor', label: 'Schematic', icon: PenTool },
   { id: 'board-settings', label: 'Board setup', icon: CircuitBoard },
   { id: 'board-designer', label: 'PCB layout', icon: CircuitBoard },
-  { id: 'blueprint-sheets', label: '3D / drawings', icon: Layers3 },
+  { id: 'mechanical-studio', label: 'Assembly / 3D', icon: Layers3 },
   { id: 'pcb-drc', label: 'Checks', icon: FileCheck2 },
 ] as const;
 
@@ -53,6 +54,7 @@ export const StudioBuildMap: React.FC = () => {
   const store = useProjectStore();
   const project = store as unknown as Record<string, unknown>;
   const { activeView, setActiveView } = store;
+  const requestMechanicalMode = useStudioContextStore((state) => state.requestMechanicalMode);
   const enabledDomains = useWorkflowPreferencesStore((state) => state.enabledDomains);
   const activeDomain = getDomainIdForView(activeView);
 
@@ -71,13 +73,19 @@ export const StudioBuildMap: React.FC = () => {
     'schematic-editor': countOf(project.schematicWires),
     'board-settings': countOf(project.boards),
     'board-designer': countOf(project.traces),
-    'blueprint-sheets': countOf(project.blueprintSheets),
+    'mechanical-studio': countOf(project.mechanicalObjects) + countOf(project.mechanicalBodies),
     'pcb-drc': countOf(project.reviewResults),
   }), [project]);
 
   const showElectronicsFlow = activeDomain === 'electronics'
     || activeDomain === 'pcb'
-    || ['component-library', 'schematic-editor', 'board-settings', 'board-designer', 'pcb-drc', 'blueprint-sheets'].includes(activeView);
+    || activeDomain === 'mechanical'
+    || ['component-library', 'schematic-editor', 'board-settings', 'board-designer', 'pcb-drc'].includes(activeView);
+
+  const openView = (viewId: string) => {
+    requestMechanicalMode(viewId === 'mechanical-studio' ? 'webgl-3d' : null);
+    setActiveView(viewId);
+  };
 
   return (
     <div className="shrink-0 border-b border-slate-200 bg-white shadow-sm">
@@ -90,7 +98,10 @@ export const StudioBuildMap: React.FC = () => {
             <button
               key={stage.id}
               type="button"
-              onClick={() => setActiveView(stage.viewId)}
+              onClick={() => {
+                requestMechanicalMode(stage.id === 'mechanical' ? 'canvas' : null);
+                setActiveView(stage.viewId);
+              }}
               aria-current={active ? 'step' : undefined}
               className={`group flex min-w-[104px] shrink-0 items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                 active
@@ -122,7 +133,7 @@ export const StudioBuildMap: React.FC = () => {
                 {index > 0 && <span className="shrink-0 text-slate-300" aria-hidden="true">→</span>}
                 <button
                   type="button"
-                  onClick={() => setActiveView(step.id)}
+                  onClick={() => openView(step.id)}
                   aria-current={active ? 'step' : undefined}
                   className={`flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-500 ${active ? 'bg-indigo-100 text-indigo-900' : 'text-slate-600 hover:bg-white hover:text-slate-950'}`}
                 >
