@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
+import { useStorageHealthStore } from '../store/storageHealthStore';
 import { getNavigationItem, isCanvasNavigationItem, NavigationSurface } from '../lib/navigationRegistry';
+import { useFeedback } from './feedback/FeedbackProvider';
+import { RECOVER_TO_DASHBOARD_KEY } from '../lib/reliability';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { BlueprintCanvas } from './BlueprintCanvas';
@@ -29,56 +32,31 @@ import { ValidationStudio } from './validation/ValidationStudio';
 
 function renderSurface(surface: NavigationSurface): React.ReactNode {
   switch (surface) {
-    case 'dashboard':
-      return <ProjectDashboard />;
-    case 'legacy-blueprint':
-      return <BlueprintCanvas />;
-    case 'product-studio':
-      return <ProductStudio />;
-    case 'readiness':
-      return <ReadinessDashboard />;
-    case 'mechanical-canvas':
-      return <MechanicalStudio initialMode="canvas" />;
-    case 'mechanical-assembly':
-      return <MechanicalStudio initialMode="assembly" />;
-    case 'component-library':
-      return <ComponentLibrary />;
-    case 'schematic-editor':
-      return <SchematicEditor />;
-    case 'power-budget':
-      return <PowerBudgetTable />;
-    case 'pin-map':
-      return <PinMapTable />;
-    case 'bom':
-      return <BOMTable />;
-    case 'board-designer':
-      return <BoardDesigner />;
-    case 'board-studio':
-      return <BoardStudio />;
-    case 'pcb-constraints':
-      return <PCBConstraints />;
-    case 'firmware-modules':
-      return <FirmwareStudio initialMode="modules" />;
-    case 'firmware-state-machine':
-      return <FirmwareStudio initialMode="state-machine" />;
-    case 'firmware-hardware-map':
-      return <FirmwareStudio initialMode="hardware-map" />;
-    case 'firmware-source':
-      return <FirmwareStudio initialMode="source" />;
-    case 'validation-tests':
-      return <ValidationStudio initialMode="tests" />;
-    case 'validation-coverage':
-      return <ValidationStudio initialMode="coverage" />;
-    case 'validation-factory-qa':
-      return <ValidationStudio initialMode="factory-qa" />;
-    case 'blueprint-sheets':
-      return <BlueprintSheets />;
-    case 'exports':
-      return <ExportCenter />;
-    case 'revisions':
-      return <RevisionsStudio />;
-    case 'factory-builder':
-      return <FactoryPackageBuilder />;
+    case 'dashboard': return <ProjectDashboard />;
+    case 'legacy-blueprint': return <BlueprintCanvas />;
+    case 'product-studio': return <ProductStudio />;
+    case 'readiness': return <ReadinessDashboard />;
+    case 'mechanical-canvas': return <MechanicalStudio initialMode="canvas" />;
+    case 'mechanical-assembly': return <MechanicalStudio initialMode="assembly" />;
+    case 'component-library': return <ComponentLibrary />;
+    case 'schematic-editor': return <SchematicEditor />;
+    case 'power-budget': return <PowerBudgetTable />;
+    case 'pin-map': return <PinMapTable />;
+    case 'bom': return <BOMTable />;
+    case 'board-designer': return <BoardDesigner />;
+    case 'board-studio': return <BoardStudio />;
+    case 'pcb-constraints': return <PCBConstraints />;
+    case 'firmware-modules': return <FirmwareStudio initialMode="modules" />;
+    case 'firmware-state-machine': return <FirmwareStudio initialMode="state-machine" />;
+    case 'firmware-hardware-map': return <FirmwareStudio initialMode="hardware-map" />;
+    case 'firmware-source': return <FirmwareStudio initialMode="source" />;
+    case 'validation-tests': return <ValidationStudio initialMode="tests" />;
+    case 'validation-coverage': return <ValidationStudio initialMode="coverage" />;
+    case 'validation-factory-qa': return <ValidationStudio initialMode="factory-qa" />;
+    case 'blueprint-sheets': return <BlueprintSheets />;
+    case 'exports': return <ExportCenter />;
+    case 'revisions': return <RevisionsStudio />;
+    case 'factory-builder': return <FactoryPackageBuilder />;
   }
 }
 
@@ -112,15 +90,43 @@ const UnavailableWorkspace: React.FC<{ viewId: string; onReturn: () => void }> =
 
 export const AppShell: React.FC = () => {
   const { activeView, loadProjectFromLocalStorage, setActiveView } = useProjectStore();
+  const storageHealth = useStorageHealthStore((state) => state.health);
+  const retrySave = useCallback(() => {
+    useProjectStore.getState().saveActiveProject();
+  }, []);
+  const { notify } = useFeedback();
   const [mounted, setMounted] = useState(false);
+  const notifiedStorageState = useRef('');
 
   useEffect(() => {
     loadProjectFromLocalStorage();
-    const timer = setTimeout(() => {
-      setMounted(true);
-    }, 0);
+    try {
+      if (window.sessionStorage.getItem(RECOVER_TO_DASHBOARD_KEY) === '1') {
+        window.sessionStorage.removeItem(RECOVER_TO_DASHBOARD_KEY);
+        setActiveView('dashboard');
+      }
+    } catch {
+      // The workspace can still load when session storage is blocked.
+    }
+    const timer = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(timer);
-  }, [loadProjectFromLocalStorage]);
+  }, [loadProjectFromLocalStorage, setActiveView]);
+
+  useEffect(() => {
+    if (!['failed', 'unavailable', 'memory-fallback'].includes(storageHealth.status)) return;
+    const signature = `${storageHealth.status}:${storageHealth.errorCode || ''}:${storageHealth.message}`;
+    if (notifiedStorageState.current === signature) return;
+    notifiedStorageState.current = signature;
+
+    notify({
+      tone: storageHealth.status === 'memory-fallback' ? 'warning' : 'error',
+      title: storageHealth.status === 'memory-fallback' ? 'Project is memory-only' : 'Project save needs attention',
+      detail: [storageHealth.message, storageHealth.guidance].filter(Boolean).join(' '),
+      durationMs: 0,
+      actionLabel: 'Retry save',
+      onAction: retrySave,
+    });
+  }, [notify, retrySave, storageHealth]);
 
   const activeNavigationItem = getNavigationItem(activeView);
   const isCanvasView = isCanvasNavigationItem(activeNavigationItem);
@@ -143,9 +149,7 @@ export const AppShell: React.FC = () => {
           <div className="relative flex min-h-0 flex-1">
             {showVisualizer && <ProductVisualizer />}
             <div className="relative flex h-full min-w-0 flex-1 flex-col">
-              {activeNavigationItem ? (
-                renderSurface(activeNavigationItem.surface)
-              ) : (
+              {activeNavigationItem ? renderSurface(activeNavigationItem.surface) : (
                 <UnavailableWorkspace viewId={activeView} onReturn={() => setActiveView('dashboard')} />
               )}
             </div>
