@@ -35,7 +35,7 @@ describe('device knowledge library', () => {
     const results = searchKnowledgeEntries(starterDeviceKnowledge, { query: 'usb reversible connector' });
     expect(results.map((entry) => entry.id)).toContain('usb-c-connector');
 
-    expect(searchKnowledgeEntries(starterDeviceKnowledge, { query: 'i2c motor' })).toEqual([]);
+    expect(searchKnowledgeEntries(starterDeviceKnowledge, { query: 'usb thermocouple' })).toEqual([]);
   });
 
   it('maps production component definitions to relevant device-family guidance', () => {
