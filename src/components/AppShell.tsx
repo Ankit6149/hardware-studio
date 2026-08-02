@@ -23,7 +23,7 @@ import { BlueprintSheets } from './BlueprintSheets';
 import { FactoryPackageBuilder } from './FactoryPackageBuilder';
 import { RevisionsStudio } from './revisions/RevisionsStudio';
 import { BoardDesigner } from './board/BoardDesigner';
-import { ComponentLibrary } from './component-library/ComponentLibrary';
+import { ComponentLibraryWorkbench } from './component-library/ComponentLibraryWorkbench';
 import { SchematicEditor } from './schematic/SchematicEditor';
 import { ProductStudio } from './product/ProductStudio';
 import { MechanicalStudio } from './mechanical/MechanicalStudio';
@@ -38,7 +38,7 @@ function renderSurface(surface: NavigationSurface): React.ReactNode {
     case 'readiness': return <ReadinessDashboard />;
     case 'mechanical-canvas': return <MechanicalStudio initialMode="canvas" />;
     case 'mechanical-assembly': return <MechanicalStudio initialMode="assembly" />;
-    case 'component-library': return <ComponentLibrary />;
+    case 'component-library': return <ComponentLibraryWorkbench />;
     case 'schematic-editor': return <SchematicEditor />;
     case 'power-budget': return <PowerBudgetTable />;
     case 'pin-map': return <PinMapTable />;
