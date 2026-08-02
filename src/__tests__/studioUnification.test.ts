@@ -107,4 +107,15 @@ describe('golden-path regression guards', () => {
     expect(contextBar).toContain("requestMechanicalMode('webgl-3d')");
     expect(contextBar).toContain("viewId === 'board-designer' && !selectedBoard");
   });
+
+  it('routes the live schematic surface through canonical project actions and in-app confirmation', () => {
+    const adapter = source('../components/studio/UnifiedWorkbenchAdapters.tsx');
+    const schematic = source('../components/schematic/UnifiedSchematicEditor.tsx');
+    expect(adapter).toContain('<UnifiedSchematicEditor />');
+    expect(schematic).toContain('placeComponentOnSchematic');
+    expect(schematic).toContain("deleteProjectComponent(deleteImpact.componentId, 'entire-product')");
+    expect(schematic).toContain('<Dialog.Root');
+    expect(schematic).not.toContain('window.confirm');
+    expect(schematic).not.toContain('addProjectComponentFromLibrary');
+  });
 });
