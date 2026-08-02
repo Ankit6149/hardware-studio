@@ -5,6 +5,7 @@ export const CURRENT_SCHEMA_VERSION = 4;
 
 export function normalizeProjectComponent(bc: Record<string, unknown>): BoardComponent {
   const compId = (bc.id as string) || `cmp_${Date.now()}_${Math.random()}`;
+  const preserved = bc as unknown as Partial<BoardComponent>;
 
   // Accept canonical project-pin fields and reusable library-definition fields.
   // Every downstream editor must receive the same BoardComponentPin shape.
@@ -50,6 +51,9 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
   };
 
   return {
+    // Preserve reviewed representation, sourcing, qualification, and provenance
+    // fields that are not rewritten by migration. Canonical fields below win.
+    ...preserved,
     id: compId,
     libraryId: (bc.libraryId as string) || '',
     referenceDesignator: (bc.referenceDesignator as string) || 'U1',
