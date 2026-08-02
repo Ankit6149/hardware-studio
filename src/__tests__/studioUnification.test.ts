@@ -39,7 +39,7 @@ describe('unified Hardware Studio build map', () => {
 });
 
 describe('shared cross-workbench engineering context', () => {
-  it('preserves board, component, net, origin, and requested 3D mode across handoffs', () => {
+  it('preserves definition, board, component, net, origin, and requested 3D mode across handoffs', () => {
     const context = useStudioContextStore.getState();
     context.setActiveBoard('board-main');
     context.setActiveComponentDefinition('lib-mcu');
@@ -99,12 +99,14 @@ describe('golden-path regression guards', () => {
     expect(appShell).toContain('UnifiedBoardDesignerWorkbench');
     expect(appShell).toContain('UnifiedMechanicalWorkbench');
     expect(appShell).toContain('<UnifiedBOMWorkbench />');
+    expect(appShell).toContain('<UnifiedValidationWorkbench initialMode="tests" />');
   });
 
-  it('adapts existing editors to the selected canonical component instance', () => {
+  it('adapts editors to the selected canonical definition and component instance', () => {
     const adapters = source('../components/studio/UnifiedWorkbenchAdapters.tsx');
     const contextBar = source('../components/studio/EngineeringContextBar.tsx');
     expect(adapters).toContain('placeComponentOnSchematic');
+    expect(adapters).toContain('setActiveComponentDefinition(added.libraryId || null)');
     expect(adapters).toContain('setActiveComponent(added.id)');
     expect(adapters).toContain('UnifiedBoardDesignerWorkbench');
     expect(contextBar).toContain("requestMechanicalMode(viewId === 'mechanical-studio' ? 'webgl-3d' : null)");
@@ -130,6 +132,15 @@ describe('golden-path regression guards', () => {
     expect(bom).toContain("updateBoardComponent(selectedComponent.id, { bomItemId: id })");
     expect(bom).toContain('Linked to ${selectedComponent.referenceDesignator}');
     expect(bom).not.toContain('generateBOMFromMVP');
+    expect(bom).not.toContain('selectedComponent.electrical');
+  });
+
+  it('links validation to the selected component and its actual net IDs', () => {
+    const validation = source('../components/studio/UnifiedValidationWorkbench.tsx');
+    expect(validation).toContain('linkedComponentIds: [selectedComponent.id]');
+    expect(validation).toContain('linkedNetIds: selectedNetIds');
+    expect(validation).toContain('selectedComponent.architectureNodeId');
+    expect(validation).toContain("executeProjectCommand('ADD_COMPONENT_TEST'");
   });
 
   it('uses an event-driven selected-board 3D preview instead of permanent animation', () => {
