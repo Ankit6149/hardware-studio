@@ -32,6 +32,7 @@ import { MechanicalStudio } from './mechanical/MechanicalStudio';
 import { FirmwareStudio } from './firmware/FirmwareStudio';
 import { ValidationStudio } from './validation/ValidationStudio';
 import { StudioBuildMap } from './studio/StudioBuildMap';
+import { EngineeringContextBar } from './studio/EngineeringContextBar';
 
 function renderSurface(surface: NavigationSurface): React.ReactNode {
   switch (surface) {
@@ -145,6 +146,7 @@ export const AppShell: React.FC = () => {
         <Sidebar />
         <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
           <StudioBuildMap />
+          <EngineeringContextBar />
           {activeHiddenDomain && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-amber-950">
               <div className="flex min-w-0 items-center gap-2">
