@@ -96,7 +96,9 @@ describe('golden-path regression guards', () => {
     expect(appShell).toContain('<EngineeringContextBar />');
     expect(appShell).toContain('UnifiedComponentLibraryWorkbench');
     expect(appShell).toContain('UnifiedSchematicWorkbench');
+    expect(appShell).toContain('UnifiedBoardDesignerWorkbench');
     expect(appShell).toContain('UnifiedMechanicalWorkbench');
+    expect(appShell).toContain('<UnifiedBOMWorkbench />');
   });
 
   it('adapts existing editors to the selected canonical component instance', () => {
@@ -104,18 +106,40 @@ describe('golden-path regression guards', () => {
     const contextBar = source('../components/studio/EngineeringContextBar.tsx');
     expect(adapters).toContain('placeComponentOnSchematic');
     expect(adapters).toContain('setActiveComponent(added.id)');
-    expect(contextBar).toContain("requestMechanicalMode('webgl-3d')");
+    expect(adapters).toContain('UnifiedBoardDesignerWorkbench');
+    expect(contextBar).toContain("requestMechanicalMode(viewId === 'mechanical-studio' ? 'webgl-3d' : null)");
     expect(contextBar).toContain("viewId === 'board-designer' && !selectedBoard");
+    expect(contextBar).toContain("viewId: 'bom'");
+    expect(contextBar).toContain("viewId: 'validation-studio'");
   });
 
   it('routes the live schematic surface through canonical project actions and in-app confirmation', () => {
     const adapter = source('../components/studio/UnifiedWorkbenchAdapters.tsx');
     const schematic = source('../components/schematic/UnifiedSchematicEditor.tsx');
-    expect(adapter).toContain('<UnifiedSchematicEditor />');
+    expect(adapter).toContain('<UnifiedSchematicEditor');
     expect(schematic).toContain('placeComponentOnSchematic');
     expect(schematic).toContain("deleteProjectComponent(deleteImpact.componentId, 'entire-product')");
     expect(schematic).toContain('<Dialog.Root');
     expect(schematic).not.toContain('window.confirm');
     expect(schematic).not.toContain('addProjectComponentFromLibrary');
+  });
+
+  it('keeps BOM records linked to the selected canonical component', () => {
+    const bom = source('../components/studio/UnifiedBOMWorkbench.tsx');
+    expect(bom).toContain('selectedComponent?.bomItemId');
+    expect(bom).toContain("updateBoardComponent(selectedComponent.id, { bomItemId: id })");
+    expect(bom).toContain('Linked to ${selectedComponent.referenceDesignator}');
+    expect(bom).not.toContain('generateBOMFromMVP');
+  });
+
+  it('uses an event-driven selected-board 3D preview instead of permanent animation', () => {
+    const view3d = source('../components/mechanical/UnifiedBoard3DView.tsx');
+    expect(view3d).toContain("powerPreference: 'low-power'");
+    expect(view3d).toContain('component.boardId === boardId');
+    expect(view3d).toContain('component.id === activeComponentId');
+    expect(view3d).toContain("controls.addEventListener('change', render)");
+    expect(view3d).toContain('renderer.forceContextLoss()');
+    expect(view3d).not.toContain('requestAnimationFrame');
+    expect(view3d).not.toContain('mainGroup.rotation');
   });
 });
