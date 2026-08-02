@@ -10,7 +10,6 @@ import { RECOVER_TO_DASHBOARD_KEY } from '../lib/reliability';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { BlueprintCanvas } from './BlueprintCanvas';
-import { BOMTable } from './BOMTable';
 import { ExportCenter } from './ExportCenter';
 import { PropertiesPanel } from './PropertiesPanel';
 import { ReviewWarnings } from './ReviewWarnings';
@@ -29,6 +28,7 @@ import { FirmwareStudio } from './firmware/FirmwareStudio';
 import { ValidationStudio } from './validation/ValidationStudio';
 import { StudioBuildMap } from './studio/StudioBuildMap';
 import { EngineeringContextBar } from './studio/EngineeringContextBar';
+import { UnifiedBOMWorkbench } from './studio/UnifiedBOMWorkbench';
 import {
   UnifiedBoardDesignerWorkbench,
   UnifiedComponentLibraryWorkbench,
@@ -48,7 +48,7 @@ function renderSurface(surface: NavigationSurface): React.ReactNode {
     case 'schematic-editor': return <UnifiedSchematicWorkbench />;
     case 'power-budget': return <PowerBudgetTable />;
     case 'pin-map': return <PinMapTable />;
-    case 'bom': return <BOMTable />;
+    case 'bom': return <UnifiedBOMWorkbench />;
     case 'board-designer': return <UnifiedBoardDesignerWorkbench />;
     case 'board-studio': return <BoardStudio />;
     case 'pcb-constraints': return <PCBConstraints />;
