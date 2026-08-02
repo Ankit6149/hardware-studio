@@ -61,8 +61,8 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
     store.placeComponentOnSchematic(source.id, 120, 160);
     store.placeComponentOnSchematic(target.id, 360, 160);
 
-    const sourcePin = definitions[0].pins[0].pinNumber;
-    const targetPin = definitions[1].pins[0].pinNumber;
+    const sourcePin = definitions[0].pins[0].number;
+    const targetPin = definitions[1].pins[0].number;
     const connection = store.connectComponentPins(
       source.id,
       sourcePin,
