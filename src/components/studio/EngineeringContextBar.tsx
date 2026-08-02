@@ -49,6 +49,7 @@ export const EngineeringContextBar: React.FC = () => {
     setActiveComponent,
     setActiveNet,
     beginHandoff,
+    requestMechanicalMode,
   } = useStudioContextStore();
 
   const activeDomain = getDomainIdForView(activeView);
@@ -92,6 +93,11 @@ export const EngineeringContextBar: React.FC = () => {
     if (viewId === 'board-designer' && !selectedBoard) {
       setActiveView('board-settings');
       return;
+    }
+    if (viewId === 'mechanical-studio') {
+      requestMechanicalMode('webgl-3d');
+    } else {
+      requestMechanicalMode(null);
     }
     setActiveView(viewId);
   };
@@ -145,7 +151,7 @@ export const EngineeringContextBar: React.FC = () => {
             { viewId: 'component-library', label: 'Components', Icon: Boxes },
             { viewId: 'schematic-editor', label: schematicActionLabel, Icon: PenTool },
             { viewId: 'board-designer', label: pcbActionLabel, Icon: CircuitBoard },
-            { viewId: 'mechanical-studio', label: 'Assembly / 3D', Icon: Layers3 },
+            { viewId: 'mechanical-studio', label: 'Inspect in 3D', Icon: Layers3 },
           ].map(({ viewId, label, Icon }, index) => (
             <React.Fragment key={viewId}>
               {index > 0 && <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300" aria-hidden="true" />}
@@ -168,6 +174,7 @@ export const EngineeringContextBar: React.FC = () => {
         <span className={`rounded-full border px-2 py-1 ${selectedComponent?.pcb?.placed || selectedComponent?.placementStatus === 'Placed' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>PCB: {selectedComponent ? selectedComponent.pcb?.placed || selectedComponent.placementStatus === 'Placed' ? 'placed' : 'unplaced' : 'no instance'}</span>
         <span className="rounded-full border border-slate-200 bg-white px-2 py-1">Footprint: {selectedComponent?.footprint || 'unresolved'}</span>
         <span className="rounded-full border border-slate-200 bg-white px-2 py-1">Pins: {selectedComponent?.pins?.length || 0}</span>
+        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">3D: preview context, not exact CAD</span>
       </div>
     </section>
   );
