@@ -5,9 +5,11 @@ import {
   ArrowRight,
   Boxes,
   CircuitBoard,
+  FileSpreadsheet,
   Layers3,
   ListTree,
   PenTool,
+  TestTube2,
 } from 'lucide-react';
 import { getDomainIdForView } from '../../lib/workflowProfiles';
 import { useProjectStore } from '../../store/projectStore';
@@ -28,6 +30,7 @@ const contextualViews = new Set([
   'blueprint-sheets',
   'exports',
   'validation-studio',
+  'requirement-coverage',
 ]);
 
 export const EngineeringContextBar: React.FC = () => {
@@ -56,7 +59,8 @@ export const EngineeringContextBar: React.FC = () => {
   const visible = contextualViews.has(activeView)
     || activeDomain === 'electronics'
     || activeDomain === 'pcb'
-    || activeDomain === 'mechanical';
+    || activeDomain === 'mechanical'
+    || activeDomain === 'validation';
 
   const resolvedBoardId = activeBoardId || store.activeBoardId || boards[0]?.id || '';
   const componentsForBoard = useMemo(
@@ -94,11 +98,7 @@ export const EngineeringContextBar: React.FC = () => {
       setActiveView('board-settings');
       return;
     }
-    if (viewId === 'mechanical-studio') {
-      requestMechanicalMode('webgl-3d');
-    } else {
-      requestMechanicalMode(null);
-    }
+    requestMechanicalMode(viewId === 'mechanical-studio' ? 'webgl-3d' : null);
     setActiveView(viewId);
   };
 
@@ -112,9 +112,18 @@ export const EngineeringContextBar: React.FC = () => {
   const schematicActionLabel = selectedComponent?.schematic?.placed ? 'Schematic' : 'Place in schematic';
   const pcbActionLabel = selectedBoard ? 'PCB' : 'Create board';
 
+  const handoffs = [
+    { viewId: 'component-library', label: 'Components', Icon: Boxes },
+    { viewId: 'schematic-editor', label: schematicActionLabel, Icon: PenTool },
+    { viewId: 'board-designer', label: pcbActionLabel, Icon: CircuitBoard },
+    { viewId: 'mechanical-studio', label: 'Inspect in 3D', Icon: Layers3 },
+    { viewId: 'bom', label: 'BOM', Icon: FileSpreadsheet },
+    { viewId: 'validation-studio', label: 'Validate', Icon: TestTube2 },
+  ] as const;
+
   return (
     <section className="shrink-0 border-b border-slate-200 bg-slate-50 px-3 py-2" aria-label="Shared engineering context">
-      <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-2 2xl:flex-row 2xl:items-center 2xl:justify-between">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-500">Working context</span>
 
@@ -146,13 +155,8 @@ export const EngineeringContextBar: React.FC = () => {
           </label>
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          {[
-            { viewId: 'component-library', label: 'Components', Icon: Boxes },
-            { viewId: 'schematic-editor', label: schematicActionLabel, Icon: PenTool },
-            { viewId: 'board-designer', label: pcbActionLabel, Icon: CircuitBoard },
-            { viewId: 'mechanical-studio', label: 'Inspect in 3D', Icon: Layers3 },
-          ].map(({ viewId, label, Icon }, index) => (
+        <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+          {handoffs.map(({ viewId, label, Icon }, index) => (
             <React.Fragment key={viewId}>
               {index > 0 && <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300" aria-hidden="true" />}
               <button
@@ -174,6 +178,7 @@ export const EngineeringContextBar: React.FC = () => {
         <span className={`rounded-full border px-2 py-1 ${selectedComponent?.pcb?.placed || selectedComponent?.placementStatus === 'Placed' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>PCB: {selectedComponent ? selectedComponent.pcb?.placed || selectedComponent.placementStatus === 'Placed' ? 'placed' : 'unplaced' : 'no instance'}</span>
         <span className="rounded-full border border-slate-200 bg-white px-2 py-1">Footprint: {selectedComponent?.footprint || 'unresolved'}</span>
         <span className="rounded-full border border-slate-200 bg-white px-2 py-1">Pins: {selectedComponent?.pins?.length || 0}</span>
+        <span className="rounded-full border border-slate-200 bg-white px-2 py-1">BOM: {selectedComponent?.bomItemId ? 'linked' : 'unlinked'}</span>
         <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">3D: preview context, not exact CAD</span>
       </div>
     </section>
