@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
 import { BoardDesignerUIState, DEFAULT_VIEW_STATE } from './boardInteraction';
@@ -68,16 +68,6 @@ export const BoardDesigner: React.FC = () => {
   });
   const [rightTab, setRightTab] = useState<RightTab>('inspector');
   const [drcResults, setDrcResults] = useState<ReviewResult[]>([]);
-
-  useEffect(() => {
-    const activeBoardId = contextBoardId || store.activeBoardId || boards[0]?.id || null;
-    setViewState((previous) => ({
-      ...previous,
-      activeBoardId,
-      selectedComponentId: contextComponentId ?? previous.selectedComponentId,
-      selectedNetName: contextNetName ?? previous.selectedNetName,
-    }));
-  }, [boards, contextBoardId, contextComponentId, contextNetName, store.activeBoardId]);
 
   const updateView = useCallback((patch: Partial<BoardDesignerUIState>) => {
     setViewState((previous) => ({ ...previous, ...patch }));
