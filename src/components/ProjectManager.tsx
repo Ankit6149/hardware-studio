@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useProjectStore } from '../store/projectStore';
+import { allowStorageRecoveryOverwrite } from '../store/storageHealthStore';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Input, Textarea } from '../ui/FormControls';
@@ -10,12 +11,11 @@ import {
   Upload, 
   Download, 
   RefreshCw, 
-  FileText, 
-  CheckCircle2, 
-  XCircle 
+  FileText 
 } from 'lucide-react';
 import { exportProjectJson } from '../lib/exportJson';
 import { exportProjectMarkdown } from '../lib/exportMarkdown';
+import { useFeedback } from './feedback/FeedbackProvider';
 
 interface ProjectManagerProps {
   isOpen: boolean;
@@ -42,7 +42,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
   const [newDesc, setNewDesc] = useState(description);
   const [copyName, setCopyName] = useState('');
   const [showCopyInput, setShowCopyInput] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const { confirm: requestConfirmation, notify } = useFeedback();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,18 +50,18 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
     setProjectName(newName);
     setProjectDescription(newDesc);
     saveActiveProject();
-    showToast("Project details updated locally.", "success");
+    notify({ tone: 'success', title: 'Project details saved', detail: 'The active project metadata was updated locally.' });
   };
 
   const handleCopy = () => {
     if (!copyName.trim()) {
-      showToast("Please enter a name for the copy.", "error");
+      notify({ tone: 'error', title: 'Copy name required', detail: 'Enter a name before creating a project copy.' });
       return;
     }
     saveProjectAsCopy(copyName);
     setShowCopyInput(false);
     setCopyName('');
-    showToast(`Created new project copy: "${copyName}"`, "success");
+    notify({ tone: 'success', title: 'Project copy created', detail: `Created “${copyName}”.` });
     // Reload state bindings
     setNewName(copyName);
     setNewDesc(description);
@@ -72,27 +72,39 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
     const loaded = useProjectStore.getState();
     setNewName(loaded.projectName);
     setNewDesc(loaded.description);
-    showToast(`Switched active project to "${loaded.projectName}"`, "success");
+    notify({ tone: 'success', title: 'Project switched', detail: `Now editing “${loaded.projectName}”.` });
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      deleteProject(id);
-      showToast(`Deleted project: "${name}"`, "success");
-      const loaded = useProjectStore.getState();
-      setNewName(loaded.projectName);
-      setNewDesc(loaded.description);
-    }
+  const handleDelete = async (id: string, name: string) => {
+    const approved = await requestConfirmation({
+      title: `Delete “${name}”?`,
+      description: 'This project will be removed from this browser. Hardware Studio does not yet provide recoverable project trash.',
+      confirmLabel: 'Delete project',
+      variant: 'destructive',
+    });
+    if (!approved) return;
+
+    deleteProject(id);
+    notify({ tone: 'success', title: 'Project deleted', detail: `Removed “${name}”.` });
+    const loaded = useProjectStore.getState();
+    setNewName(loaded.projectName);
+    setNewDesc(loaded.description);
   };
 
-  const handleReset = () => {
-    if (confirm("Reset current project to its default template configuration? All modifications will be lost.")) {
-      resetProject();
-      const loaded = useProjectStore.getState();
-      setNewName(loaded.projectName);
-      setNewDesc(loaded.description);
-      showToast("Workspace template reset.", "success");
-    }
+  const handleReset = async () => {
+    const approved = await requestConfirmation({
+      title: 'Reset the active project?',
+      description: 'All current modifications will be replaced with the default template configuration. This reset is not currently recoverable.',
+      confirmLabel: 'Reset project',
+      variant: 'destructive',
+    });
+    if (!approved) return;
+
+    resetProject();
+    const loaded = useProjectStore.getState();
+    setNewName(loaded.projectName);
+    setNewDesc(loaded.description);
+    notify({ tone: 'success', title: 'Workspace template reset' });
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,38 +115,35 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
+        allowStorageRecoveryOverwrite();
         const res = importProjectJSON(json);
         if (res.success) {
-          showToast(`Successfully imported project "${json.projectName}"`, "success");
+          notify({ tone: 'success', title: 'Project imported', detail: `Imported “${json.projectName || 'project'}”.` });
           const loaded = useProjectStore.getState();
           setNewName(loaded.projectName);
           setNewDesc(loaded.description);
         } else {
-          showToast(`Import failed: ${res.issues ? res.issues.map(issue => typeof issue === 'object' && issue !== null && 'message' in issue ? String(issue.message) : String(issue)).join(', ') : 'Validation errors'}`, "error");
+          notify({ tone: 'error', title: 'Project import failed', detail: res.issues ? res.issues.map(issue => typeof issue === 'object' && issue !== null && 'message' in issue ? String(issue.message) : String(issue)).join(', ') : 'Validation errors' });
         }
       } catch {
-        showToast("Invalid JSON file formatting.", "error");
+        notify({ tone: 'error', title: 'Invalid project file', detail: 'The selected file is not valid JSON.' });
       }
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const handleExportJSON = () => {
     const state = useProjectStore.getState();
     exportProjectJson(state);
-    showToast("Exported project JSON backup.", "success");
+    notify({ tone: 'success', title: 'JSON backup exported' });
   };
 
   const handleExportMD = () => {
     const state = useProjectStore.getState();
     exportProjectMarkdown(state);
-    showToast("Exported project Markdown report.", "success");
+    notify({ tone: 'success', title: 'Markdown report exported' });
   };
 
   return (
@@ -150,18 +159,6 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
       }
     >
       <div className="space-y-6">
-        {/* Toast Alert Banner */}
-        {toast && (
-          <div className={`p-3 rounded border text-xs font-mono flex items-center space-x-2 animate-in fade-in slide-in-from-top-2 duration-200 ${
-            toast.type === 'success' 
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-              : 'bg-rose-50 border-rose-200 text-rose-800'
-          }`}>
-            {toast.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-            <span>{toast.message}</span>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           
           {/* Column 1: Edit active project details */}
@@ -262,7 +259,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
                 </Button>
                 
                 <Button 
-                  onClick={handleReset}
+                  onClick={() => void handleReset()}
                   variant="outline" 
                   size="xs" 
                   className="w-full text-left justify-start border-rose-250 hover:bg-rose-50 text-rose-700"
@@ -313,7 +310,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
                       
                       {!isActive && projectsList.length > 1 && (
                         <button 
-                          onClick={() => handleDelete(p.id, p.projectName)}
+                          onClick={() => void handleDelete(p.id, p.projectName)}
                           className="text-slate-400 hover:text-rose-600 transition-colors p-0.5 rounded"
                           title="Delete Project"
                         >

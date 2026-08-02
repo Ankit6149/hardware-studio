@@ -2,6 +2,7 @@ import React from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { BoardDesignerUIState } from './boardInteraction';
 import { Eye, EyeOff, Layers } from 'lucide-react';
+import { useFeedback } from '../feedback/FeedbackProvider';
 
 interface BoardLayerPanelProps {
   viewState: BoardDesignerUIState;
@@ -22,7 +23,33 @@ const LAYER_DEFS = [
 
 export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onViewStateChange }) => {
   const { boards } = useProjectStore();
+  const { notify, prompt: requestText } = useFeedback();
   const { layerVisibility, activeLayerId, activeBoardId } = viewState;
+
+
+  const handleAddBoard = async () => {
+    const name = await requestText({
+      title: 'Create a PCB board',
+      description: 'Add a separate board document to this project. The board will start with default prototype settings that can be edited afterward.',
+      label: 'Board name',
+      defaultValue: `Multi-board Layout ${(boards || []).length + 1}`,
+      placeholder: 'Main controller board',
+      required: true,
+      minLength: 2,
+      maxLength: 80,
+      confirmLabel: 'Create board',
+    });
+    if (!name) return;
+
+    const state = useProjectStore.getState();
+    const newBoard = state.addBoard({
+      name,
+      mountingNotes: 'Added via Multi-board manager',
+    });
+    state.setActiveBoard(newBoard.id);
+    onViewStateChange({ activeBoardId: newBoard.id });
+    notify({ tone: 'success', title: 'PCB board created', detail: `Created “${name}” and made it active.` });
+  };
 
   const toggleLayer = (key: string) => {
     onViewStateChange({
@@ -61,18 +88,7 @@ export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onV
               ))}
             </select>
             <button
-              onClick={() => {
-                const name = window.prompt("Enter new PCB board name:", `Multi-board Layout ${(boards || []).length + 1}`);
-                if (name) {
-                  const state = useProjectStore.getState();
-                  const newBoard = state.addBoard({
-                    name,
-                    mountingNotes: 'Added via Multi-board manager'
-                  });
-                  state.setActiveBoard(newBoard.id);
-                  onViewStateChange({ activeBoardId: newBoard.id });
-                }
-              }}
+              onClick={() => void handleAddBoard()}
               className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 font-bold text-[9px] rounded"
               title="Add a new PCB board layer"
             >

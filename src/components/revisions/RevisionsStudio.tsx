@@ -12,9 +12,11 @@ import {
   ReleaseBlocker
 } from '../../lib/releaseEngine';
 import { GitBranch, Tag, ShieldCheck, AlertCircle, Plus, CheckCircle2 } from 'lucide-react';
+import { useFeedback } from '../feedback/FeedbackProvider';
 
 export const RevisionsStudio: React.FC = () => {
   const store = useProjectStore();
+  const { confirm: requestConfirmation, notify } = useFeedback();
   const [versionName, setVersionName] = useState('');
   const [branchName, setBranchName] = useState('');
   const [rcTag, setRcTag] = useState('');
@@ -57,18 +59,27 @@ export const RevisionsStudio: React.FC = () => {
     setRcTag('');
   };
 
-  const handleApproveRelease = (rcId: string) => {
+  const handleApproveRelease = async (rcId: string) => {
     const rc = releaseCandidates.find(r => r.id === rcId);
     if (!rc) return;
+
+    const approved = await requestConfirmation({
+      title: `Approve release candidate “${rc.name}”?`,
+      description: 'Approval publishes a release record from the current candidate. Hardware Studio does not yet provide a complete trusted-signature or release-withdrawal workflow, so review every blocker and artifact before continuing.',
+      confirmLabel: 'Approve release',
+      variant: 'default',
+    });
+    if (!approved) return;
+
     try {
       const rel = approveRelease(rc, 'Lead Hardware Engineer');
       store.updateProjectState({
         releases: [...(store.releases || []), rel]
       });
-      alert(`Release ${rel.name} approved and published cleanly!`);
+      notify({ tone: 'success', title: 'Release approved', detail: `${rel.name} was added to the project release history.` });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      alert(`Approval error: ${msg}`);
+      notify({ tone: 'error', title: 'Release approval failed', detail: msg, durationMs: 0 });
     }
   };
 
@@ -211,7 +222,7 @@ export const RevisionsStudio: React.FC = () => {
 
                 {rc.status === 'Release Candidate' && (
                   <button
-                    onClick={() => handleApproveRelease(rc.id)}
+                    onClick={() => void handleApproveRelease(rc.id)}
                     className="w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs rounded transition-all"
                   >
                     Approve Release Sign-Off
