@@ -44,6 +44,7 @@ export const KnowledgeProvider: React.FC<React.PropsWithChildren> = ({ children 
     <KnowledgeContext.Provider value={value}>
       {children}
       <KnowledgeDrawer
+        key={`${isOpen ? 'open' : 'closed'}:${requestedEntryId ?? 'index'}`}
         isOpen={isOpen}
         requestedEntryId={requestedEntryId}
         onOpenChange={setIsOpen}
