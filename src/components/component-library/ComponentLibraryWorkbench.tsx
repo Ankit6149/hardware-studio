@@ -105,7 +105,7 @@ function parsePins(value: string): ComponentPinDefinition[] {
         number: number || String(index + 1),
         name: name || `PIN${index + 1}`,
         electricalType,
-        required: required.toLowerCase() === 'true',
+        required: required?.toLowerCase() === 'true',
       };
     });
 }
@@ -189,9 +189,9 @@ function FootprintPreview({ component }: { component: ElectronicComponentDefinit
 export const ComponentLibraryWorkbench: React.FC = () => {
   const store = useProjectStore();
   const {
-    boardComponents,
-    boards,
-    circuitBlocks,
+    boardComponents = [],
+    boards = [],
+    circuitBlocks = [],
     customComponentLibrary = [],
     addBoardComponent,
     addBOMItem,
@@ -295,7 +295,7 @@ export const ComponentLibraryWorkbench: React.FC = () => {
   const addSelectedToProject = () => {
     if (!selectedComponent) return;
     const prefix = referencePrefix(selectedComponent.category);
-    const existing = new Set((boardComponents || []).map((component) => component.referenceDesignator));
+    const existing = new Set(boardComponents.map((component) => component.referenceDesignator));
     let index = 1;
     while (existing.has(`${prefix}${index}`)) index += 1;
     const referenceDesignator = `${prefix}${index}`;
