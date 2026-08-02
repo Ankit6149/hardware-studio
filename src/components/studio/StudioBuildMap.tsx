@@ -127,7 +127,7 @@ export const StudioBuildMap: React.FC = () => {
           <span className="mr-1 shrink-0 text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-500">Connected path</span>
           {ELECTRONICS_FLOW.map((step, index) => {
             const Icon = step.icon;
-            const active = activeView === step.id || (step.id === 'pcb-drc' && activeView === 'board-designer');
+            const active = activeView === step.id;
             return (
               <React.Fragment key={step.id}>
                 {index > 0 && <span className="shrink-0 text-slate-300" aria-hidden="true">→</span>}
