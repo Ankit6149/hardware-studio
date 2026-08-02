@@ -25,10 +25,10 @@ import { FactoryPackageBuilder } from './FactoryPackageBuilder';
 import { RevisionsStudio } from './revisions/RevisionsStudio';
 import { ProductStudio } from './product/ProductStudio';
 import { FirmwareStudio } from './firmware/FirmwareStudio';
-import { ValidationStudio } from './validation/ValidationStudio';
 import { StudioBuildMap } from './studio/StudioBuildMap';
 import { EngineeringContextBar } from './studio/EngineeringContextBar';
 import { UnifiedBOMWorkbench } from './studio/UnifiedBOMWorkbench';
+import { UnifiedValidationWorkbench } from './studio/UnifiedValidationWorkbench';
 import {
   UnifiedBoardDesignerWorkbench,
   UnifiedComponentLibraryWorkbench,
@@ -56,9 +56,9 @@ function renderSurface(surface: NavigationSurface): React.ReactNode {
     case 'firmware-state-machine': return <FirmwareStudio initialMode="state-machine" />;
     case 'firmware-hardware-map': return <FirmwareStudio initialMode="hardware-map" />;
     case 'firmware-source': return <FirmwareStudio initialMode="source" />;
-    case 'validation-tests': return <ValidationStudio initialMode="tests" />;
-    case 'validation-coverage': return <ValidationStudio initialMode="coverage" />;
-    case 'validation-factory-qa': return <ValidationStudio initialMode="factory-qa" />;
+    case 'validation-tests': return <UnifiedValidationWorkbench initialMode="tests" />;
+    case 'validation-coverage': return <UnifiedValidationWorkbench initialMode="coverage" />;
+    case 'validation-factory-qa': return <UnifiedValidationWorkbench initialMode="factory-qa" />;
     case 'blueprint-sheets': return <BlueprintSheets />;
     case 'exports': return <ExportCenter />;
     case 'revisions': return <RevisionsStudio />;
