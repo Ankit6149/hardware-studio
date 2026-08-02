@@ -19,14 +19,14 @@ import { getDomainIdForView, type WorkflowDomainId } from '../../lib/workflowPro
 import { useProjectStore } from '../../store/projectStore';
 import { useWorkflowPreferencesStore } from '../../store/workflowPreferencesStore';
 
-interface BuildStage {
+export interface BuildStage {
   id: WorkflowDomainId;
   label: string;
   viewId: string;
   icon: LucideIcon;
 }
 
-const BUILD_STAGES: readonly BuildStage[] = [
+export const BUILD_STAGES: readonly BuildStage[] = [
   { id: 'product', label: 'Product', viewId: 'requirements', icon: Shapes },
   { id: 'mechanical', label: 'Mechanical', viewId: 'mechanical-studio', icon: Wrench },
   { id: 'electronics', label: 'Electronics', viewId: 'component-library', icon: Cpu },
@@ -36,7 +36,7 @@ const BUILD_STAGES: readonly BuildStage[] = [
   { id: 'outputs', label: 'Outputs', viewId: 'exports', icon: PackageCheck },
 ];
 
-const ELECTRONICS_FLOW = [
+export const ELECTRONICS_FLOW = [
   { id: 'component-library', label: 'Components', icon: Boxes },
   { id: 'schematic-editor', label: 'Schematic', icon: PenTool },
   { id: 'board-settings', label: 'Board setup', icon: CircuitBoard },
