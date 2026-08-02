@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { VisualFamilyId } from '../../lib/visual/representationRegistry';
@@ -93,7 +93,10 @@ function buildFamilyModel(familyId: VisualFamilyId): THREE.Group {
     }
     case 'led': {
       addCylinder(group, 1.1, 2.1, [0, 0.45, 0], 0xef4444);
-      const dome = new THREE.Mesh(new THREE.SphereGeometry(1.1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), material(0xf87171, { transparent: true, opacity: 0.75 }));
+      const dome = new THREE.Mesh(
+        new THREE.SphereGeometry(1.1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+        material(0xf87171, { transparent: true, opacity: 0.75 }),
+      );
       dome.position.y = 1.5;
       group.add(dome);
       addCylinder(group, 0.09, 2.4, [-0.35, -1.75, 0], 0xcbd5e1);
@@ -117,7 +120,9 @@ function buildFamilyModel(familyId: VisualFamilyId): THREE.Group {
       addBox(group, [6.2, 0.45, 4.2], [0, -0.25, 0], 0x047857);
       addBox(group, [2.5, 0.75, 2.5], [0, 0.35, 0], 0x1f2937);
       addBox(group, [0.8, 0.35, 0.8], [-2.1, 0.18, 1.15], 0xd1d5db, { metalness: 0.55 });
-      for (let index = 0; index < 4; index += 1) addCylinder(group, 0.17, 0.3, [-2.2 + index * 1.45, -0.25, 1.7], 0xd4af37, [Math.PI / 2, 0, 0]);
+      for (let index = 0; index < 4; index += 1) {
+        addCylinder(group, 0.17, 0.3, [-2.2 + index * 1.45, -0.25, 1.7], 0xd4af37, [Math.PI / 2, 0, 0]);
+      }
       break;
     }
     case 'voltage-regulator': {
@@ -167,9 +172,16 @@ function buildFamilyModel(familyId: VisualFamilyId): THREE.Group {
       break;
     }
     case 'enclosure': {
-      const outer = addBox(group, [8.5, 4.6, 6.2], [0, 0, 0], 0x64748b, { transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+      const outer = addBox(group, [8.5, 4.6, 6.2], [0, 0, 0], 0x64748b, {
+        transparent: true,
+        opacity: 0.35,
+        side: THREE.DoubleSide,
+      });
       outer.material.depthWrite = false;
-      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(outer.geometry), new THREE.LineBasicMaterial({ color: 0xcbd5e1 }));
+      const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(outer.geometry),
+        new THREE.LineBasicMaterial({ color: 0xcbd5e1 }),
+      );
       edges.position.copy(outer.position);
       group.add(edges);
       addBox(group, [6.7, 0.4, 4.5], [0, -1.1, 0], 0x047857);
@@ -180,11 +192,19 @@ function buildFamilyModel(familyId: VisualFamilyId): THREE.Group {
       addBox(group, [3.2, 0.85, 3.2], [-1.1, 0.35, 0.3], 0x111827);
       addBox(group, [2.3, 1.25, 1.7], [2.7, 0.55, -1.4], 0x334155);
       addCylinder(group, 0.75, 1.3, [2.8, 0.45, 1.6], 0x1d4ed8);
-      for (const x of [-3.8, 3.8]) for (const z of [-2.3, 2.3]) addCylinder(group, 0.22, 0.55, [x, -0.3, z], 0xd4af37, [Math.PI / 2, 0, 0]);
+      for (const x of [-3.8, 3.8]) {
+        for (const z of [-2.3, 2.3]) {
+          addCylinder(group, 0.22, 0.55, [x, -0.3, z], 0xd4af37, [Math.PI / 2, 0, 0]);
+        }
+      }
       break;
     }
     case 'product-system': {
-      const outer = addBox(group, [8, 4.8, 6], [0, 0, 0], 0x334155, { transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+      const outer = addBox(group, [8, 4.8, 6], [0, 0, 0], 0x334155, {
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.DoubleSide,
+      });
       outer.material.depthWrite = false;
       addBox(group, [5.8, 0.4, 3.8], [0, -1, 0], 0x047857);
       addBox(group, [2.4, 1, 2.4], [0, -0.2, 0], 0x111827);
@@ -203,13 +223,19 @@ function buildFamilyModel(familyId: VisualFamilyId): THREE.Group {
   return group;
 }
 
+function renderWebGLUnavailable(mount: HTMLDivElement) {
+  const message = document.createElement('div');
+  message.className = 'absolute inset-0 grid place-items-center p-6 text-center text-sm text-slate-300';
+  message.textContent = 'WebGL is unavailable on this device or browser session.';
+  mount.replaceChildren(message);
+}
+
 export const Lightweight3DPreview: React.FC<Lightweight3DPreviewProps> = ({
   familyId,
   quality = 'balanced',
   className = '',
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -224,11 +250,10 @@ export const Lightweight3DPreview: React.FC<Lightweight3DPreviewProps> = ({
         preserveDrawingBuffer: false,
       });
     } catch {
-      setError('WebGL is unavailable on this device or browser session.');
+      renderWebGLUnavailable(mount);
       return;
     }
 
-    setError(null);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
     camera.position.set(10, 8, 12);
@@ -320,11 +345,6 @@ export const Lightweight3DPreview: React.FC<Lightweight3DPreviewProps> = ({
   return (
     <div className={`relative min-h-[260px] overflow-hidden rounded-xl border border-slate-700 bg-slate-950 ${className}`}>
       <div ref={mountRef} className="absolute inset-0" />
-      {error && (
-        <div className="absolute inset-0 grid place-items-center p-6 text-center text-sm text-slate-300">
-          {error}
-        </div>
-      )}
       <div className="pointer-events-none absolute bottom-2 left-2 rounded-md border border-slate-700 bg-slate-950/85 px-2 py-1 text-[10px] font-semibold text-slate-300 backdrop-blur-sm">
         Visualization only · drag to orbit · wheel to zoom · no continuous animation
       </div>
