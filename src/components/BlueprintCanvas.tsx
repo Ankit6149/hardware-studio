@@ -1,4 +1,13 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+'use client';
+
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -6,254 +15,285 @@ import {
   Background,
   useReactFlow,
   ReactFlowProvider,
+  useStore,
   Handle,
   Position,
   NodeProps,
   Connection,
   NodeChange,
+  MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Eye, Info, Network, ShieldAlert } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { CustomNode, NodeData } from '../types';
 import { BlockLibraryItem } from '../data/blockLibrary';
+import {
+  ArchitecturePort,
+  portHandleId,
+  portKindFromHandleId,
+  portKindStyles,
+  resolveVisualFamily,
+  resolveVisualFamilyId,
+} from '../lib/visual/representationRegistry';
+import { ArchitectureGlyph } from './visual/DeviceVisual';
+import { RepresentationInspector } from './visual/RepresentationInspector';
 
-// Status colors styling helper
 const getStatusClasses = (status: NodeData['status']) => {
   switch (status) {
-    case 'MVP':
-      return {
-        bg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-        dot: 'bg-emerald-500'
-      };
-    case 'Later':
-      return {
-        bg: 'bg-slate-50 text-slate-600 border-slate-200',
-        dot: 'bg-slate-400'
-      };
-    case 'Future':
-      return {
-        bg: 'bg-purple-50 text-purple-800 border-purple-200',
-        dot: 'bg-purple-500'
-      };
-    case 'External':
-      return {
-        bg: 'bg-slate-100 text-slate-500 border-slate-200',
-        dot: 'bg-slate-400'
-      };
-    case 'Risk':
-      return {
-        bg: 'bg-rose-50 text-rose-800 border-rose-200',
-        dot: 'bg-rose-500 animate-pulse'
-      };
-    case 'Complete':
-      return {
-        bg: 'bg-blue-50 text-blue-800 border-blue-200',
-        dot: 'bg-blue-500'
-      };
-    default:
-      return {
-        bg: 'bg-gray-50 text-gray-700 border-gray-200',
-        dot: 'bg-gray-400'
-      };
+    case 'MVP': return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+    case 'Later': return 'border-slate-200 bg-slate-50 text-slate-600';
+    case 'Future': return 'border-purple-200 bg-purple-50 text-purple-800';
+    case 'External': return 'border-slate-200 bg-slate-100 text-slate-500';
+    case 'Risk': return 'border-rose-200 bg-rose-50 text-rose-800';
+    case 'Complete': return 'border-blue-200 bg-blue-50 text-blue-800';
+    default: return 'border-slate-200 bg-slate-50 text-slate-700';
   }
 };
 
-// Category indicator helper
-const getCategoryColor = (cat: string) => {
-  switch (cat) {
-    case 'Product': return 'bg-slate-800';
-    case 'Interaction': return 'bg-pink-500';
-    case 'Electronics': return 'bg-cyan-500';
-    case 'Firmware': return 'bg-violet-500';
-    case 'Mechanical': return 'bg-amber-500';
-    case 'Power': return 'bg-yellow-500';
-    case 'Software': return 'bg-indigo-500';
-    case 'Testing': return 'bg-rose-500';
-    default: return 'bg-slate-400';
-  }
-};
+interface RepresentationInspectorContextValue {
+  inspect: (data: NodeData) => void;
+}
 
-// --- CUSTOM BLOCK NODE ---
-const BlockNode: React.FC<NodeProps<CustomNode>> = ({ data, selected }) => {
-  const statusStyles = getStatusClasses(data.status);
-  const categoryBarColor = getCategoryColor(data.category);
+const RepresentationInspectorContext = createContext<RepresentationInspectorContextValue | null>(null);
+
+function useRepresentationInspector() {
+  const value = useContext(RepresentationInspectorContext);
+  if (!value) throw new Error('Architecture nodes require RepresentationInspectorContext');
+  return value;
+}
+
+function portPosition(index: number, count: number): string {
+  if (count <= 1) return '50%';
+  return `${24 + (52 * index) / (count - 1)}%`;
+}
+
+function splitPorts(ports: readonly ArchitecturePort[]) {
+  const inputs: ArchitecturePort[] = [];
+  const outputs: ArchitecturePort[] = [];
+  ports.forEach((port, index) => {
+    if (port.direction === 'input') inputs.push(port);
+    else if (port.direction === 'output') outputs.push(port);
+    else if (index % 2 === 0) inputs.push(port);
+    else outputs.push(port);
+  });
+  return { inputs, outputs };
+}
+
+const ArchitectureNode: React.FC<NodeProps<CustomNode>> = ({ data, selected }) => {
+  const family = resolveVisualFamily(data);
+  const familyId = resolveVisualFamilyId(data);
+  const zoom = useStore((state) => state.transform[2]);
+  const { inspect } = useRepresentationInspector();
+  const compact = zoom < 0.58;
+  const medium = zoom >= 0.58 && zoom < 0.88;
+  const { inputs, outputs } = splitPorts(family.ports);
+
+  const renderPorts = (ports: ArchitecturePort[], side: 'left' | 'right') => ports.map((port, index) => {
+    const styles = portKindStyles[port.kind];
+    const top = portPosition(index, ports.length);
+    const isLeft = side === 'left';
+    return (
+      <React.Fragment key={`${side}-${port.id}`}>
+        <Handle
+          type={isLeft ? 'target' : 'source'}
+          id={portHandleId(port)}
+          position={isLeft ? Position.Left : Position.Right}
+          title={`${port.label}: ${port.description}`}
+          className="!h-3 !w-3 !border-2 !border-white shadow-sm transition-transform hover:!scale-125"
+          style={{ top, backgroundColor: styles.color }}
+        />
+        {!compact && (
+          <span
+            className={`pointer-events-none absolute z-10 max-w-[82px] truncate rounded border border-slate-200 bg-white/95 px-1.5 py-0.5 text-[8px] font-bold text-slate-600 shadow-sm ${isLeft ? '-left-2 -translate-x-full text-right' : '-right-2 translate-x-full text-left'}`}
+            style={{ top, transform: `${isLeft ? 'translate(-100%, -50%)' : 'translate(100%, -50%)'}` }}
+            aria-hidden="true"
+          >
+            {port.label}
+          </span>
+        )}
+      </React.Fragment>
+    );
+  });
+
+  if (compact) {
+    return (
+      <div
+        className={`relative grid h-[92px] w-[118px] place-items-center rounded-[24px] border bg-white shadow-sm transition ${selected ? 'border-slate-950 ring-2 ring-slate-950/15' : 'border-slate-200'}`}
+        title={`${data.name}: ${family.description}`}
+      >
+        {renderPorts(inputs, 'left')}
+        {renderPorts(outputs, 'right')}
+        <div className="grid h-12 w-12 place-items-center rounded-2xl" style={{ backgroundColor: family.accent, color: family.color }}>
+          <ArchitectureGlyph familyId={familyId} className="h-8 w-8" />
+        </div>
+        <span className="absolute bottom-2 max-w-[100px] truncate text-[9px] font-bold text-slate-800">{data.name}</span>
+      </div>
+    );
+  }
 
   return (
-    <div 
-      className={`bg-white rounded-lg border text-slate-800 text-[11px] w-52 overflow-hidden transition-all duration-200 select-none shadow-[0_1px_3px_rgba(15,23,42,0.03),0_1px_2px_rgba(15,23,42,0.02)] ${
-        selected 
-          ? 'border-slate-900 shadow-[0_4px_12px_rgba(15,23,42,0.08),0_2px_4px_rgba(15,23,42,0.04)] ring-[1.5px] ring-slate-900' 
-          : 'border-slate-200 hover:border-slate-350 hover:shadow-[0_2px_6px_rgba(15,23,42,0.04)]'
-      }`}
+    <article
+      className={`relative w-[244px] overflow-visible rounded-[22px] border bg-white text-slate-800 shadow-[0_8px_28px_rgba(15,23,42,0.08)] transition-all duration-150 ${selected ? 'border-slate-950 ring-2 ring-slate-950/10' : 'border-slate-200 hover:border-slate-300'}`}
+      aria-label={`${data.name}, ${family.label} architecture node`}
     >
-      {/* Handles */}
-      <Handle type="target" position={Position.Left} className="w-1.5 h-1.5 bg-slate-400 hover:bg-slate-600 transition-colors" />
-      <Handle type="source" position={Position.Right} className="w-1.5 h-1.5 bg-slate-400 hover:bg-slate-600 transition-colors" />
+      {renderPorts(inputs, 'left')}
+      {renderPorts(outputs, 'right')}
 
-      {/* Top Accent Category Bar */}
-      <div className={`h-1 w-full ${categoryBarColor}`} />
-
-      <div className="p-3 space-y-2.5">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-[8px] font-mono font-bold tracking-widest text-slate-400 uppercase">
-            {data.category}
-          </span>
-          <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-md border uppercase tracking-wider scale-95 shrink-0 ${statusStyles.bg}`}>
-            {data.status}
-          </span>
+      <div className="overflow-hidden rounded-[21px]">
+        <div className="flex items-start gap-3 border-b border-slate-100 p-3.5" style={{ background: `linear-gradient(135deg, ${family.accent}, #ffffff)` }}>
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/80 bg-white/80 shadow-sm" style={{ color: family.color }}>
+            <ArchitectureGlyph familyId={familyId} className="h-8 w-8" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-[9px] font-extrabold uppercase tracking-[0.13em]" style={{ color: family.color }}>{family.shortLabel} · {data.category}</span>
+              <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide ${getStatusClasses(data.status)}`}>{data.status}</span>
+            </div>
+            <h3 className="mt-1.5 line-clamp-2 text-[13px] font-extrabold leading-4 text-slate-950">{data.name}</h3>
+            {!medium && <p className="mt-1 line-clamp-2 text-[10px] leading-[16px] text-slate-600">{data.description || family.description}</p>}
+          </div>
         </div>
 
-        {/* Name */}
-        <div className="font-bold text-xs text-slate-900 leading-snug truncate" title={data.name}>
-          {data.name}
-        </div>
+        {!medium && (
+          <div className="space-y-2.5 p-3.5">
+            <div className="flex flex-wrap gap-1.5">
+              {family.ports.slice(0, 4).map((port) => (
+                <span key={port.id} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[8px] font-bold uppercase tracking-wide text-slate-600">
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: portKindStyles[port.kind].color }} />
+                  {portKindStyles[port.kind].label}
+                </span>
+              ))}
+              {family.ports.length > 4 && <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[8px] font-bold text-slate-500">+{family.ports.length - 4}</span>}
+            </div>
 
-        {/* Description */}
-        {data.description && (
-          <p className="text-[10px] text-slate-500 leading-normal line-clamp-2">
-            {data.description}
-          </p>
-        )}
-
-        {/* Specs / Components Footer */}
-        {(data.candidateComponents || data.requirements) && (
-          <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[9px]">
-            {data.candidateComponents ? (
-              <span className="truncate max-w-[120px] bg-slate-100/80 text-slate-600 px-1.5 py-0.5 rounded font-mono text-[8px] border border-slate-200/50" title={data.candidateComponents}>
-                {data.candidateComponents}
-              </span>
-            ) : (
-              <span className="text-slate-400 italic">No component</span>
+            {data.candidateComponents && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2">
+                <p className="text-[8px] font-bold uppercase tracking-wide text-slate-400">Candidate / linked hardware</p>
+                <p className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-600">{data.candidateComponents}</p>
+              </div>
             )}
           </div>
         )}
+
+        <button
+          type="button"
+          className="nodrag flex w-full items-center justify-between border-t border-slate-100 bg-white px-3.5 py-2 text-[9px] font-bold text-slate-600 transition hover:bg-slate-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            inspect(data);
+          }}
+        >
+          <span className="inline-flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" aria-hidden="true" />Inspect all representations</span>
+          <span aria-hidden="true">→</span>
+        </button>
       </div>
-    </div>
+    </article>
   );
 };
 
-// --- CUSTOM BOUNDARY NODE ---
 const BoundaryNode: React.FC<NodeProps<CustomNode>> = ({ data, selected }) => {
-  const isMvp = data.status === 'MVP';
-  const isLater = data.status === 'Later';
-  const isFuture = data.status === 'Future';
-
-  const boundaryColorClass = isMvp 
-    ? 'border-emerald-400 bg-emerald-500/[0.02] text-emerald-800' 
-    : isLater 
-      ? 'border-slate-350 bg-slate-500/[0.01] text-slate-700' 
-      : isFuture 
-        ? 'border-purple-400 bg-purple-500/[0.02] text-purple-800'
-        : 'border-slate-400 bg-slate-500/[0.02] text-slate-800';
-
+  const family = resolveVisualFamily(data);
   return (
-    <div 
-      className={`border-2 border-dashed rounded-xl h-full w-full p-4 pointer-events-none select-none relative transition-all ${boundaryColorClass} ${
-        selected ? 'ring-2 ring-slate-900 border-slate-900 shadow-sm' : ''
-      }`}
+    <div
+      className={`relative h-full w-full rounded-[28px] border-2 border-dashed p-4 text-slate-700 transition ${selected ? 'border-slate-950 ring-2 ring-slate-950/10' : 'border-slate-300'} bg-white/35`}
+      style={{ borderColor: selected ? '#0f172a' : family.color }}
     >
-      <div className="absolute -top-3 left-4 flex items-center space-x-1.5 select-none">
-        <span className={`text-[9px] font-extrabold uppercase tracking-widest border px-2 py-0.5 rounded-md shadow-sm bg-white ${
-          isMvp ? 'text-emerald-700 border-emerald-200' : 'text-slate-700 border-slate-200'
-        }`}>
-          {data.name} &bull; {data.status}
-        </span>
-        {data.notes && (
-          <span className="text-[9px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-md border border-slate-200/80 shadow-sm">
-            {data.notes}
-          </span>
-        )}
+      <div className="absolute -top-4 left-5 flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
+        <ArchitectureGlyph familyId={resolveVisualFamilyId(data)} className="h-4 w-4" />
+        <span className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-slate-800">{data.name}</span>
+        <span className={`rounded-full border px-1.5 py-0.5 text-[7px] font-extrabold uppercase ${getStatusClasses(data.status)}`}>{data.status}</span>
       </div>
     </div>
   );
 };
 
-// Define node types memoized
 const nodeTypes = {
-  blockNode: BlockNode,
+  blockNode: ArchitectureNode,
   boundaryNode: BoundaryNode,
 };
 
 const BlueprintCanvasContent: React.FC = () => {
-  const { 
-    activeView, 
-    nodes, 
-    edges, 
-    setSelectedNodeId, 
-    updateNodePosition, 
+  const {
+    activeView,
+    nodes,
+    edges,
+    setSelectedNodeId,
+    updateNodePosition,
     addEdge,
-    addNode
+    addNode,
   } = useProjectStore();
-
+  const [inspectedNode, setInspectedNode] = useState<NodeData | null>(null);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const reactFlowInstance = useReactFlow();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
-  // Filter nodes & edges for the current view
-  const viewNodes = useMemo(() => {
-    return nodes.filter(node => node.data.views && node.data.views.includes(activeView));
-  }, [nodes, activeView]);
+  const viewNodes = useMemo(
+    () => nodes.filter((node) => node.data.views && node.data.views.includes(activeView)),
+    [nodes, activeView],
+  );
 
-  const viewEdges = useMemo(() => {
-    return edges.filter(edge => edge.views && edge.views.includes(activeView));
-  }, [edges, activeView]);
+  const viewEdges = useMemo(
+    () => edges
+      .filter((edge) => edge.views && edge.views.includes(activeView))
+      .map((edge) => {
+        const kind = portKindFromHandleId(edge.sourceHandle) ?? portKindFromHandleId(edge.targetHandle);
+        const visual = kind ? portKindStyles[kind] : portKindStyles.dependency;
+        return {
+          ...edge,
+          type: 'smoothstep',
+          animated: kind === 'wireless',
+          style: { stroke: visual.color, strokeWidth: 2, strokeDasharray: visual.dash },
+          markerEnd: { type: MarkerType.ArrowClosed, color: visual.color, width: 16, height: 16 },
+          labelStyle: { fill: '#475569', fontSize: 10, fontWeight: 700 },
+          labelBgStyle: { fill: '#ffffff', fillOpacity: 0.92 },
+          labelBgPadding: [4, 3] as [number, number],
+          labelBgBorderRadius: 5,
+        };
+      }),
+    [edges, activeView],
+  );
 
-  // Handle position changes on drag end or drag progress
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     changes.forEach((change) => {
-      if (change.type === 'position' && change.position && change.id) {
-        updateNodePosition(change.id, change.position);
-      }
+      if (change.type === 'position' && change.position && change.id) updateNodePosition(change.id, change.position);
     });
   }, [updateNodePosition]);
 
-  // Handle node selection
   const onNodeClick = useCallback((_: React.MouseEvent, node: CustomNode) => {
     setSelectedNodeId(node.id);
   }, [setSelectedNodeId]);
 
-  // Deselect node on clicking canvas background
-  const onPaneClick = useCallback(() => {
-    setSelectedNodeId(null);
-  }, [setSelectedNodeId]);
+  const onPaneClick = useCallback(() => setSelectedNodeId(null), [setSelectedNodeId]);
 
-  // Handle edge connects
   const onConnect = useCallback((params: Connection) => {
+    const kind = portKindFromHandleId(params.sourceHandle) ?? portKindFromHandleId(params.targetHandle);
     addEdge({
       id: `edge_${Date.now()}`,
       source: params.source,
       target: params.target,
+      sourceHandle: params.sourceHandle,
+      targetHandle: params.targetHandle,
       views: [activeView],
-      label: ''
+      label: kind ? portKindStyles[kind].label : '',
     });
   }, [addEdge, activeView]);
 
-  // Drag over handler for HTML5 drag-and-drop
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
-  // Drop handler to place node on coordinates
   const onDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-
     if (!reactFlowWrapper.current || !reactFlowInstance) return;
-
-    const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
     const dataStr = event.dataTransfer.getData('application/reactflow-item');
-    
     if (!dataStr) return;
-    
+
     try {
       const item: BlockLibraryItem = JSON.parse(dataStr);
-      
-      // Calculate coordinates relative to flow viewport zoom & pan
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      });
-
+      const position = reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY });
       addNode({
         type: item.type,
         position,
@@ -271,45 +311,74 @@ const BlueprintCanvasContent: React.FC = () => {
           notes: item.notes,
           testingNotes: item.testingNotes,
           views: [activeView],
-          positions: {}
-        }
+          positions: {},
+        },
       });
-    } catch (err) {
-      console.error("Failed to add node via drop:", err);
+    } catch (error) {
+      console.error('Failed to add architecture node from library', error);
     }
   }, [reactFlowInstance, activeView, addNode]);
 
+  const inspectorValue = useMemo<RepresentationInspectorContextValue>(() => ({
+    inspect: (data) => {
+      setInspectedNode(data);
+      setIsInspectorOpen(true);
+    },
+  }), []);
+
   return (
-    <div ref={reactFlowWrapper} className="w-full h-full relative" onDragOver={onDragOver} onDrop={onDrop}>
-      {activeView === 'hardware-studio' && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-amber-50 text-amber-800 border border-amber-200 rounded px-3 py-1 text-[10px] font-bold uppercase tracking-wider z-10 shadow-sm pointer-events-none">
-          External Software Layer — Not inside physical wearable device
+    <RepresentationInspectorContext.Provider value={inspectorValue}>
+      <div ref={reactFlowWrapper} className="relative h-full w-full" onDragOver={onDragOver} onDrop={onDrop}>
+        <div className="pointer-events-none absolute left-4 top-4 z-10 max-w-sm rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.13em] text-slate-800"><Network className="h-4 w-4 text-indigo-600" aria-hidden="true" />System architecture</div>
+          <p className="mt-1 text-[10px] leading-4 text-slate-500">Semantic device and function visuals with typed ports. Use Schematic and PCB workbenches for exact electrical and footprint geometry.</p>
         </div>
-      )}
-      <ReactFlow
-        nodes={viewNodes}
-        edges={viewEdges}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        onConnect={onConnect}
-        fitView
-      >
-        <Background gap={14} size={1} color="#e2e8f0" />
-        <Controls showInteractive={false} className="bg-white border border-gray-200 rounded shadow-sm text-slate-700" />
-        <MiniMap zoomable pannable nodeColor="#cbd5e1" className="border border-gray-200 rounded shadow-sm" />
-      </ReactFlow>
-    </div>
+
+        <div className="pointer-events-none absolute bottom-4 left-4 z-10 hidden max-w-md items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/95 px-3 py-2 text-[10px] leading-4 text-amber-900 shadow-sm backdrop-blur-sm md:flex">
+          <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Images and 3D previews improve recognition only; unresolved package, footprint, or CAD data remains unresolved.
+        </div>
+
+        <ReactFlow
+          nodes={viewNodes}
+          edges={viewEdges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
+          onConnect={onConnect}
+          fitView
+          minZoom={0.2}
+          maxZoom={1.8}
+          defaultEdgeOptions={{ type: 'smoothstep' }}
+          proOptions={{ hideAttribution: false }}
+        >
+          <Background gap={18} size={1} color="#dbe3ed" />
+          <Controls showInteractive={false} className="rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm" />
+          <MiniMap
+            zoomable
+            pannable
+            nodeColor={(node) => resolveVisualFamily(node.data as NodeData).color}
+            maskColor="rgba(241,245,249,0.72)"
+            className="rounded-lg border border-slate-200 bg-white shadow-sm"
+          />
+        </ReactFlow>
+
+        <RepresentationInspector
+          key={`${inspectedNode?.name ?? 'none'}:${isInspectorOpen ? 'open' : 'closed'}`}
+          nodeData={inspectedNode}
+          open={isInspectorOpen}
+          onOpenChange={setIsInspectorOpen}
+        />
+      </div>
+    </RepresentationInspectorContext.Provider>
   );
 };
 
-export const BlueprintCanvas: React.FC = () => {
-  return (
-    <div className="flex-1 h-full min-h-0 bg-slate-50 flex flex-col relative overflow-hidden">
-      <ReactFlowProvider>
-        <BlueprintCanvasContent />
-      </ReactFlowProvider>
-    </div>
-  );
-};
+export const BlueprintCanvas: React.FC = () => (
+  <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-50">
+    <ReactFlowProvider>
+      <BlueprintCanvasContent />
+    </ReactFlowProvider>
+  </div>
+);
