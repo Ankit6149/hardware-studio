@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defaultComponents } from '../lib/components/componentLibrary';
+import { normalizeProjectComponent } from '../lib/projectMigrations';
 import { useProjectStore } from '../store/projectStore';
 import { useStudioContextStore } from '../store/studioContextStore';
 import type { BOMItem } from '../types';
@@ -26,7 +27,7 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
     useStudioContextStore.getState().clearContext();
   });
 
-  it('keeps the same component IDs, representations, pins, net, board, sourcing, and validation links', () => {
+  it('keeps the same component IDs, pins, net, board, sourcing, and validation links', () => {
     const store = useProjectStore.getState();
     const definitions = defaultComponents.filter((definition) => definition.pins.length > 0).slice(0, 2);
     expect(definitions).toHaveLength(2);
@@ -57,8 +58,8 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
     expect(source.id).not.toBe(target.id);
     expect(source.libraryId).toBe(definitions[0].libraryId);
     expect(target.libraryId).toBe(definitions[1].libraryId);
-    expect(source.packageDimensions).toEqual(definitions[0].packageDimensions);
-    expect(source.footprintSvg).toBe(definitions[0].footprintSvg);
+    expect(source.packageName).toBe(definitions[0].package);
+    expect(source.footprint).toBe(definitions[0].footprint);
     expect(source.manufacturer).toBe(definitions[0].manufacturer);
 
     store.placeComponentOnSchematic(source.id, 120, 160);
@@ -135,13 +136,13 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
       id: source.id,
       boardId: board.id,
       libraryId: definitions[0].libraryId,
+      packageName: definitions[0].package,
+      footprint: definitions[0].footprint,
+      manufacturer: definitions[0].manufacturer,
       bomItemId: bomId,
       schematic: expect.objectContaining({ placed: true }),
       pcb: expect.objectContaining({ placed: true, xMm: 12, yMm: 16, side: 'Top' }),
     });
-    expect(finalSource?.packageDimensions).toEqual(definitions[0].packageDimensions);
-    expect(finalSource?.footprintSvg).toBe(definitions[0].footprintSvg);
-    expect(finalSource?.manufacturer).toBe(definitions[0].manufacturer);
     expect(finalTarget).toMatchObject({
       id: target.id,
       boardId: board.id,
@@ -164,5 +165,67 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
       linkedNetIds: [connection.net.id],
       status: 'Not Started',
     });
+  });
+
+  it('preserves optional representation and CAD metadata while normalizing legacy pins', () => {
+    const normalized = normalizeProjectComponent({
+      id: 'comp_legacy_sensor',
+      libraryId: 'sensor-reviewed-v3',
+      referenceDesignator: 'U7',
+      componentName: 'Qualified Sensor',
+      componentType: 'Sensor',
+      value: 'SENSOR-X',
+      boardId: 'board_main',
+      circuitBlockId: 'block_sensing',
+      packageName: 'LGA-12',
+      footprint: 'LGA-12_2.5x3.0mm',
+      manufacturer: 'Example Devices',
+      description: 'Reviewed component metadata.',
+      footprintSvg: '<svg viewBox="0 0 100 100"></svg>',
+      packageDimensions: { widthMm: 3, heightMm: 2.5, heightZMm: 0.8 },
+      packageOutline: { widthMm: 3, heightMm: 2.5, courtyardMm: 0.25 },
+      symbolRevisionId: 'symbol-rev-3',
+      footprintRevisionId: 'footprint-rev-5',
+      cadModelRevisionId: 'cad-rev-2',
+      model3dUrl: '/models/sensor-x.glb',
+      sourceLicense: 'Reviewed vendor distribution terms',
+      qualificationStatus: 'Reviewed',
+      pins: [{
+        number: '1',
+        name: 'VDD',
+        electricalType: 'PowerIn',
+        required: true,
+        voltage: 3.3,
+        protocol: 'Power',
+        notes: 'Qualified supply pin.',
+      }],
+    });
+
+    expect(normalized).toMatchObject({
+      id: 'comp_legacy_sensor',
+      libraryId: 'sensor-reviewed-v3',
+      manufacturer: 'Example Devices',
+      footprintSvg: '<svg viewBox="0 0 100 100"></svg>',
+      packageDimensions: { widthMm: 3, heightMm: 2.5, heightZMm: 0.8 },
+      packageOutline: { widthMm: 3, heightMm: 2.5, courtyardMm: 0.25 },
+      symbolRevisionId: 'symbol-rev-3',
+      footprintRevisionId: 'footprint-rev-5',
+      cadModelRevisionId: 'cad-rev-2',
+      model3dUrl: '/models/sensor-x.glb',
+      sourceLicense: 'Reviewed vendor distribution terms',
+      qualificationStatus: 'Reviewed',
+    });
+    expect(normalized.pins).toEqual([
+      expect.objectContaining({
+        componentId: 'comp_legacy_sensor',
+        pinNumber: '1',
+        pinName: 'VDD',
+        electricalType: 'PowerIn',
+        required: true,
+        voltage: 3.3,
+        protocol: 'Power',
+        notes: 'Qualified supply pin.',
+      }),
+    ]);
   });
 });
