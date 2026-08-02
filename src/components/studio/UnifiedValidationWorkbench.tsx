@@ -47,7 +47,7 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
       .filter((netId): netId is string => Boolean(netId)),
   ));
   const linkedTests = selectedComponent
-    ? validationTests.filter((test) => test.linkedComponentIds.includes(selectedComponent.id))
+    ? validationTests.filter((test) => (test.linkedComponentIds || []).includes(selectedComponent.id))
     : [];
 
   const createLinkedTest = () => {
