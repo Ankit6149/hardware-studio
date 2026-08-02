@@ -25,14 +25,16 @@ import { BlueprintSheets } from './BlueprintSheets';
 import { FactoryPackageBuilder } from './FactoryPackageBuilder';
 import { RevisionsStudio } from './revisions/RevisionsStudio';
 import { BoardDesigner } from './board/BoardDesigner';
-import { ComponentLibraryWorkbench } from './component-library/ComponentLibraryWorkbench';
-import { SchematicEditor } from './schematic/SchematicEditor';
 import { ProductStudio } from './product/ProductStudio';
-import { MechanicalStudio } from './mechanical/MechanicalStudio';
 import { FirmwareStudio } from './firmware/FirmwareStudio';
 import { ValidationStudio } from './validation/ValidationStudio';
 import { StudioBuildMap } from './studio/StudioBuildMap';
 import { EngineeringContextBar } from './studio/EngineeringContextBar';
+import {
+  UnifiedComponentLibraryWorkbench,
+  UnifiedMechanicalWorkbench,
+  UnifiedSchematicWorkbench,
+} from './studio/UnifiedWorkbenchAdapters';
 
 function renderSurface(surface: NavigationSurface): React.ReactNode {
   switch (surface) {
@@ -40,10 +42,10 @@ function renderSurface(surface: NavigationSurface): React.ReactNode {
     case 'legacy-blueprint': return <BlueprintCanvas />;
     case 'product-studio': return <ProductStudio />;
     case 'readiness': return <ReadinessDashboard />;
-    case 'mechanical-canvas': return <MechanicalStudio initialMode="canvas" />;
-    case 'mechanical-assembly': return <MechanicalStudio initialMode="assembly" />;
-    case 'component-library': return <ComponentLibraryWorkbench />;
-    case 'schematic-editor': return <SchematicEditor />;
+    case 'mechanical-canvas': return <UnifiedMechanicalWorkbench defaultMode="canvas" />;
+    case 'mechanical-assembly': return <UnifiedMechanicalWorkbench defaultMode="assembly" />;
+    case 'component-library': return <UnifiedComponentLibraryWorkbench />;
+    case 'schematic-editor': return <UnifiedSchematicWorkbench />;
     case 'power-budget': return <PowerBudgetTable />;
     case 'pin-map': return <PinMapTable />;
     case 'bom': return <BOMTable />;
