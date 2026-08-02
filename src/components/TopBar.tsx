@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { AlertCircle, CloudOff, FolderOpen, HardDrive, LayoutTemplate, LoaderCircle, RotateCcw } from 'lucide-react';
+import { AlertCircle, BookOpen, CloudOff, FolderOpen, HardDrive, LayoutTemplate, LoaderCircle, RotateCcw } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useStorageHealthStore } from '../store/storageHealthStore';
 import { storageHealthLabel } from '../lib/reliability';
 import { Button } from '../ui/Button';
 import { useFeedback } from './feedback/FeedbackProvider';
+import { useKnowledge } from './knowledge/KnowledgeProvider';
 import { BrandMark } from './BrandMark';
 import { ProjectManager } from './ProjectManager';
 import { TemplatePicker } from './TemplatePicker';
@@ -57,6 +58,7 @@ export const TopBar: React.FC = () => {
   const storageHealth = useStorageHealthStore((state) => state.health);
   const retrySave = () => useProjectStore.getState().saveActiveProject();
   const { confirm: requestConfirmation, notify } = useFeedback();
+  const { openKnowledge } = useKnowledge();
   const [isProjOpen, setIsProjOpen] = useState(false);
   const [isTplOpen, setIsTplOpen] = useState(false);
 
@@ -140,6 +142,7 @@ export const TopBar: React.FC = () => {
           <span className="truncate">{templateName || 'Custom'}</span>
         </div>
 
+        <Button onClick={() => openKnowledge()} variant="secondary" size="sm" icon={<BookOpen className="h-3.5 w-3.5 text-indigo-600" />}>Learn</Button>
         <Button onClick={() => setIsProjOpen(true)} variant="secondary" size="sm" icon={<FolderOpen className="h-3.5 w-3.5 text-slate-500" />}>Workspaces</Button>
         <Button onClick={() => setIsTplOpen(true)} variant="secondary" size="sm" className="hidden md:inline-flex" icon={<LayoutTemplate className="h-3.5 w-3.5 text-slate-500" />}>Templates</Button>
         <Button onClick={() => void handleReset()} variant="ghost" size="sm" className="border border-rose-100 text-rose-700 hover:bg-rose-50" icon={<RotateCcw className="h-3.5 w-3.5 text-rose-500" />}>Reset</Button>

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { RECOVER_TO_DASHBOARD_KEY } from '../../lib/reliability';
 import { prepareStorageReliability } from '../../store/storageHealthStore';
 import { FeedbackProvider } from '../feedback/FeedbackProvider';
+import { KnowledgeProvider } from '../knowledge/KnowledgeProvider';
 import { AppErrorBoundary } from './AppErrorBoundary';
 
 type ShellComponent = React.ComponentType;
@@ -41,7 +42,9 @@ export const StudioRoot: React.FC = () => (
     }}
   >
     <FeedbackProvider>
-      <StudioApplicationLoader />
+      <KnowledgeProvider>
+        <StudioApplicationLoader />
+      </KnowledgeProvider>
     </FeedbackProvider>
   </AppErrorBoundary>
 );
