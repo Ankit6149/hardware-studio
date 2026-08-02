@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore, type MechanicalWorkbenchMode } from '../../store/studioContextStore';
 import { ComponentLibraryWorkbench } from '../component-library/ComponentLibraryWorkbench';
-import { SchematicEditor } from '../schematic/SchematicEditor';
+import { UnifiedSchematicEditor } from '../schematic/UnifiedSchematicEditor';
 import { MechanicalStudio } from '../mechanical/MechanicalStudio';
 
 export const UnifiedComponentLibraryWorkbench: React.FC = () => {
@@ -45,7 +45,7 @@ export const UnifiedSchematicWorkbench: React.FC = () => {
     placeComponentOnSchematic(selected.id, 140 + column * 180, 140 + row * 140);
   }, [activeBoardId, activeComponentId, boardComponents, placeComponentOnSchematic, setActiveComponent]);
 
-  return <SchematicEditor />;
+  return <UnifiedSchematicEditor />;
 };
 
 export const UnifiedMechanicalWorkbench: React.FC<{ defaultMode: MechanicalWorkbenchMode }> = ({ defaultMode }) => {
