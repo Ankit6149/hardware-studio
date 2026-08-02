@@ -10,6 +10,8 @@ export type StudioContextEntity =
   | 'mechanical-object'
   | 'validation-item';
 
+export type MechanicalWorkbenchMode = 'canvas' | 'assembly' | '3d-preview' | 'webgl-3d';
+
 export interface StudioSelection {
   entity: StudioContextEntity;
   id: string;
@@ -24,12 +26,14 @@ interface StudioContextState {
   selected: StudioSelection | null;
   originView: string | null;
   returnView: string | null;
+  requestedMechanicalMode: MechanicalWorkbenchMode | null;
   setActiveBoard: (boardId: string | null) => void;
   setActiveComponentDefinition: (definitionId: string | null) => void;
   setActiveComponent: (componentId: string | null) => void;
   setActiveNet: (netName: string | null) => void;
   select: (selection: StudioSelection | null) => void;
   beginHandoff: (originView: string, returnView?: string | null) => void;
+  requestMechanicalMode: (mode: MechanicalWorkbenchMode | null) => void;
   clearContext: () => void;
 }
 
@@ -41,6 +45,7 @@ export const useStudioContextStore = create<StudioContextState>((set) => ({
   selected: null,
   originView: null,
   returnView: null,
+  requestedMechanicalMode: null,
 
   setActiveBoard: (activeBoardId) => set({
     activeBoardId,
@@ -64,6 +69,7 @@ export const useStudioContextStore = create<StudioContextState>((set) => ({
   }),
   select: (selected) => set({ selected }),
   beginHandoff: (originView, returnView = originView) => set({ originView, returnView }),
+  requestMechanicalMode: (requestedMechanicalMode) => set({ requestedMechanicalMode }),
   clearContext: () => set({
     activeBoardId: null,
     activeComponentDefinitionId: null,
@@ -72,5 +78,6 @@ export const useStudioContextStore = create<StudioContextState>((set) => ({
     selected: null,
     originView: null,
     returnView: null,
+    requestedMechanicalMode: null,
   }),
 }));
