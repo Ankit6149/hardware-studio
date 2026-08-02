@@ -28,6 +28,7 @@ import { FirmwareStudio } from './firmware/FirmwareStudio';
 import { StudioBuildMap } from './studio/StudioBuildMap';
 import { EngineeringContextBar } from './studio/EngineeringContextBar';
 import { UnifiedBOMWorkbench } from './studio/UnifiedBOMWorkbench';
+import { UnifiedBoardDRCWorkbench } from './studio/UnifiedBoardDRCWorkbench';
 import { UnifiedValidationWorkbench } from './studio/UnifiedValidationWorkbench';
 import {
   UnifiedBoardDesignerWorkbench,
@@ -36,7 +37,9 @@ import {
   UnifiedSchematicWorkbench,
 } from './studio/UnifiedWorkbenchAdapters';
 
-function renderSurface(surface: NavigationSurface): React.ReactNode {
+function renderSurface(surface: NavigationSurface, viewId: string): React.ReactNode {
+  if (viewId === 'pcb-drc') return <UnifiedBoardDRCWorkbench />;
+
   switch (surface) {
     case 'dashboard': return <ProjectDashboard />;
     case 'legacy-blueprint': return <BlueprintCanvas />;
@@ -164,7 +167,7 @@ export const AppShell: React.FC = () => {
           <div className="relative flex min-h-0 flex-1">
             {showVisualizer && <ProductVisualizer />}
             <div className="relative flex h-full min-w-0 flex-1 flex-col">
-              {activeNavigationItem ? renderSurface(activeNavigationItem.surface) : (
+              {activeNavigationItem ? renderSurface(activeNavigationItem.surface, activeView) : (
                 <UnavailableWorkspace viewId={activeView} onReturn={() => setActiveView('dashboard')} />
               )}
             </div>
