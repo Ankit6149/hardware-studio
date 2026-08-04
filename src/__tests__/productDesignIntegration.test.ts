@@ -17,11 +17,12 @@ describe('Product Design Studio integration contracts', () => {
     expect(getNavigationItem('product-architecture')?.id).toBe('product-architecture');
   });
 
-  it('routes the active Product view into the correct ProductStudio mode', () => {
+  it('routes the active Product view into the correct ProductStudio mode and recovery boundary', () => {
     const appShell = source('../components/AppShell.tsx');
     const productStudio = source('../components/product/ProductStudio.tsx');
     expect(appShell).toContain('<ProductStudio initialMode={viewId} />');
     expect(productStudio).toContain("activeMode === 'product-design'");
+    expect(productStudio).toContain('<ProductDesignSafetyBoundary />');
     expect(productStudio).toContain('<ProductDesignStudio />');
     expect(productStudio).toContain("activeMode === 'requirements'");
     expect(productStudio).toContain("activeMode === 'product-architecture'");
@@ -35,6 +36,8 @@ describe('Product Design Studio integration contracts', () => {
     expect(repository).toContain("const ASSETS_STORE = 'assets'");
     expect(repository).toContain("const CHECKPOINTS_STORE = 'checkpoints'");
     expect(repository).toContain("database.transaction(DOCUMENTS_STORE, 'readwrite')");
+    expect(repository).toContain('deleteRecordsByIndex');
+    expect(repository).toContain('openCursor(IDBKeyRange.only(value))');
     expect(store).not.toContain('localStorage.setItem');
     expect(store).not.toContain('localStorage.getItem');
   });
@@ -49,6 +52,18 @@ describe('Product Design Studio integration contracts', () => {
     expect(canvas).not.toContain('saveDocument(');
   });
 
+  it('uses a conflict-safe import policy and repairs the existing reference identity', () => {
+    const importPolicy = source('../lib/product-design/importPolicy.ts');
+    const safetyBoundary = source('../components/product-design/ProductDesignSafetyBoundary.tsx');
+    expect(importPolicy).toContain("mode: 'create-conflict-safe-copy'");
+    expect(importPolicy).toContain('objectIdMap');
+    expect(importPolicy).toContain('assetIdMap');
+    expect(safetyBoundary).toContain('prepareProductDesignImport');
+    expect(safetyBoundary).toContain('repository.saveAsset(asset)');
+    expect(safetyBoundary).toContain('id: reference.assetId');
+    expect(safetyBoundary).toContain("'Relink reference image'");
+  });
+
   it('uses an event-driven low-power 3D preview and releases WebGL resources', () => {
     const view3d = source('../components/product-design/ProductDesign3DPreview.tsx');
     expect(view3d).toContain("powerPreference: 'low-power'");
@@ -61,9 +76,10 @@ describe('Product Design Studio integration contracts', () => {
 
   it('does not use native blocking dialogs in the touched Product Design flow', () => {
     const studio = source('../components/product-design/ProductDesignStudio.tsx');
+    const safetyBoundary = source('../components/product-design/ProductDesignSafetyBoundary.tsx');
     const canvas = source('../components/product-design/ProductDesignCanvas.tsx');
     const view3d = source('../components/product-design/ProductDesign3DPreview.tsx');
-    for (const file of [studio, canvas, view3d]) {
+    for (const file of [studio, safetyBoundary, canvas, view3d]) {
       expect(file).not.toContain('window.alert');
       expect(file).not.toContain('window.confirm');
       expect(file).not.toContain('window.prompt');
