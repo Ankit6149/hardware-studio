@@ -45,7 +45,6 @@ import {
   Undo2,
   Ungroup,
   Unlock,
-  Upload,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -123,7 +122,7 @@ export const ProductDesignStudio: React.FC = () => {
   const project = useProjectStore();
   const initialize = useProductDesignStore((state) => state.initialize);
   const documents = useProductDesignStore((state) => state.documents);
-  const document = useProductDesignStore((state) => state.document);
+  const designDocument = useProductDesignStore((state) => state.document);
   const checkpoints = useProductDesignStore((state) => state.checkpoints);
   const activeLayerId = useProductDesignStore((state) => state.activeLayerId);
   const selectedObjectIds = useProductDesignStore((state) => state.selectedObjectIds);
@@ -171,7 +170,7 @@ export const ProductDesignStudio: React.FC = () => {
   const [historyOpen, setHistoryOpen] = useState(true);
   const [checkpointName, setCheckpointName] = useState('');
   const [newLayerName, setNewLayerName] = useState('');
-  const [expandedLayers, setExpandedLayers] = useState<Record<string, boolean>>({});
+  const [collapsedLayers, setCollapsedLayers] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     void initialize(project.id || 'local-project');
@@ -189,33 +188,21 @@ export const ProductDesignStudio: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setActiveTool]);
 
-  useEffect(() => {
-    if (!document) return;
-    setExpandedLayers((current) => {
-      const next = { ...current };
-      document.layers.forEach((layer) => {
-        if (next[layer.id] === undefined) next[layer.id] = true;
-      });
-      return next;
-    });
-  }, [document]);
-
   const selectedObjects = useMemo(
-    () => document?.objects.filter((object) => selectedObjectIds.includes(object.id)) || [],
-    [document, selectedObjectIds],
+    () => designDocument?.objects.filter((object) => selectedObjectIds.includes(object.id)) || [],
+    [designDocument, selectedObjectIds],
   );
   const selectedObject = selectedObjects.length === 1 ? selectedObjects[0] : null;
-  const selectedConceptPart = selectedObject?.type === 'concept-part' ? selectedObject : null;
 
   const objectByLayer = useMemo(() => {
     const result = new Map<string, ProductDesignObject[]>();
-    document?.layers.forEach((layer) => result.set(layer.id, []));
-    document?.objects
+    designDocument?.layers.forEach((layer) => result.set(layer.id, []));
+    designDocument?.objects
       .slice()
       .sort((a, b) => b.order - a.order)
       .forEach((object) => result.get(object.layerId)?.push(object));
     return result;
-  }, [document]);
+  }, [designDocument]);
 
   const updateSelected = (patch: Partial<ProductDesignObject>, label: string) => {
     if (!selectedObject) return;
@@ -231,15 +218,14 @@ export const ProductDesignStudio: React.FC = () => {
   };
 
   const handleReferenceFile = async (file: File | undefined) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return;
+    if (!file || !file.type.startsWith('image/')) return;
     await addReferenceImage(file, { altText: file.name });
   };
 
   const handleExport = async () => {
     const content = await exportDocument();
-    if (!content || !document) return;
-    downloadTextFile(`${document.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'product-design'}.hardware-design.json`, content);
+    if (!content || !designDocument) return;
+    downloadTextFile(`${designDocument.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'product-design'}.hardware-design.json`, content);
   };
 
   const handleImportFile = async (file: File | undefined) => {
@@ -254,7 +240,7 @@ export const ProductDesignStudio: React.FC = () => {
     setCheckpointName('');
   };
 
-  if (!document) {
+  if (!designDocument) {
     return (
       <section className="grid h-full min-h-0 place-items-center bg-slate-100 p-6">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
@@ -276,14 +262,14 @@ export const ProductDesignStudio: React.FC = () => {
           <button type="button" onClick={() => setLeftPanelOpen((open) => !open)} className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label={leftPanelOpen ? 'Hide layer panel' : 'Show layer panel'}>{leftPanelOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}</button>
 
           <div className="min-w-[180px] max-w-[280px] flex-1 sm:flex-none">
-            <input value={document.name} onChange={(event) => updateDocument({ name: event.target.value })} aria-label="Product Design document name" className="h-8 w-full rounded-lg border border-transparent px-2 text-sm font-bold text-slate-950 outline-none hover:border-slate-200 focus:border-indigo-400 focus:bg-white" />
-            <p className="truncate px-2 text-[9px] font-semibold text-slate-500">Product Design · revision {document.revision}</p>
+            <input value={designDocument.name} onChange={(event) => updateDocument({ name: event.target.value })} aria-label="Product Design document name" className="h-8 w-full rounded-lg border border-transparent px-2 text-sm font-bold text-slate-950 outline-none hover:border-slate-200 focus:border-indigo-400 focus:bg-white" />
+            <p className="truncate px-2 text-[9px] font-semibold text-slate-500">Product Design · revision {designDocument.revision}</p>
           </div>
 
-          <select value={document.id} onChange={(event) => void openDocument(event.target.value)} aria-label="Open Product Design document" className="h-8 max-w-48 rounded-lg border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 outline-none focus:border-indigo-500">
+          <select value={designDocument.id} onChange={(event) => void openDocument(event.target.value)} aria-label="Open Product Design document" className="h-8 max-w-48 rounded-lg border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 outline-none focus:border-indigo-500">
             {documents.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}
           </select>
-          <button type="button" onClick={() => void createDocument(`Product concept ${documents.length + 1}`, document.units)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"><Plus className="h-3.5 w-3.5" /> New</button>
+          <button type="button" onClick={() => void createDocument(`Product concept ${documents.length + 1}`, designDocument.units)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"><Plus className="h-3.5 w-3.5" /> New</button>
 
           <div className="hidden h-5 w-px bg-slate-200 md:block" />
           <button type="button" onClick={undo} disabled={undoStack.length === 0} title="Undo · Ctrl/Cmd+Z" className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-30"><Undo2 className="h-4 w-4" /></button>
@@ -327,13 +313,13 @@ export const ProductDesignStudio: React.FC = () => {
               <input value={newLayerName} onChange={(event) => setNewLayerName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { addLayer(newLayerName.trim() || undefined); setNewLayerName(''); } }} placeholder="New layer name" className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[11px] outline-none focus:border-indigo-500 focus:bg-white" />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-2">
-              {document.layers.slice().sort((a, b) => a.order - b.order).map((layer) => {
+              {designDocument.layers.slice().sort((a, b) => a.order - b.order).map((layer) => {
                 const objects = objectByLayer.get(layer.id) || [];
-                const expanded = expandedLayers[layer.id] !== false;
+                const expanded = !collapsedLayers[layer.id];
                 return (
                   <div key={layer.id} className={`mb-1 rounded-xl border ${activeLayerId === layer.id ? 'border-indigo-200 bg-indigo-50/50' : 'border-transparent'}`}>
                     <div className="flex items-center gap-1 p-1">
-                      <button type="button" onClick={() => setExpandedLayers((current) => ({ ...current, [layer.id]: !expanded }))} className="grid h-7 w-7 place-items-center rounded-md text-slate-400 hover:bg-white">{expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</button>
+                      <button type="button" onClick={() => setCollapsedLayers((current) => ({ ...current, [layer.id]: expanded }))} className="grid h-7 w-7 place-items-center rounded-md text-slate-400 hover:bg-white">{expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</button>
                       <button type="button" onClick={() => setActiveLayer(layer.id)} className="min-w-0 flex-1 truncate text-left text-[11px] font-bold text-slate-800">{layer.name}</button>
                       <button type="button" onClick={() => updateLayer(layer.id, { visible: !layer.visible })} className="grid h-7 w-7 place-items-center rounded-md text-slate-400 hover:bg-white" title={layer.visible ? 'Hide layer' : 'Show layer'}>{layer.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}</button>
                       <button type="button" onClick={() => updateLayer(layer.id, { locked: !layer.locked })} className="grid h-7 w-7 place-items-center rounded-md text-slate-400 hover:bg-white" title={layer.locked ? 'Unlock layer' : 'Lock layer'}>{layer.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}</button>
@@ -350,7 +336,7 @@ export const ProductDesignStudio: React.FC = () => {
                         {objects.length === 0 && <p className="px-2 py-2 text-[9px] text-slate-400">Empty layer</p>}
                       </div>
                     )}
-                    {document.layers.length > 1 && activeLayerId === layer.id && (
+                    {designDocument.layers.length > 1 && activeLayerId === layer.id && (
                       <button type="button" onClick={() => deleteLayer(layer.id)} className="mx-2 mb-2 text-[9px] font-semibold text-red-600 hover:text-red-800">Delete layer · objects move safely</button>
                     )}
                   </div>
@@ -411,7 +397,7 @@ export const ProductDesignStudio: React.FC = () => {
                       <NumberField label="Width" value={selectedObject.width} min={1} onChange={(width) => updateSelected({ width: Math.max(1, width) }, 'Update object width')} />
                       <NumberField label="Height" value={selectedObject.height} min={1} onChange={(height) => updateSelected({ height: Math.max(1, height) }, 'Update object height')} />
                       <NumberField label="Rotation" value={selectedObject.rotation} onChange={(rotation) => updateSelected({ rotation }, 'Rotate design object')} />
-                      <label className="block"><span className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Layer</span><select value={selectedObject.layerId} onChange={(event) => updateSelected({ layerId: event.target.value }, 'Move object to layer')} className="mt-1 h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-[10px] outline-none focus:border-indigo-500">{document.layers.map((layer) => <option key={layer.id} value={layer.id}>{layer.name}</option>)}</select></label>
+                      <label className="block"><span className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Layer</span><select value={selectedObject.layerId} onChange={(event) => updateSelected({ layerId: event.target.value }, 'Move object to layer')} className="mt-1 h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-[10px] outline-none focus:border-indigo-500">{designDocument.layers.map((layer) => <option key={layer.id} value={layer.id}>{layer.name}</option>)}</select></label>
                     </div>
                   </div>
 
@@ -484,7 +470,7 @@ export const ProductDesignStudio: React.FC = () => {
           </div>
         )}
         <div className="flex h-7 items-center gap-3 border-t border-slate-100 px-3 text-[9px] font-semibold text-slate-500">
-          <span className="truncate">{persistenceMessage}</span><span>{document.objects.length} objects</span><span>{document.layers.length} layers</span><span>{selectedObjectIds.length} selected</span><span className="ml-auto hidden text-amber-700 sm:inline">Concept design · exact engineering continues in Mechanical</span><button type="button" onClick={() => project.setActiveView('mechanical-studio')} className="inline-flex items-center gap-1 font-bold text-indigo-700 hover:text-indigo-900">Mechanical <ArrowRight className="h-3 w-3" /></button>
+          <span className="truncate">{persistenceMessage}</span><span>{designDocument.objects.length} objects</span><span>{designDocument.layers.length} layers</span><span>{selectedObjectIds.length} selected</span><span className="ml-auto hidden text-amber-700 sm:inline">Concept design · exact engineering continues in Mechanical</span><button type="button" onClick={() => project.setActiveView('mechanical-studio')} className="inline-flex items-center gap-1 font-bold text-indigo-700 hover:text-indigo-900">Mechanical <ArrowRight className="h-3 w-3" /></button>
         </div>
       </footer>
 
