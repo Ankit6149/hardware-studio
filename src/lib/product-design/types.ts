@@ -120,6 +120,33 @@ export type ProductDesignObject =
   | ProductDesignReferenceImage
   | ProductDesignConceptPart;
 
+export type ProductDesignObjectPatch = Partial<
+  Omit<ProductDesignBaseObject, 'id' | 'documentId' | 'type' | 'createdAt'>
+> & {
+  cornerRadius?: number;
+  text?: string;
+  fontSize?: number;
+  fontWeight?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  value?: number;
+  units?: ProductDesignUnits;
+  prefix?: string;
+  suffix?: string;
+  assetId?: string;
+  fit?: 'contain' | 'cover';
+  sourceUrl?: string;
+  attribution?: string;
+  license?: string;
+  altText?: string;
+  depth?: number;
+  material?: string;
+  finish?: string;
+  appearance?: string;
+  sourceObjectIds?: string[];
+  linkedMechanicalObjectId?: string;
+  linkedRequirementIds?: string[];
+};
+
 export interface ProductDesignCanvasSettings {
   width: number;
   height: number;
