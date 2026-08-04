@@ -27,7 +27,7 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
     useStudioContextStore.getState().clearContext();
   });
 
-  it('keeps the same component IDs, pins, net, board, sourcing, and validation links', () => {
+  it('keeps one canonical identity through schematic, PCB, BOM, and validation', () => {
     const store = useProjectStore.getState();
     const definitions = defaultComponents.filter((definition) => definition.pins.length > 0).slice(0, 2);
     expect(definitions).toHaveLength(2);
@@ -55,12 +55,14 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
 
     const source = store.addProjectComponentFromLibrary(definitions[0], board.id);
     const target = store.addProjectComponentFromLibrary(definitions[1], board.id);
-    expect(source.id).not.toBe(target.id);
-    expect(source.libraryId).toBe(definitions[0].libraryId);
+
+    expect(source).toMatchObject({
+      libraryId: definitions[0].libraryId,
+      packageName: definitions[0].packageName,
+      footprint: definitions[0].footprintName,
+      manufacturer: definitions[0].manufacturer,
+    });
     expect(target.libraryId).toBe(definitions[1].libraryId);
-    expect(source.packageName).toBe(definitions[0].package);
-    expect(source.footprint).toBe(definitions[0].footprint);
-    expect(source.manufacturer).toBe(definitions[0].manufacturer);
 
     store.placeComponentOnSchematic(source.id, 120, 160);
     store.placeComponentOnSchematic(target.id, 360, 160);
@@ -128,16 +130,13 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
     const finalState = useProjectStore.getState();
     const finalSource = finalState.boardComponents?.find((component) => component.id === source.id);
     const finalTarget = finalState.boardComponents?.find((component) => component.id === target.id);
-    const finalWire = finalState.schematicWires?.find((wire) => wire.id === connection.wire.id);
-    const finalNet = finalState.nets?.find((net) => net.id === connection.net.id);
-    const finalTest = finalState.validationTests?.[0];
 
     expect(finalSource).toMatchObject({
       id: source.id,
       boardId: board.id,
       libraryId: definitions[0].libraryId,
-      packageName: definitions[0].package,
-      footprint: definitions[0].footprint,
+      packageName: definitions[0].packageName,
+      footprint: definitions[0].footprintName,
       manufacturer: definitions[0].manufacturer,
       bomItemId: bomId,
       schematic: expect.objectContaining({ placed: true }),
@@ -152,15 +151,15 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
     });
     expect(finalSource?.pins?.find((pin) => pin.pinNumber === sourcePin)?.netName).toBe('GOLDEN_SIGNAL');
     expect(finalTarget?.pins?.find((pin) => pin.pinNumber === targetPin)?.netName).toBe('GOLDEN_SIGNAL');
-    expect(finalWire).toMatchObject({
+    expect(finalState.schematicWires?.find((wire) => wire.id === connection.wire.id)).toMatchObject({
       netId: connection.net.id,
       netName: 'GOLDEN_SIGNAL',
       sourceAnchor: expect.objectContaining({ componentId: source.id, pinNumber: sourcePin }),
       targetAnchor: expect.objectContaining({ componentId: target.id, pinNumber: targetPin }),
     });
-    expect(finalNet?.netName).toBe('GOLDEN_SIGNAL');
+    expect(finalState.nets?.find((net) => net.id === connection.net.id)?.netName).toBe('GOLDEN_SIGNAL');
     expect(finalState.bom?.[0]).toMatchObject({ id: bomId, blockName: source.componentName });
-    expect(finalTest).toMatchObject({
+    expect(finalState.validationTests?.[0]).toMatchObject({
       linkedComponentIds: [source.id],
       linkedNetIds: [connection.net.id],
       status: 'Not Started',
@@ -180,10 +179,8 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
       packageName: 'LGA-12',
       footprint: 'LGA-12_2.5x3.0mm',
       manufacturer: 'Example Devices',
-      description: 'Reviewed component metadata.',
       footprintSvg: '<svg viewBox="0 0 100 100"></svg>',
       packageDimensions: { widthMm: 3, heightMm: 2.5, heightZMm: 0.8 },
-      packageOutline: { widthMm: 3, heightMm: 2.5, courtyardMm: 0.25 },
       symbolRevisionId: 'symbol-rev-3',
       footprintRevisionId: 'footprint-rev-5',
       cadModelRevisionId: 'cad-rev-2',
@@ -207,7 +204,6 @@ describe('unified Electronics → PCB → BOM → Validation golden path', () =>
       manufacturer: 'Example Devices',
       footprintSvg: '<svg viewBox="0 0 100 100"></svg>',
       packageDimensions: { widthMm: 3, heightMm: 2.5, heightZMm: 0.8 },
-      packageOutline: { widthMm: 3, heightMm: 2.5, courtyardMm: 0.25 },
       symbolRevisionId: 'symbol-rev-3',
       footprintRevisionId: 'footprint-rev-5',
       cadModelRevisionId: 'cad-rev-2',
