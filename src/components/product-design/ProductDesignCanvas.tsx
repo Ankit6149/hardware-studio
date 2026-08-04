@@ -92,7 +92,6 @@ function renderObjectShape(
         {object.type === 'note' && <rect width={object.width} height={object.height} rx={10} {...common} />}
         <foreignObject width={Math.max(20, object.width)} height={Math.max(20, object.height)}>
           <div
-            xmlns="http://www.w3.org/1999/xhtml"
             style={{
               boxSizing: 'border-box',
               width: '100%',
