@@ -44,36 +44,39 @@ function rebaseDocument(
 ): ProductDesignDocument {
   const timestamp = new Date().toISOString();
   const layerIdMap = new Map(source.layers.map((layer) => [layer.id, createProductDesignId('layer')]));
+  const fallbackLayerId = Array.from(layerIdMap.values())[0];
   const objectIdMap = new Map(source.objects.map((object) => [object.id, createProductDesignId('object')]));
   const groupIds = Array.from(new Set(source.objects.map((object) => object.groupId).filter((id): id is string => Boolean(id))));
   const groupIdMap = new Map(groupIds.map((groupId) => [groupId, createProductDesignId('group')]));
 
-  const objects = source.objects.map((object) => {
-    const base = {
+  const objects: ProductDesignObject[] = source.objects.map((object): ProductDesignObject => {
+    const common = {
       ...object,
       id: objectIdMap.get(object.id) as string,
       documentId: targetDocumentId,
-      layerId: layerIdMap.get(object.layerId) || Array.from(layerIdMap.values())[0],
+      layerId: layerIdMap.get(object.layerId) || fallbackLayerId,
       groupId: object.groupId ? groupIdMap.get(object.groupId) : undefined,
       createdAt: timestamp,
       updatedAt: timestamp,
-    } as ProductDesignObject;
+    };
 
-    if (base.type === 'reference-image') {
+    if (object.type === 'reference-image') {
       return {
-        ...base,
-        assetId: assetIdMap.get(object.type === 'reference-image' ? object.assetId : '') || createProductDesignId('asset'),
+        ...common,
+        type: 'reference-image',
+        assetId: assetIdMap.get(object.assetId) || createProductDesignId('asset'),
       };
     }
-    if (base.type === 'concept-part') {
+    if (object.type === 'concept-part') {
       return {
-        ...base,
-        sourceObjectIds: object.type === 'concept-part'
-          ? object.sourceObjectIds.map((id) => objectIdMap.get(id)).filter((id): id is string => Boolean(id))
-          : [],
+        ...common,
+        type: 'concept-part',
+        sourceObjectIds: object.sourceObjectIds
+          .map((id) => objectIdMap.get(id))
+          .filter((id): id is string => Boolean(id)),
       };
     }
-    return base;
+    return common;
   });
 
   return {
