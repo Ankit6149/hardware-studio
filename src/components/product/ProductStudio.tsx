@@ -11,6 +11,7 @@ import {
   Undo2,
 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
+import { ProductDesignSafetyBoundary } from '../product-design/ProductDesignSafetyBoundary';
 import { ProductDesignStudio } from '../product-design/ProductDesignStudio';
 import { ProductArchitectureCanvas } from './ProductArchitectureCanvas';
 import { ProductInspector } from './ProductInspector';
@@ -104,7 +105,12 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({ initialMode = 'pro
       </nav>
 
       <div className="min-h-0 flex-1">
-        {activeMode === 'product-design' && <ProductDesignStudio />}
+        {activeMode === 'product-design' && (
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+            <ProductDesignSafetyBoundary />
+            <div className="min-h-0 flex-1"><ProductDesignStudio /></div>
+          </div>
+        )}
 
         {activeMode === 'requirements' && (
           <div className="flex h-full min-h-0 overflow-hidden bg-slate-50">
