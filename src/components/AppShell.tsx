@@ -43,7 +43,7 @@ function renderSurface(surface: NavigationSurface, viewId: string): React.ReactN
   switch (surface) {
     case 'dashboard': return <ProjectDashboard />;
     case 'legacy-blueprint': return <BlueprintCanvas />;
-    case 'product-studio': return <ProductStudio />;
+    case 'product-studio': return <ProductStudio initialMode={viewId} />;
     case 'readiness': return <ReadinessDashboard />;
     case 'mechanical-canvas': return <UnifiedMechanicalWorkbench defaultMode="canvas" />;
     case 'mechanical-assembly': return <UnifiedMechanicalWorkbench defaultMode="assembly" />;
