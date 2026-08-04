@@ -86,9 +86,19 @@ describe('Product Design import policy', () => {
     expect(imported.document.name).toContain('imported copy');
     expect([...newObjectIds].every((id) => !oldObjectIds.has(id))).toBe(true);
     expect(imported.document.layers[0].id).not.toBe(bundle.document.layers[0].id);
+
     expect(importedReference?.type).toBe('reference-image');
-    expect(importedReference?.type === 'reference-image' && imported.assets[0].id).toBe(importedReference.assetId);
-    expect(importedConcept?.type === 'concept-part' && importedConcept.sourceObjectIds.every((id) => newObjectIds.has(id))).toBe(true);
+    if (!importedReference || importedReference.type !== 'reference-image') {
+      throw new Error('Expected a remapped reference image.');
+    }
+    expect(imported.assets[0].id).toBe(importedReference.assetId);
+
+    expect(importedConcept?.type).toBe('concept-part');
+    if (!importedConcept || importedConcept.type !== 'concept-part') {
+      throw new Error('Expected a remapped concept part.');
+    }
+    expect(importedConcept.sourceObjectIds.every((id) => newObjectIds.has(id))).toBe(true);
+
     expect(imported.checkpoints[0].documentId).toBe(imported.document.id);
     expect(imported.checkpoints[0].document.id).toBe(imported.document.id);
   });
