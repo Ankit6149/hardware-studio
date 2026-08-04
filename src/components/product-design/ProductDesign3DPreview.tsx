@@ -131,8 +131,9 @@ export const ProductDesign3DPreview: React.FC = () => {
         controls.dispose();
         geometry.dispose();
         material.dispose();
-        (edges.geometry as THREE.BufferGeometry).dispose();
-        (edges.material as THREE.Material).dispose();
+        edges.geometry.dispose();
+        if (Array.isArray(edges.material)) edges.material.forEach((edgeMaterial) => edgeMaterial.dispose());
+        else edges.material.dispose();
         platformGeometry.dispose();
         platformMaterial.dispose();
         renderer.dispose();
