@@ -44,14 +44,13 @@ function rebaseDocument(
 ): ProductDesignDocument {
   const timestamp = new Date().toISOString();
   const layerIdMap = new Map(source.layers.map((layer) => [layer.id, createProductDesignId('layer')]));
-  const fallbackLayerId = Array.from(layerIdMap.values())[0];
+  const fallbackLayerId = Array.from(layerIdMap.values())[0] || createProductDesignId('layer');
   const objectIdMap = new Map(source.objects.map((object) => [object.id, createProductDesignId('object')]));
   const groupIds = Array.from(new Set(source.objects.map((object) => object.groupId).filter((id): id is string => Boolean(id))));
   const groupIdMap = new Map(groupIds.map((groupId) => [groupId, createProductDesignId('group')]));
 
   const objects: ProductDesignObject[] = source.objects.map((object): ProductDesignObject => {
-    const common = {
-      ...object,
+    const identity = {
       id: objectIdMap.get(object.id) as string,
       documentId: targetDocumentId,
       layerId: layerIdMap.get(object.layerId) || fallbackLayerId,
@@ -62,21 +61,26 @@ function rebaseDocument(
 
     if (object.type === 'reference-image') {
       return {
-        ...common,
+        ...object,
+        ...identity,
         type: 'reference-image',
         assetId: assetIdMap.get(object.assetId) || createProductDesignId('asset'),
       };
     }
     if (object.type === 'concept-part') {
       return {
-        ...common,
+        ...object,
+        ...identity,
         type: 'concept-part',
         sourceObjectIds: object.sourceObjectIds
           .map((id) => objectIdMap.get(id))
           .filter((id): id is string => Boolean(id)),
       };
     }
-    return common;
+    return {
+      ...object,
+      ...identity,
+    };
   });
 
   return {
@@ -86,7 +90,7 @@ function rebaseDocument(
     name: appendCopyLabel ? `${source.name} (imported copy)` : source.name,
     layers: source.layers.map((layer, index) => ({
       ...layer,
-      id: layerIdMap.get(layer.id) as string,
+      id: layerIdMap.get(layer.id) || fallbackLayerId,
       documentId: targetDocumentId,
       order: index,
       createdAt: timestamp,
@@ -152,7 +156,7 @@ export function prepareProductDesignImport(
     document,
     assets: bundle.assets.map((asset) => ({
       ...asset,
-      id: assetIdMap.get(asset.id) as string,
+      id: assetIdMap.get(asset.id) || createProductDesignId('asset'),
       documentId: targetDocumentId,
     })),
     checkpoints,
