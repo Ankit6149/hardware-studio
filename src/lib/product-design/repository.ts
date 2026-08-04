@@ -27,6 +27,26 @@ function transactionToPromise(transaction: IDBTransaction): Promise<void> {
   });
 }
 
+function deleteRecordsByIndex(
+  store: IDBObjectStore,
+  indexName: string,
+  value: IDBValidKey,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = store.index(indexName).openCursor(IDBKeyRange.only(value));
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) {
+        resolve();
+        return;
+      }
+      cursor.delete();
+      cursor.continue();
+    };
+    request.onerror = () => reject(request.error || new Error(`Unable to delete records from ${indexName}.`));
+  });
+}
+
 async function openProductDesignDatabase(): Promise<IDBDatabase> {
   if (typeof indexedDB === 'undefined') throw new Error('IndexedDB is unavailable in this environment.');
 
@@ -97,13 +117,10 @@ export class IndexedDbProductDesignRepository implements ProductDesignRepository
       'readwrite',
     );
     transaction.objectStore(DOCUMENTS_STORE).delete(documentId);
-
-    const assetIndex = transaction.objectStore(ASSETS_STORE).index('documentId');
-    const checkpointIndex = transaction.objectStore(CHECKPOINTS_STORE).index('documentId');
-    const assetKeys = await requestToPromise(assetIndex.getAllKeys(documentId));
-    const checkpointKeys = await requestToPromise(checkpointIndex.getAllKeys(documentId));
-    assetKeys.forEach((key) => transaction.objectStore(ASSETS_STORE).delete(key));
-    checkpointKeys.forEach((key) => transaction.objectStore(CHECKPOINTS_STORE).delete(key));
+    await Promise.all([
+      deleteRecordsByIndex(transaction.objectStore(ASSETS_STORE), 'documentId', documentId),
+      deleteRecordsByIndex(transaction.objectStore(CHECKPOINTS_STORE), 'documentId', documentId),
+    ]);
     await transactionToPromise(transaction);
   }
 
