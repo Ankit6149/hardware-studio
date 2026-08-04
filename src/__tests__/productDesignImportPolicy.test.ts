@@ -11,12 +11,17 @@ function exportedBundle(): ProductDesignExportBundle {
   const document = createProductDesignDocument('source-project', 'Wearable concept');
   const layerId = document.layers[0].id;
   const rectangle = createProductDesignObject(document, 'rectangle', layerId, 80, 90);
+  const referenceBase = createProductDesignObject(document, 'reference-image', layerId, 260, 90);
+  const conceptBase = createProductDesignObject(document, 'concept-part', layerId, 80, 260);
+  if (referenceBase.type !== 'reference-image' || conceptBase.type !== 'concept-part') {
+    throw new Error('Product Design fixture creation returned an unexpected object type.');
+  }
   const reference = {
-    ...createProductDesignObject(document, 'reference-image', layerId, 260, 90),
+    ...referenceBase,
     assetId: createProductDesignId('asset'),
   };
   const concept = {
-    ...createProductDesignObject(document, 'concept-part', layerId, 80, 260),
+    ...conceptBase,
     sourceObjectIds: [rectangle.id, reference.id],
   };
   document.objects = [rectangle, reference, concept];
