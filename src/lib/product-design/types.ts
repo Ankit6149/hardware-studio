@@ -3,20 +3,24 @@ export type ProductDesignUnits = 'mm' | 'cm' | 'in';
 export type ProductDesignTool =
   | 'select'
   | 'pan'
+  | 'frame'
   | 'rectangle'
   | 'ellipse'
   | 'line'
   | 'arrow'
+  | 'freehand'
   | 'text'
   | 'note'
   | 'dimension'
   | 'reference-image';
 
 export type ProductDesignObjectType =
+  | 'frame'
   | 'rectangle'
   | 'ellipse'
   | 'line'
   | 'arrow'
+  | 'freehand-path'
   | 'text'
   | 'note'
   | 'dimension'
@@ -24,6 +28,11 @@ export type ProductDesignObjectType =
   | 'concept-part';
 
 export type ProductDesignAuthority = 'concept' | 'intent' | 'reference' | 'qualified';
+
+export interface ProductDesignPoint {
+  x: number;
+  y: number;
+}
 
 export interface ProductDesignLayer {
   id: string;
@@ -61,6 +70,12 @@ export interface ProductDesignBaseObject {
   updatedAt: string;
 }
 
+export interface ProductDesignFrame extends ProductDesignBaseObject {
+  type: 'frame';
+  title: string;
+  clipContent: boolean;
+}
+
 export interface ProductDesignRectangle extends ProductDesignBaseObject {
   type: 'rectangle';
   cornerRadius: number;
@@ -72,6 +87,12 @@ export interface ProductDesignEllipse extends ProductDesignBaseObject {
 
 export interface ProductDesignLine extends ProductDesignBaseObject {
   type: 'line' | 'arrow';
+}
+
+export interface ProductDesignFreehandPath extends ProductDesignBaseObject {
+  type: 'freehand-path';
+  points: ProductDesignPoint[];
+  smoothing: number;
 }
 
 export interface ProductDesignText extends ProductDesignBaseObject {
@@ -112,9 +133,11 @@ export interface ProductDesignConceptPart extends ProductDesignBaseObject {
 }
 
 export type ProductDesignObject =
+  | ProductDesignFrame
   | ProductDesignRectangle
   | ProductDesignEllipse
   | ProductDesignLine
+  | ProductDesignFreehandPath
   | ProductDesignText
   | ProductDesignDimension
   | ProductDesignReferenceImage
@@ -123,7 +146,11 @@ export type ProductDesignObject =
 export type ProductDesignObjectPatch = Partial<
   Omit<ProductDesignBaseObject, 'id' | 'documentId' | 'type' | 'createdAt'>
 > & {
+  title?: string;
+  clipContent?: boolean;
   cornerRadius?: number;
+  points?: ProductDesignPoint[];
+  smoothing?: number;
   text?: string;
   fontSize?: number;
   fontWeight?: number;
