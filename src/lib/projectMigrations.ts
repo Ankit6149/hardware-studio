@@ -1,11 +1,14 @@
 // projectMigrations.ts — Phase 23 Project Import/Export Correctness and Schema Migrations
 import { Project, BoardComponent } from '../types';
+import { defaultComponents } from './components/componentLibrary';
 
 export const CURRENT_SCHEMA_VERSION = 4;
 
 export function normalizeProjectComponent(bc: Record<string, unknown>): BoardComponent {
   const compId = (bc.id as string) || `cmp_${Date.now()}_${Math.random()}`;
   const preserved = bc as unknown as Partial<BoardComponent>;
+  const libraryId = (bc.libraryId as string) || '';
+  const sourceDefinition = defaultComponents.find((definition) => definition.libraryId === libraryId);
 
   // Accept canonical project-pin fields and reusable library-definition fields.
   // Every downstream editor must receive the same BoardComponentPin shape.
@@ -55,23 +58,24 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
     // fields that are not rewritten by migration. Canonical fields below win.
     ...preserved,
     id: compId,
-    libraryId: (bc.libraryId as string) || '',
+    libraryId,
     referenceDesignator: (bc.referenceDesignator as string) || 'U1',
-    componentName: (bc.componentName as string) || '',
-    componentType: (bc.componentType as string) || '',
-    value: (bc.value as string) || '',
-    packageName: (bc.packageName as string) || '',
-    footprint: (bc.footprint as string) || '',
-    partNumber: (bc.partNumber as string) || '',
+    componentName: (bc.componentName as string) || sourceDefinition?.name || '',
+    componentType: (bc.componentType as string) || sourceDefinition?.category || '',
+    value: (bc.value as string) || sourceDefinition?.value || '',
+    packageName: (bc.packageName as string) || sourceDefinition?.packageName || '',
+    footprint: (bc.footprint as string) || sourceDefinition?.footprintName || '',
+    partNumber: (bc.partNumber as string) || sourceDefinition?.partNumber || '',
+    manufacturer: (bc.manufacturer as string) || sourceDefinition?.manufacturer || '',
     pins,
     boardId: (bc.boardId as string) || 'board_0',
     circuitBlockId: (bc.circuitBlockId as string) || 'block_0',
     bomItemId: (bc.bomItemId as string) || '',
-    quantity: Number(bc.quantity) || 1,
+    quantity: Number(bc.quantity) || sourceDefinition?.defaultQuantity || 1,
     schematic,
     pcb,
     status: (bc.status as BoardComponent['status']) || 'Draft',
-    notes: (bc.notes as string) || '',
+    notes: (bc.notes as string) || sourceDefinition?.description || '',
 
     placementX: pcb.xMm,
     placementY: pcb.yMm,
@@ -80,7 +84,7 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
     lockedPlacement: pcb.locked,
     placementStatus: pcb.placementStatus,
     supplier: (bc.supplier as string) || '',
-    datasheetUrl: (bc.datasheetUrl as string) || '',
+    datasheetUrl: (bc.datasheetUrl as string) || sourceDefinition?.datasheetUrl || '',
     placementCriticality: (bc.placementCriticality as BoardComponent['placementCriticality']) || 'Low'
   };
 }
