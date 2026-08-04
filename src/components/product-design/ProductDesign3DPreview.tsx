@@ -15,16 +15,16 @@ const views = [
 export const ProductDesign3DPreview: React.FC = () => {
   const open = useProductDesignStore((state) => state.is3DOpen);
   const setOpen = useProductDesignStore((state) => state.set3DOpen);
-  const document = useProductDesignStore((state) => state.document);
+  const designDocument = useProductDesignStore((state) => state.document);
   const selectedObjectIds = useProductDesignStore((state) => state.selectedObjectIds);
   const updateObjectById = useProductDesignStore((state) => state.updateObjectById);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const setCameraViewRef = useRef<((position: readonly [number, number, number]) => void) | null>(null);
 
   const conceptPart = useMemo(() => {
-    const selected = document?.objects.find((object) => selectedObjectIds.includes(object.id) && object.type === 'concept-part');
-    return selected?.type === 'concept-part' ? selected : document?.objects.find((object) => object.type === 'concept-part');
-  }, [document, selectedObjectIds]);
+    const selected = designDocument?.objects.find((object) => selectedObjectIds.includes(object.id) && object.type === 'concept-part');
+    return selected?.type === 'concept-part' ? selected : designDocument?.objects.find((object) => object.type === 'concept-part');
+  }, [designDocument, selectedObjectIds]);
 
   useEffect(() => {
     if (!open || !conceptPart || !canvasRef.current) return;
@@ -110,9 +110,9 @@ export const ProductDesign3DPreview: React.FC = () => {
       if (canvas.parentElement) observer.observe(canvas.parentElement);
 
       const handleVisibility = () => {
-        if (document.visibilityState === 'visible') render();
+        if (window.document.visibilityState === 'visible') render();
       };
-      document.addEventListener('visibilitychange', handleVisibility);
+      window.document.addEventListener('visibilitychange', handleVisibility);
 
       setCameraViewRef.current = (position) => {
         camera.position.set(...position);
@@ -126,7 +126,7 @@ export const ProductDesign3DPreview: React.FC = () => {
 
       cleanup = () => {
         observer.disconnect();
-        document.removeEventListener('visibilitychange', handleVisibility);
+        window.document.removeEventListener('visibilitychange', handleVisibility);
         controls.removeEventListener('change', render);
         controls.dispose();
         geometry.dispose();
@@ -147,6 +147,11 @@ export const ProductDesign3DPreview: React.FC = () => {
       cleanup?.();
     };
   }, [conceptPart, open]);
+
+  const updateConceptPart = (patch: Partial<typeof conceptPart>, label: string) => {
+    if (!conceptPart) return;
+    updateObjectById(conceptPart.id, { ...conceptPart, ...patch }, label);
+  };
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -187,18 +192,18 @@ export const ProductDesign3DPreview: React.FC = () => {
                 </dl>
 
                 <label className="mt-4 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Depth</label>
-                <input type="number" min={1} value={conceptPart.depth} onChange={(event) => updateObjectById(conceptPart.id, { depth: Math.max(1, Number(event.target.value) || 1) } as never, 'Update concept depth')} className="mt-1 h-9 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-indigo-500" />
+                <input type="number" min={1} value={conceptPart.depth} onChange={(event) => updateConceptPart({ depth: Math.max(1, Number(event.target.value) || 1) }, 'Update concept depth')} className="mt-1 h-9 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-indigo-500" />
 
                 <label className="mt-3 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Material intent</label>
-                <input value={conceptPart.material} onChange={(event) => updateObjectById(conceptPart.id, { material: event.target.value } as never, 'Update concept material')} className="mt-1 h-9 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-indigo-500" />
+                <input value={conceptPart.material} onChange={(event) => updateConceptPart({ material: event.target.value }, 'Update concept material')} className="mt-1 h-9 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-indigo-500" />
 
                 <label className="mt-3 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Finish intent</label>
-                <input value={conceptPart.finish} onChange={(event) => updateObjectById(conceptPart.id, { finish: event.target.value } as never, 'Update concept finish')} className="mt-1 h-9 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-indigo-500" />
+                <input value={conceptPart.finish} onChange={(event) => updateConceptPart({ finish: event.target.value }, 'Update concept finish')} className="mt-1 h-9 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-indigo-500" />
 
                 <label className="mt-3 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Appearance</label>
                 <div className="mt-1 flex items-center gap-2">
-                  <input type="color" value={conceptPart.appearance} onChange={(event) => updateObjectById(conceptPart.id, { appearance: event.target.value } as never, 'Update concept appearance')} className="h-9 w-12 rounded-lg border border-slate-300 bg-white p-1" />
-                  <input value={conceptPart.appearance} onChange={(event) => updateObjectById(conceptPart.id, { appearance: event.target.value } as never, 'Update concept appearance')} className="h-9 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 font-mono text-xs outline-none focus:border-indigo-500" />
+                  <input type="color" value={conceptPart.appearance} onChange={(event) => updateConceptPart({ appearance: event.target.value }, 'Update concept appearance')} className="h-9 w-12 rounded-lg border border-slate-300 bg-white p-1" />
+                  <input value={conceptPart.appearance} onChange={(event) => updateConceptPart({ appearance: event.target.value }, 'Update concept appearance')} className="h-9 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 font-mono text-xs outline-none focus:border-indigo-500" />
                 </div>
 
                 <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[10px] leading-5 text-amber-900">
