@@ -10,7 +10,6 @@ import { RECOVER_TO_DASHBOARD_KEY } from '../lib/reliability';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { BlueprintCanvas } from './BlueprintCanvas';
-import { BOMTable } from './BOMTable';
 import { ExportCenter } from './ExportCenter';
 import { PropertiesPanel } from './PropertiesPanel';
 import { ReviewWarnings } from './ReviewWarnings';
@@ -24,37 +23,45 @@ import { ProjectDashboard } from './ProjectDashboard';
 import { BlueprintSheets } from './BlueprintSheets';
 import { FactoryPackageBuilder } from './FactoryPackageBuilder';
 import { RevisionsStudio } from './revisions/RevisionsStudio';
-import { BoardDesigner } from './board/BoardDesigner';
-import { ComponentLibraryWorkbench } from './component-library/ComponentLibraryWorkbench';
-import { SchematicEditor } from './schematic/SchematicEditor';
 import { ProductStudio } from './product/ProductStudio';
-import { MechanicalStudio } from './mechanical/MechanicalStudio';
 import { FirmwareStudio } from './firmware/FirmwareStudio';
-import { ValidationStudio } from './validation/ValidationStudio';
+import { StudioBuildMap } from './studio/StudioBuildMap';
+import { EngineeringContextBar } from './studio/EngineeringContextBar';
+import { UnifiedBOMWorkbench } from './studio/UnifiedBOMWorkbench';
+import { UnifiedBoardDRCWorkbench } from './studio/UnifiedBoardDRCWorkbench';
+import { UnifiedValidationWorkbench } from './studio/UnifiedValidationWorkbench';
+import {
+  UnifiedBoardDesignerWorkbench,
+  UnifiedComponentLibraryWorkbench,
+  UnifiedMechanicalWorkbench,
+  UnifiedSchematicWorkbench,
+} from './studio/UnifiedWorkbenchAdapters';
 
-function renderSurface(surface: NavigationSurface): React.ReactNode {
+function renderSurface(surface: NavigationSurface, viewId: string): React.ReactNode {
+  if (viewId === 'pcb-drc') return <UnifiedBoardDRCWorkbench />;
+
   switch (surface) {
     case 'dashboard': return <ProjectDashboard />;
     case 'legacy-blueprint': return <BlueprintCanvas />;
     case 'product-studio': return <ProductStudio />;
     case 'readiness': return <ReadinessDashboard />;
-    case 'mechanical-canvas': return <MechanicalStudio initialMode="canvas" />;
-    case 'mechanical-assembly': return <MechanicalStudio initialMode="assembly" />;
-    case 'component-library': return <ComponentLibraryWorkbench />;
-    case 'schematic-editor': return <SchematicEditor />;
+    case 'mechanical-canvas': return <UnifiedMechanicalWorkbench defaultMode="canvas" />;
+    case 'mechanical-assembly': return <UnifiedMechanicalWorkbench defaultMode="assembly" />;
+    case 'component-library': return <UnifiedComponentLibraryWorkbench />;
+    case 'schematic-editor': return <UnifiedSchematicWorkbench />;
     case 'power-budget': return <PowerBudgetTable />;
     case 'pin-map': return <PinMapTable />;
-    case 'bom': return <BOMTable />;
-    case 'board-designer': return <BoardDesigner />;
+    case 'bom': return <UnifiedBOMWorkbench />;
+    case 'board-designer': return <UnifiedBoardDesignerWorkbench />;
     case 'board-studio': return <BoardStudio />;
     case 'pcb-constraints': return <PCBConstraints />;
     case 'firmware-modules': return <FirmwareStudio initialMode="modules" />;
     case 'firmware-state-machine': return <FirmwareStudio initialMode="state-machine" />;
     case 'firmware-hardware-map': return <FirmwareStudio initialMode="hardware-map" />;
     case 'firmware-source': return <FirmwareStudio initialMode="source" />;
-    case 'validation-tests': return <ValidationStudio initialMode="tests" />;
-    case 'validation-coverage': return <ValidationStudio initialMode="coverage" />;
-    case 'validation-factory-qa': return <ValidationStudio initialMode="factory-qa" />;
+    case 'validation-tests': return <UnifiedValidationWorkbench initialMode="tests" />;
+    case 'validation-coverage': return <UnifiedValidationWorkbench initialMode="coverage" />;
+    case 'validation-factory-qa': return <UnifiedValidationWorkbench initialMode="factory-qa" />;
     case 'blueprint-sheets': return <BlueprintSheets />;
     case 'exports': return <ExportCenter />;
     case 'revisions': return <RevisionsStudio />;
@@ -143,14 +150,16 @@ export const AppShell: React.FC = () => {
       <div className="relative flex min-h-0 flex-1">
         <Sidebar />
         <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+          <StudioBuildMap />
+          <EngineeringContextBar />
           {activeHiddenDomain && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-amber-950">
               <div className="flex min-w-0 items-center gap-2">
                 <EyeOff className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <p className="text-xs leading-5"><strong>This workbench is hidden from your current workflow.</strong> It remains open until you leave, and its project data has not been changed.</p>
+                <p className="text-xs leading-5"><strong>This domain is outside the focused workflow.</strong> It stays fully available in the build map, and its project data has not been changed.</p>
               </div>
               <div className="flex shrink-0 gap-2">
-                <button type="button" onClick={() => toggleDomain(activeHiddenDomain)} className="rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500">Show this domain</button>
+                <button type="button" onClick={() => toggleDomain(activeHiddenDomain)} className="rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500">Add to focus</button>
                 <button type="button" onClick={openSetup} className="inline-flex items-center gap-1.5 rounded-lg bg-amber-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-1"><Settings2 className="h-3.5 w-3.5" aria-hidden="true" /> Configure</button>
               </div>
             </div>
@@ -158,7 +167,7 @@ export const AppShell: React.FC = () => {
           <div className="relative flex min-h-0 flex-1">
             {showVisualizer && <ProductVisualizer />}
             <div className="relative flex h-full min-w-0 flex-1 flex-col">
-              {activeNavigationItem ? renderSurface(activeNavigationItem.surface) : (
+              {activeNavigationItem ? renderSurface(activeNavigationItem.surface, activeView) : (
                 <UnavailableWorkspace viewId={activeView} onReturn={() => setActiveView('dashboard')} />
               )}
             </div>
