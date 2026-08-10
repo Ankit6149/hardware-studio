@@ -23,6 +23,9 @@ import { ProjectDashboard } from './ProjectDashboard';
 import { BlueprintSheets } from './BlueprintSheets';
 import { FactoryPackageBuilder } from './FactoryPackageBuilder';
 import { RevisionsStudio } from './revisions/RevisionsStudio';
+import { BoardDesigner } from './board/BoardDesigner';
+import { ComponentLibraryWorkbench } from './component-library/ComponentLibraryWorkbench';
+import { SchematicEditor } from './schematic/SchematicEditor';
 import { ProductStudio } from './product/ProductStudio';
 import { FirmwareStudio } from './firmware/FirmwareStudio';
 import { StudioBuildMap } from './studio/StudioBuildMap';
@@ -45,10 +48,17 @@ function renderSurface(surface: NavigationSurface, viewId: string): React.ReactN
     case 'legacy-blueprint': return <BlueprintCanvas />;
     case 'product-studio': return <ProductStudio initialMode={viewId} />;
     case 'readiness': return <ReadinessDashboard />;
+<<<<<<< HEAD
     case 'mechanical-canvas': return <UnifiedMechanicalWorkbench defaultMode="canvas" />;
     case 'mechanical-assembly': return <UnifiedMechanicalWorkbench defaultMode="assembly" />;
     case 'component-library': return <UnifiedComponentLibraryWorkbench />;
     case 'schematic-editor': return <UnifiedSchematicWorkbench />;
+=======
+    case 'mechanical-canvas': return <MechanicalStudio initialMode="canvas" />;
+    case 'mechanical-assembly': return <MechanicalStudio initialMode="assembly" />;
+    case 'component-library': return <ComponentLibraryWorkbench />;
+    case 'schematic-editor': return <SchematicEditor />;
+>>>>>>> origin/feature/device-knowledge-library
     case 'power-budget': return <PowerBudgetTable />;
     case 'pin-map': return <PinMapTable />;
     case 'bom': return <UnifiedBOMWorkbench />;
