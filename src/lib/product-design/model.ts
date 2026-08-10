@@ -198,6 +198,29 @@ export function createProductDesignObject(
       altText: '',
     };
   }
+  if (type === 'frame') {
+    return {
+      ...commonObjectFields(document, type, layerId, x, y, 'concept'),
+      type,
+      width: 400,
+      height: 300,
+      fill: 'transparent',
+      stroke: '#64748b',
+      title: 'Frame',
+      clipContent: true,
+    };
+  }
+  if (type === 'freehand-path') {
+    return {
+      ...commonObjectFields(document, type, layerId, x, y, 'concept'),
+      type,
+      width: 0,
+      height: 0,
+      fill: 'transparent',
+      points: [] as Array<{ x: number; y: number }>,
+      smoothing: 0.5,
+    };
+  }
 
   const exhaustive: never = type;
   throw new Error(`Unsupported product design object: ${exhaustive}`);

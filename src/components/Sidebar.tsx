@@ -224,10 +224,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
               </section>
             );
           })}
-              </div>
-            </section>
-          ))}
->>>>>>> origin/feature/visual-representation-system
         </nav>
       </div>
 
