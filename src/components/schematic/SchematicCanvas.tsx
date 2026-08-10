@@ -264,94 +264,110 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
           })}
 
           {/* Render wires */}
-          {(schematicWires || []).map((w, idx) => {
-            const isSelected = selectedWireId === w.id;
-            if (!w.points || w.points.length < 2) return null;
-            
-            // Compute dynamic endpoints anchored to current symbol pin positions
-            const points = [...w.points];
+          {(() => {
+            const allWirePaths: { x: number; y: number }[][] = [];
+            const wireElements = (schematicWires || []).map((w, idx) => {
+              const isSelected = selectedWireId === w.id;
+              if (!w.points || w.points.length < 2) return null;
+              
+              const points = [...w.points];
 
-            // Resolve source anchor (structured or fallback to sourcePinId)
-            let sourceCompId = w.sourceAnchor?.type === 'pin' ? w.sourceAnchor.componentId : undefined;
-            let sourcePinNum = w.sourceAnchor?.type === 'pin' ? w.sourceAnchor.pinNumber : undefined;
-            if (!sourceCompId && w.sourcePinId) {
-              const lastIdx = w.sourcePinId.lastIndexOf('_');
-              if (lastIdx > 0) {
-                sourceCompId = w.sourcePinId.slice(0, lastIdx);
-                sourcePinNum = w.sourcePinId.slice(lastIdx + 1);
+              let sourceCompId = w.sourceAnchor?.type === 'pin' ? w.sourceAnchor.componentId : undefined;
+              let sourcePinNum = w.sourceAnchor?.type === 'pin' ? w.sourceAnchor.pinNumber : undefined;
+              if (!sourceCompId && w.sourcePinId) {
+                const lastIdx = w.sourcePinId.lastIndexOf('_');
+                if (lastIdx > 0) {
+                  sourceCompId = w.sourcePinId.slice(0, lastIdx);
+                  sourcePinNum = w.sourcePinId.slice(lastIdx + 1);
+                }
               }
-            }
-            if (sourceCompId && sourcePinNum) {
-              const comp = (boardComponents || []).find(c => c.id === sourceCompId);
-              if (comp && comp.schematic?.placed) {
-                const layouts = getSymbolPinLayouts(comp, comp.schematic?.x || 150, comp.schematic?.y || 150);
-                const pinPos = layouts.find(l => l.number === sourcePinNum);
-                if (pinPos) points[0] = { x: pinPos.x, y: pinPos.y };
+              if (sourceCompId && sourcePinNum) {
+                const comp = (boardComponents || []).find(c => c.id === sourceCompId);
+                if (comp && comp.schematic?.placed) {
+                  const layouts = getSymbolPinLayouts(comp, comp.schematic?.x || 150, comp.schematic?.y || 150);
+                  const pinPos = layouts.find(l => l.number === sourcePinNum);
+                  if (pinPos) points[0] = { x: pinPos.x, y: pinPos.y };
+                }
               }
-            }
 
-            // Resolve target anchor (structured or fallback to targetPinId)
-            let targetCompId = w.targetAnchor?.type === 'pin' ? w.targetAnchor.componentId : undefined;
-            let targetPinNum = w.targetAnchor?.type === 'pin' ? w.targetAnchor.pinNumber : undefined;
-            if (!targetCompId && w.targetPinId) {
-              const lastIdx = w.targetPinId.lastIndexOf('_');
-              if (lastIdx > 0) {
-                targetCompId = w.targetPinId.slice(0, lastIdx);
-                targetPinNum = w.targetPinId.slice(lastIdx + 1);
+              let targetCompId = w.targetAnchor?.type === 'pin' ? w.targetAnchor.componentId : undefined;
+              let targetPinNum = w.targetAnchor?.type === 'pin' ? w.targetAnchor.pinNumber : undefined;
+              if (!targetCompId && w.targetPinId) {
+                const lastIdx = w.targetPinId.lastIndexOf('_');
+                if (lastIdx > 0) {
+                  targetCompId = w.targetPinId.slice(0, lastIdx);
+                  targetPinNum = w.targetPinId.slice(lastIdx + 1);
+                }
               }
-            }
-            if (targetCompId && targetPinNum) {
-              const comp = (boardComponents || []).find(c => c.id === targetCompId);
-              if (comp && comp.schematic?.placed) {
-                const layouts = getSymbolPinLayouts(comp, comp.schematic?.x || 150, comp.schematic?.y || 150);
-                const pinPos = layouts.find(l => l.number === targetPinNum);
-                if (pinPos) points[points.length - 1] = { x: pinPos.x, y: pinPos.y };
+              if (targetCompId && targetPinNum) {
+                const comp = (boardComponents || []).find(c => c.id === targetCompId);
+                if (comp && comp.schematic?.placed) {
+                  const layouts = getSymbolPinLayouts(comp, comp.schematic?.x || 150, comp.schematic?.y || 150);
+                  const pinPos = layouts.find(l => l.number === targetPinNum);
+                  if (pinPos) points[points.length - 1] = { x: pinPos.x, y: pinPos.y };
+                }
               }
-            }
+
+              // Format 90-degree orthogonal path if only 2 points
+              const finalPath = points.length === 2 
+                ? computeOrthogonalPath(points[0].x, points[0].y, points[1].x, points[1].y)
+                : points;
+
+              allWirePaths.push(finalPath);
+
+              return (
+                <g
+                  key={w.id || idx}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewStateChange({
+                      selectedWireId: w.id,
+                      selectedComponentId: null
+                    });
+                  }}
+                >
+                  <path
+                    d={`M ${finalPath.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth={8}
+                    className="cursor-pointer"
+                  />
+                  <path
+                    d={`M ${finalPath.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                    fill="none"
+                    stroke={isSelected ? '#10b981' : '#38bdf8'}
+                    strokeWidth={1.5}
+                    className="transition-all"
+                  />
+                  {finalPath.length > 0 && (
+                    <text
+                      x={finalPath[0].x + 8}
+                      y={finalPath[0].y - 5}
+                      fill="#38bdf8"
+                      fontSize={7}
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
+                      {w.netName}
+                    </text>
+                  )}
+                </g>
+              );
+            });
+
+            // T-junction dots detection
+            const junctions = detectWireJunctions(allWirePaths);
 
             return (
-              <g
-                key={w.id || idx}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewStateChange({
-                    selectedWireId: w.id,
-                    selectedComponentId: null
-                  });
-                }}
-              >
-                {/* Background fat stroke for easy clicking selection */}
-                <path
-                  d={`M ${points.map(p => `${p.x} ${p.y}`).join(' L ')}`}
-                  fill="none"
-                  stroke="transparent"
-                  strokeWidth={8}
-                  className="cursor-pointer"
-                />
-                {/* Real wire segment */}
-                <path
-                  d={`M ${points.map(p => `${p.x} ${p.y}`).join(' L ')}`}
-                  fill="none"
-                  stroke={isSelected ? '#10b981' : '#38bdf8'}
-                  strokeWidth={1.5}
-                  className="transition-all"
-                />
-                
-                {/* Net text label near first segment */}
-                {w.points.length > 0 && (
-                  <text
-                    x={w.points[0].x + 10}
-                    y={w.points[0].y - 4}
-                    fill="#38bdf8"
-                    fontSize={7.5}
-                    fontFamily="monospace"
-                  >
-                    {w.netName}
-                  </text>
-                )}
+              <g>
+                {wireElements}
+                {junctions.map((j, jIdx) => (
+                  <circle key={`jnc_${jIdx}`} cx={j.x} cy={j.y} r={3} fill="#38bdf8" stroke="#0f172a" strokeWidth={1} />
+                ))}
               </g>
             );
-          })}
+          })()}
 
           {/* Active wire routing preview */}
           {isDrawingWire && wirePoints.length > 0 && (

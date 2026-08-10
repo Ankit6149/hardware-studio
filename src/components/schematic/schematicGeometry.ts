@@ -150,3 +150,67 @@ export function getPinPosition(
   const match = layouts.find(l => l.number === pinNum);
   return match ? { x: match.x, y: match.y } : { x: symbolX, y: symbolY };
 }
+
+/** Compute 90-degree Manhattan orthogonal path between two points */
+export function computeOrthogonalPath(
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  preferHorizontal: boolean = true
+): { x: number; y: number }[] {
+  const points: { x: number; y: number }[] = [{ x: startX, y: startY }];
+
+  if (Math.abs(startX - endX) < 1 || Math.abs(startY - endY) < 1) {
+    // Straight line
+    points.push({ x: endX, y: endY });
+    return points;
+  }
+
+  if (preferHorizontal) {
+    const midX = snapToGrid((startX + endX) / 2);
+    points.push({ x: midX, y: startY });
+    points.push({ x: midX, y: endY });
+  } else {
+    const midY = snapToGrid((startY + endY) / 2);
+    points.push({ x: startX, y: midY });
+    points.push({ x: endX, y: midY });
+  }
+
+  points.push({ x: endX, y: endY });
+  return points;
+}
+
+export interface WireJunctionPoint {
+  x: number;
+  y: number;
+}
+
+/** Find T-junction wire intersection points where multiple wires meet */
+export function detectWireJunctions(
+  wirePaths: { x: number; y: number }[][]
+): WireJunctionPoint[] {
+  const pointCounts = new Map<string, { count: number; x: number; y: number }>();
+
+  wirePaths.forEach((path) => {
+    path.forEach((pt) => {
+      const key = `${Math.round(pt.x)},${Math.round(pt.y)}`;
+      const existing = pointCounts.get(key);
+      if (existing) {
+        existing.count++;
+      } else {
+        pointCounts.set(key, { count: 1, x: pt.x, y: pt.y });
+      }
+    });
+  });
+
+  const junctions: WireJunctionPoint[] = [];
+  pointCounts.forEach((val) => {
+    if (val.count >= 3) {
+      junctions.push({ x: val.x, y: val.y });
+    }
+  });
+
+  return junctions;
+}
+
