@@ -21,27 +21,33 @@ const STATE_TYPE_COLORS: Record<string, string> = {
 
 function FirmwareStateNode({ data, selected }: NodeProps) {
   const d = data as { label: string; stateType: string; description: string };
-  const color = STATE_TYPE_COLORS[d.stateType] || '#6b7280';
+  const color = STATE_TYPE_COLORS[d.stateType] || '#475569';
   const isInitial = d.stateType === 'Initial';
   const isFinal = d.stateType === 'Final';
 
   return (
     <div style={{
-      background: `linear-gradient(135deg, ${color}20, ${color}08)`,
-      border: selected ? `2px solid ${color}` : `2px solid ${color}60`,
-      borderRadius: isFinal ? '50%' : isInitial ? 12 : 8,
-      padding: isInitial ? '10px 16px' : '8px 14px',
-      minWidth: isFinal ? 60 : 80,
+      background: '#ffffff',
+      border: selected ? `2.5px solid ${color}` : `1.5px solid ${color}`,
+      borderRadius: isFinal ? 20 : isInitial ? 12 : 8,
+      padding: '10px 14px',
+      minWidth: isFinal ? 70 : 130,
       textAlign: 'center',
-      boxShadow: selected ? `0 0 0 2px ${color}30` : '0 1px 4px rgba(0,0,0,0.06)',
+      boxShadow: selected ? `0 0 0 3px ${color}30, 0 4px 12px rgba(0,0,0,0.08)` : '0 2px 6px rgba(0,0,0,0.05)',
+      cursor: 'grab',
+      transition: 'all 0.15s ease-in-out',
     }}>
-      <Handle type="target" position={Position.Top} style={{ background: color, width: 6, height: 6 }} />
-      <div style={{ fontSize: 9, color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {d.stateType}
+      <Handle type="target" position={Position.Left} style={{ background: color, width: 9, height: 9, border: '2px solid white' }} />
+      <Handle type="target" position={Position.Top} id="f-top" style={{ background: color, width: 9, height: 9, border: '2px solid white' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+        <span style={{ fontSize: 9, color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', background: `${color}15`, padding: '2px 6px', borderRadius: 4 }}>
+          {d.stateType}
+        </span>
       </div>
-      <div style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', marginTop: 2 }}>{d.label}</div>
-      {d.description && <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>{d.description}</div>}
-      <Handle type="source" position={Position.Bottom} style={{ background: color, width: 6, height: 6 }} />
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginTop: 4, fontFamily: 'sans-serif' }}>{d.label}</div>
+      {d.description && <div style={{ fontSize: 10, color: '#475569', marginTop: 3 }}>{d.description}</div>}
+      <Handle type="source" position={Position.Right} style={{ background: color, width: 9, height: 9, border: '2px solid white' }} />
+      <Handle type="source" position={Position.Bottom} id="f-bottom" style={{ background: color, width: 9, height: 9, border: '2px solid white' }} />
     </div>
   );
 }
