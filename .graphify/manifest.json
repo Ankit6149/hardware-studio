@@ -1,0 +1,890 @@
+{
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/eslint.config.mjs": {
+    "mtime": 1781420532617.8374,
+    "hash": "dfa1f5f6a7037bf39dc510f30b180002"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/next.config.ts": {
+    "mtime": 1781420532782.136,
+    "hash": "9b77af189a21a7a64e4bd7a426f64176"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/packages/local-bridge/bridgeServer.js": {
+    "mtime": 1784652093381.8772,
+    "hash": "69f6ed713e5b24251700c2f5805dcdba"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/packages/mcp-server/mcpServer.ts": {
+    "mtime": 1784652187629.9492,
+    "hash": "1c59dc09d509d6cb2010d3a2b1702d46"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/packages/mcp-server/mcpServerStdio.ts": {
+    "mtime": 1784573401885.362,
+    "hash": "5e3d1cfeaa95c87a50804d990593e32b"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/postcss.config.mjs": {
+    "mtime": 1781420532661.4111,
+    "hash": "239f3ebf717465dc636818a1a619398d"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/blueprintManufacturing.test.ts": {
+    "mtime": 1784652302151.6777,
+    "hash": "a69f39baeb67e33067fbb94e0f76e082"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/bridgeSecurity.test.ts": {
+    "mtime": 1785855850421.3435,
+    "hash": "ad0869c23b32e1160f4d479e94631537"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/bridgeWorkspaceOps.test.ts": {
+    "mtime": 1785855850421.3435,
+    "hash": "53552ce79aefcfb55eeb68c24208a4f8"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/commandBus.test.ts": {
+    "mtime": 1784633455305.6406,
+    "hash": "619cfaeb24f694e0e2fc835982e0f7d0"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/deviceKnowledge.test.ts": {
+    "mtime": 1785855850421.3435,
+    "hash": "e035f86140b49615cbdf24fa6dfb1676"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/engineeringBlueprintDrawing.test.ts": {
+    "mtime": 1785855850427.7192,
+    "hash": "7d522ecc44dbfa035dd0523b0991ff47"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/feedbackState.test.ts": {
+    "mtime": 1785855850427.7192,
+    "hash": "d190064cd52bc3686231a429b6886a38"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/firmwareWorkspace.test.ts": {
+    "mtime": 1784633785410.6995,
+    "hash": "411aac68fe75644bcbd5f9e7d15042fc"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/hardwareStudioV1Integration.test.ts": {
+    "mtime": 1784652309936.1118,
+    "hash": "8d406fcafa18d2596c7d56a8a62e97f4"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/localBridge.test.ts": {
+    "mtime": 1784634215384.3745,
+    "hash": "9c2bc55a7f9cfb56f50ae764577c5288"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/localBridgeSecurity.test.ts": {
+    "mtime": 1785855850427.7192,
+    "hash": "77f802507037e39f6b172717e907c800"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/mcpProtocol.test.ts": {
+    "mtime": 1784652681722.1687,
+    "hash": "e144bf24d152404cf3dba75a51a50834"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/mcpServer.test.ts": {
+    "mtime": 1784634224209.1228,
+    "hash": "26cc0ac302c8dbb3cd1cda3401a777b0"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/mechanical3DSync.test.ts": {
+    "mtime": 1784652073078.6555,
+    "hash": "01cf482301facca504fcbae31646fd4d"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/mechanicalGeometry.test.ts": {
+    "mtime": 1784652031526.3398,
+    "hash": "4bdf79e62a3096b68fee23b4ebf1a1bd"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/mfgManifestEngine.test.ts": {
+    "mtime": 1784652240789.5142,
+    "hash": "3ef3849944d4379aece7280556c60e4d"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/navigationRegistry.test.ts": {
+    "mtime": 1785855850427.7192,
+    "hash": "d9c048eb196998fa36d4a79657aeb621"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/pcbMechanicalSync.test.ts": {
+    "mtime": 1784573908716.4404,
+    "hash": "91f81e41158ea9670b9db7907c0a60cd"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/pcbRouting.test.ts": {
+    "mtime": 1785855850430.74,
+    "hash": "bba7ad6aadab666f5b18e99d9d969c27"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/productGraph.test.ts": {
+    "mtime": 1784570049978.0967,
+    "hash": "bfb0f885bf40d4c8f74346a87d9952c5"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/projectSerialization.test.ts": {
+    "mtime": 1784570274717.2458,
+    "hash": "5658882b48bdda01cbb1cd317d6bb964"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/projectStore.test.ts": {
+    "mtime": 1784561935010.2366,
+    "hash": "2e0f8a6f34dedb113089698b2bbc89d4"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/projectStoreSerialization.test.ts": {
+    "mtime": 1784652657752.173,
+    "hash": "c934ee23a0928ed89e88a7a89d16eb66"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/readinessEngine.test.ts": {
+    "mtime": 1784652394404.7253,
+    "hash": "a5cd1f0ae1456165e62a911498810a98"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/releaseBranching.test.ts": {
+    "mtime": 1784652399866.4924,
+    "hash": "0b277ac2fca02f28ed6ad74c9145bd80"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/releaseEngine.test.ts": {
+    "mtime": 1784570173542.5076,
+    "hash": "d7f12b7951d35384eac714303b58ac35"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/reliability.test.ts": {
+    "mtime": 1785855850430.74,
+    "hash": "55c99dcb1a82c280c0a2b1988280e167"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/revisionsUI.test.ts": {
+    "mtime": 1784634584567.9592,
+    "hash": "d78cbf26b9767769f92d1e81cfec3325"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/runTests.js": {
+    "mtime": 1784469996721.0288,
+    "hash": "5e2e967ba7122c64393a2819b90abfb9"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/schematicWire.test.ts": {
+    "mtime": 1784570111760.3008,
+    "hash": "7fe7f6998a9dc2b5efff8f21d4541c04"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/schematicWireAnchors.test.ts": {
+    "mtime": 1784634912889.5054,
+    "hash": "e6ed346340b03ca24a1e20dbf103cca8"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/studioUnification.test.ts": {
+    "mtime": 1786380050670.4514,
+    "hash": "36c0676410c273ca84e5e3645bf6c394"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/unifiedGoldenPath.integration.test.ts": {
+    "mtime": 1786380050670.4514,
+    "hash": "ac4183149a63b1df3c5c9088db210eb1"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/validationExecution.test.ts": {
+    "mtime": 1784652124659.3335,
+    "hash": "3203314a6943bbc3496d81ea65375107"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/validationRuns.test.ts": {
+    "mtime": 1784633862208.0547,
+    "hash": "f8778f2984ff7247f20b0eb021d338e8"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/visualRepresentationRegistry.test.ts": {
+    "mtime": 1785855850430.74,
+    "hash": "04585a89bfa58295cfb0bf83607efb9b"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/webgl3DView.test.ts": {
+    "mtime": 1784634927429.2874,
+    "hash": "786194c1fd62cd95b9517e221a900cd9"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/__tests__/workflowProfiles.test.ts": {
+    "mtime": 1785855850430.74,
+    "hash": "ba34c0678a80abc244c75a6ddb442832"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/app/layout.tsx": {
+    "mtime": 1785855850430.74,
+    "hash": "4ec9225132e385cceb9777ae522f15b7"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/app/page.tsx": {
+    "mtime": 1785855850437.5132,
+    "hash": "04623e94ac52c9ddf2107afdbb77ac37"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/app/studio/page.tsx": {
+    "mtime": 1785855850437.5132,
+    "hash": "67544e0c5ba9478bcaaf3563352c965a"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/AppShell.tsx": {
+    "mtime": 1786380050670.4514,
+    "hash": "13aee55e9c606914213b4b71403cdb96"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/BlueprintCanvas.tsx": {
+    "mtime": 1785855850437.5132,
+    "hash": "9fb28c8f297deaf68e1a61fb38e6d387"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/BlueprintDossier.tsx": {
+    "mtime": 1785855850437.5132,
+    "hash": "6202797aed57742abfb50c7ede57920e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/BlueprintSheets.tsx": {
+    "mtime": 1783501545634.484,
+    "hash": "a40635513aa632be32bccf7b550fcf2a"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/BoardStudio.tsx": {
+    "mtime": 1786380620391.5034,
+    "hash": "f6f3846332fbc9314e13e998672a94cf"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/BrandMark.tsx": {
+    "mtime": 1785855850443.901,
+    "hash": "cf9aa89eddb61b0e4af101ec8963125e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/ExportCenter.tsx": {
+    "mtime": 1783524201068.0422,
+    "hash": "e67cfe09e999311406b89e6dae029335"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/FactoryPackageBuilder.tsx": {
+    "mtime": 1783525091482.0803,
+    "hash": "4a7ac5244641fd0bb88a318f93735afc"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/PCBConstraints.tsx": {
+    "mtime": 1783177652908.1072,
+    "hash": "b8eb1557853db1b45e764a0bf278b928"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/PinMapTable.tsx": {
+    "mtime": 1783164347370.7847,
+    "hash": "6a5c9c0c27b93d0c1ca8ba947ca9be11"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/PowerBudgetTable.tsx": {
+    "mtime": 1783164355730.191,
+    "hash": "93967d69d11e5fa03baa49cae7cbc424"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/ProductVisualizer.tsx": {
+    "mtime": 1783525115338.9697,
+    "hash": "7ad28160fefe120f3aeeab53c9afc22c"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/ProjectDashboard.tsx": {
+    "mtime": 1785855850443.901,
+    "hash": "1e073e456a8a5ab9022aa2bec49ed6f8"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/ProjectManager.tsx": {
+    "mtime": 1785855850445.4116,
+    "hash": "a15f10429b78ba621672bd18b97af3d5"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/PropertiesPanel.tsx": {
+    "mtime": 1785855850447.1494,
+    "hash": "79e217ee249c829d442b20982255677d"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/ReadinessDashboard.tsx": {
+    "mtime": 1783358078022.2056,
+    "hash": "d310f43a93506d455a276e38e7feb340"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/ReviewWarnings.tsx": {
+    "mtime": 1783154770141.8062,
+    "hash": "a29553803edb69fd3721e7d16be491dc"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/Sidebar.tsx": {
+    "mtime": 1785855850447.6606,
+    "hash": "8d174ab2dc0ff8c590ecbbbf101a8678"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/TemplatePicker.tsx": {
+    "mtime": 1783163701664.7637,
+    "hash": "737e3ddf6905373e3bf993d60ddb07ac"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/TopBar.tsx": {
+    "mtime": 1785855850449.0527,
+    "hash": "a58a3f4465715b2019bec33612dd14ed"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/blueprints/BlueprintDrawingRenderer.tsx": {
+    "mtime": 1785855850450.0996,
+    "hash": "036a0f23238c6e02fe028155d3968d0e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/blueprints/BlueprintPageLayout.tsx": {
+    "mtime": 1785855850451.141,
+    "hash": "e2cf9614e5fff4140b7ca41ce3db39ce"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/blueprints/BlueprintSheetRenderer.tsx": {
+    "mtime": 1783524211950.43,
+    "hash": "99d7b64a9bb6ddfdaffea0383411b381"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/blueprints/BlueprintTitleBlock.tsx": {
+    "mtime": 1783273569325.5442,
+    "hash": "334ad549eb20b7912ca0280d0ea68cdf"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/blueprints/sheets/CoverSheet.tsx": {
+    "mtime": 1783354729509.607,
+    "hash": "d926a815cb5443e049bb91e10fa11c13"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/blueprints/sheets/ElectricalSheets.tsx": {
+    "mtime": 1783273749811.2256,
+    "hash": "baeaa4aca520a4938f4ccef5e3884bd6"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/blueprints/sheets/HandoffSheets.tsx": {
+    "mtime": 1783354755889.215,
+    "hash": "6d0020b5afa283a07844aa11cb7204d7"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/blueprints/sheets/MechanicalSheets.tsx": {
+    "mtime": 1783273767874.3564,
+    "hash": "f6fa699fab0ab3efe76b70662bae6cd1"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/blueprints/sheets/PCBSheets.tsx": {
+    "mtime": 1784635213654.7957,
+    "hash": "ed1b4c7af9cff44d6c3016998992fa1d"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/blueprints/sheets/SoftwareQASheets.tsx": {
+    "mtime": 1783273790860.8464,
+    "hash": "930d190adccfdb60000b98e80366a8e3"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/BoardCanvas.tsx": {
+    "mtime": 1784651929939.5896,
+    "hash": "11fe01a02e88a2f38af6bdf52217e417"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/BoardComponentBin.tsx": {
+    "mtime": 1784469703911.1807,
+    "hash": "e99688970e79123cdef6fbb74af748c7"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/BoardDRCPanel.tsx": {
+    "mtime": 1783844532966.911,
+    "hash": "e1b1d96bd0801f960ada0a6eddcb673d"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/BoardDesigner.tsx": {
+    "mtime": 1786380050678.7905,
+    "hash": "6186048a970e49641573fb4cee7368c1"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/BoardInspector.tsx": {
+    "mtime": 1784635267601.777,
+    "hash": "3081c78c621f4b0d0c622f1d2f0e9643"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/BoardLayerPanel.tsx": {
+    "mtime": 1785855850452.1797,
+    "hash": "84383cb20044a5b73c9825ac0da1b9b5"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/BoardNetPanel.tsx": {
+    "mtime": 1783844514202.9443,
+    "hash": "7eca5319d5d7012382425c22ffd701f9"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/BoardStatusBar.tsx": {
+    "mtime": 1783844282024.0393,
+    "hash": "9c33c880325bcdc81e842890ac83de0c"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/BoardToolbar.tsx": {
+    "mtime": 1783844493663.4597,
+    "hash": "5f78a787f04c6a6244911e937d44db8c"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/boardGeometry.ts": {
+    "mtime": 1784470135758.5928,
+    "hash": "483029706107174249f52b88d597280f"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/boardInteraction.ts": {
+    "mtime": 1783844276843.8518,
+    "hash": "49ff1cb54ec2fce77d7d95ec6d8c9629"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/board/boardTypes.ts": {
+    "mtime": 1783844271035.6692,
+    "hash": "ddef900a4911c573f7b34baa9685a54f"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/component-library/ComponentLibraryWorkbench.tsx": {
+    "mtime": 1785855850452.6963,
+    "hash": "0eca8f0ed9eed26ab52317fab4c4feed"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/feedback/FeedbackProvider.tsx": {
+    "mtime": 1785855850453.7356,
+    "hash": "4142ce618a478585b620fb8430a8b23c"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/firmware/FirmwareCodePreview.tsx": {
+    "mtime": 1785855850454.7805,
+    "hash": "afa88e9e4af7084219c92e562929784a"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/firmware/FirmwareStateMachineCanvas.tsx": {
+    "mtime": 1785855850455.3022,
+    "hash": "3f58773229466dab2fadb5a539ecbdbc"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/firmware/FirmwareStudio.tsx": {
+    "mtime": 1784570250162.9763,
+    "hash": "eba477f0e2fff151df0695907606885f"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/knowledge/KnowledgeDrawer.tsx": {
+    "mtime": 1785855850456.7695,
+    "hash": "735527eed21a169180f45066214cfbcc"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/knowledge/KnowledgeProvider.tsx": {
+    "mtime": 1785855850457.307,
+    "hash": "680f9af9db3a06d9fde46c81b4b22da5"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/mechanical/MechanicalCanvas.tsx": {
+    "mtime": 1784651556396.6843,
+    "hash": "07d1cda63a53fd8b0a3b4805ebdd3001"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/mechanical/MechanicalInspector.tsx": {
+    "mtime": 1785855850457.307,
+    "hash": "b8ee355d7708002e61db1a91c0a6a16c"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/mechanical/MechanicalStudio.tsx": {
+    "mtime": 1786380604087.5042,
+    "hash": "04b77f2224262f7828e14a296dd9f25c"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/mechanical/UnifiedBoard3DView.tsx": {
+    "mtime": 1786380050678.7905,
+    "hash": "5135664e0503acc3b08f7749a65337a0"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/product/ProductArchitectureCanvas.tsx": {
+    "mtime": 1785855850457.307,
+    "hash": "75f315a8ce9ff01c00c410a4d0dbf7cf"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/product/ProductInspector.tsx": {
+    "mtime": 1784560813638.3892,
+    "hash": "33c2db866b8ca8eb9e98e391cce9d074"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/product/ProductRequirementsPanel.tsx": {
+    "mtime": 1784560837693.5034,
+    "hash": "1639a0832f151245fe8f1b7c19c395f8"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/product/ProductStudio.tsx": {
+    "mtime": 1784560866766.9502,
+    "hash": "c9ab8b9618662927c0a686f359ea7534"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/reliability/AppErrorBoundary.tsx": {
+    "mtime": 1785855850457.307,
+    "hash": "f0fb41b8bc41af302561b8547ec865d0"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/reliability/StudioRoot.tsx": {
+    "mtime": 1785855850457.307,
+    "hash": "0490842968234bd0b80292276d24612a"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/revisions/RevisionsStudio.tsx": {
+    "mtime": 1785855850457.307,
+    "hash": "ced5f33220f7af32a4a897e5871e306b"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/schematic/SchematicCanvas.tsx": {
+    "mtime": 1784651625535.2556,
+    "hash": "58d61e1eedf5fa925eb48fa2df878022"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/schematic/SchematicSymbolRenderer.tsx": {
+    "mtime": 1784469550046.8848,
+    "hash": "507c9bd2d61ef21b24dc18da1b3387dd"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/schematic/UnifiedSchematicEditor.tsx": {
+    "mtime": 1786380050678.7905,
+    "hash": "b763f306819a20356d5bfec2477d8886"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/schematic/schematicGeometry.ts": {
+    "mtime": 1784469567862.7705,
+    "hash": "264a5746044767c2ff64a8dc7c606d1e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/schematic/schematicInteraction.ts": {
+    "mtime": 1784453664471.0361,
+    "hash": "07d305968ad77436914cad48fa19e0c3"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/studio/EngineeringContextBar.tsx": {
+    "mtime": 1786380050678.7905,
+    "hash": "cee9265dc2cde5aad9d73b4c13c3ca27"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/studio/StudioBuildMap.tsx": {
+    "mtime": 1786380050678.7905,
+    "hash": "f410a005fe072b968916a667dae9509a"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/studio/UnifiedBOMWorkbench.tsx": {
+    "mtime": 1786380050687.2876,
+    "hash": "dbe83acccd2d346ae5d6585bca6c54a7"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/studio/UnifiedBoardDRCWorkbench.tsx": {
+    "mtime": 1786380050689.2925,
+    "hash": "1a0e802b36fecd05fa575ed4f6abb1ba"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/studio/UnifiedValidationWorkbench.tsx": {
+    "mtime": 1786380050689.2925,
+    "hash": "a5163b2dcfab74d151451820ebdd6702"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/studio/UnifiedWorkbenchAdapters.tsx": {
+    "mtime": 1786380050691.298,
+    "hash": "68b80478981ce4d47d2638a5e6327731"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/validation/ValidationStudio.tsx": {
+    "mtime": 1784561198844.0457,
+    "hash": "b367bf53a09af6549b4a3fc858645fb7"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/visual/DeviceVisual.tsx": {
+    "mtime": 1785855850461.8796,
+    "hash": "1853b6ec3c5848d2c15fd3f538e5983e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/visual/Lightweight3DPreview.tsx": {
+    "mtime": 1785855850461.8796,
+    "hash": "143ae439d82549fa0048a37d9274d6d8"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/visual/RepresentationInspector.tsx": {
+    "mtime": 1785855850464.9507,
+    "hash": "95943d915076096a8c3777e2cc8b4f0c"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/components/workflow/WorkflowSetupDialog.tsx": {
+    "mtime": 1785855850464.9507,
+    "hash": "3157bdbe30ded05b362a575c9c6e2b13"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/core/productGraph/graph.ts": {
+    "mtime": 1784573156110.486,
+    "hash": "e1b0cbc2a0e587a876b9ebd33630181d"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/core/productGraph/queries.ts": {
+    "mtime": 1784574174463.6128,
+    "hash": "3d7293f2657eb3aa967fae3557417218"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/core/productGraph/relations.ts": {
+    "mtime": 1784570031838.431,
+    "hash": "88418e4addb4db8e0d82a38ca42e5b6f"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/data/blockLibrary.ts": {
+    "mtime": 1785855850467.568,
+    "hash": "8916528b8ddaf1a89c1d9a50fc184473"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/data/templates/bleButtonTemplate.ts": {
+    "mtime": 1783163573541.1309,
+    "hash": "af6307879f45cd33fcbd8a6a91ccf8cf"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/data/templates/emptyTemplate.ts": {
+    "mtime": 1783163564510.6436,
+    "hash": "b378eb09f0d9e59425634b20bf7fc6f1"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/data/templates/genericWearableTemplate.ts": {
+    "mtime": 1783163589738.675,
+    "hash": "1b8dce30be0c3d17ff43fd8f2da585d7"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/data/templates/index.ts": {
+    "mtime": 1786380555273.49,
+    "hash": "ebb26031a73f2419ea7738fa7f2b3d2d"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/data/templates/iotSensorTemplate.ts": {
+    "mtime": 1783163597281.938,
+    "hash": "bcda8c8cefbb283f0d97a0d729c7d954"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/data/templates/theRingTemplate.ts": {
+    "mtime": 1785855850467.568,
+    "hash": "03d31f6329bf15011f2b8f2cca128215"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/blueprintGenerator.ts": {
+    "mtime": 1784635408904.6719,
+    "hash": "bbb17fab5d3f5c0ef0860a0c9a67e990"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/blueprintPackExport.ts": {
+    "mtime": 1783501281811.6274,
+    "hash": "245ddeb8aaafb2d092076453e03a9ac4"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/blueprintSheetTypes.ts": {
+    "mtime": 1783501026044.0142,
+    "hash": "3e5c67af62599134af9f7b4bb16ee892"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/blueprints/mfgManifestEngine.ts": {
+    "mtime": 1784652259089.2473,
+    "hash": "011c3de402f2a52fcb184a53c6dd291c"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/boardDRC.ts": {
+    "mtime": 1784469844737.1936,
+    "hash": "5c650b0a5ac091572f815b71b9aaa98c"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/components/componentLibrary.ts": {
+    "mtime": 1784453215994.485,
+    "hash": "9611a64638ed6a9304bb51467328226a"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/components/componentSearch.ts": {
+    "mtime": 1784453220232.681,
+    "hash": "55a8c415300d6fd68127bfb9cb2152ee"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/designReview.ts": {
+    "mtime": 1784635451665.3318,
+    "hash": "cb4d30c01630d7a9be698d1f90442149"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/editorLayoutGenerators.ts": {
+    "mtime": 1784635492297.4363,
+    "hash": "8d5e02c4c140a96c7774cdd2df5282d5"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/exportBlueprintSheets.ts": {
+    "mtime": 1783355024225.699,
+    "hash": "7b55d40ba0d9d42a95be345493e9beef"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/exportBoardPlan.ts": {
+    "mtime": 1783177685458.3416,
+    "hash": "fece252abe4bd0cbb811022dd5e2d9fe"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/exportCsv.ts": {
+    "mtime": 1783163664420.9358,
+    "hash": "6aa35d663e7834d523f26de3648ff75e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/exportDossier.ts": {
+    "mtime": 1785855850471.4773,
+    "hash": "13622d740102bc7a8c51fcb265bab27f"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/exportFirmware.ts": {
+    "mtime": 1785855850471.4773,
+    "hash": "493a8f9fa254b9485451bb27fb2e87db"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/exportJson.ts": {
+    "mtime": 1782934188688.5996,
+    "hash": "8cce7a71b299ab0957572aaa7539297f"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/exportMarkdown.ts": {
+    "mtime": 1785855850471.4773,
+    "hash": "e781fc9e39a27cfe1851f592ef2c8dcd"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/feedback/feedbackState.ts": {
+    "mtime": 1785855850471.4773,
+    "hash": "15a42d2858152a18a61b1679ca193e27"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/firmware/firmwareCodegen.ts": {
+    "mtime": 1784476426580.947,
+    "hash": "4ad94fb44d89f3b36ab631f72db414ce"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/firmware/firmwareValidation.ts": {
+    "mtime": 1784476395812.6206,
+    "hash": "4a43ec3439af3819ae04cfcbd28e0e50"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/footprints.ts": {
+    "mtime": 1786380574882.5774,
+    "hash": "f50b20ff8b11965220c13fd658404ef8"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/knowledge/deviceKnowledge.ts": {
+    "mtime": 1785855850476.2395,
+    "hash": "3c08ede9f33c264244e99a78a35693b2"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/knowledge/starterDeviceKnowledge.ts": {
+    "mtime": 1785855850477.746,
+    "hash": "dd09898e4cb0d77b2d4af9839f7ad781"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/mechanical/mechanicalGeometry.ts": {
+    "mtime": 1785855850477.746,
+    "hash": "c816ba9b088eace46fd13ece25553cd7"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/mechanical/mechanicalValidation.ts": {
+    "mtime": 1784476376980.1436,
+    "hash": "03fc5970d9c0de89e1a61ad8743d78e1"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/nativeExports.ts": {
+    "mtime": 1785855850477.746,
+    "hash": "7ead98e4b4e75c99132fc629d83a211a"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/navigationRegistry.ts": {
+    "mtime": 1785855850477.746,
+    "hash": "b715e793e85dd2d31f5a41d51fa0e59f"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/pcb/pcbRoutingEngine.ts": {
+    "mtime": 1785855850477.746,
+    "hash": "b1daf963ab52738f07377afececb4192"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/product/productGraph.ts": {
+    "mtime": 1784476336206.3132,
+    "hash": "7717d0682b97b84ce8665ee2c5591ef9"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/projectMigrations.ts": {
+    "mtime": 1786380050693.3027,
+    "hash": "6efecd608778a21b026d2384f29e1fc8"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/projectSerialization.ts": {
+    "mtime": 1784633250795.92,
+    "hash": "5c861f73a80769a7b2e57844be561c49"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/readinessScore.ts": {
+    "mtime": 1783418689655.0908,
+    "hash": "62653039bfafd77fdb5af670437180dc"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/releaseEngine.ts": {
+    "mtime": 1785855850477.746,
+    "hash": "68eeb2470fdc5546e3e20b6c60f2415e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/reliability.ts": {
+    "mtime": 1785855850477.746,
+    "hash": "f754625e0a78250b91d141fee07389f5"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/schematicERC.ts": {
+    "mtime": 1784635418962.4656,
+    "hash": "e1663bc40747e6af12605e92e72051c3"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/validationRules.ts": {
+    "mtime": 1785855850477.746,
+    "hash": "68b00a6ed5c75fc05d66ba28c0bd1aa7"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/validationRunner.ts": {
+    "mtime": 1785855850477.746,
+    "hash": "580f0b8ea7e6a5b85a745e0c3bdd01aa"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/validation/measurementEvaluation.ts": {
+    "mtime": 1784476451831.6802,
+    "hash": "900a735d4bac91b70b6ac26c7d1da7c8"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/validation/validationCoverage.ts": {
+    "mtime": 1784476466661.1213,
+    "hash": "b103869872388f653413e6161329d875"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/visual/representationRegistry.ts": {
+    "mtime": 1785855850477.746,
+    "hash": "813fabc8bb3fb2f4402d12ece9b89989"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/lib/workflowProfiles.ts": {
+    "mtime": 1785855850487.507,
+    "hash": "e520238385eb1304f9094b77795ad7c7"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/store/projectStore.ts": {
+    "mtime": 1785855850487.507,
+    "hash": "4aa96fa30ff30ee91794da3dff469377"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/store/storageHealthStore.ts": {
+    "mtime": 1785855850487.507,
+    "hash": "9fdf1fd23fdc9b2f0f7a3ebd738b28b2"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/store/studioContextStore.ts": {
+    "mtime": 1786380050695.5535,
+    "hash": "db961a86cabb9e48f067de2b60438934"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/store/workflowPreferencesStore.ts": {
+    "mtime": 1785855850491.915,
+    "hash": "5e9ab106e7aa2d92b9391f5ff9ab9452"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/types/index.ts": {
+    "mtime": 1785855850493.6304,
+    "hash": "3e650f7f69eb75ae84ba508648fb9168"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/ui/Badge.tsx": {
+    "mtime": 1783163540745.4124,
+    "hash": "149e1240414abb2c514edaf4916d7865"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/ui/Button.tsx": {
+    "mtime": 1783163531891.8318,
+    "hash": "6d6ed92448faed93d71148a62e60c60e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/ui/Card.tsx": {
+    "mtime": 1783163536239.843,
+    "hash": "573469281fae9450cc7105a444e88b0c"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/ui/EmptyState.tsx": {
+    "mtime": 1783163545458.2734,
+    "hash": "44f2a3415688d0d6b790146297564264"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/ui/FormControls.tsx": {
+    "mtime": 1783163559552.3752,
+    "hash": "5e879917d5669c4a5d84a121019290fe"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/ui/Modal.tsx": {
+    "mtime": 1783164421262.083,
+    "hash": "74169be482d985717e45af9026a835c6"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/ui/StatCard.tsx": {
+    "mtime": 1783163549983.8335,
+    "hash": "4cfb44ff6bac85ae175b088c7cf833af"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/vitest.config.ts": {
+    "mtime": 1784472407803.1465,
+    "hash": "c2d44cf715953aa2263e1cfc316df006"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/.agents/skills/task.md": {
+    "mtime": 1783792986014.213,
+    "hash": "f9261143c0778ba9d8adeec28c50ea62"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/.github/workflows/README.md": {
+    "mtime": 1785855850396.5654,
+    "hash": "7206dd734af1314d8c45527a42ddbf1f"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/.github/workflows/ci.yml": {
+    "mtime": 1785855850397.6133,
+    "hash": "e15cc15255788173284fe7399fb045f3"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/AGENTS.md": {
+    "mtime": 1782934085783.0334,
+    "hash": "9e09241799026ac05be315a2f0b50055"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/CLAUDE.md": {
+    "mtime": 1782934085783.537,
+    "hash": "5c27369b226fcf2be8a6cfe52224e767"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/CONTRIBUTING.md": {
+    "mtime": 1785855850398.8403,
+    "hash": "b41c8e49a559f3b58b1036f372a6eb88"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/PRODUCT_STATUS.md": {
+    "mtime": 1785855850399.9707,
+    "hash": "30dbe69a23ebdb9ddf22abb99e8bc398"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/QA_CHECKLIST.md": {
+    "mtime": 1785855850401.036,
+    "hash": "9aa4dff4e82ab8fdfd48829722fa1c0e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/README.md": {
+    "mtime": 1785855850401.036,
+    "hash": "1555bef5bbe7c957f35be7d9b70f446f"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/ARCHITECTURE.md": {
+    "mtime": 1785855850402.5464,
+    "hash": "b2bc5e303ddc6ae2b0e9da2940304ead"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/CURRENT_STATUS.md": {
+    "mtime": 1785855850402.5464,
+    "hash": "e3089b100136129d40951813a6a69e93"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/PRODUCT_VISION.md": {
+    "mtime": 1785855850402.5464,
+    "hash": "63306be4914b8a80405ad7cf3a1f2146"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/ROADMAP.md": {
+    "mtime": 1785855850402.5464,
+    "hash": "1ece12c8bcf73a3411ce0fff79cdfe99"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/SAFETY_AND_LIMITATIONS.md": {
+    "mtime": 1785855850406.6528,
+    "hash": "e71b1c2dc181cae59b043c2c267e5827"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/architecture/STUDIO_UNIFICATION_AUDIT.md": {
+    "mtime": 1785855850407.9294,
+    "hash": "9672c02c7caf4ee0fda78c47ef257068"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/architecture/UNIFIED_STUDIO_GOLDEN_PATH.md": {
+    "mtime": 1786380050670.4514,
+    "hash": "8b3a9eea704057192e726caf90672f5d"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/development/PRODUCT_RECOVERY_EXECUTION_PLAN.md": {
+    "mtime": 1785855850407.9294,
+    "hash": "a870ea713c9bc3cd32f12aeff8c54240"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/development/PRODUCT_RECOVERY_ISSUE_MAP.md": {
+    "mtime": 1785855850407.9294,
+    "hash": "f417d6b5a1c09896dfb9bbf0fe12ed6b"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/development/V1_BASELINE_AUDIT.md": {
+    "mtime": 1784569871062.2932,
+    "hash": "f41b294ef99d6f52451b5c5c3b381c2b"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/development/V1_COMPLETION_AUDIT.md": {
+    "mtime": 1785855850410.4375,
+    "hash": "9ae3f064e6e2af30b5949390c2f2d175"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/development/V1_EXECUTION_LEDGER.md": {
+    "mtime": 1785855850410.4375,
+    "hash": "1a7e3b2ba4fa13232933d252ed2becae"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/mcp/SECURITY.md": {
+    "mtime": 1784570200251.3074,
+    "hash": "7dc0cf65e9ce08b1abae197aaf5d927d"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/mcp/SETUP.md": {
+    "mtime": 1784570190479.5234,
+    "hash": "2afbb50451e72492871d03e0da915339"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/mcp/TOOLS.md": {
+    "mtime": 1784570195548.6604,
+    "hash": "9c34e922b53fa620d68870cb6c908771"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/research/ADAPTIVE_WORKFLOWS.md": {
+    "mtime": 1785855850410.4375,
+    "hash": "d0d07b8b35393b5c1667868691f9c602"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/research/DEVICE_KNOWLEDGE_LIBRARY_SOURCES.md": {
+    "mtime": 1785855850410.4375,
+    "hash": "67490fff5f99dfb9edb843eacd77ca79"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/research/HARDWARE_STUDIO_DOMAIN_TOOL_LANDSCAPE.md": {
+    "mtime": 1785855850414.9392,
+    "hash": "02b6adea74a54754f4b7255d10faf77e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/research/HARDWARE_STUDIO_MASTER_PRODUCT_RESEARCH_AND_BUILD_BLUEPRINT.md": {
+    "mtime": 1785855850417.2737,
+    "hash": "b596bb72c072db991638790936a84ea9"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/docs/research/VISUAL_REPRESENTATION_SYSTEM.md": {
+    "mtime": 1785855850417.2737,
+    "hash": "9bd872abd3cb2d1c14318e3dda78ebb1"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/public/file.svg": {
+    "mtime": 1781420532672.2854,
+    "hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/public/globe.svg": {
+    "mtime": 1781420532691.9956,
+    "hash": "2aaafa6a49b6563925fe440891e32717"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/public/hardware-studio-mark.svg": {
+    "mtime": 1785855850421.3435,
+    "hash": "ffcead1574262a2a8407c520a21dbe82"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/public/next.svg": {
+    "mtime": 1781420532712.4282,
+    "hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/public/vercel.svg": {
+    "mtime": 1781420532727.396,
+    "hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/public/window.svg": {
+    "mtime": 1781420532744.0337,
+    "hash": "a2760511c65806022ad20adf74370ff3"
+  },
+  "C:/Users/ANKIT BHARDWAJ/Desktop/hardware studio/src/app/icon.svg": {
+    "mtime": 1785855850430.74,
+    "hash": "0ddd74907c4c7f895ba0f59065d5acf7"
+  }
+}

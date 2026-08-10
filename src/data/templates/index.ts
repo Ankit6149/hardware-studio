@@ -1,4 +1,5 @@
 import { Project } from '../../types';
+import { arduinoUnoTemplate } from './arduinoUnoTemplate';
 import { theRingTemplate } from './theRingTemplate';
 import { genericWearableTemplate } from './genericWearableTemplate';
 import { bleButtonTemplate } from './bleButtonTemplate';
@@ -21,6 +22,14 @@ export interface TemplateMetadata {
 }
 
 export const templates: TemplateMetadata[] = [
+  {
+    id: "arduino-uno",
+    name: "Arduino Uno R3 Workstation",
+    description: "Standard Arduino Uno R3 hardware architecture with ATmega328P MCU, USB Type-B interface, 16MHz crystal, LDO power rails, and DIP headers.",
+    difficulty: "Beginner",
+    includes: { blueprint: true, bom: true, tests: true, power: true, pins: true },
+    project: arduinoUnoTemplate
+  },
   {
     id: "the-ring",
     name: "The Ring",

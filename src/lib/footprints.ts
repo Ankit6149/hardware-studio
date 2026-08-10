@@ -318,6 +318,169 @@ export const FOOTPRINT_LIBRARY: Record<string, FootprintPreset> = {
     ],
     courtyardWidthMm: 4.0,
     courtyardHeightMm: 4.0
+  },
+  DIP28: {
+    name: "DIP28",
+    category: "IC",
+    bodyWidthMm: 35.5,
+    bodyHeightMm: 7.62,
+    padWidthMm: 1.5,
+    padHeightMm: 1.5,
+    pads: [
+      ...Array.from({ length: 14 }, (_, i) => ({ name: String(i + 1), xMm: -16.51 + i * 2.54, yMm: -3.81, widthMm: 1.5, heightMm: 1.5 })),
+      ...Array.from({ length: 14 }, (_, i) => ({ name: String(28 - i), xMm: -16.51 + i * 2.54, yMm: 3.81, widthMm: 1.5, heightMm: 1.5 }))
+    ],
+    courtyardWidthMm: 38.0,
+    courtyardHeightMm: 10.0
+  },
+  USB_B: {
+    name: "USB_B",
+    category: "Connector",
+    bodyWidthMm: 12.0,
+    bodyHeightMm: 16.0,
+    padWidthMm: 1.8,
+    padHeightMm: 2.5,
+    pads: [
+      { name: "1", xMm: 1.25, yMm: 4.7, widthMm: 1.8, heightMm: 2.5 },
+      { name: "2", xMm: -1.25, yMm: 4.7, widthMm: 1.8, heightMm: 2.5 },
+      { name: "3", xMm: -1.25, yMm: 2.7, widthMm: 1.8, heightMm: 2.5 },
+      { name: "4", xMm: 1.25, yMm: 2.7, widthMm: 1.8, heightMm: 2.5 }
+    ],
+    courtyardWidthMm: 14.0,
+    courtyardHeightMm: 18.0
+  },
+  USB_C: {
+    name: "USB_C",
+    category: "Connector",
+    bodyWidthMm: 8.94,
+    bodyHeightMm: 7.35,
+    padWidthMm: 0.6,
+    padHeightMm: 1.2,
+    pads: [
+      { name: "A1/B12_GND", xMm: -3.25, yMm: 2.5, widthMm: 0.6, heightMm: 1.2 },
+      { name: "A4/B9_VBUS", xMm: -2.25, yMm: 2.5, widthMm: 0.6, heightMm: 1.2 },
+      { name: "A5_CC1", xMm: -1.25, yMm: 2.5, widthMm: 0.6, heightMm: 1.2 },
+      { name: "A6_DP1", xMm: -0.25, yMm: 2.5, widthMm: 0.6, heightMm: 1.2 },
+      { name: "A7_DN1", xMm: 0.25, yMm: 2.5, widthMm: 0.6, heightMm: 1.2 },
+      { name: "A8_SBU1", xMm: 1.25, yMm: 2.5, widthMm: 0.6, heightMm: 1.2 },
+      { name: "B5_CC2", xMm: 2.25, yMm: 2.5, widthMm: 0.6, heightMm: 1.2 },
+      { name: "B1/A12_GND", xMm: 3.25, yMm: 2.5, widthMm: 0.6, heightMm: 1.2 }
+    ],
+    courtyardWidthMm: 10.5,
+    courtyardHeightMm: 9.0
+  },
+  HEADER_1X10: {
+    name: "HEADER_1X10",
+    category: "Connector",
+    bodyWidthMm: 25.4,
+    bodyHeightMm: 2.54,
+    padWidthMm: 1.6,
+    padHeightMm: 1.6,
+    pads: Array.from({ length: 10 }, (_, i) => ({ name: String(i + 1), xMm: -11.43 + i * 2.54, yMm: 0, widthMm: 1.6, heightMm: 1.6 })),
+    courtyardWidthMm: 27.0,
+    courtyardHeightMm: 4.0
+  },
+  HEADER_1X8: {
+    name: "HEADER_1X8",
+    category: "Connector",
+    bodyWidthMm: 20.32,
+    bodyHeightMm: 2.54,
+    padWidthMm: 1.6,
+    padHeightMm: 1.6,
+    pads: Array.from({ length: 8 }, (_, i) => ({ name: String(i + 1), xMm: -8.89 + i * 2.54, yMm: 0, widthMm: 1.6, heightMm: 1.6 })),
+    courtyardWidthMm: 22.0,
+    courtyardHeightMm: 4.0
+  },
+  HEADER_1X6: {
+    name: "HEADER_1X6",
+    category: "Connector",
+    bodyWidthMm: 15.24,
+    bodyHeightMm: 2.54,
+    padWidthMm: 1.6,
+    padHeightMm: 1.6,
+    pads: Array.from({ length: 6 }, (_, i) => ({ name: String(i + 1), xMm: -6.35 + i * 2.54, yMm: 0, widthMm: 1.6, heightMm: 1.6 })),
+    courtyardWidthMm: 17.0,
+    courtyardHeightMm: 4.0
+  },
+  HC49S: {
+    name: "HC49S",
+    category: "Clock",
+    bodyWidthMm: 11.5,
+    bodyHeightMm: 5.0,
+    padWidthMm: 2.0,
+    padHeightMm: 2.0,
+    pads: [
+      { name: "1", xMm: -2.44, yMm: 0.0, widthMm: 2.0, heightMm: 2.0 },
+      { name: "2", xMm: 2.44, yMm: 0.0, widthMm: 2.0, heightMm: 2.0 }
+    ],
+    courtyardWidthMm: 13.0,
+    courtyardHeightMm: 6.5
+  },
+  SOT223: {
+    name: "SOT223",
+    category: "Regulator",
+    bodyWidthMm: 6.5,
+    bodyHeightMm: 3.5,
+    padWidthMm: 1.2,
+    padHeightMm: 1.8,
+    pads: [
+      { name: "1", xMm: -2.3, yMm: -3.0, widthMm: 1.2, heightMm: 1.8 },
+      { name: "2", xMm: 0.0, yMm: -3.0, widthMm: 1.2, heightMm: 1.8 },
+      { name: "3", xMm: 2.3, yMm: -3.0, widthMm: 1.2, heightMm: 1.8 },
+      { name: "TAB", xMm: 0.0, yMm: 3.0, widthMm: 3.2, heightMm: 1.8 }
+    ],
+    courtyardWidthMm: 8.0,
+    courtyardHeightMm: 8.0
+  },
+  OLED_096: {
+    name: "OLED_096",
+    category: "Display",
+    bodyWidthMm: 27.0,
+    bodyHeightMm: 27.0,
+    padWidthMm: 1.6,
+    padHeightMm: 1.6,
+    pads: [
+      { name: "1_GND", xMm: -3.81, yMm: -12.0, widthMm: 1.6, heightMm: 1.6 },
+      { name: "2_VCC", xMm: -1.27, yMm: -12.0, widthMm: 1.6, heightMm: 1.6 },
+      { name: "3_SCL", xMm: 1.27, yMm: -12.0, widthMm: 1.6, heightMm: 1.6 },
+      { name: "4_SDA", xMm: 3.81, yMm: -12.0, widthMm: 1.6, heightMm: 1.6 }
+    ],
+    courtyardWidthMm: 29.0,
+    courtyardHeightMm: 29.0
+  },
+  ESP32_WROOM: {
+    name: "ESP32_WROOM",
+    category: "MCU",
+    bodyWidthMm: 18.0,
+    bodyHeightMm: 25.5,
+    padWidthMm: 1.5,
+    padHeightMm: 0.9,
+    pads: Array.from({ length: 38 }, (_, i) => ({
+      name: String(i + 1),
+      xMm: i < 19 ? -9.0 : 9.0,
+      yMm: -11.0 + (i % 19) * 1.27,
+      widthMm: 1.5,
+      heightMm: 0.9
+    })),
+    courtyardWidthMm: 21.0,
+    courtyardHeightMm: 27.5
+  },
+  RP2040_PICO: {
+    name: "RP2040_PICO",
+    category: "MCU",
+    bodyWidthMm: 21.0,
+    bodyHeightMm: 51.0,
+    padWidthMm: 1.6,
+    padHeightMm: 1.6,
+    pads: Array.from({ length: 40 }, (_, i) => ({
+      name: String(i + 1),
+      xMm: i < 20 ? -8.89 : 8.89,
+      yMm: -24.13 + (i % 20) * 2.54,
+      widthMm: 1.6,
+      heightMm: 1.6
+    })),
+    courtyardWidthMm: 23.0,
+    courtyardHeightMm: 53.0
   }
 };
 

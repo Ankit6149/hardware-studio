@@ -4,10 +4,9 @@ import React, { useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { MechanicalCanvas } from './MechanicalCanvas';
 import { MechanicalInspector } from './MechanicalInspector';
-import { Mechanical3DView } from './Mechanical3DView';
-import { WebGL3DView } from './WebGL3DView';
+import { UnifiedBoard3DView } from './UnifiedBoard3DView';
 import { validateMechanicalLayout } from '../../lib/mechanical/mechanicalValidation';
-import { Square, Circle, MousePointer, Move, Undo2, Redo2, Trash2, ShieldAlert, Lock, EyeOff } from 'lucide-react';
+import { Square, Circle, MousePointer, Move, Undo2, Redo2, Trash2, ShieldAlert, Lock, EyeOff, Boxes, Layers } from 'lucide-react';
 
 type ToolMode = 'select' | 'pan' | 'rect' | 'circle' | 'polygon';
 
@@ -21,7 +20,7 @@ export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode 
   const [tool, setTool] = useState<ToolMode>('select');
   const [showWarnings, setShowWarnings] = useState(false);
   const [studioMode, setStudioMode] = useState<'canvas' | 'assembly' | '3d-preview' | 'webgl-3d'>(
-    initialMode === 'assembly' ? 'assembly' : initialMode === '3d-preview' ? '3d-preview' : 'canvas'
+    initialMode === 'assembly' ? 'assembly' : initialMode === '3d-preview' || initialMode === 'webgl-3d' ? 'webgl-3d' : 'canvas'
   );
 
   const mechanicalObjects = store.mechanicalObjects || [];
@@ -40,32 +39,16 @@ export const MechanicalStudio: React.FC<MechanicalStudioProps> = ({ initialMode 
     return sum + (match ? parseFloat(match[1]) : 0);
   }, 0);
 
-  if (studioMode === 'webgl-3d') {
+  if (studioMode === 'webgl-3d' || studioMode === '3d-preview') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
-          <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: 400 }}>Canvas</button>
-          <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: 400 }}>Assembly Stack</button>
-          <button onClick={() => setStudioMode('webgl-3d')} style={{ ...tabStyle, fontWeight: 700, borderBottom: '2px solid #3b82f6' }}>WebGL 3D Workbench</button>
-          <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: 400 }}>Isometric Preview (SVG)</button>
+      <div className="flex h-full flex-col overflow-hidden bg-slate-900 text-slate-100">
+        <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-950 px-4 py-2 text-xs font-semibold">
+          <button type="button" onClick={() => setStudioMode('canvas')} className="rounded px-3 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100">2D Mechanical Canvas</button>
+          <button type="button" onClick={() => setStudioMode('assembly')} className="rounded px-3 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100">Assembly Stack</button>
+          <button type="button" onClick={() => setStudioMode('webgl-3d')} className="flex items-center gap-1.5 rounded bg-indigo-600 px-3 py-1 text-white shadow-sm"><Boxes className="h-3.5 w-3.5" /> 3D WebGL Workbench</button>
         </div>
-        <div style={{ flex: 1, minHeight: 0 }}>
-          <WebGL3DView />
-        </div>
-      </div>
-    );
-  }
-
-  if (studioMode === '3d-preview') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
-          <button onClick={() => setStudioMode('canvas')} style={{ ...tabStyle, fontWeight: 400 }}>Canvas</button>
-          <button onClick={() => setStudioMode('assembly')} style={{ ...tabStyle, fontWeight: 400 }}>Assembly Stack</button>
-          <button onClick={() => setStudioMode('3d-preview')} style={{ ...tabStyle, fontWeight: 700, borderBottom: '2px solid #3b82f6' }}>3D Preview</button>
-        </div>
-        <div style={{ flex: 1, minHeight: 0 }}>
-          <Mechanical3DView />
+        <div className="min-h-0 flex-1">
+          <UnifiedBoard3DView />
         </div>
       </div>
     );
