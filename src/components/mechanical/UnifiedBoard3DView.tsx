@@ -165,20 +165,72 @@ export const UnifiedBoard3DView: React.FC = () => {
     });
 
     if (showEnclosure) {
-      const enclosure = mechanicalObjects.find((object) => object.layer === 'Enclosure' || object.layer === 'Outer Enclosure');
-      if (enclosure?.widthMm && enclosure?.heightMm && enclosure?.depthMm) {
-        const geometry = new THREE.BoxGeometry(enclosure.widthMm, enclosure.depthMm, enclosure.heightMm);
-        const material = new THREE.MeshStandardMaterial({
-          color: 0x64748b,
-          transparent: true,
-          opacity: 0.18,
-          depthWrite: false,
-          side: THREE.DoubleSide,
-        });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(0, enclosure.depthMm / 2 - 1, 0);
-        group.add(mesh);
-      }
+      mechanicalObjects.forEach((obj) => {
+        // A. 3D SCREW STANDOFF BOSS / MOUNTING POINT
+        if (obj.type === 'Mounting Point' || obj.name.toLowerCase().includes('boss') || obj.name.toLowerCase().includes('standoff')) {
+          const outerR = obj.radiusMm || 3.2;
+          const height = obj.depthMm || 8;
+          const x = (obj.xMm || 0) - size.width / 2;
+          const z = (obj.yMm || 0) - size.height / 2;
+
+          const bossMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(outerR, outerR, height, 16),
+            new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.6 })
+          );
+          bossMesh.position.set(x, height / 2 + 0.8, z);
+          group.add(bossMesh);
+
+          // Inner pilot hole
+          const holeMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(outerR * 0.45, outerR * 0.45, height + 0.2, 16),
+            new THREE.MeshStandardMaterial({ color: 0x0f172a })
+          );
+          holeMesh.position.set(x, height / 2 + 0.9, z);
+          group.add(holeMesh);
+        }
+        // B. 3D ENCLOSURE CASING SHELL
+        else if (obj.type === 'Outer Profile' || obj.layer === 'Enclosure') {
+          const w = obj.widthMm || size.width + 10;
+          const h = obj.heightMm || size.height + 10;
+          const d = obj.depthMm || 22;
+
+          const geometry = new THREE.BoxGeometry(w, d, h);
+          const material = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8,
+            transparent: true,
+            opacity: 0.25,
+            roughness: 0.1,
+            metalness: 0.1,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.position.set(0, d / 2 - 1, 0);
+          group.add(mesh);
+
+          const casingEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(geometry),
+            new THREE.LineBasicMaterial({ color: 0x0284c7 })
+          );
+          casingEdges.position.copy(mesh.position);
+          group.add(casingEdges);
+        }
+        // C. 3D BATTERY CAVITY
+        else if (obj.type === 'Battery Cavity') {
+          const w = obj.widthMm || 40;
+          const h = obj.heightMm || 20;
+          const d = obj.depthMm || 10;
+          const x = (obj.xMm || 0) - size.width / 2 + w / 2;
+          const z = (obj.yMm || 0) - size.height / 2 + h / 2;
+
+          const battMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(w, d, h),
+            new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4, metalness: 0.2 })
+          );
+          battMesh.position.set(x, d / 2 + 0.8, z);
+          group.add(battMesh);
+        }
+      });
     }
 
     scene.add(group);

@@ -270,24 +270,34 @@ export const MechanicalCanvas: React.FC<MechanicalCanvasProps> = ({ selectedObje
 
       {/* Objects */}
       {mechanicalObjects.filter(o => o.visible).map(obj => {
-        const color = TYPE_COLORS[obj.type] || '#6b7280';
+        const color = TYPE_COLORS[obj.type] || '#334155';
         const isSelected = obj.id === selectedObjectId;
 
-        if (obj.shape === 'circle' && obj.radiusMm) {
+        // A. SCREW STANDOFF BOSS / MOUNTING POINT
+        if (obj.type === 'Mounting Point' || obj.name.toLowerCase().includes('boss') || obj.name.toLowerCase().includes('standoff')) {
           const c = mmToScreen(obj.xMm, obj.yMm);
-          const r = obj.radiusMm * view.scale;
+          const outerR = (obj.radiusMm || 3.2) * view.scale;
+          const pilotR = Math.max(1, outerR * 0.45);
           return (
-            <g key={obj.id}>
-              <circle cx={c.x} cy={c.y} r={r} fill={`${color}15`} stroke={isSelected ? color : `${color}80`}
-                strokeWidth={isSelected ? 2 : 1} strokeDasharray={obj.type === 'Antenna Keepout' ? '4 2' : undefined}
-                style={{ cursor: 'pointer' }}
-                onMouseDown={e => handleObjectMouseDown(e, obj)}
-              />
-              <text x={c.x} y={c.y} textAnchor="middle" dominantBaseline="middle" fontSize={10} fill={color} pointerEvents="none">
-                {obj.name}
+            <g key={obj.id} onMouseDown={e => handleObjectMouseDown(e, obj)} style={{ cursor: 'pointer' }}>
+              {/* Outer standoff boss wall */}
+              <circle cx={c.x} cy={c.y} r={outerR} fill="#e2e8f0" stroke={isSelected ? '#0284c7' : '#334155'} strokeWidth={isSelected ? 2 : 1.5} />
+              {/* Inner pilot drill hole */}
+              <circle cx={c.x} cy={c.y} r={pilotR} fill="#ffffff" stroke="#0f172a" strokeWidth={1} />
+              {/* Center crosshairs */}
+              <line x1={c.x - outerR - 2} y1={c.y} x2={c.x + outerR + 2} y2={c.y} stroke="#64748b" strokeWidth={0.75} strokeDasharray="2 1" />
+              <line x1={c.x} y1={c.y - outerR - 2} x2={c.x} y2={c.y + outerR + 2} stroke="#64748b" strokeWidth={0.75} strokeDasharray="2 1" />
+              {/* 4 Reinforcement Ribs */}
+              <line x1={c.x - outerR} y1={c.y} x2={c.x - pilotR} y2={c.y} stroke="#475569" strokeWidth={1.2} />
+              <line x1={c.x + pilotR} y1={c.y} x2={c.x + outerR} y2={c.y} stroke="#475569" strokeWidth={1.2} />
+              <line x1={c.x} y1={c.y - outerR} x2={c.x} y2={c.y - pilotR} stroke="#475569" strokeWidth={1.2} />
+              <line x1={c.x} y1={c.y + pilotR} x2={c.x} y2={c.y + outerR} stroke="#475569" strokeWidth={1.2} />
+              {/* Label */}
+              <text x={c.x} y={c.y + outerR + 10} textAnchor="middle" fontSize={8.5} fontFamily="monospace" fontWeight="bold" fill="#0f172a" pointerEvents="none">
+                {obj.name} (Ø{(obj.radiusMm || 3.2) * 2}mm)
               </text>
               {isSelected && !obj.locked && (
-                <circle cx={c.x + r} cy={c.y} r={4} fill="white" stroke={color} strokeWidth={1.5}
+                <circle cx={c.x + outerR} cy={c.y} r={4.5} fill="#ffffff" stroke="#0284c7" strokeWidth={1.8}
                   style={{ cursor: 'e-resize' }}
                   onMouseDown={e => handleResizeHandleMouseDown(e, obj, 'r')}
                 />
@@ -296,41 +306,120 @@ export const MechanicalCanvas: React.FC<MechanicalCanvasProps> = ({ selectedObje
           );
         }
 
-        // Rectangle
-        const tl = mmToScreen(obj.xMm, obj.yMm);
-        const w = (obj.widthMm || 0) * view.scale;
-        const h = (obj.heightMm || 0) * view.scale;
+        // B. ENCLOSURE OUTER PROFILE / SHELL WALLS
+        if (obj.type === 'Outer Profile' || obj.layer === 'Enclosure') {
+          const tl = mmToScreen(obj.xMm, obj.yMm);
+          const w = (obj.widthMm || 100) * view.scale;
+          const h = (obj.heightMm || 60) * view.scale;
+          const wallT = 2.0 * view.scale;
 
-        return (
-          <g key={obj.id}>
-            <rect x={tl.x} y={tl.y} width={w} height={h}
-              fill={`${color}12`} stroke={isSelected ? color : `${color}80`}
-              strokeWidth={isSelected ? 2 : 1}
-              strokeDasharray={obj.type.includes('Keepout') ? '4 2' : undefined}
-              rx={2}
-              style={{ cursor: 'pointer' }}
-              onMouseDown={e => handleObjectMouseDown(e, obj)}
-            />
-            <text x={tl.x + w / 2} y={tl.y + h / 2} textAnchor="middle" dominantBaseline="middle"
-              fontSize={Math.min(10, w / 6)} fill={color} pointerEvents="none">
-              {obj.name}
-            </text>
-            {/* Dimension labels */}
-            <text x={tl.x + w / 2} y={tl.y - 4} textAnchor="middle" fontSize={8} fill="#94a3b8" pointerEvents="none">
-              {obj.widthMm}mm
-            </text>
-            <text x={tl.x + w + 4} y={tl.y + h / 2} textAnchor="start" fontSize={8} fill="#94a3b8" pointerEvents="none"
-              transform={`rotate(90, ${tl.x + w + 4}, ${tl.y + h / 2})`}>
-              {obj.heightMm}mm
-            </text>
-            {/* Resize handles */}
-            {isSelected && !obj.locked && (
-              <>
-                <rect x={tl.x + w - 4} y={tl.y + h - 4} width={8} height={8} fill="white" stroke={color}
+          return (
+            <g key={obj.id} onMouseDown={e => handleObjectMouseDown(e, obj)} style={{ cursor: 'pointer' }}>
+              {/* Outer Casing Boundary */}
+              <rect x={tl.x} y={tl.y} width={w} height={h}
+                fill="#f1f5f9" stroke={isSelected ? '#0284c7' : '#0f172a'}
+                strokeWidth={isSelected ? 2.5 : 2} rx={6}
+              />
+              {/* Inner Shell Wall Contour */}
+              {w > wallT * 2 && h > wallT * 2 && (
+                <rect x={tl.x + wallT} y={tl.y + wallT} width={w - wallT * 2} height={h - wallT * 2}
+                  fill="#ffffff" stroke="#475569" strokeWidth={1.2} strokeDasharray="4 2" rx={4}
+                />
+              )}
+              <text x={tl.x + 12} y={tl.y + 16} fontSize={9.5} fontFamily="sans-serif" fontWeight="bold" fill="#0f172a" pointerEvents="none">
+                {obj.name} ({obj.widthMm} × {obj.heightMm}mm)
+              </text>
+              {/* Resize handles */}
+              {isSelected && !obj.locked && (
+                <rect x={tl.x + w - 4} y={tl.y + h - 4} width={8} height={8} fill="white" stroke="#0284c7"
+                  strokeWidth={1.8} rx={1} style={{ cursor: 'se-resize' }}
+                  onMouseDown={e => handleResizeHandleMouseDown(e, obj, 'se')}
+                />
+              )}
+            </g>
+          );
+        }
+
+        // C. BATTERY CAVITY / COMPARTMENT
+        if (obj.type === 'Battery Cavity') {
+          const tl = mmToScreen(obj.xMm, obj.yMm);
+          const w = (obj.widthMm || 40) * view.scale;
+          const h = (obj.heightMm || 20) * view.scale;
+
+          return (
+            <g key={obj.id} onMouseDown={e => handleObjectMouseDown(e, obj)} style={{ cursor: 'pointer' }}>
+              <rect x={tl.x} y={tl.y} width={w} height={h}
+                fill="#fef3c7" stroke={isSelected ? '#0284c7' : '#d97706'}
+                strokeWidth={isSelected ? 2 : 1.5} rx={3}
+              />
+              {/* Battery polarity terminals */}
+              <text x={tl.x + 6} y={tl.y + h / 2 + 3} fontSize={10} fontWeight="bold" fill="#dc2626" pointerEvents="none">+</text>
+              <text x={tl.x + w - 10} y={tl.y + h / 2 + 3} fontSize={10} fontWeight="bold" fill="#2563eb" pointerEvents="none">-</text>
+              <text x={tl.x + w / 2} y={tl.y + h / 2 + 3} textAnchor="middle" fontSize={8.5} fontFamily="sans-serif" fontWeight="bold" fill="#78350f" pointerEvents="none">
+                {obj.name}
+              </text>
+              {isSelected && !obj.locked && (
+                <rect x={tl.x + w - 4} y={tl.y + h - 4} width={8} height={8} fill="white" stroke="#d97706"
                   strokeWidth={1.5} rx={1} style={{ cursor: 'se-resize' }}
                   onMouseDown={e => handleResizeHandleMouseDown(e, obj, 'se')}
                 />
-              </>
+              )}
+            </g>
+          );
+        }
+
+        // D. CONNECTOR CUTOUT OPENING (USB / BARREL / HEADERS)
+        if (obj.type === 'Connector Opening') {
+          const tl = mmToScreen(obj.xMm, obj.yMm);
+          const w = (obj.widthMm || 16) * view.scale;
+          const h = (obj.heightMm || 12) * view.scale;
+
+          return (
+            <g key={obj.id} onMouseDown={e => handleObjectMouseDown(e, obj)} style={{ cursor: 'pointer' }}>
+              <rect x={tl.x} y={tl.y} width={w} height={h}
+                fill="#dcfce7" stroke={isSelected ? '#0284c7' : '#15803d'}
+                strokeWidth={isSelected ? 2 : 1.5} rx={4}
+              />
+              {/* Chamfered port guide lines */}
+              <line x1={tl.x + 3} y1={tl.y + 3} x2={tl.x + w - 3} y2={tl.y + 3} stroke="#166534" strokeWidth={1} />
+              <line x1={tl.x + 3} y1={tl.y + h - 3} x2={tl.x + w - 3} y2={tl.y + h - 3} stroke="#166534" strokeWidth={1} />
+              <text x={tl.x + w / 2} y={tl.y + h / 2 + 3} textAnchor="middle" fontSize={8} fontFamily="monospace" fontWeight="bold" fill="#14532d" pointerEvents="none">
+                {obj.name}
+              </text>
+              {isSelected && !obj.locked && (
+                <rect x={tl.x + w - 4} y={tl.y + h - 4} width={8} height={8} fill="white" stroke="#15803d"
+                  strokeWidth={1.5} rx={1} style={{ cursor: 'se-resize' }}
+                  onMouseDown={e => handleResizeHandleMouseDown(e, obj, 'se')}
+                />
+              )}
+            </g>
+          );
+        }
+
+        // E. GENERAL RECTANGULAR CAD ZONE
+        const tl = mmToScreen(obj.xMm, obj.yMm);
+        const w = (obj.widthMm || 10) * view.scale;
+        const h = (obj.heightMm || 10) * view.scale;
+
+        return (
+          <g key={obj.id} onMouseDown={e => handleObjectMouseDown(e, obj)} style={{ cursor: 'pointer' }}>
+            <rect x={tl.x} y={tl.y} width={w} height={h}
+              fill={`${color}18`} stroke={isSelected ? '#0284c7' : color}
+              strokeWidth={isSelected ? 2 : 1.2}
+              strokeDasharray={obj.type.includes('Keepout') ? '4 2' : undefined}
+              rx={2}
+            />
+            <text x={tl.x + w / 2} y={tl.y + h / 2 + 3} textAnchor="middle" fontSize={8.5} fontFamily="sans-serif" fontWeight="bold" fill={color} pointerEvents="none">
+              {obj.name}
+            </text>
+            <text x={tl.x + w / 2} y={tl.y - 3} textAnchor="middle" fontSize={7.5} fontFamily="monospace" fill="#64748b" pointerEvents="none">
+              {obj.widthMm} × {obj.heightMm}mm
+            </text>
+            {isSelected && !obj.locked && (
+              <rect x={tl.x + w - 4} y={tl.y + h - 4} width={8} height={8} fill="white" stroke={color}
+                strokeWidth={1.5} rx={1} style={{ cursor: 'se-resize' }}
+                onMouseDown={e => handleResizeHandleMouseDown(e, obj, 'se')}
+              />
             )}
           </g>
         );
