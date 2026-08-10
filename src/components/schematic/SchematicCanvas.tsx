@@ -2,7 +2,7 @@
 import React, { useRef, useCallback, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { SchematicUIState } from './schematicInteraction';
-import { getSymbolPinLayouts, snapToGrid } from './schematicGeometry';
+import { getSymbolPinLayouts, snapToGrid, computeOrthogonalPath, detectWireJunctions } from './schematicGeometry';
 import { ReviewResult } from '../../types';
 import { SchematicSymbolRenderer } from './SchematicSymbolRenderer';
 import { useEffect } from 'react';
@@ -327,14 +327,14 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
                   }}
                 >
                   <path
-                    d={`M ${finalPath.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                    d={`M ${finalPath.map((p: { x: number; y: number }) => `${p.x} ${p.y}`).join(' L ')}`}
                     fill="none"
                     stroke="transparent"
                     strokeWidth={8}
                     className="cursor-pointer"
                   />
                   <path
-                    d={`M ${finalPath.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                    d={`M ${finalPath.map((p: { x: number; y: number }) => `${p.x} ${p.y}`).join(' L ')}`}
                     fill="none"
                     stroke={isSelected ? '#10b981' : '#38bdf8'}
                     strokeWidth={1.5}
@@ -362,7 +362,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
             return (
               <g>
                 {wireElements}
-                {junctions.map((j, jIdx) => (
+                {junctions.map((j: { x: number; y: number }, jIdx: number) => (
                   <circle key={`jnc_${jIdx}`} cx={j.x} cy={j.y} r={3} fill="#38bdf8" stroke="#0f172a" strokeWidth={1} />
                 ))}
               </g>

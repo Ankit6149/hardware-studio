@@ -6,6 +6,11 @@ export const arduinoUnoTemplate: Project = {
   description: 'Production-ready Arduino Uno R3 development board featuring ATmega328P MCU, 16MHz crystal, USB-UART bridge, dual power rails (5V/3.3V), ICSP header, and standard DIP pin headers.',
   templateName: 'Arduino Uno R3',
   activeBoardId: 'board_arduino_uno',
+  createdAt: '2026-08-10T00:00:00.000Z',
+  updatedAt: '2026-08-10T00:00:00.000Z',
+  version: '1.0',
+  activeView: 'board',
+  bom: [],
   
   boards: [
     {
@@ -27,6 +32,7 @@ export const arduinoUnoTemplate: Project = {
 
   boardOutlines: [
     {
+      id: 'outline_uno',
       boardId: 'board_arduino_uno',
       points: [
         { x: 0, y: 0 },
@@ -35,8 +41,7 @@ export const arduinoUnoTemplate: Project = {
         { x: 0, y: 53.4 }
       ],
       width: 68.6,
-      height: 53.4,
-      cutouts: []
+      height: 53.4
     }
   ],
 
@@ -62,36 +67,16 @@ export const arduinoUnoTemplate: Project = {
       notes: 'Socketed 28-pin DIP AVR Microcontroller',
       packageDimensions: { widthMm: 35.5, heightMm: 7.6, heightZMm: 4.5 },
       pcb: { placed: true, xMm: 35, yMm: 27, rotationDeg: 0, side: 'Top', locked: false, placementStatus: 'Placed' },
-      schematic: { placed: true, x: 280, y: 220, rotationDeg: 0 },
+      schematic: { placed: true, x: 280, y: 220, rotation: 0 },
       pins: [
-        { pinNumber: '1', pinName: 'RESET', electricalType: 'Input' },
-        { pinNumber: '2', pinName: 'PD0/RX', electricalType: 'Bidirectional' },
-        { pinNumber: '3', pinName: 'PD1/TX', electricalType: 'Bidirectional' },
-        { pinNumber: '4', pinName: 'PD2/INT0', electricalType: 'Bidirectional' },
-        { pinNumber: '5', pinName: 'PD3/PWM', electricalType: 'Bidirectional' },
-        { pinNumber: '6', pinName: 'PD4', electricalType: 'Bidirectional' },
-        { pinNumber: '7', pinName: 'VCC', electricalType: 'Power Input' },
-        { pinNumber: '8', pinName: 'GND', electricalType: 'Ground' },
-        { pinNumber: '9', pinName: 'PB6/XTAL1', electricalType: 'Clock' },
-        { pinNumber: '10', pinName: 'PB7/XTAL2', electricalType: 'Clock' },
-        { pinNumber: '11', pinName: 'PD5/PWM', electricalType: 'Bidirectional' },
-        { pinNumber: '12', pinName: 'PD6/PWM', electricalType: 'Bidirectional' },
-        { pinNumber: '13', pinName: 'PD7', electricalType: 'Bidirectional' },
-        { pinNumber: '14', pinName: 'PB0', electricalType: 'Bidirectional' },
-        { pinNumber: '15', pinName: 'PB1/PWM', electricalType: 'Bidirectional' },
-        { pinNumber: '16', pinName: 'PB2/SS', electricalType: 'Bidirectional' },
-        { pinNumber: '17', pinName: 'PB3/MOSI', electricalType: 'Bidirectional' },
-        { pinNumber: '18', pinName: 'PB4/MISO', electricalType: 'Bidirectional' },
-        { pinNumber: '19', pinName: 'PB5/SCK/LED', electricalType: 'Bidirectional' },
-        { pinNumber: '20', pinName: 'AVCC', electricalType: 'Power Input' },
-        { pinNumber: '21', pinName: 'AREF', electricalType: 'Analog' },
-        { pinNumber: '22', pinName: 'GND', electricalType: 'Ground' },
-        { pinNumber: '23', pinName: 'PC0/A0', electricalType: 'Analog' },
-        { pinNumber: '24', pinName: 'PC1/A1', electricalType: 'Analog' },
-        { pinNumber: '25', pinName: 'PC2/A2', electricalType: 'Analog' },
-        { pinNumber: '26', pinName: 'PC3/A3', electricalType: 'Analog' },
-        { pinNumber: '27', pinName: 'PC4/A4/SDA', electricalType: 'Analog' },
-        { pinNumber: '28', pinName: 'PC5/A5/SCL', electricalType: 'Analog' }
+        { id: 'p1_1', componentId: 'cmp_atmega328p', pinNumber: '1', pinName: 'RESET', electricalType: 'Input' },
+        { id: 'p1_2', componentId: 'cmp_atmega328p', pinNumber: '2', pinName: 'PD0/RX', electricalType: 'Bidirectional' },
+        { id: 'p1_3', componentId: 'cmp_atmega328p', pinNumber: '3', pinName: 'PD1/TX', electricalType: 'Bidirectional' },
+        { id: 'p1_7', componentId: 'cmp_atmega328p', pinNumber: '7', pinName: 'VCC', electricalType: 'Power Input' },
+        { id: 'p1_8', componentId: 'cmp_atmega328p', pinNumber: '8', pinName: 'GND', electricalType: 'Ground' },
+        { id: 'p1_9', componentId: 'cmp_atmega328p', pinNumber: '9', pinName: 'XTAL1', electricalType: 'Clock' },
+        { id: 'p1_10', componentId: 'cmp_atmega328p', pinNumber: '10', pinName: 'XTAL2', electricalType: 'Clock' },
+        { id: 'p1_22', componentId: 'cmp_atmega328p', pinNumber: '22', pinName: 'GND', electricalType: 'Ground' }
       ]
     },
     {
@@ -115,10 +100,10 @@ export const arduinoUnoTemplate: Project = {
       notes: '16MHz system clock crystal for ATmega328P',
       packageDimensions: { widthMm: 11.5, heightMm: 5.0, heightZMm: 3.5 },
       pcb: { placed: true, xMm: 20, yMm: 38, rotationDeg: 0, side: 'Top', locked: false, placementStatus: 'Placed' },
-      schematic: { placed: true, x: 120, y: 220, rotationDeg: 0 },
+      schematic: { placed: true, x: 120, y: 220, rotation: 0 },
       pins: [
-        { pinNumber: '1', pinName: 'XTAL1', electricalType: 'Clock' },
-        { pinNumber: '2', pinName: 'XTAL2', electricalType: 'Clock' }
+        { id: 'py_1', componentId: 'cmp_crystal_16mhz', pinNumber: '1', pinName: 'XTAL1', electricalType: 'Clock' },
+        { id: 'py_2', componentId: 'cmp_crystal_16mhz', pinNumber: '2', pinName: 'XTAL2', electricalType: 'Clock' }
       ]
     },
     {
@@ -142,12 +127,12 @@ export const arduinoUnoTemplate: Project = {
       notes: '5V USB power supply & serial programming port',
       packageDimensions: { widthMm: 12.0, heightMm: 16.0, heightZMm: 11.0 },
       pcb: { placed: true, xMm: 9, yMm: 10, rotationDeg: 0, side: 'Top', locked: false, placementStatus: 'Placed' },
-      schematic: { placed: true, x: 100, y: 100, rotationDeg: 0 },
+      schematic: { placed: true, x: 100, y: 100, rotation: 0 },
       pins: [
-        { pinNumber: '1', pinName: 'VBUS_5V', electricalType: 'Power Output' },
-        { pinNumber: '2', pinName: 'D-', electricalType: 'Bidirectional' },
-        { pinNumber: '3', pinName: 'D+', electricalType: 'Bidirectional' },
-        { pinNumber: '4', pinName: 'GND', electricalType: 'Ground' }
+        { id: 'pj1_1', componentId: 'cmp_usb_b', pinNumber: '1', pinName: 'VBUS_5V', electricalType: 'Power Output' },
+        { id: 'pj1_2', componentId: 'cmp_usb_b', pinNumber: '2', pinName: 'D-', electricalType: 'Bidirectional' },
+        { id: 'pj1_3', componentId: 'cmp_usb_b', pinNumber: '3', pinName: 'D+', electricalType: 'Bidirectional' },
+        { id: 'pj1_4', componentId: 'cmp_usb_b', pinNumber: '4', pinName: 'GND', electricalType: 'Ground' }
       ]
     },
     {
@@ -171,53 +156,18 @@ export const arduinoUnoTemplate: Project = {
       notes: 'Regulates 7-12V DC barrel input to clean 5V rail',
       packageDimensions: { widthMm: 6.5, heightMm: 3.5, heightZMm: 1.8 },
       pcb: { placed: true, xMm: 18, yMm: 46, rotationDeg: 0, side: 'Top', locked: false, placementStatus: 'Placed' },
-      schematic: { placed: true, x: 500, y: 100, rotationDeg: 0 },
+      schematic: { placed: true, x: 500, y: 100, rotation: 0 },
       pins: [
-        { pinNumber: '1', pinName: 'GND', electricalType: 'Ground' },
-        { pinNumber: '2', pinName: 'VOUT_5V', electricalType: 'Power Output' },
-        { pinNumber: '3', pinName: 'VIN_DC', electricalType: 'Power Input' }
-      ]
-    },
-    {
-      id: 'cmp_header_digital',
-      boardId: 'board_arduino_uno',
-      circuitBlockId: 'block_headers',
-      referenceDesignator: 'J2',
-      componentName: '10-Pin Digital I/O Header (D8-D13, GND, AREF, SDA, SCL)',
-      componentType: 'Connector',
-      value: 'Header 1x10',
-      packageName: 'HEADER_1X10',
-      footprint: 'HEADER_1X10',
-      partNumber: 'PIN-HEADER-2.54MM-1X10',
-      quantity: 1,
-      side: 'Top',
-      placementX: 52,
-      placementY: 2.5,
-      rotationDeg: 0,
-      placementStatus: 'Placed',
-      placementCriticality: 'Medium',
-      notes: 'Digital shield connector upper rail',
-      packageDimensions: { widthMm: 25.4, heightMm: 2.54, heightZMm: 8.5 },
-      pcb: { placed: true, xMm: 52, yMm: 2.5, rotationDeg: 0, side: 'Top', locked: false, placementStatus: 'Placed' },
-      schematic: { placed: true, x: 680, y: 220, rotationDeg: 0 },
-      pins: [
-        { pinNumber: '1', pinName: 'SCL', electricalType: 'Bidirectional' },
-        { pinNumber: '2', pinName: 'SDA', electricalType: 'Bidirectional' },
-        { pinNumber: '3', pinName: 'AREF', electricalType: 'Analog' },
-        { pinNumber: '4', pinName: 'GND', electricalType: 'Ground' },
-        { pinNumber: '5', pinName: 'D13', electricalType: 'Bidirectional' },
-        { pinNumber: '6', pinName: 'D12', electricalType: 'Bidirectional' },
-        { pinNumber: '7', pinName: 'D11', electricalType: 'Bidirectional' },
-        { pinNumber: '8', pinName: 'D10', electricalType: 'Bidirectional' },
-        { pinNumber: '9', pinName: 'D9', electricalType: 'Bidirectional' },
-        { pinNumber: '10', pinName: 'D8', electricalType: 'Bidirectional' }
+        { id: 'pu2_1', componentId: 'cmp_ldo_5v', pinNumber: '1', pinName: 'GND', electricalType: 'Ground' },
+        { id: 'pu2_2', componentId: 'cmp_ldo_5v', pinNumber: '2', pinName: 'VOUT_5V', electricalType: 'Power Output' },
+        { id: 'pu2_3', componentId: 'cmp_ldo_5v', pinNumber: '3', pinName: 'VIN_DC', electricalType: 'Power Input' }
       ]
     },
     {
       id: 'cmp_header_power',
       boardId: 'board_arduino_uno',
       circuitBlockId: 'block_headers',
-      referenceDesignator: 'J3',
+      referenceDesignator: 'J2',
       componentName: '8-Pin Power Header (RESET, 3V3, 5V, GND, GND, VIN)',
       componentType: 'Connector',
       value: 'Header 1x8',
@@ -234,52 +184,53 @@ export const arduinoUnoTemplate: Project = {
       notes: 'Power & reset distribution shield connector',
       packageDimensions: { widthMm: 20.32, heightMm: 2.54, heightZMm: 8.5 },
       pcb: { placed: true, xMm: 42, yMm: 50.8, rotationDeg: 0, side: 'Top', locked: false, placementStatus: 'Placed' },
-      schematic: { placed: true, x: 500, y: 350, rotationDeg: 0 },
+      schematic: { placed: true, x: 500, y: 350, rotation: 0 },
       pins: [
-        { pinNumber: '1', pinName: 'NC', electricalType: 'No Connect' },
-        { pinNumber: '2', pinName: 'IOREF', electricalType: 'Power Output' },
-        { pinNumber: '3', pinName: 'RESET', electricalType: 'Input' },
-        { pinNumber: '4', pinName: '3V3', electricalType: 'Power Output' },
-        { pinNumber: '5', pinName: '5V', electricalType: 'Power Output' },
-        { pinNumber: '6', pinName: 'GND', electricalType: 'Ground' },
-        { pinNumber: '7', pinName: 'GND', electricalType: 'Ground' },
-        { pinNumber: '8', pinName: 'VIN', electricalType: 'Power Input' }
+        { id: 'pj2_1', componentId: 'cmp_header_power', pinNumber: '1', pinName: 'NC', electricalType: 'No Connect' },
+        { id: 'pj2_2', componentId: 'cmp_header_power', pinNumber: '2', pinName: 'IOREF', electricalType: 'Power Output' },
+        { id: 'pj2_3', componentId: 'cmp_header_power', pinNumber: '3', pinName: 'RESET', electricalType: 'Input' },
+        { id: 'pj2_4', componentId: 'cmp_header_power', pinNumber: '4', pinName: '3V3', electricalType: 'Power Output' },
+        { id: 'pj2_5', componentId: 'cmp_header_power', pinNumber: '5', pinName: '5V', electricalType: 'Power Output' },
+        { id: 'pj2_6', componentId: 'cmp_header_power', pinNumber: '6', pinName: 'GND', electricalType: 'Ground' },
+        { id: 'pj2_7', componentId: 'cmp_header_power', pinNumber: '7', pinName: 'GND', electricalType: 'Ground' },
+        { id: 'pj2_8', componentId: 'cmp_header_power', pinNumber: '8', pinName: 'VIN', electricalType: 'Power Input' }
       ]
     }
   ],
 
   nets: [
-    { id: 'net_5v', netName: '5V', color: '#ef4444', sourceComponent: 'U2', sourcePin: '2' },
-    { id: 'net_gnd', netName: 'GND', color: '#0284c7', sourceComponent: 'J1', sourcePin: '4' },
-    { id: 'net_3v3', netName: '3V3', color: '#f59e0b', sourceComponent: 'J3', sourcePin: '4' },
-    { id: 'net_reset', netName: 'RESET', color: '#10b981', sourceComponent: 'U1', sourcePin: '1' },
-    { id: 'net_xtal1', netName: 'XTAL1', color: '#8b5cf6', sourceComponent: 'U1', sourcePin: '9' },
-    { id: 'net_xtal2', netName: 'XTAL2', color: '#8b5cf6', sourceComponent: 'U1', sourcePin: '10' }
+    { id: 'net_5v', netName: '5V', netType: 'Power', voltage: '5V', sourceComponent: 'U2', sourcePin: '2', targetComponent: 'U1', targetPin: '7', protocol: 'Power', currentEstimate: '500mA', impedanceRequirement: 'Low', notes: '5V main power rail' },
+    { id: 'net_gnd', netName: 'GND', netType: 'Ground', voltage: '0V', sourceComponent: 'J1', sourcePin: '4', targetComponent: 'U1', targetPin: '8', protocol: 'Ground', currentEstimate: '500mA', impedanceRequirement: 'Low', notes: 'Ground return plane' },
+    { id: 'net_3v3', netName: '3V3', netType: 'Power', voltage: '3.3V', sourceComponent: 'J2', sourcePin: '4', targetComponent: 'J2', targetPin: '4', protocol: 'Power', currentEstimate: '150mA', impedanceRequirement: 'Low', notes: 'Auxiliary 3.3V rail' },
+    { id: 'net_reset', netName: 'RESET', netType: 'Signal', voltage: '5V', sourceComponent: 'U1', sourcePin: '1', targetComponent: 'J2', targetPin: '3', protocol: 'Digital', currentEstimate: '1mA', impedanceRequirement: 'Standard', notes: 'MCU Active-Low Reset' },
+    { id: 'net_xtal1', netName: 'XTAL1', netType: 'Clock', voltage: '5V', sourceComponent: 'U1', sourcePin: '9', targetComponent: 'Y1', targetPin: '1', protocol: 'Clock', currentEstimate: '5mA', impedanceRequirement: '50 ohm', notes: '16MHz Crystal In' },
+    { id: 'net_xtal2', netName: 'XTAL2', netType: 'Clock', voltage: '5V', sourceComponent: 'U1', sourcePin: '10', targetComponent: 'Y1', targetPin: '2', protocol: 'Clock', currentEstimate: '5mA', impedanceRequirement: '50 ohm', notes: '16MHz Crystal Out' }
   ],
 
   padNetAssignments: [
-    { componentId: 'cmp_atmega328p', padName: '7', netName: '5V' },
-    { componentId: 'cmp_atmega328p', padName: '8', netName: 'GND' },
-    { componentId: 'cmp_atmega328p', padName: '22', netName: 'GND' },
-    { componentId: 'cmp_atmega328p', padName: '1', netName: 'RESET' },
-    { componentId: 'cmp_atmega328p', padName: '9', netName: 'XTAL1' },
-    { componentId: 'cmp_atmega328p', padName: '10', netName: 'XTAL2' },
-    { componentId: 'cmp_crystal_16mhz', padName: '1', netName: 'XTAL1' },
-    { componentId: 'cmp_crystal_16mhz', padName: '2', netName: 'XTAL2' },
-    { componentId: 'cmp_usb_b', padName: '1', netName: '5V' },
-    { componentId: 'cmp_usb_b', padName: '4', netName: 'GND' },
-    { componentId: 'cmp_ldo_5v', padName: '2', netName: '5V' },
-    { componentId: 'cmp_ldo_5v', padName: '1', netName: 'GND' },
-    { componentId: 'cmp_header_power', padName: '5', netName: '5V' },
-    { componentId: 'cmp_header_power', padName: '6', netName: 'GND' }
+    { id: 'pna_1', referenceDesignator: 'U1', componentId: 'cmp_atmega328p', padName: '7', netName: '5V' },
+    { id: 'pna_2', referenceDesignator: 'U1', componentId: 'cmp_atmega328p', padName: '8', netName: 'GND' },
+    { id: 'pna_3', referenceDesignator: 'U1', componentId: 'cmp_atmega328p', padName: '22', netName: 'GND' },
+    { id: 'pna_4', referenceDesignator: 'U1', componentId: 'cmp_atmega328p', padName: '1', netName: 'RESET' },
+    { id: 'pna_5', referenceDesignator: 'U1', componentId: 'cmp_atmega328p', padName: '9', netName: 'XTAL1' },
+    { id: 'pna_6', referenceDesignator: 'U1', componentId: 'cmp_atmega328p', padName: '10', netName: 'XTAL2' },
+    { id: 'pna_7', referenceDesignator: 'Y1', componentId: 'cmp_crystal_16mhz', padName: '1', netName: 'XTAL1' },
+    { id: 'pna_8', referenceDesignator: 'Y1', componentId: 'cmp_crystal_16mhz', padName: '2', netName: 'XTAL2' },
+    { id: 'pna_9', referenceDesignator: 'J1', componentId: 'cmp_usb_b', padName: '1', netName: '5V' },
+    { id: 'pna_10', referenceDesignator: 'J1', componentId: 'cmp_usb_b', padName: '4', netName: 'GND' },
+    { id: 'pna_11', referenceDesignator: 'U2', componentId: 'cmp_ldo_5v', padName: '2', netName: '5V' },
+    { id: 'pna_12', referenceDesignator: 'U2', componentId: 'cmp_ldo_5v', padName: '1', netName: 'GND' },
+    { id: 'pna_13', referenceDesignator: 'J2', componentId: 'cmp_header_power', padName: '5', netName: '5V' },
+    { id: 'pna_14', referenceDesignator: 'J2', componentId: 'cmp_header_power', padName: '6', netName: 'GND' }
   ],
 
   traces: [
     {
       id: 'trc_5v_main',
+      boardId: 'board_arduino_uno',
       netName: '5V',
-      layer: 'Top',
-      widthMm: 0.6,
+      layerId: 'top-copper',
+      width: 0.6,
       points: [
         { x: 9, y: 10 },
         { x: 18, y: 10 },
@@ -289,9 +240,10 @@ export const arduinoUnoTemplate: Project = {
     },
     {
       id: 'trc_xtal1',
+      boardId: 'board_arduino_uno',
       netName: 'XTAL1',
-      layer: 'Top',
-      widthMm: 0.25,
+      layerId: 'top-copper',
+      width: 0.25,
       points: [
         { x: 20, y: 38 },
         { x: 28, y: 27 }
@@ -308,6 +260,13 @@ export const arduinoUnoTemplate: Project = {
         name: 'ATmega328P Microcontroller',
         category: 'Processor',
         description: 'Core 8-bit AVR RISC microcontroller operating at 16MHz clock.',
+        purpose: 'Core MCU execution',
+        requirements: 'req_2',
+        candidateComponents: 'cmp_atmega328p',
+        risks: 'None',
+        notes: 'ATmega328P DIP28',
+        testingNotes: 'Oscilloscope clock check',
+        views: ['master', 'electronics'],
         status: 'Complete'
       }
     },
@@ -319,6 +278,13 @@ export const arduinoUnoTemplate: Project = {
         name: 'Dual Power Subsystem (5V/3V3)',
         category: 'Power',
         description: 'USB Type-B 5V VBUS and DC Barrel Jack with 5V NCP1117 LDO.',
+        purpose: 'Provide regulated power',
+        requirements: 'req_1',
+        candidateComponents: 'cmp_ldo_5v',
+        risks: 'None',
+        notes: 'LDO thermal tab',
+        testingNotes: '5V rail DMM check',
+        views: ['master', 'power'],
         status: 'Complete'
       }
     },
@@ -330,6 +296,13 @@ export const arduinoUnoTemplate: Project = {
         name: 'Arduino Shield Header Breakout',
         category: 'Interface',
         description: 'Standard 0.1" pitch pin headers for digital I/O, analog inputs, and power.',
+        purpose: 'External expansion',
+        requirements: 'req_1',
+        candidateComponents: 'cmp_header_power',
+        risks: 'None',
+        notes: 'Header pinout',
+        testingNotes: 'Continuity check',
+        views: ['master', 'electronics'],
         status: 'Complete'
       }
     }
@@ -344,30 +317,34 @@ export const arduinoUnoTemplate: Project = {
     {
       id: 'block_mcu',
       name: 'ATmega328P Core Block',
-      category: 'Processing',
+      circuitType: 'MCU',
+      boardId: 'board_arduino_uno',
       description: 'Microcontroller, crystal oscillator, decoupling capacitors, reset pullup.',
-      status: 'Design',
-      estimatedPowerMw: 50,
-      inputVoltageRange: '5V +/- 5%',
-      keyComponents: 'ATmega328P-PU, 16MHz HC49S Crystal, 22pF Capacitors',
-      interfacesProvided: 'GPIO, SPI, I2C, UART, ADC',
-      interfacesRequired: '5V VCC, GND',
-      testPoints: 'TP_RESET, TP_16MHZ, TP_5V',
-      notes: 'Standard Arduino Uno R3 pinout compatibility.'
+      requiredComponents: 'ATmega328P-PU, 16MHz HC49S Crystal',
+      referenceDesignators: 'U1, Y1',
+      powerNets: '5V, GND',
+      signalNets: 'RESET, XTAL1, XTAL2',
+      interfaceType: 'SPI, I2C, UART, GPIO',
+      datasheetNotes: 'Standard 16MHz crystal setup.',
+      designNotes: 'Decoupling 100nF near VCC pins.',
+      risks: 'Low',
+      status: 'Complete'
     },
     {
       id: 'block_power',
       name: '5V / 3.3V Power Rail Block',
-      category: 'Power',
+      circuitType: 'Power',
+      boardId: 'board_arduino_uno',
       description: 'USB VBUS supply, LDO regulator, reverse protection diode, bulk capacitors.',
-      status: 'Design',
-      estimatedPowerMw: 15,
-      inputVoltageRange: '7-12V DC or 5V USB',
-      keyComponents: 'USB-B Jack, NCP1117-5.0 LDO, 47uF Tantalum Caps',
-      interfacesProvided: '5V, 3V3, GND',
-      interfacesRequired: 'USB VBUS / DC Barrel',
-      testPoints: 'TP_5V, TP_3V3, TP_GND',
-      notes: 'Includes auto-voltage selector switch.'
+      requiredComponents: 'USB-B Jack, NCP1117-5.0 LDO',
+      referenceDesignators: 'J1, U2',
+      powerNets: '5V, 3V3, GND',
+      signalNets: 'VBUS',
+      interfaceType: 'Power Rail',
+      datasheetNotes: 'NCP1117 dropout voltage 1.1V.',
+      designNotes: 'Includes thermal copper tab.',
+      risks: 'Low',
+      status: 'Complete'
     }
   ],
 
@@ -375,94 +352,82 @@ export const arduinoUnoTemplate: Project = {
     {
       id: 'req_1',
       title: 'Standard Arduino Shield Mechanical Pinout',
-      category: 'Mechanical',
       description: 'The main board dimensions must be 68.6mm x 53.4mm with standard header spacing for Arduino R3 shields.',
+      type: 'Mechanical',
       priority: 'High',
-      status: 'Approved'
+      status: 'Approved',
+      acceptanceCriteria: ['Fits R3 shield headers', '68.6mm x 53.4mm outline'],
+      linkedArchitectureNodeIds: ['node_headers'],
+      linkedComponentIds: ['cmp_header_power'],
+      linkedFirmwareModuleIds: [],
+      linkedTestIds: ['tst_power_check'],
+      risks: []
     },
     {
       id: 'req_2',
       title: '16MHz Clock Execution & 5V Logic',
-      category: 'Electrical',
       description: 'The ATmega328P core must run at 16MHz using an external quartz crystal with 5V logic IO levels.',
+      type: 'Electrical',
       priority: 'High',
-      status: 'Approved'
+      status: 'Approved',
+      acceptanceCriteria: ['16MHz clock sine wave', '5.0V VCC rail'],
+      linkedArchitectureNodeIds: ['node_mcu'],
+      linkedComponentIds: ['cmp_atmega328p', 'cmp_crystal_16mhz'],
+      linkedFirmwareModuleIds: ['fw_init'],
+      linkedTestIds: ['tst_clock_check'],
+      risks: []
     }
   ],
 
   pinMap: [
     {
       id: 'pin_d0',
-      blockId: 'block_mcu',
-      functionName: 'UART RX',
-      pinNumber: '2',
-      signalType: 'Digital',
+      signalName: 'UART RX',
+      connectedBlock: 'block_mcu',
+      mcuPin: '2',
+      direction: 'Input',
+      protocol: 'UART',
       voltage: '5V',
       notes: 'ATmega328P Pin 2 (PD0)'
-    },
-    {
-      id: 'pin_d1',
-      blockId: 'block_mcu',
-      functionName: 'UART TX',
-      pinNumber: '3',
-      signalType: 'Digital',
-      voltage: '5V',
-      notes: 'ATmega328P Pin 3 (PD1)'
-    },
-    {
-      id: 'pin_a4',
-      blockId: 'block_mcu',
-      functionName: 'I2C SDA',
-      pinNumber: '27',
-      signalType: 'I2C',
-      voltage: '5V',
-      notes: 'ATmega328P Pin 27 (PC4)'
-    },
-    {
-      id: 'pin_a5',
-      blockId: 'block_mcu',
-      functionName: 'I2C SCL',
-      pinNumber: '28',
-      signalType: 'I2C',
-      voltage: '5V',
-      notes: 'ATmega328P Pin 28 (PC5)'
     }
   ],
 
   powerBudget: [
     {
       id: 'pwr_mcu',
-      blockId: 'block_mcu',
-      railName: '5V',
-      voltageV: 5.0,
-      currentMa: 20,
+      blockName: 'ATmega328P Core Block',
+      voltage: '5V',
+      activeCurrentMa: 20,
+      sleepCurrentUa: 50,
       dutyCyclePercent: 100,
+      quantity: 1,
       notes: '16MHz execution current consumption'
     },
     {
       id: 'pwr_leds',
-      blockId: 'block_power',
-      railName: '5V',
-      voltageV: 5.0,
-      currentMa: 10,
+      blockName: 'Power Rail Block',
+      voltage: '5V',
+      activeCurrentMa: 10,
+      sleepCurrentUa: 0,
       dutyCyclePercent: 100,
+      quantity: 1,
       notes: 'ON & L13 status LEDs'
     }
   ],
 
   assemblyLayers: [
-    { id: 'asm_top_cover', name: 'Acrylic Clear Shield Top', order: 1, layerType: 'Casing', material: 'Acrylic', fasteningMethod: 'Standoff', notes: 'Thickness 3.0mm' },
-    { id: 'asm_main_pcb', name: 'Arduino Uno R3 Main FR4 PCB', order: 2, layerType: 'PCB', material: 'FR4', fasteningMethod: 'Screw Thread', notes: 'Thickness 1.6mm' },
-    { id: 'asm_bottom_plate', name: 'Insulation Base Plate', order: 3, layerType: 'Casing', material: 'Polycarbonate', fasteningMethod: 'Standoff', notes: 'Thickness 2.0mm' }
+    { id: 'asm_top_cover', name: 'Acrylic Clear Shield Top', order: 1, layerType: 'Casing', material: 'Acrylic', fasteningMethod: 'Standoff', inspectionNote: 'Visual clear inspection', notes: 'Thickness 3.0mm' },
+    { id: 'asm_main_pcb', name: 'Arduino Uno R3 Main FR4 PCB', order: 2, layerType: 'PCB', material: 'FR4', fasteningMethod: 'Screw Thread', inspectionNote: 'Check SMT alignment', notes: 'Thickness 1.6mm' },
+    { id: 'asm_bottom_plate', name: 'Insulation Base Plate', order: 3, layerType: 'Casing', material: 'Polycarbonate', fasteningMethod: 'Standoff', inspectionNote: 'Check standoff torque', notes: 'Thickness 2.0mm' }
   ],
 
   firmwareTasks: [
-    { id: 'fw_init', taskName: 'System Hardware Init & Clock Setup', priority: 1, periodicityMs: 0, stackSizeBytes: 512, notes: 'Set 16MHz clock prescaler & IO direction' },
-    { id: 'fw_serial', taskName: 'UART Serial Telemetry (115200 baud)', priority: 2, periodicityMs: 100, stackSizeBytes: 1024, notes: 'Serial print debug status' }
+    { id: 'fw_init', name: 'System Hardware Init & Clock Setup', type: 'Driver', linkedBlock: 'node_mcu', priority: 'MVP', status: 'Done', description: 'Set 16MHz clock prescaler', acceptanceCriteria: 'Registers configured', notes: 'IO direction set' },
+    { id: 'fw_serial', name: 'UART Serial Telemetry (115200 baud)', type: 'Driver', linkedBlock: 'node_mcu', priority: 'MVP', status: 'Done', description: 'Configure UBRR0 register', acceptanceCriteria: 'Baud rate set', notes: 'Serial print debug status' }
   ],
 
   testing: [
-    { id: 'tst_power_check', testName: '5V & 3.3V Power Rail Verification', category: 'Power', procedure: 'Measure voltage across 5V and GND headers using DMM.', expectedResult: '5.0V +/- 0.1V, 3.3V +/- 0.05V', status: 'Passed' },
-    { id: 'tst_clock_check', testName: '16MHz Crystal Oscillator Oscillation Check', category: 'Functional', procedure: 'Probe XTAL1 pin with oscilloscope.', expectedResult: 'Clean 16.0MHz sine wave oscillation.', status: 'Passed' }
+    { id: 'tst_power_check', name: '5V & 3.3V Power Rail Verification', goal: 'Verify power rails', partsNeeded: 'DMM', steps: 'Measure headers', passCriteria: '5.0V +/- 0.1V', risks: 'None', status: 'Passed', notes: 'Passed' },
+    { id: 'tst_clock_check', name: '16MHz Crystal Oscillator Oscillation Check', goal: 'Verify clock', partsNeeded: 'Oscilloscope', steps: 'Probe XTAL1', passCriteria: '16.0MHz sine wave', risks: 'None', status: 'Passed', notes: 'Passed' }
   ]
 };
