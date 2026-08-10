@@ -561,23 +561,23 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
           <circle key={i} cx={d.cx} cy={d.cy} r={0.5} fill="#334155" opacity={0.5} />
         ))}
 
-        {/* Board outline */}
+        {/* Board outline with realistic solder mask green background */}
         {outline && outline.points && outline.points.length >= 3 && (
           <polygon
             points={outline.points.map(p => `${bx(p.x)},${by(p.y)}`).join(' ')}
-            fill="#0f172a"
-            stroke="#38bdf8"
-            strokeWidth={1.5}
-            opacity={0.9}
+            fill="#064e3b"
+            stroke="#10b981"
+            strokeWidth={2}
+            opacity={0.95}
           />
         )}
         {outline && (!outline.points || outline.points.length < 3) && outline.width && outline.height && (
           <rect
             x={bx(0)} y={by(0)}
             width={bs(outline.width)} height={bs(outline.height)}
-            fill="#0f172a"
-            stroke="#38bdf8"
-            strokeWidth={1.5}
+            fill="#064e3b"
+            stroke="#10b981"
+            strokeWidth={2}
           />
         )}
 
@@ -623,11 +623,11 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
           const isHighlighted = selectedNetName && trace.netName === selectedNetName;
           const isSelected = selectedObjectId === trace.id;
 
-          let strokeColor = layerId === 'bottom-copper' ? '#3b82f6' : '#22c55e';
+          let strokeColor = layerId === 'bottom-copper' ? '#3b82f6' : '#ef4444';
           if (isHighlighted) strokeColor = '#22d3ee';
           else if (isSelected) strokeColor = '#f59e0b';
 
-          const opacity = isSelected || isHighlighted ? 1 : isActive ? 0.85 : 0.25;
+          const opacity = isSelected || isHighlighted ? 1 : isActive ? 0.9 : 0.4;
 
           return (
             <polyline
@@ -635,7 +635,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
               points={trace.points.map(p => `${bx(p.x)},${by(p.y)}`).join(' ')}
               fill="none"
               stroke={strokeColor}
-              strokeWidth={bs(trace.width || 0.15)}
+              strokeWidth={bs(trace.width || 0.25)}
               strokeLinecap="round"
               strokeLinejoin="round"
               opacity={opacity}
@@ -661,10 +661,10 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
               .map(p => `${bx(p.x)},${by(p.y)}`).join(' ')}
             fill="none"
             stroke="#fbbf24"
-            strokeWidth={bs(0.15)}
+            strokeWidth={bs(0.25)}
             strokeDasharray="3,2"
             strokeLinecap="round"
-            opacity={0.8}
+            opacity={0.9}
           />
         )}
 
@@ -683,7 +683,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
                 selectedKeepoutId: null,
               });
             }} className="cursor-pointer">
-              <circle cx={bx(via.x)} cy={by(via.y)} r={bs((via.outerDiameter || 0.6) / 2)} fill="#1e293b" stroke={isSelected ? '#f59e0b' : '#8b5cf6'} strokeWidth={1.2} />
+              <circle cx={bx(via.x)} cy={by(via.y)} r={bs((via.outerDiameter || 0.6) / 2)} fill="#f59e0b" stroke={isSelected ? '#10b981' : '#d97706'} strokeWidth={1} />
               <circle cx={bx(via.x)} cy={by(via.y)} r={bs((via.drillDiameter || 0.3) / 2)} fill="#0f172a" />
             </g>
           );
@@ -704,14 +704,14 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
                 selectedKeepoutId: null,
               });
             }} className="cursor-pointer">
-              <circle cx={bx(drill.x)} cy={by(drill.y)} r={bs((drill.diameter || 1.0) / 2)} fill="none" stroke={isSelected ? '#f59e0b' : '#94a3b8'} strokeWidth={1} />
-              <line x1={bx(drill.x) - 3} y1={by(drill.y)} x2={bx(drill.x) + 3} y2={by(drill.y)} stroke="#94a3b8" strokeWidth={0.5} />
-              <line x1={bx(drill.x)} y1={by(drill.y) - 3} x2={bx(drill.x)} y2={by(drill.y) + 3} stroke="#94a3b8" strokeWidth={0.5} />
+              <circle cx={bx(drill.x)} cy={by(drill.y)} r={bs((drill.diameter || 1.0) / 2)} fill="none" stroke={isSelected ? '#f59e0b' : '#cbd5e1'} strokeWidth={1.5} strokeDasharray="3,2" />
+              <line x1={bx(drill.x) - 4} y1={by(drill.y)} x2={bx(drill.x) + 4} y2={by(drill.y)} stroke="#cbd5e1" strokeWidth={0.5} />
+              <line x1={bx(drill.x)} y1={by(drill.y) - 4} x2={bx(drill.x)} y2={by(drill.y) + 4} stroke="#cbd5e1" strokeWidth={0.5} />
             </g>
           );
         })}
 
-        {/* Components */}
+        {/* Components with Gold SMT pads and White Silkscreen */}
         {filteredComponents.map(comp => {
           if (comp.placementX == null || comp.placementY == null) return null;
           const fp = getFootprint(comp.footprint);
@@ -737,54 +737,69 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
               }}
               className="cursor-pointer"
             >
+              {/* Footprint courtyard outline */}
               <rect
                 x={-bs(fp.courtyardWidthMm / 2)} y={-bs(fp.courtyardHeightMm / 2)}
                 width={bs(fp.courtyardWidthMm)} height={bs(fp.courtyardHeightMm)}
-                fill="none" stroke={isSelected ? '#f59e0b' : '#475569'}
-                strokeWidth={0.5} strokeDasharray={comp.side === 'Bottom' ? '2,2' : isSelected ? 'none' : '2,1'} opacity={comp.side === 'Bottom' ? 0.35 : 0.5}
+                fill="none" stroke={isSelected ? '#10b981' : '#64748b'}
+                strokeWidth={0.75} strokeDasharray={comp.side === 'Bottom' ? '2,2' : isSelected ? 'none' : '2,1'} opacity={comp.side === 'Bottom' ? 0.35 : 0.6}
               />
+              {/* Component Body (Epoxy package body) */}
               <rect
                 x={-bs(fp.bodyWidthMm / 2)} y={-bs(fp.bodyHeightMm / 2)}
                 width={bs(fp.bodyWidthMm)} height={bs(fp.bodyHeightMm)}
-                fill={isSelected ? '#1e3a5f' : isNetHighlighted ? '#1a2e4a' : '#1e293b'}
-                stroke={isSelected ? '#f59e0b' : isNetHighlighted ? '#22d3ee' : '#64748b'}
-                strokeWidth={isSelected ? 1.5 : 1}
+                fill={isSelected ? '#065f46' : isNetHighlighted ? '#0c4a6e' : '#18181b'}
+                stroke={isSelected ? '#10b981' : isNetHighlighted ? '#38bdf8' : '#f8fafc'}
+                strokeWidth={isSelected ? 2 : 1}
                 strokeDasharray={comp.side === 'Bottom' ? '3,3' : 'none'}
                 rx={bs(0.2)}
               />
+              {/* Metallic Gold SMT / TH Pads */}
               {fp.pads.map((pad, pi) => {
                 const padXMm = comp.side === 'Bottom' ? -pad.xMm : pad.xMm;
                 return (
-                  <rect
-                    key={pi}
-                    x={bs(padXMm) - bs(pad.widthMm / 2)}
-                    y={bs(pad.yMm) - bs(pad.heightMm / 2)}
-                    width={bs(pad.widthMm)}
-                    height={bs(pad.heightMm)}
-                    fill={isNetHighlighted ? '#22d3ee' : comp.side === 'Bottom' ? '#3b82f6' : '#c084fc'}
-                    opacity={comp.side === 'Bottom' ? 0.6 : 0.8}
-                    rx={bs(0.05)}
-                  />
+                  <g key={pi}>
+                    <rect
+                      x={bs(padXMm) - bs(pad.widthMm / 2)}
+                      y={bs(pad.yMm) - bs(pad.heightMm / 2)}
+                      width={bs(pad.widthMm)}
+                      height={bs(pad.heightMm)}
+                      fill={isNetHighlighted ? '#38bdf8' : comp.side === 'Bottom' ? '#60a5fa' : '#f59e0b'}
+                      stroke="#d97706"
+                      strokeWidth={0.5}
+                      opacity={comp.side === 'Bottom' ? 0.8 : 1}
+                      rx={bs(0.05)}
+                    />
+                    {/* Inner drill hole for TH pads */}
+                    {(comp.footprint.includes('DIP') || comp.footprint.includes('HEADER') || comp.footprint.includes('USB')) && (
+                      <circle
+                        cx={bs(padXMm)}
+                        cy={bs(pad.yMm)}
+                        r={bs(Math.min(pad.widthMm, pad.heightMm) * 0.25)}
+                        fill="#0f172a"
+                      />
+                    )}
+                  </g>
                 );
               })}
+              {/* Pin 1 orientation dot (Red) */}
               <circle
                 cx={bs((comp.side === 'Bottom' ? -1 : 1) * (fp.pads[0]?.xMm || -fp.bodyWidthMm / 2 + 0.3))}
                 cy={bs(fp.pads[0]?.yMm || -fp.bodyHeightMm / 2 + 0.3)}
-                r={bs(0.15)}
+                r={bs(0.2)}
                 fill="#ef4444"
               />
-              {zoom >= 5 && (
-                <text
-                  x={0} y={bs(fp.courtyardHeightMm / 2) + 8}
-                  fill={isSelected ? '#fbbf24' : '#94a3b8'}
-                  fontSize={Math.max(7, Math.min(10, zoom))}
-                  textAnchor="middle"
-                  fontWeight="bold"
-                  fontFamily="monospace"
-                >
-                  {comp.referenceDesignator}
-                </text>
-              )}
+              {/* Silkscreen RefDes Text */}
+              <text
+                x={0} y={bs(fp.courtyardHeightMm / 2) + 8}
+                fill={isSelected ? '#10b981' : '#f8fafc'}
+                fontSize={Math.max(8, Math.min(11, zoom))}
+                textAnchor="middle"
+                fontWeight="bold"
+                fontFamily="monospace"
+              >
+                {comp.referenceDesignator}
+              </text>
             </g>
           );
         })}
