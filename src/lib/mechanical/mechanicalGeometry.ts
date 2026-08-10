@@ -361,3 +361,98 @@ export function checkMechanicalInterference(project: Project): CollisionResult {
     minClearanceMm: Math.round(minClearanceMm * 100) / 100
   };
 }
+
+/** Parametric Screw Standoff Boss Geometry */
+export interface ScrewBossParams {
+  threadType: 'M2' | 'M2.5' | 'M3' | 'M4';
+  outerRadiusMm: number;
+  pilotHoleRadiusMm: number;
+  heightMm: number;
+  draftAngleDeg: number;
+  ribCount: number;
+}
+
+export function computeScrewBossGeometry(
+  threadType: 'M2' | 'M2.5' | 'M3' | 'M4' = 'M3',
+  heightMm: number = 8.0
+): ScrewBossParams {
+  const specs: Record<string, { outerR: number; pilotR: number }> = {
+    M2: { outerR: 2.2, pilotR: 0.9 },
+    'M2.5': { outerR: 2.7, pilotR: 1.1 },
+    M3: { outerR: 3.2, pilotR: 1.35 },
+    M4: { outerR: 4.2, pilotR: 1.8 }
+  };
+  const spec = specs[threadType] || specs.M3;
+  return {
+    threadType,
+    outerRadiusMm: spec.outerR,
+    pilotHoleRadiusMm: spec.pilotR,
+    heightMm,
+    draftAngleDeg: 1.5,
+    ribCount: 4
+  };
+}
+
+/** Parametric Cantilever Snap-Fit Clip Geometry */
+export interface SnapFitClipParams {
+  beamLengthMm: number;
+  beamWidthMm: number;
+  beamThicknessMm: number;
+  undercutDepthMm: number;
+  insertionAngleDeg: number;
+  retractionAngleDeg: number;
+  maxDeflectionMm: number;
+}
+
+export function computeSnapFitClipGeometry(
+  beamLengthMm: number = 10.0,
+  beamWidthMm: number = 5.0
+): SnapFitClipParams {
+  const thickness = 1.5;
+  const undercut = 0.8;
+  const maxDeflection = (undercut * 1.2);
+  return {
+    beamLengthMm,
+    beamWidthMm,
+    beamThicknessMm: thickness,
+    undercutDepthMm: undercut,
+    insertionAngleDeg: 45,
+    retractionAngleDeg: 45,
+    maxDeflectionMm: Math.round(maxDeflection * 100) / 100
+  };
+}
+
+/** Parametric Enclosure Wall & Corner Fillet Shell */
+export interface EnclosureShellParams {
+  outerWidthMm: number;
+  outerHeightMm: number;
+  outerDepthMm: number;
+  wallThicknessMm: number;
+  cornerFilletRadiusMm: number;
+  innerWidthMm: number;
+  innerHeightMm: number;
+  innerDepthMm: number;
+}
+
+export function computeEnclosureShell(
+  outerWidthMm: number = 100,
+  outerHeightMm: number = 60,
+  outerDepthMm: number = 25,
+  wallThicknessMm: number = 2.0,
+  cornerFilletRadiusMm: number = 3.0
+): EnclosureShellParams {
+  const innerWidthMm = Math.max(10, outerWidthMm - wallThicknessMm * 2);
+  const innerHeightMm = Math.max(10, outerHeightMm - wallThicknessMm * 2);
+  const innerDepthMm = Math.max(5, outerDepthMm - wallThicknessMm * 2);
+  return {
+    outerWidthMm,
+    outerHeightMm,
+    outerDepthMm,
+    wallThicknessMm,
+    cornerFilletRadiusMm,
+    innerWidthMm,
+    innerHeightMm,
+    innerDepthMm
+  };
+}
+

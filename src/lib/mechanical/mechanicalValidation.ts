@@ -104,5 +104,17 @@ export function validateMechanicalLayout(
     });
   }
 
+  // Screw Boss Standoff Placement Checks
+  const screwBosses = objects.filter(o => o.type === 'Mounting Point' || o.name?.toLowerCase().includes('boss') || o.name?.toLowerCase().includes('standoff'));
+  for (const sb of screwBosses) {
+    if (outerProfiles.length > 0 && !isMechanicalObjectContained(sb, outerProfiles[0])) {
+      issues.push({
+        severity: 'Error',
+        objectId: sb.id,
+        message: `Mounting screw standoff "${sb.name}" extends outside outer enclosure profile`
+      });
+    }
+  }
+
   return issues;
 }

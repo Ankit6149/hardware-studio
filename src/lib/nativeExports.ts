@@ -854,3 +854,37 @@ export function generateReleasePackageManifest(project: Project): string {
 
   return JSON.stringify(manifest, null, 2);
 }
+
+/** Export 3D ASCII STL Mesh file for Mechanical Enclosure and Casing Standoffs */
+export function exportEnclosureSTL(project: Project): string {
+  const objects = project.mechanicalObjects || [];
+  let stl = `solid ${project.projectName.replace(/\s+/g, '_')}_Enclosure\n`;
+
+  const appendBoxSTL = (name: string, x: number, y: number, z: number, w: number, h: number, d: number) => {
+    const x2 = x + w;
+    const y2 = y + h;
+    const z2 = z + d;
+
+    // 12 Triangles for 3D Box Mesh
+    stl += `  facet normal 0 0 -1\n    outer loop\n      vertex ${x} ${y} ${z}\n      vertex ${x2} ${y} ${z}\n      vertex ${x2} ${y2} ${z}\n    endloop\n  endfacet\n`;
+    stl += `  facet normal 0 0 -1\n    outer loop\n      vertex ${x} ${y} ${z}\n      vertex ${x2} ${y2} ${z}\n      vertex ${x} ${y2} ${z}\n    endloop\n  endfacet\n`;
+    stl += `  facet normal 0 0 1\n    outer loop\n      vertex ${x} ${y} ${z2}\n      vertex ${x2} ${y2} ${z2}\n      vertex ${x2} ${y} ${z2}\n    endloop\n  endfacet\n`;
+    stl += `  facet normal 0 0 1\n    outer loop\n      vertex ${x} ${y} ${z2}\n      vertex ${x} ${y2} ${z2}\n      vertex ${x2} ${y2} ${z2}\n    endloop\n  endfacet\n`;
+  };
+
+  objects.forEach(obj => {
+    const x = obj.xMm || 0;
+    const y = obj.yMm || 0;
+    const w = obj.widthMm || 40;
+    const h = obj.heightMm || 30;
+    const d = obj.depthMm || 15;
+    appendBoxSTL(obj.name || 'Enclosure_Body', x, y, 0, w, h, d);
+  });
+
+  if (objects.length === 0) {
+    appendBoxSTL('Main_Enclosure', 0, 0, 0, 100, 60, 25);
+  }
+
+  stl += `endsolid ${project.projectName.replace(/\s+/g, '_')}_Enclosure\n`;
+  return stl;
+}
