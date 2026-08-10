@@ -44,34 +44,39 @@ const STATUS_BORDER: Record<string, string> = {
 /** Custom node for architecture blocks */
 function ArchitectureBlockNode({ data, selected }: NodeProps) {
   const d = data as { label: string; category: string; status: string; description: string };
-  const color = CATEGORY_COLORS[d.category] || '#6b7280';
+  const color = CATEGORY_COLORS[d.category] || '#475569';
 
   return (
     <div
       style={{
-        background: `linear-gradient(135deg, ${color}18, ${color}08)`,
-        border: selected ? `2px solid ${color}` : (STATUS_BORDER[d.status] || '1px solid #d1d5db'),
+        background: '#ffffff',
+        border: selected ? `2.5px solid ${color}` : (STATUS_BORDER[d.status] || '1.5px solid #cbd5e1'),
         borderRadius: 8,
-        padding: '8px 12px',
-        minWidth: 120,
-        boxShadow: selected ? `0 0 0 2px ${color}40` : '0 1px 3px rgba(0,0,0,0.08)',
+        padding: '10px 14px',
+        minWidth: 140,
+        boxShadow: selected ? `0 0 0 3px ${color}30, 0 4px 12px rgba(0,0,0,0.08)` : '0 2px 6px rgba(0,0,0,0.05)',
         cursor: 'grab',
+        transition: 'all 0.15s ease-in-out',
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ background: color, width: 8, height: 8 }} />
-      <div style={{ fontSize: 10, color, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        {d.category}
+      <Handle type="target" position={Position.Left} style={{ background: color, width: 9, height: 9, border: '2px solid white' }} />
+      <Handle type="target" position={Position.Top} id="t-top" style={{ background: color, width: 9, height: 9, border: '2px solid white' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+        <span style={{ fontSize: 9, color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', background: `${color}15`, padding: '2px 6px', borderRadius: 4 }}>
+          {d.category}
+        </span>
+        <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>
+          {d.status}
+        </span>
       </div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginTop: 2 }}>{d.label}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginTop: 6, fontFamily: 'sans-serif' }}>{d.label}</div>
       {d.description && (
-        <div style={{ fontSize: 10, color: '#64748b', marginTop: 2, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: 10, color: '#475569', marginTop: 3, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {d.description}
         </div>
       )}
-      <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 4 }}>
-        {d.status}
-      </div>
-      <Handle type="source" position={Position.Right} style={{ background: color, width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Right} style={{ background: color, width: 9, height: 9, border: '2px solid white' }} />
+      <Handle type="source" position={Position.Bottom} id="s-bottom" style={{ background: color, width: 9, height: 9, border: '2px solid white' }} />
     </div>
   );
 }
