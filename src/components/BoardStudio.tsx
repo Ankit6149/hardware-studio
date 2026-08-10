@@ -179,19 +179,19 @@ export const BoardStudio: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-slate-900 text-slate-100">
+    <div className="flex h-full flex-col overflow-hidden bg-slate-50 text-slate-900">
       {/* Top Header Toolbar */}
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950 px-6 py-3">
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 py-3 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200">
             <Layers className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+            <h1 className="text-sm font-bold tracking-tight text-slate-900 flex items-center gap-2">
               Board Stackup & CAD Configurations
-              <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-[10px] font-mono text-indigo-300 border border-indigo-500/30">PCB STUDIO</span>
+              <span className="rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-mono text-indigo-700 border border-indigo-200">PCB STUDIO</span>
             </h1>
-            <p className="text-xs text-slate-400">Define physical boards, stackup layers, substrates, and SMT placement criticalities.</p>
+            <p className="text-xs text-slate-500">Define physical boards, stackup layers, substrates, and SMT placement criticalities.</p>
           </div>
         </div>
 
@@ -199,14 +199,14 @@ export const BoardStudio: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('boards')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === 'boards' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === 'boards' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
           >
             Boards & Stackups ({boards.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('components')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === 'components' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === 'components' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
           >
             SMT Placements ({boardComponents.length})
           </button>

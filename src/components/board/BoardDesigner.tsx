@@ -207,16 +207,16 @@ export const BoardDesigner: React.FC = () => {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-slate-950 text-slate-200">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-800 bg-slate-900 px-3 py-2">
+    <div className="flex h-full flex-col overflow-hidden bg-slate-50 text-slate-900">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2 shadow-xs">
         <div className="min-w-0">
-          <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-indigo-300">Active board context</p>
-          <p className="truncate text-xs font-bold text-white">{activeBoard.name} · {activeBoardComponents.length} components · {nets.length} nets · {traces.filter((trace) => trace.boardId === activeBoard.id).length} traces</p>
+          <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-indigo-600">Active board context</p>
+          <p className="truncate text-xs font-bold text-slate-900">{activeBoard.name} · {activeBoardComponents.length} components · {nets.length} nets · {traces.filter((trace) => trace.boardId === activeBoard.id).length} traces</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setActiveView('component-library')} className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-semibold text-slate-200 hover:bg-slate-700">Add component</button>
-          <button type="button" onClick={() => setActiveView('schematic-editor')} className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-semibold text-slate-200 hover:bg-slate-700">Open schematic</button>
-          <button type="button" onClick={() => setActiveView('board-settings')} className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[10px] font-semibold text-slate-200 hover:bg-slate-700">Board settings</button>
+          <button type="button" onClick={() => setActiveView('component-library')} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100">Add component</button>
+          <button type="button" onClick={() => setActiveView('schematic-editor')} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100">Open schematic</button>
+          <button type="button" onClick={() => setActiveView('board-settings')} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100">Board settings</button>
         </div>
       </div>
 
@@ -242,8 +242,8 @@ export const BoardDesigner: React.FC = () => {
           <BoardStatusBar viewState={viewState} />
         </div>
 
-        <div className="flex w-56 shrink-0 flex-col overflow-hidden border-l border-slate-800 bg-slate-900">
-          <div className="flex shrink-0 border-b border-slate-800">
+        <div className="flex w-56 shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-xs">
+          <div className="flex shrink-0 border-b border-slate-200 bg-slate-50/50">
             {([
               { key: 'inspector' as const, label: 'Inspector', Icon: Cpu },
               { key: 'nets' as const, label: 'Nets', Icon: Network },
@@ -253,7 +253,7 @@ export const BoardDesigner: React.FC = () => {
                 key={tab.key}
                 type="button"
                 onClick={() => setRightTab(tab.key)}
-                className={`flex flex-1 items-center justify-center gap-1 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all ${rightTab === tab.key ? 'border-b-2 border-indigo-500 bg-slate-800 text-indigo-300' : 'text-slate-500 hover:text-slate-400'}`}
+                className={`flex flex-1 items-center justify-center gap-1 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all ${rightTab === tab.key ? 'border-b-2 border-indigo-600 bg-white text-indigo-700 font-extrabold' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <tab.Icon className="h-3 w-3" aria-hidden="true" />
                 {tab.label}
@@ -261,7 +261,7 @@ export const BoardDesigner: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto bg-white">
             {rightTab === 'inspector' && <BoardInspector viewState={viewState} onViewStateChange={updateView} />}
             {rightTab === 'nets' && <BoardNetPanel viewState={viewState} onViewStateChange={updateView} />}
             {rightTab === 'drc' && <BoardDRCPanel results={drcResults} viewState={viewState} onViewStateChange={updateView} />}

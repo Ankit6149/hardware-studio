@@ -63,16 +63,16 @@ export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onV
   };
 
   return (
-    <div className="w-48 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 overflow-hidden">
-      <div className="p-2 border-b border-slate-800">
+    <div className="w-48 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-hidden shadow-sm">
+      <div className="p-2 border-b border-slate-200 bg-slate-50/50">
         <div className="flex items-center gap-1.5 mb-2">
-          <Layers className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Layers</span>
+          <Layers className="w-3.5 h-3.5 text-indigo-600" />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Layers</span>
         </div>
 
         {/* Board selector */}
         <div className="space-y-1.5 mb-2.5">
-          <label className="text-[8px] text-slate-500 font-bold block uppercase tracking-wider">PCB Board</label>
+          <label className="text-[8px] text-slate-400 font-bold block uppercase tracking-wider">PCB Board</label>
           <div className="flex gap-1">
             <select
               value={activeBoardId || 'board-main'}
@@ -81,7 +81,7 @@ export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onV
                 useProjectStore.getState().setActiveBoard(val);
                 onViewStateChange({ activeBoardId: val });
               }}
-              className="flex-1 bg-slate-950 text-slate-200 text-[10px] px-2 py-0.5 rounded border border-slate-800 font-mono focus:outline-none focus:border-indigo-500"
+              className="flex-1 bg-white text-slate-800 text-[10px] px-2 py-0.5 rounded border border-slate-200 font-mono focus:outline-none focus:border-indigo-500 shadow-xs"
             >
               {(boards || []).map(b => (
                 <option key={b.id} value={b.id}>{b.name}</option>
@@ -89,7 +89,7 @@ export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onV
             </select>
             <button
               onClick={() => void handleAddBoard()}
-              className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 font-bold text-[9px] rounded"
+              className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-indigo-600 font-bold text-[9px] rounded border border-slate-200"
               title="Add a new PCB board layer"
             >
               +
@@ -98,7 +98,7 @@ export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onV
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
+      <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 bg-white">
         {LAYER_DEFS.map(layer => {
           const visible = layerVisibility[layer.key] !== false;
           const isActive = activeLayerId === layer.key;
@@ -106,7 +106,7 @@ export const BoardLayerPanel: React.FC<BoardLayerPanelProps> = ({ viewState, onV
             <div
               key={layer.key}
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] cursor-pointer transition-all ${
-                isActive ? 'bg-slate-800 ring-1 ring-indigo-500' : 'hover:bg-slate-800/50'
+                isActive ? 'bg-indigo-50 ring-1 ring-indigo-300 font-semibold text-indigo-950' : 'hover:bg-slate-50 text-slate-700'
               }`}
             >
               <button

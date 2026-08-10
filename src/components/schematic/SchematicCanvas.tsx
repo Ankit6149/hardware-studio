@@ -209,13 +209,13 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
   const placedComponents = (boardComponents || []).filter(c => c.schematic?.placed === true);
 
   return (
-    <div className="flex-1 w-full h-full relative overflow-hidden bg-slate-900 select-none">
+    <div className="flex-1 w-full h-full relative overflow-hidden bg-white select-none shadow-inner">
       {/* Schematic SVG canvas */}
       <svg
         ref={svgRef}
         width="100%"
         height="100%"
-        className="cursor-crosshair"
+        className="cursor-crosshair bg-white"
         onClick={handleCanvasClick}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -224,7 +224,7 @@ export const SchematicCanvas: React.FC<SchematicCanvasProps> = ({ viewState, onV
         <defs>
           {/* Snap Grid pattern */}
           <pattern id="schematicGrid" width={20} height={20} patternUnits="userSpaceOnUse">
-            <circle cx={1} cy={1} r={1} fill="#334155" />
+            <circle cx={1} cy={1} r={1} fill="#cbd5e1" />
           </pattern>
         </defs>
 

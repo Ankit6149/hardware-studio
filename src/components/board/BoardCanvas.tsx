@@ -544,7 +544,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
 
       <svg
         ref={svgRef}
-        className="w-full h-full bg-slate-950 cursor-crosshair select-none outline-none"
+        className="w-full h-full bg-slate-50 cursor-crosshair select-none outline-none"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -558,15 +558,15 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       >
         {/* Grid dots */}
         {gridDots.map((d, i) => (
-          <circle key={i} cx={d.cx} cy={d.cy} r={0.5} fill="#334155" opacity={0.5} />
+          <circle key={i} cx={d.cx} cy={d.cy} r={0.6} fill="#cbd5e1" opacity={0.8} />
         ))}
 
-        {/* Board outline with realistic solder mask green background */}
+        {/* Board outline with realistic light solder mask green background */}
         {outline && outline.points && outline.points.length >= 3 && (
           <polygon
             points={outline.points.map(p => `${bx(p.x)},${by(p.y)}`).join(' ')}
-            fill="#064e3b"
-            stroke="#10b981"
+            fill="#ecfdf5"
+            stroke="#059669"
             strokeWidth={2}
             opacity={0.95}
           />
@@ -575,8 +575,8 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
           <rect
             x={bx(0)} y={by(0)}
             width={bs(outline.width)} height={bs(outline.height)}
-            fill="#064e3b"
-            stroke="#10b981"
+            fill="#ecfdf5"
+            stroke="#059669"
             strokeWidth={2}
           />
         )}
@@ -748,9 +748,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
               <rect
                 x={-bs(fp.bodyWidthMm / 2)} y={-bs(fp.bodyHeightMm / 2)}
                 width={bs(fp.bodyWidthMm)} height={bs(fp.bodyHeightMm)}
-                fill={isSelected ? '#065f46' : isNetHighlighted ? '#0c4a6e' : '#18181b'}
-                stroke={isSelected ? '#10b981' : isNetHighlighted ? '#38bdf8' : '#f8fafc'}
-                strokeWidth={isSelected ? 2 : 1}
+                fill={isSelected ? '#dcfce7' : isNetHighlighted ? '#e0f2fe' : '#f1f5f9'}
+                stroke={isSelected ? '#059669' : isNetHighlighted ? '#0284c7' : '#334155'}
+                strokeWidth={isSelected ? 2 : 1.2}
                 strokeDasharray={comp.side === 'Bottom' ? '3,3' : 'none'}
                 rx={bs(0.2)}
               />
@@ -787,12 +787,12 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
                 cx={bs((comp.side === 'Bottom' ? -1 : 1) * (fp.pads[0]?.xMm || -fp.bodyWidthMm / 2 + 0.3))}
                 cy={bs(fp.pads[0]?.yMm || -fp.bodyHeightMm / 2 + 0.3)}
                 r={bs(0.2)}
-                fill="#ef4444"
+                fill="#dc2626"
               />
               {/* Silkscreen RefDes Text */}
               <text
                 x={0} y={bs(fp.courtyardHeightMm / 2) + 8}
-                fill={isSelected ? '#10b981' : '#f8fafc'}
+                fill={isSelected ? '#059669' : '#0f172a'}
                 fontSize={Math.max(8, Math.min(11, zoom))}
                 textAnchor="middle"
                 fontWeight="bold"
@@ -812,25 +812,25 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
               key={`rat_${i}`}
               x1={bx(line.x1)} y1={by(line.y1)}
               x2={bx(line.x2)} y2={by(line.y2)}
-              stroke={isHighlighted ? '#22d3ee' : '#475569'}
-              strokeWidth={isHighlighted ? 1.2 : 0.6}
+              stroke={isHighlighted ? '#0284c7' : '#94a3b8'}
+              strokeWidth={isHighlighted ? 1.5 : 0.8}
               strokeDasharray="3,3"
-              opacity={isHighlighted ? 0.9 : 0.4}
+              opacity={isHighlighted ? 0.95 : 0.6}
             />
           );
         })}
 
         {/* Coordinate readout */}
-        <text x={10} y={20} fill="#94a3b8" fontSize={10} fontFamily="monospace">
+        <text x={10} y={20} fill="#475569" fontSize={10} fontFamily="monospace" fontWeight="600">
           {viewState.mouseXMm.toFixed(2)}, {viewState.mouseYMm.toFixed(2)} mm | Grid: {gridSizeMm}mm | Zoom: {zoom}x | Board: {viewState.activeBoardId || 'board-main'}
         </text>
         {selectedNetName && (
-          <text x={10} y={34} fill="#22d3ee" fontSize={10} fontFamily="monospace">
+          <text x={10} y={34} fill="#0284c7" fontSize={10} fontFamily="monospace" fontWeight="700">
             Net: {selectedNetName}
           </text>
         )}
         {isRouting && (
-          <text x={10} y={48} fill="#fbbf24" fontSize={10} fontFamily="monospace">
+          <text x={10} y={48} fill="#d97706" fontSize={10} fontFamily="monospace" fontWeight="700">
             ROUTING — Click target pad/via to route, use Finish as Dangling Draft, Esc to cancel
           </text>
         )}
