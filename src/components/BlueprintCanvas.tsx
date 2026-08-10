@@ -333,6 +333,7 @@ const BlueprintCanvasContent: React.FC = () => {
           <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.13em] text-slate-800"><Network className="h-4 w-4 text-indigo-600" aria-hidden="true" />System architecture</div>
           <p className="mt-1 text-[10px] leading-4 text-slate-500">Semantic device and function visuals with typed ports. Use Schematic and PCB workbenches for exact electrical and footprint geometry.</p>
         </div>
+        </div>
 
         <div className="pointer-events-none absolute bottom-4 left-4 z-10 hidden max-w-md items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/95 px-3 py-2 text-[10px] leading-4 text-amber-900 shadow-sm backdrop-blur-sm md:flex">
           <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
