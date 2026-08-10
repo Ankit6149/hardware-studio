@@ -113,15 +113,16 @@ export const navigationDomains: readonly NavigationDomain[] = [
     purpose: 'Project health, progress, and release blockers.',
     items: [
       item('dashboard', 'Project Dashboard', 'See project health, next actions, and current blockers.', 'dashboard', 'dashboard', 'HOME'),
-      item('product-studio', 'Product Studio', 'Work with requirements, architecture, interfaces, and risks.', 'product', 'product-studio', 'WORK'),
+      item('product-studio', 'Product Workspace', 'Open the connected Product Design, Requirements, and Architecture workbenches.', 'product', 'product-studio', 'WORK'),
       item('readiness', 'Release Readiness', 'Review evidence, unresolved findings, and release blockers.', 'readiness', 'readiness', 'GATE'),
     ],
   },
   {
     id: 'product',
     label: 'Product',
-    purpose: 'Define what the product must do and how it is structured.',
+    purpose: 'Explore product form, define intent, and connect it to engineering.',
     items: [
+      item('product-design', 'Product Design', 'Create layered product concepts, references, dimensions, concept parts, and lightweight 3D previews.', 'product', 'product-studio', 'DESIGN'),
       item('requirements', 'Requirements', 'Define measurable product needs and acceptance criteria.', 'requirements', 'product-studio', 'REQ'),
       item('product-architecture', 'Product Architecture', 'Organize functions, interfaces, and system relationships.', 'architecture', 'product-studio', 'ARCH'),
       item('risks-interfaces', 'Risks & Interfaces', 'Track product risks, assumptions, and cross-domain interfaces.', 'risk', 'product-studio', 'RISK'),
@@ -217,7 +218,7 @@ export const compatibleNavigationItems: readonly NavigationItem[] = [
     layout: 'canvas',
     showVisualizer: true,
   }),
-  item('electronics', 'Product Studio', 'Legacy product-electronics section retained for safe project loading.', 'product', 'product-studio', 'WORK'),
+  item('electronics', 'Product Workspace', 'Legacy product-electronics section retained for safe project loading.', 'product', 'product-studio', 'WORK'),
   item('power-budget', 'Power Tree', 'Legacy power-budget ID retained for safe project loading.', 'power', 'power-budget', 'PWR'),
   item('board-studio', 'Board Settings', 'Legacy board-studio ID retained for safe project loading.', 'layers', 'board-studio', 'SET'),
   item('board-components', 'Board Settings', 'Legacy board-components ID retained for safe project loading.', 'layers', 'board-studio', 'SET'),
