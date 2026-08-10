@@ -4,7 +4,7 @@ import { BoardDesignerUIState } from './boardInteraction';
 import {
   mmToSvg, svgToMm, snapToGrid as snapCoordinateToGrid,
   getOutlineBounds, getNetRatsnestLines,
-  getComponentPads, getNearestPad
+  getComponentPads, getNearestPad, generateGroundPourPolygon, computeOctagonalPath
 } from './boardGeometry';
 import { getFootprint } from '../../lib/footprints';
 import { ReviewResult, Project } from '../../types';
@@ -578,6 +578,18 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
             fill="#ecfdf5"
             stroke="#059669"
             strokeWidth={2}
+          />
+        )}
+
+        {/* Ground Plane Copper Pour Polygon */}
+        {outline && (
+          <polygon
+            points={generateGroundPourPolygon(outline, 0.6).map(p => `${bx(p.x)},${by(p.y)}`).join(' ')}
+            fill="#d1fae5"
+            stroke="#10b981"
+            strokeWidth={1}
+            strokeDasharray="2,2"
+            opacity={0.6}
           />
         )}
 

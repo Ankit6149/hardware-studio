@@ -479,6 +479,84 @@ export const autoPlaceComponents = (
   return placed;
 };
 
+// ─── 45° Octagonal Routing & Ground Pour Helpers ──────────────────────
+
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+/** Compute 45-degree octagonal 2-segment path between two points */
+export const computeOctagonalPath = (p1: Point2D, p2: Point2D): Point2D[] => {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+
+  if (Math.abs(dx) === 0 || Math.abs(dy) === 0 || Math.abs(Math.abs(dx) - Math.abs(dy)) < 0.01) {
+    return [p1, p2];
+  }
+
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+
+  if (absDx > absDy) {
+    const diag = absDy;
+    const midX = p1.x + Math.sign(dx) * (absDx - diag);
+    return [p1, { x: midX, y: p1.y }, p2];
+  } else {
+    const diag = absDx;
+    const midY = p1.y + Math.sign(dy) * (absDy - diag);
+    return [p1, { x: p1.x, y: midY }, p2];
+  }
+};
+
+/** Check if two component courtyard bounding boxes overlap */
+export const checkCourtyardOverlap = (compA: BoardComponent, compB: BoardComponent): boolean => {
+  if (compA.placementX == null || compA.placementY == null || compB.placementX == null || compB.placementY == null) {
+    return false;
+  }
+  const fpA = getFootprint(compA.footprint);
+  const fpB = getFootprint(compB.footprint);
+
+  const halfWA = fpA.courtyardWidthMm / 2;
+  const halfHA = fpA.courtyardHeightMm / 2;
+  const halfWB = fpB.courtyardWidthMm / 2;
+  const halfHB = fpB.courtyardHeightMm / 2;
+
+  const overlapX = Math.abs(compA.placementX - compB.placementX) < (halfWA + halfWB);
+  const overlapY = Math.abs(compA.placementY - compB.placementY) < (halfHA + halfHB);
+
+  return overlapX && overlapY;
+};
+
+/** Generate copper ground plane pour inset points inside board outline */
+export const generateGroundPourPolygon = (outline: BoardOutline, insetMm: number = 0.5): Point2D[] => {
+  if (!outline || !outline.points || outline.points.length < 3) {
+    const w = outline?.width || 50;
+    const h = outline?.height || 30;
+    return [
+      { x: insetMm, y: insetMm },
+      { x: w - insetMm, y: insetMm },
+      { x: w - insetMm, y: h - insetMm },
+      { x: insetMm, y: h - insetMm },
+    ];
+  }
+
+  // Calculate inset centroid
+  const points = outline.points;
+  const cx = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+  const cy = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+
+  return points.map(p => {
+    const dx = cx - p.x;
+    const dy = cy - p.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return {
+      x: p.x + (dx / len) * insetMm,
+      y: p.y + (dy / len) * insetMm,
+    };
+  });
+};
+
 // ─── Rough autoroute ───────────────────────────────────────────────
 
 export const roughAutorouteNet = (
@@ -490,22 +568,15 @@ export const roughAutorouteNet = (
   const pads = getPadsForNet(project, netName);
   if (pads.length < 2) return null;
 
-  // Simple L-route: go horizontal then vertical from pad A to pad B
+  // 45-degree octagonal route from pad A to pad B
   const srcPad = pads[0];
   const tgtPad = pads[1];
 
-  const midX = tgtPad.x;
-  const midY = srcPad.y;
-
-  const points = [
-    { x: srcPad.x, y: srcPad.y },
-    { x: midX, y: midY },
-    { x: tgtPad.x, y: tgtPad.y },
-  ];
+  const points = computeOctagonalPath({ x: srcPad.x, y: srcPad.y }, { x: tgtPad.x, y: tgtPad.y });
 
   const dx = tgtPad.x - srcPad.x;
   const dy = tgtPad.y - srcPad.y;
-  const length = Math.abs(dx) + Math.abs(dy);
+  const length = Math.hypot(dx, dy);
 
   return {
     id: `trace_auto_${netName}_${Date.now()}`,
@@ -514,7 +585,7 @@ export const roughAutorouteNet = (
     netId: (project.nets || []).find(n => n.netName === netName)?.id,
     netName,
     points,
-    width: netName.toLowerCase().includes('gnd') || netName.toLowerCase().includes('vbat') || netName.toLowerCase().includes('3v3') ? 0.3 : 0.15,
+    width: netName.toLowerCase().includes('gnd') || netName.toLowerCase().includes('vbat') || netName.toLowerCase().includes('3v3') ? 0.35 : 0.15,
     status: 'Needs Review' as const,
     lengthEstimate: Math.round(length * 100) / 100,
   };
