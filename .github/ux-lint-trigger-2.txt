@@ -1,0 +1,1 @@
+Trigger persisted lint diagnostics for the reconstructed UX foundations source.
