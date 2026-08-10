@@ -10,7 +10,7 @@ interface BoardLayerPanelProps {
 }
 
 const LAYER_DEFS = [
-  { key: 'top-copper', label: 'Top Copper', color: '#22c55e' },
+  { key: 'top-copper', label: 'Top Copper', color: '#ef4444' },
   { key: 'bottom-copper', label: 'Bottom Copper', color: '#3b82f6' },
   { key: 'silkscreen', label: 'Silkscreen', color: '#fbbf24' },
   { key: 'mask', label: 'Solder Mask', color: '#a855f7' },
