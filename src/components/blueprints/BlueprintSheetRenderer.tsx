@@ -28,25 +28,39 @@ export const BlueprintSheetRenderer: React.FC<BlueprintSheetRendererProps> = ({ 
   const sts = statusStyles[sheet.status] || statusStyles["Draft"];
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden print:shadow-none print:border-slate-300 page-break-after">
-      {/* Title Block */}
-      <div className="border-b-2 border-slate-900 px-5 py-3 bg-slate-50/60 flex items-center justify-between print:bg-white">
+    <div className="bg-white border-2 border-slate-900 rounded-lg shadow-sm overflow-hidden print:shadow-none print:border-slate-900 page-break-after">
+      {/* ISO / ANSI Engineering Title Block Header */}
+      <div className="border-b-2 border-slate-900 px-5 py-3 bg-slate-100 flex items-center justify-between print:bg-white">
         <div className="flex items-center space-x-3">
-          <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest font-mono min-w-[60px]">Sheet {sheet.sheetNo}</span>
-          <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-tight">{sheet.title}</h2>
+          <span className="text-[10px] font-mono font-extrabold text-slate-700 uppercase tracking-widest bg-slate-200 px-2 py-0.5 rounded border border-slate-300">
+            SHEET {sheet.sheetNo}
+          </span>
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900 uppercase tracking-tight font-sans">{sheet.title}</h2>
+            <span className="text-[9px] font-mono text-slate-500">{sheet.category} — ISO 7200 / ANSI Y14.1 Standard</span>
+          </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${sts.bg} ${sts.text} ${sts.border}`}>
+        <div className="flex items-center space-x-4">
+          {/* First Angle Projection Icon */}
+          <div className="flex flex-col items-center">
+            <svg width="24" height="14" viewBox="0 0 24 14" fill="none" stroke="#475569" strokeWidth="1.2">
+              <polygon points="2,3 8,1 8,13 2,11" fill="none" />
+              <circle cx="17" cy="7" r="5" fill="none" />
+              <circle cx="17" cy="7" r="2" fill="none" />
+            </svg>
+            <span className="text-[7px] font-mono text-slate-500 uppercase mt-0.5">3rd Angle</span>
+          </div>
+          <span className={`text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded border ${sts.bg} ${sts.text} ${sts.border}`}>
             {sheet.status}
           </span>
-          <span className="text-[8px] text-slate-400 font-mono">{sheet.category}</span>
         </div>
       </div>
 
-      {/* Meta row */}
-      <div className="px-5 py-1.5 border-b border-slate-150 flex items-center justify-between text-[9px] text-slate-400 font-mono bg-slate-50/30">
-        <span>{projectName} — Rev {revision || "1.0"}</span>
-        <span>{sheet.sourceObjects.length} source objects</span>
+      {/* Meta row with tolerances and scale */}
+      <div className="px-5 py-2 border-b border-slate-300 flex items-center justify-between text-[9.5px] text-slate-700 font-mono bg-slate-50 font-bold">
+        <span>PROJECT: {projectName.toUpperCase()} | REV: {revision || "1.0"}</span>
+        <span>SCALE: 1:1 | TOLERANCES: ±0.1mm | UNIT: MM</span>
+        <span>OBJECTS: {sheet.sourceObjects.length}</span>
       </div>
 
       {/* Drawing area */}

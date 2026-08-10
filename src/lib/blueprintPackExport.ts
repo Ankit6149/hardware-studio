@@ -215,6 +215,16 @@ export function exportBlueprintPackHtml(pack: BlueprintPack): string {
   return html;
 }
 
+// ---- DXF Multi-Sheet Pack Export ----
+import { exportDrawingToDxf } from './blueprints/blueprintDxfExporter';
+
+export function exportBlueprintPackDxf(pack: BlueprintPack): { filename: string; dxfContent: string }[] {
+  return pack.sheets.map(sheet => ({
+    filename: `Sheet_${sheet.sheetNo}_${sheet.title.replace(/[^a-zA-Z0-9]/g, '_')}.dxf`,
+    dxfContent: exportDrawingToDxf(sheet.drawing, sheet.title),
+  }));
+}
+
 // ---- Summary JSON Export ----
 export function exportBlueprintPackSummaryJson(pack: BlueprintPack): string {
   const summary = {
