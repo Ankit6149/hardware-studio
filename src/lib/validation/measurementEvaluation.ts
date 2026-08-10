@@ -56,13 +56,31 @@ export function evaluateValidationMeasurement(
     }
 
     case 'Visual Inspection': {
-      // Visual inspection cannot auto-pass; requires explicit reviewer action
       return 'Needs Review';
     }
 
     default:
       return 'Needs Review';
   }
+}
+
+/** Calculate Process Capability Index Cpk for numeric telemetry measurements */
+export function calculateCpk(values: number[], lsl: number, usl: number): { cpk: number; mean: number; stdDev: number } {
+  if (values.length === 0) return { cpk: 0, mean: 0, stdDev: 0 };
+
+  const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+  if (values.length === 1) return { cpk: 1.0, mean, stdDev: 0 };
+
+  const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / (values.length - 1);
+  const stdDev = Math.sqrt(variance);
+
+  if (stdDev === 0) return { cpk: 2.0, mean, stdDev: 0 };
+
+  const cpu = (usl - mean) / (3 * stdDev);
+  const cpl = (mean - lsl) / (3 * stdDev);
+  const cpk = Math.max(0, Math.min(cpu, cpl));
+
+  return { cpk: parseFloat(cpk.toFixed(2)), mean: parseFloat(mean.toFixed(2)), stdDev: parseFloat(stdDev.toFixed(3)) };
 }
 
 /** Calculate the correct status for a validation test */
