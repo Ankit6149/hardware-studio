@@ -3,6 +3,13 @@
   display: none;
 }
 
+/* The legacy PCB canvas used to paint a generated green polygon for every board
+   outline even when no copper zone existed in project data. In the engineering
+   workbench that synthetic preview is hidden so visible copper is never implied. */
+.hs-app .hs-engineering-pcb polygon[fill="#d1fae5"][stroke="#10b981"] {
+  display: none;
+}
+
 @media (min-width: 1024px) {
   .hs-app [aria-label="Product Design Studio"] > div.flex.min-h-0.flex-1 {
     position: relative;
