@@ -1,30 +1,25 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { generateFirmwareWorkspace } from '../../lib/exportFirmware';
 import { FirmwareSourceFile } from '../../types';
-import { FileCode, Plus, Trash2, Save, RefreshCw, FileText, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, FileCode, FileText, Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { useFeedback } from '../feedback/FeedbackProvider';
 
 export const FirmwareCodePreview: React.FC = () => {
   const store = useProjectStore();
+  const feedback = useFeedback();
   const sourceFiles = store.firmwareSourceFiles || [];
 
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
-  const [editingContent, setEditingContent] = useState<string>('');
-  const [newFilePath, setNewFilePath] = useState<string>('');
-  const [isAddingFile, setIsAddingFile] = useState<boolean>(false);
+  const [editingContent, setEditingContent] = useState('');
+  const [newFilePath, setNewFilePath] = useState('');
+  const [isAddingFile, setIsAddingFile] = useState(false);
   const [saveNotification, setSaveNotification] = useState<string | null>(null);
 
-  // Initialize only the external project workspace. Selection is derived below.
-  useEffect(() => {
-    if (sourceFiles.length === 0) {
-      store.updateProjectState({ firmwareSourceFiles: generateFirmwareWorkspace(store) });
-    }
-  }, [sourceFiles.length, store]);
-
   const effectiveSelectedFileId = selectedFileId ?? sourceFiles[0]?.id ?? null;
-  const activeFile = sourceFiles.find(file => file.id === effectiveSelectedFileId);
+  const activeFile = sourceFiles.find((file) => file.id === effectiveSelectedFileId);
   const editorContent = selectedFileId ? editingContent : (activeFile?.content ?? '');
 
   const handleSelectFile = (file: FirmwareSourceFile) => {
@@ -32,205 +27,135 @@ export const FirmwareCodePreview: React.FC = () => {
     setEditingContent(file.content);
   };
 
-  const handleContentChange = (val: string) => {
-    setEditingContent(val);
+  const handleContentChange = (value: string) => {
+    setEditingContent(value);
     const fileId = effectiveSelectedFileId;
-    if (fileId) {
-      if (!selectedFileId) setSelectedFileId(fileId);
-      const updated = sourceFiles.map(file => file.id === fileId ? { ...file, content: val, dirty: true } : file);
-      store.updateProjectState({ firmwareSourceFiles: updated });
-    }
+    if (!fileId) return;
+    if (!selectedFileId) setSelectedFileId(fileId);
+    store.updateProjectState({
+      firmwareSourceFiles: sourceFiles.map((file) => file.id === fileId ? { ...file, content: value, dirty: true } : file),
+    });
   };
 
   const handleSaveFile = () => {
     const fileId = effectiveSelectedFileId;
     if (!fileId) return;
-    const updated = sourceFiles.map(file => file.id === fileId ? { ...file, content: editorContent, dirty: false } : file);
-    store.updateProjectState({ firmwareSourceFiles: updated });
+    store.updateProjectState({
+      firmwareSourceFiles: sourceFiles.map((file) => file.id === fileId ? { ...file, content: editorContent, dirty: false } : file),
+    });
     setSaveNotification(`Saved ${activeFile?.name || 'file'}`);
-    setTimeout(() => setSaveNotification(null), 2000);
+    window.setTimeout(() => setSaveNotification(null), 1800);
   };
 
   const handleCreateFile = () => {
-    if (!newFilePath.trim()) return;
-    const name = newFilePath.split('/').pop() || newFilePath;
+    const path = newFilePath.trim();
+    if (!path) return;
+    const name = path.split('/').pop() || path;
     const ext = name.split('.').pop() || '';
-    const lang: FirmwareSourceFile['language'] = ext === 'cpp' || ext === 'c' || ext === 'h' ? 'cpp' : ext === 'ini' ? 'ini' : 'text';
+    const language: FirmwareSourceFile['language'] = ext === 'cpp' || ext === 'c' || ext === 'h' ? 'cpp' : ext === 'ini' ? 'ini' : 'text';
     const newFile: FirmwareSourceFile = {
       id: `fw_file_${Date.now()}`,
-      path: newFilePath.trim(),
+      path,
       name,
-      content: `// Source file: ${newFilePath.trim()}\n\n`,
+      content: `// Source file: ${path}\n\n`,
       isGenerated: false,
       dirty: false,
-      language: lang
+      language,
     };
-    const updated = [...sourceFiles, newFile];
-    store.updateProjectState({ firmwareSourceFiles: updated });
+    store.updateProjectState({ firmwareSourceFiles: [...sourceFiles, newFile] });
     setSelectedFileId(newFile.id);
     setEditingContent(newFile.content);
     setNewFilePath('');
     setIsAddingFile(false);
   };
 
-  const handleDeleteFile = (id: string) => {
-    const updated = sourceFiles.filter(f => f.id !== id);
+  const handleDeleteFile = async (file: FirmwareSourceFile) => {
+    const confirmed = await feedback.confirm({
+      title: `Delete ${file.path}?`,
+      description: 'This removes the source file from the current project workspace. Linked module records remain, but may lose implementation evidence.',
+      confirmLabel: 'Delete file',
+      cancelLabel: 'Keep file',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+    const updated = sourceFiles.filter((candidate) => candidate.id !== file.id);
     store.updateProjectState({ firmwareSourceFiles: updated });
-    if (selectedFileId === id) {
+    if (effectiveSelectedFileId === file.id) {
       const first = updated[0];
-      setSelectedFileId(first ? first.id : null);
-      setEditingContent(first ? first.content : '');
+      setSelectedFileId(first?.id || null);
+      setEditingContent(first?.content || '');
     }
   };
 
-  const handleRegenerate = () => {
+  const handleRegenerate = async () => {
+    if (sourceFiles.length > 0) {
+      const confirmed = await feedback.confirm({
+        title: 'Regenerate generated firmware workspace files?',
+        description: 'This replaces the generated workspace set. Create/imported real source files should be reviewed before continuing; generation is not verification.',
+        confirmLabel: 'Regenerate',
+        cancelLabel: 'Cancel',
+      });
+      if (!confirmed) return;
+    }
     const fresh = generateFirmwareWorkspace(store);
     store.updateProjectState({ firmwareSourceFiles: fresh });
-    if (fresh.length > 0) {
-      setSelectedFileId(fresh[0].id);
-      setEditingContent(fresh[0].content);
-    }
-    setSaveNotification('Regenerated workspace configuration');
-    setTimeout(() => setSaveNotification(null), 2000);
+    setSelectedFileId(fresh[0]?.id || null);
+    setEditingContent(fresh[0]?.content || '');
+    setSaveNotification('Generated workspace files');
+    window.setTimeout(() => setSaveNotification(null), 1800);
   };
 
   return (
-    <div className="flex h-full w-full bg-slate-950 text-slate-100 font-sans overflow-hidden">
-      {/* File Tree Sidebar */}
-      <div className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
-        <div className="p-3 border-b border-slate-800 flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <FileCode className="w-4 h-4 text-indigo-400" /> Firmware Source Tree
-          </span>
+    <section className="flex h-full min-h-0 w-full overflow-hidden bg-white text-slate-900" aria-label="Firmware source editor">
+      <aside className="flex w-[220px] shrink-0 flex-col border-r border-slate-300 bg-[#f5f1e8]" aria-label="Firmware source files">
+        <div className="flex min-h-10 items-center justify-between border-b border-slate-300 px-2.5">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-slate-700"><FileCode className="h-3.5 w-3.5" /> Source files</span>
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => setIsAddingFile(!isAddingFile)}
-              className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded"
-              title="Create New File"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={handleRegenerate}
-              className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded"
-              title="Regenerate PlatformIO Workspace"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
+            <button type="button" onClick={() => setIsAddingFile((value) => !value)} className="grid h-7 w-7 place-items-center rounded-md text-slate-500 hover:bg-white hover:text-slate-900" title="Create source file" aria-label="Create source file"><Plus className="h-3.5 w-3.5" /></button>
+            <button type="button" onClick={() => void handleRegenerate()} className="grid h-7 w-7 place-items-center rounded-md text-slate-500 hover:bg-white hover:text-slate-900" title="Generate workspace files" aria-label="Generate workspace files"><RefreshCw className="h-3.5 w-3.5" /></button>
           </div>
         </div>
 
         {isAddingFile && (
-          <div className="p-2 border-b border-slate-800 bg-slate-850 flex flex-col gap-2">
-            <input
-              type="text"
-              placeholder="e.g. include/drivers.h"
-              value={newFilePath}
-              onChange={(e) => setNewFilePath(e.target.value)}
-              className="bg-slate-950 border border-slate-700 text-xs px-2 py-1 rounded text-slate-200 focus:outline-none focus:border-indigo-500"
-            />
-            <div className="flex justify-end gap-1">
-              <button
-                onClick={() => setIsAddingFile(false)}
-                className="px-2 py-0.5 text-[10px] text-slate-400 hover:text-white"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateFile}
-                className="px-2 py-0.5 text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium"
-              >
-                Add File
-              </button>
-            </div>
+          <div className="border-b border-slate-300 bg-white p-2">
+            <label className="block text-[9px] font-medium text-slate-500" htmlFor="firmware-new-path">New file path</label>
+            <input id="firmware-new-path" value={newFilePath} onChange={(event) => setNewFilePath(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') handleCreateFile(); }} placeholder="include/drivers.h" className="mt-1 h-8 w-full rounded-md border border-slate-300 bg-white px-2 text-[10px] outline-none focus:border-slate-500" />
+            <div className="mt-2 flex justify-end gap-1.5"><button type="button" onClick={() => setIsAddingFile(false)} className="min-h-7 rounded-md px-2 text-[9px] font-semibold text-slate-500 hover:bg-slate-100">Cancel</button><button type="button" onClick={handleCreateFile} className="min-h-7 rounded-md bg-slate-950 px-2 text-[9px] font-semibold text-white hover:bg-slate-800">Create</button></div>
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-          {sourceFiles.map((file) => (
-            <div
-              key={file.id}
-              onClick={() => handleSelectFile(file)}
-              className={`group flex items-center justify-between px-2.5 py-1.5 rounded text-xs cursor-pointer transition-colors ${
-                effectiveSelectedFileId === file.id
-                  ? 'bg-indigo-600/20 text-indigo-300 font-medium border border-indigo-500/30'
-                  : 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <div className="flex items-center gap-2 truncate">
-                <FileText className="w-3.5 h-3.5 shrink-0 text-slate-500" />
-                <span className="truncate">{file.path}</span>
-                {file.dirty && <span className="text-amber-400 font-bold text-xs">*</span>}
+        <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+          {sourceFiles.map((file) => {
+            const selected = effectiveSelectedFileId === file.id;
+            return (
+              <div key={file.id} className={`group flex min-h-9 items-center gap-1 rounded-md px-1 ${selected ? 'bg-[#e5ded0]' : 'hover:bg-[#ece7dd]'}`}>
+                <button type="button" onClick={() => handleSelectFile(file)} aria-pressed={selected} className="flex min-w-0 flex-1 items-center gap-2 px-1 text-left">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span className="min-w-0 flex-1 truncate font-mono text-[9px] text-slate-700">{file.path}</span>
+                  {file.dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600" aria-label="Unsaved edits" />}
+                </button>
+                <button type="button" onClick={() => void handleDeleteFile(file)} className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-slate-400 opacity-0 hover:bg-white hover:text-rose-700 focus:opacity-100 group-hover:opacity-100" aria-label={`Delete ${file.path}`}><Trash2 className="h-3 w-3" /></button>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteFile(file.id);
-                }}
-                className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-red-400 transition-opacity"
-                title="Delete File"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
+            );
+          })}
+          {sourceFiles.length === 0 && <div className="px-3 py-8 text-center"><p className="text-[10px] font-semibold text-slate-700">No source files</p><p className="mt-1 text-[9px] leading-4 text-slate-500">Opening Source does not generate files. Create a real file, or explicitly generate starter workspace files.</p><button type="button" onClick={() => setIsAddingFile(true)} className="mt-3 min-h-8 rounded-md bg-slate-950 px-3 text-[10px] font-semibold text-white">Create file</button></div>}
         </div>
-      </div>
+      </aside>
 
-      {/* Code Editor Main View */}
-      <div className="flex-1 flex flex-col bg-slate-950 overflow-hidden">
+      <main className="flex min-w-0 flex-1 flex-col bg-[#fbfaf6]">
         {activeFile ? (
           <>
-            <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-semibold text-slate-200">{activeFile.path}</span>
-                {activeFile.dirty && (
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">
-                    Unsaved Edits
-                  </span>
-                )}
-                {activeFile.isGenerated && (
-                  <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded">
-                    Generated Config
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                {saveNotification && (
-                  <span className="text-xs text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> {saveNotification}
-                  </span>
-                )}
-                <button
-                  onClick={handleSaveFile}
-                  disabled={!activeFile.dirty}
-                  className={`px-3 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-all ${
-                    activeFile.dirty
-                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm'
-                      : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                  }`}
-                >
-                  <Save className="w-3.5 h-3.5" /> Save Changes
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 relative overflow-hidden p-2 bg-slate-950">
-              <textarea
-                value={editorContent}
-                onChange={(e) => handleContentChange(e.target.value)}
-                className="w-full h-full bg-slate-950 text-slate-200 font-mono text-xs p-3 focus:outline-none resize-none leading-relaxed"
-                spellCheck={false}
-              />
-            </div>
+            <header className="flex min-h-10 shrink-0 items-center gap-3 border-b border-slate-300 bg-white px-3">
+              <div className="min-w-0 flex-1"><p className="truncate font-mono text-[10px] font-semibold text-slate-800">{activeFile.path}</p><p className="mt-0.5 text-[8px] text-slate-400">{activeFile.isGenerated ? 'Generated workspace file · not implementation evidence by itself' : 'Project source file'}</p></div>
+              {saveNotification && <span className="hidden items-center gap-1 text-[9px] text-emerald-700 sm:inline-flex"><CheckCircle2 className="h-3.5 w-3.5" /> {saveNotification}</span>}
+              <button type="button" onClick={handleSaveFile} disabled={!activeFile.dirty} className="inline-flex min-h-8 items-center gap-1.5 rounded-md bg-slate-950 px-3 text-[10px] font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"><Save className="h-3.5 w-3.5" /> Save</button>
+            </header>
+            <textarea value={editorContent} onChange={(event) => handleContentChange(event.target.value)} className="min-h-0 flex-1 resize-none bg-[#fbfaf6] p-4 font-mono text-[12px] leading-6 text-slate-900 outline-none" spellCheck={false} aria-label={`Edit ${activeFile.path}`} />
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500 text-xs">
-            Select or create a source file to edit.
-          </div>
+          <div className="grid min-h-0 flex-1 place-items-center p-8 text-center"><div className="max-w-sm"><FileCode className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-sm font-semibold text-slate-800">Source editor is ready</p><p className="mt-1 text-xs leading-5 text-slate-500">Create a source file or explicitly generate starter workspace files. Merely opening this editor does not change the project.</p></div></div>
         )}
-      </div>
-    </div>
+      </main>
+    </section>
   );
 };
