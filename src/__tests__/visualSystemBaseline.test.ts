@@ -30,9 +30,14 @@ describe('brand-aligned visual system baseline', () => {
     expect(topBar).toContain('bg-[#f8f5ee]');
     expect(sidebar).toContain('bg-[#11110f]');
     expect(subnav).toContain('bg-[#f6f2e9]');
-    expect(landing).toContain('ProductTechnicalHero');
-    expect(landing).toContain('PcbAssemblyDrawing');
-    expect(landing).toContain('A component is not a rectangle');
+
+    expect(landing).toContain('fixed inset-x-0 top-0 z-50');
+    expect(landing).toContain('One physical product.');
+    expect(landing).toContain('Every discipline connected.');
+    expect(landing).toContain('<TechnicalBoard />');
+    expect(landing).toContain('<RepresentationPanel />');
+    expect(landing).toContain('Technical PCB assembly illustration');
+    expect(landing).not.toContain('Build the hardware.');
 
     expect(topBar).not.toContain('text-indigo-');
     expect(sidebar).not.toContain('ring-indigo-');
