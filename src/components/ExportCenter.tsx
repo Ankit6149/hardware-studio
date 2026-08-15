@@ -4,474 +4,262 @@ import { exportProjectJson } from '../lib/exportJson';
 import { exportProjectMarkdown } from '../lib/exportMarkdown';
 import { exportBlueprintDossierMarkdown, exportBlueprintDossierJson } from '../lib/exportDossier';
 import { generateFirmwareSkeleton } from '../lib/exportFirmware';
-import { 
-  Download, 
-  Cpu, 
-  AlertTriangle,
-  RefreshCw
-} from 'lucide-react';
-import { exportBlueprintPackJson, exportBlueprintPackMarkdown, exportBlueprintPackHtml } from '../lib/blueprintPackExport';
-import { exportBlueprintSheetsMarkdown, exportBlueprintSheetsJson, exportBlueprintSheetsHtml } from '../lib/exportBlueprintSheets';
+import { exportBlueprintPackHtml, exportBlueprintPackJson, exportBlueprintPackMarkdown } from '../lib/blueprintPackExport';
+import { exportBlueprintSheetsHtml, exportBlueprintSheetsJson, exportBlueprintSheetsMarkdown } from '../lib/exportBlueprintSheets';
 import {
-  exportEditorLayoutsJson,
-  exportConceptualSchematicJson,
+  exportBomCsv,
   exportConceptualMechanicalLayoutJson,
-  exportFirmwareArchitectureJson,
+  exportConceptualSchematicJson,
+  exportEditorLayoutsJson,
   exportFactoryReadinessJson,
-  exportMissingFactoryFilesMarkdown,
+  exportFirmwareArchitectureJson,
   exportHandoffManifestJson,
-  generateNativeGerberCopperTop,
-  generateNativeGerberCopperBottom,
-  generateNativeGerberBoardOutline,
-  generateNativeGerberTopSilkscreen,
-  generateNativeGerberTopMask,
-  generateNativeGerberBottomMask,
-  generateNativeGerberTopPaste,
-  generateNativeGerberBottomPaste,
-  generateNativeExcellonDrills,
-  generateNativeCplDraftCsv,
-  generateNativeNetlistJson,
+  exportMissingFactoryFilesMarkdown,
+  generateFactoryReviewReadme,
   generateNativeBoardLayoutJson,
-  generateFactoryReviewReadme
+  generateNativeCplDraftCsv,
+  generateNativeExcellonDrills,
+  generateNativeGerberBoardOutline,
+  generateNativeGerberCopperBottom,
+  generateNativeGerberCopperTop,
+  generateNativeNetlistJson,
+  generateReleasePackageManifest,
 } from '../lib/nativeExports';
+import { evaluateManufacturingContext } from '../lib/manufacturing/manufacturingContext';
+import { useFeedback } from './feedback/FeedbackProvider';
+import { AlertTriangle, ChevronDown, Download, FileArchive, FileCode2, RefreshCw, ShieldCheck } from 'lucide-react';
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'The export could not be generated from the current project state.';
+}
 
 export const ExportCenter: React.FC = () => {
   const project = useProjectStore();
-  const { 
-    bom = [], 
-    boards = [],
-    boardComponents = [],
-    nets = [],
-    pcbConstraints = [],
-    manufacturingChecklist = []
-  } = project;
+  const { notify } = useFeedback();
+  const manufacturing = evaluateManufacturingContext(project);
+  const context = manufacturing.context;
 
-  const totalLayoutObjs = Object.values(project.editorLayouts || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0);
-  
-  const stats = [
-    { label: "BOM Part Rows", value: bom.length },
-    { label: "Active PCBs / Flex", value: boards.length },
-    { label: "Netlist Traces", value: nets.length },
-    { label: "PCB Constraints", value: pcbConstraints.length },
-    { label: "Handoff Checks", value: manufacturingChecklist.length },
-    { label: "Editor Placed Objects", value: totalLayoutObjs }
-  ];
-
-  const downloadTextFile = (filename: string, content: string, mimeType = "text/plain") => {
+  const downloadTextFile = (filename: string, content: string, mimeType = 'text/plain') => {
     if (typeof window === 'undefined') return;
     const blob = new Blob([content], { type: `${mimeType};charset=utf-8;` });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  const handleExportFile = (key: string) => {
-    if (key === 'top_copper') {
-      downloadTextFile('top_copper.gbr', generateNativeGerberCopperTop(project));
-    } else if (key === 'bottom_copper') {
-      downloadTextFile('bottom_copper.gbr', generateNativeGerberCopperBottom(project));
-    } else if (key === 'board_outline') {
-      downloadTextFile('board_outline.gbr', generateNativeGerberBoardOutline(project));
-    } else if (key === 'top_silkscreen') {
-      downloadTextFile('top_silkscreen.gbr', generateNativeGerberTopSilkscreen(project));
-    } else if (key === 'top_mask') {
-      downloadTextFile('top_mask.gbr', generateNativeGerberTopMask(project));
-    } else if (key === 'bottom_mask') {
-      downloadTextFile('bottom_mask.gbr', generateNativeGerberBottomMask(project));
-    } else if (key === 'top_paste') {
-      downloadTextFile('top_paste.gbr', generateNativeGerberTopPaste(project));
-    } else if (key === 'bottom_paste') {
-      downloadTextFile('bottom_paste.gbr', generateNativeGerberBottomPaste(project));
-    } else if (key === 'drill') {
-      downloadTextFile('drills.drl', generateNativeExcellonDrills(project));
-    } else if (key === 'bom') {
-      // BOM CSV
-      const headers = ["Designator", "Name", "Type", "Value", "Package", "Quantity"];
-      const rows = (boardComponents || []).map(c => [
-        c.referenceDesignator, c.componentName, c.componentType, c.value, c.packageName, c.quantity
-      ].map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(","));
-      const content = headers.join(",") + "\n" + rows.join("\n");
-      downloadTextFile('bom.csv', content, 'text/csv');
-    } else if (key === 'cpl') {
-      downloadTextFile('cpl.csv', generateNativeCplDraftCsv(project), 'text/csv');
-    } else if (key === 'netlist') {
-      downloadTextFile('netlist.json', generateNativeNetlistJson(project), 'application/json');
-    } else if (key === 'readme') {
-      downloadTextFile('factory_review_readme.md', generateFactoryReviewReadme(project));
-    } else if (key === 'manifest') {
-      downloadTextFile('handoff_manifest.json', exportHandoffManifestJson(project), 'application/json');
-    } else if (key === 'board_layout') {
-      downloadTextFile('board_layout.json', generateNativeBoardLayoutJson(project), 'application/json');
+  const safeDownload = (label: string, filename: string, generate: () => string, mimeType = 'text/plain') => {
+    try {
+      downloadTextFile(filename, generate(), mimeType);
+    } catch (error) {
+      notify({ tone: 'error', title: `${label} export blocked`, detail: errorMessage(error) });
     }
   };
 
+  const manufacturingExports = [
+    { label: 'Top copper', filename: 'top_copper.gbr', generate: () => generateNativeGerberCopperTop(project) },
+    { label: 'Bottom copper', filename: 'bottom_copper.gbr', generate: () => generateNativeGerberCopperBottom(project) },
+    { label: 'Board outline', filename: 'board_outline.gbr', generate: () => generateNativeGerberBoardOutline(project) },
+    { label: 'NC drill', filename: 'drills.drl', generate: () => generateNativeExcellonDrills(project) },
+    { label: 'Pick & place', filename: 'cpl.csv', mime: 'text/csv', generate: () => generateNativeCplDraftCsv(project) },
+    { label: 'BOM', filename: 'bom.csv', mime: 'text/csv', generate: () => exportBomCsv(project) },
+  ];
+
+  const blueprintSummary = project.blueprintPack?.summary;
+
   return (
-    <div className="flex-1 bg-slate-50 overflow-y-auto p-6 flex flex-col items-center select-none font-sans">
-      <div className="w-full max-w-4xl space-y-6">
-        <div>
-          <h1 className="text-base font-black text-slate-800 tracking-tight uppercase font-mono">Factory Export Center</h1>
-          <p className="text-xs text-slate-550 mt-0.5">Download physical project planning database, draft layout artwork files, or BOM tables.</p>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {stats.map((s, idx) => (
-            <div key={idx} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
-              <span className="text-[8px] font-bold text-slate-450 uppercase tracking-widest block font-mono">{s.label}</span>
-              <span className="text-lg font-black text-slate-800 mt-1 block font-mono">{s.value}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* 1. PROJECT BACKUPS */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+    <div className="flex-1 overflow-y-auto bg-slate-100/80 text-slate-900">
+      <div className="mx-auto w-full max-w-7xl px-5 py-5 lg:px-7">
+        <header className="mb-5 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">1. Project Backup</h2>
-            <p className="text-[10px] text-slate-550">Save or sync your complete project layout planning databases.</p>
-          </div>
-          <div className="flex flex-wrap gap-2.5">
-            <button
-              onClick={() => exportProjectJson(project)}
-              className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded text-[10px] font-bold transition-all border border-slate-950 cursor-pointer shadow-sm"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Full Project JSON (Generated In App)</span>
-            </button>
-            <button
-              onClick={() => exportProjectMarkdown(project)}
-              className="flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-650 px-3.5 py-2 rounded text-[10px] font-bold transition-all border border-slate-200 cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Project Summary Markdown (Generated In App)</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 2. GENERATED BLUEPRINT PACK */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">2. Generated Blueprint Pack</h2>
-              <p className="text-[10px] text-slate-500 mt-0.5">16-sheet blueprint pack generated from live project data with drawings, tables, and warnings.</p>
+            <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              <FileArchive className="h-3.5 w-3.5" />
+              Output
             </div>
-            <div className="flex items-center space-x-2">
-              {project.blueprintPackStatus && (
-                <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
-                  project.blueprintPackStatus === 'Generated' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                  project.blueprintPackStatus === 'Stale' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                  project.blueprintPackStatus === 'Verified' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
-                  'bg-slate-50 text-slate-600 border-slate-200'
-                }`}>
-                  {project.blueprintPackStatus}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {project.blueprintPackStatus === 'Stale' && (
-            <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2 flex items-center space-x-2">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span className="text-[10px] text-amber-700 font-medium">Blueprint pack is stale. Project data changed since last generation.</span>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2.5">
-            <button
-              onClick={() => {
-                project.generateBlueprintPack();
-              }}
-              className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>{project.blueprintPack ? 'Regenerate' : 'Generate'} Blueprint Pack</span>
-            </button>
-
-            {project.blueprintPack && (
-              <>
-                <button
-                  onClick={() => {
-                    downloadTextFile('blueprint_pack.json', exportBlueprintPackJson(project.blueprintPack!), 'application/json');
-                  }}
-                  className="flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded text-[10px] font-bold transition-all border border-slate-200 cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Pack JSON</span>
-                </button>
-                <button
-                  onClick={() => {
-                    downloadTextFile('blueprint_pack.md', exportBlueprintPackMarkdown(project.blueprintPack!));
-                  }}
-                  className="flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded text-[10px] font-bold transition-all border border-slate-200 cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Pack Markdown</span>
-                </button>
-                <button
-                  onClick={() => {
-                    downloadTextFile('blueprint_pack.html', exportBlueprintPackHtml(project.blueprintPack!), 'text/html');
-                  }}
-                  className="flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded text-[10px] font-bold transition-all border border-slate-200 cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Pack HTML</span>
-                </button>
-              </>
-            )}
-          </div>
-
-          {project.blueprintPack && (
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {[
-                { label: 'Sheets', val: project.blueprintPack.summary.totalSheets },
-                { label: 'Generated', val: project.blueprintPack.summary.generatedSheets },
-                { label: 'Missing', val: project.blueprintPack.summary.missingDataSheets },
-                { label: 'Warnings', val: project.blueprintPack.summary.warnings },
-                { label: 'Errors', val: project.blueprintPack.summary.errors },
-                { label: 'Blockers', val: project.blueprintPack.summary.blockers },
-              ].map((s, i) => (
-                <div key={i} className="bg-slate-50 border border-slate-150 rounded p-2 text-center">
-                  <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest block">{s.label}</span>
-                  <span className={`text-sm font-black block mt-0.5 ${
-                    s.label === 'Blockers' && s.val > 0 ? 'text-rose-600' :
-                    s.label === 'Errors' && s.val > 0 ? 'text-rose-500' :
-                    s.label === 'Missing' && s.val > 0 ? 'text-amber-600' : 'text-slate-800'
-                  }`}>{s.val}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 3. BLUEPRINT DOCUMENTS */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
-          <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">3. Blueprint Documents</h2>
-            <p className="text-[10px] text-slate-500">Download consolidated blueprint layouts and design packs.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-slate-50 border border-slate-200 rounded p-3 flex flex-col justify-between space-y-2">
-              <div>
-                <span className="text-[9.5px] font-bold text-slate-700 uppercase block">Blueprint Dossier</span>
-                <span className="text-[9px] text-slate-450 block leading-relaxed">Integrated technical review report dossier templates.</span>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => downloadTextFile("blueprint_dossier.md", exportBlueprintDossierMarkdown(project))}
-                  className="flex-grow flex items-center justify-center space-x-1 bg-slate-900 hover:bg-slate-805 text-white py-1.5 rounded text-[9px] font-bold cursor-pointer"
-                >
-                  <span>Dossier MD</span>
-                </button>
-                <button
-                  onClick={() => downloadTextFile("blueprint_dossier.json", exportBlueprintDossierJson(project), "application/json")}
-                  className="flex-grow flex items-center justify-center space-x-1 bg-white hover:bg-slate-100 text-slate-650 border border-slate-250 py-1.5 rounded text-[9px] font-bold cursor-pointer font-sans"
-                >
-                  <span>Dossier JSON</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 rounded p-3 flex flex-col justify-between space-y-2">
-              <div>
-                <span className="text-[9.5px] font-bold text-slate-700 uppercase block">Blueprint Sheets Pack</span>
-                <span className="text-[9px] text-slate-450 block leading-relaxed">16-sheet coordinates layout pack (SH 01 to SH 16).</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => downloadTextFile("blueprint_sheets.md", exportBlueprintSheetsMarkdown(project))}
-                  className="flex items-center justify-center space-x-1 bg-slate-900 hover:bg-slate-805 text-white py-1.5 rounded text-[9px] font-bold cursor-pointer"
-                >
-                  <span>Sheets MD</span>
-                </button>
-                <button
-                  onClick={() => downloadTextFile("blueprint_sheets.html", exportBlueprintSheetsHtml(project), "text/html")}
-                  className="flex items-center justify-center space-x-1 bg-white hover:bg-slate-100 text-slate-650 border border-slate-250 py-1.5 rounded text-[9px] font-bold cursor-pointer"
-                >
-                  <span>Sheets HTML</span>
-                </button>
-                <button
-                  onClick={() => downloadTextFile("blueprint_sheets.json", exportBlueprintSheetsJson(project), "application/json")}
-                  className="flex items-center justify-center space-x-1 bg-white hover:bg-slate-100 text-slate-650 border border-slate-250 py-1.5 rounded text-[9px] font-bold cursor-pointer"
-                >
-                  <span>Sheets JSON</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 4. NATIVE EDITOR DATA */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
-          <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">4. Native Editor Data</h2>
-            <p className="text-[10px] text-slate-500">Structured layout databases mapping absolute grid geometries.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {[
-              { name: "Editor Layout JSON", fn: "editor_layout.json", action: () => downloadTextFile("editor_layout.json", exportEditorLayoutsJson(project), "application/json") },
-              { name: "Mechanical Layout JSON", fn: "mechanical_layout.json", action: () => downloadTextFile("mechanical_layout.json", exportConceptualMechanicalLayoutJson(project), "application/json") },
-              { name: "Schematic Graph JSON", fn: "schematic_graph.json", action: () => downloadTextFile("schematic_graph.json", exportConceptualSchematicJson(project), "application/json") },
-              { name: "Board Layout JSON", fn: "board_layout.json", action: () => handleExportFile("board_layout") },
-              { name: "Routing JSON", fn: "routing.json", action: () => downloadTextFile("routing.json", generateNativeNetlistJson(project), "application/json") }
-            ].map((d, i) => (
-              <div key={i} className="bg-slate-55/20 border border-slate-200 rounded p-3 flex flex-col justify-between hover:border-slate-350 transition-all">
-                <div>
-                  <span className="text-[9.5px] font-bold text-slate-700 block">{d.name}</span>
-                  <span className="text-[8px] text-slate-400 font-mono block mt-1">{d.fn}</span>
-                </div>
-                <button
-                  onClick={d.action}
-                  className="mt-3 w-full flex items-center justify-center space-x-1 bg-white hover:bg-slate-100 text-slate-650 border border-slate-250 py-1 rounded text-[9px] font-bold cursor-pointer"
-                >
-                  <Download className="w-3 h-3 text-slate-400" />
-                  <span>Download</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 5. MANUFACTURING DRAFT FILES */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
-          <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">5. Manufacturing Draft Files</h2>
-            <p className="text-[10px] text-slate-500">Draft manufacturing stencils generated in-app. Requires final review check before submit.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {[
-              { label: "Top Copper Gerber", key: "top_copper", fn: "top_copper.gbr" },
-              { label: "Bottom Copper Gerber", key: "bottom_copper", fn: "bottom_copper.gbr" },
-              { label: "Board Outline Gerber", key: "board_outline", fn: "board_outline.gbr" },
-              { label: "Top Silkscreen Gerber", key: "top_silkscreen", fn: "top_silkscreen.gbr" },
-              { label: "Top Mask Gerber", key: "top_mask", fn: "top_mask.gbr" },
-              { label: "Bottom Mask Gerber", key: "bottom_mask", fn: "bottom_mask.gbr" },
-              { label: "Top Solder Paste Gerber", key: "top_paste", fn: "top_paste.gbr" },
-              { label: "Bottom Solder Paste Gerber", key: "bottom_paste", fn: "bottom_paste.gbr" },
-              { label: "Excellon Drill File", key: "drill", fn: "drills.drl" },
-              { label: "BOM Sourcing CSV", key: "bom", fn: "bom.csv" },
-              { label: "CPL Draft CSV", key: "cpl", fn: "cpl.csv" },
-              { label: "Netlist JSON Map", key: "netlist", fn: "netlist.json" },
-              { label: "Handoff Manifest JSON", key: "manifest", fn: "handoff_manifest.json" },
-              { label: "Factory Review README", key: "readme", fn: "factory_review_readme.md" }
-            ].map((f, i) => (
-              <div key={i} className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col justify-between">
-                <div>
-                  <div className="text-[9.5px] font-bold text-slate-700">{f.label}</div>
-                  <div className="text-[8px] text-amber-600 font-bold font-mono mt-1">Generated In App — Needs Review</div>
-                </div>
-                <button
-                  onClick={() => handleExportFile(f.key)}
-                  className="mt-3 w-full flex items-center justify-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white py-1 rounded text-[9px] font-bold cursor-pointer"
-                >
-                  <Download className="w-3 h-3 text-slate-300" />
-                  <span>Export</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 6. REVIEW & READINESS */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
-          <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">6. Review & Readiness</h2>
-            <p className="text-[10px] text-slate-550">Validate system integration indexes and compliance check sheets.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-slate-50 border border-slate-200 rounded p-3 flex flex-col justify-between space-y-2">
-              <div>
-                <span className="text-[9.5px] font-bold text-slate-700 uppercase block">Design Review JSON</span>
-                <span className="text-[9px] text-slate-450 block leading-relaxed">Full list of open design warnings and suggestions.</span>
-              </div>
-              <button
-                onClick={() => downloadTextFile("design_review.json", JSON.stringify(project.reviewResults || [], null, 2), "application/json")}
-                className="w-full flex items-center justify-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white py-1.5 rounded text-[9px] font-bold cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export JSON</span>
-              </button>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 rounded p-3 flex flex-col justify-between space-y-2">
-              <div>
-                <span className="text-[9.5px] font-bold text-slate-700 uppercase block">Factory Readiness JSON</span>
-                <span className="text-[9px] text-slate-450 block leading-relaxed">System metrics, weighting parameters, and gates checklist.</span>
-              </div>
-              <button
-                onClick={() => downloadTextFile("factory_readiness.json", exportFactoryReadinessJson(project), "application/json")}
-                className="w-full flex items-center justify-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white py-1.5 rounded text-[9px] font-bold cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export JSON</span>
-              </button>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 rounded p-3 flex flex-col justify-between space-y-2">
-              <div>
-                <span className="text-[9.5px] font-bold text-slate-700 uppercase block">Missing Factory Files MD</span>
-                <span className="text-[9px] text-slate-450 block leading-relaxed">Detailed checklist reporting external CAD guidelines.</span>
-              </div>
-              <button
-                onClick={() => downloadTextFile("missing_factory_files.md", exportMissingFactoryFilesMarkdown(project))}
-                className="w-full flex items-center justify-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white py-1.5 rounded text-[9px] font-bold cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export Markdown</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 7. FIRMWARE */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
-          <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">7. Firmware</h2>
-            <p className="text-[10px] text-slate-550">Dynamic driver code templates based on pinouts mapping.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="bg-slate-50 border border-slate-200 rounded p-3 flex flex-col justify-between space-y-2">
-              <div>
-                <span className="text-[9.5px] font-bold text-slate-700 uppercase block">Firmware Skeleton (.ino)</span>
-                <span className="text-[9px] text-slate-450 block leading-relaxed">Arduino C++ header pins mapping config stub.</span>
-              </div>
-              <button
-                onClick={() => downloadTextFile("firmware_skeleton.ino", generateFirmwareSkeleton(project))}
-                className="w-full flex items-center justify-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white py-1.5 rounded text-[9px] font-bold cursor-pointer"
-              >
-                <Cpu className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Export C++ code</span>
-              </button>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 rounded p-3 flex flex-col justify-between space-y-2">
-              <div>
-                <span className="text-[9.5px] font-bold text-slate-700 uppercase block">Firmware Architecture JSON</span>
-                <span className="text-[9px] text-slate-450 block leading-relaxed">Task priority loops scheduler config values list.</span>
-              </div>
-              <button
-                onClick={() => downloadTextFile("firmware_architecture.json", exportFirmwareArchitectureJson(project), "application/json")}
-                className="w-full flex items-center justify-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white py-1.5 rounded text-[9px] font-bold cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export JSON</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Limitations Warning */}
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start space-x-3.5">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <h3 className="text-[10px] font-bold text-amber-850 uppercase tracking-widest font-mono">Conceptual Engineering Limitations</h3>
-            <p className="text-[11px] text-amber-800 leading-relaxed font-sans font-medium">
-              Hardware Studio acts as a **planning and layout-preparation bridge**. Drawing grids, nets, pin allocations, and component coordinates downloaded here do **NOT** guarantee final physical copper tolerances automatically. Final engineering review, independent Gerber viewer review, and fab-house DFM validation are mandatory prior to mass factory production.
+            <h1 className="text-xl font-semibold tracking-tight text-slate-950">Export center</h1>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">
+              Keep project backups, design documents and manufacturing drafts separate. Only outputs supported by the current engineering state are presented as fabrication actions.
             </p>
           </div>
+          <div className={`inline-flex w-fit items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] font-semibold ${manufacturing.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-800'}`}>
+            {manufacturing.ready ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+            {manufacturing.ready ? 'Manufacturing draft eligible' : 'Manufacturing blocked'}
+          </div>
+        </header>
+
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <main className="min-w-0 space-y-4">
+            <section className="border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-col gap-4 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Project source</p>
+                  <h2 className="mt-1 text-sm font-semibold text-slate-950">Backups & working documents</h2>
+                  <p className="mt-1 text-xs text-slate-500">Portable project state and current engineering documentation. These are not manufacturing qualification files.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => exportProjectJson(project)} className="inline-flex h-8 items-center gap-1.5 bg-slate-950 px-3 text-[11px] font-semibold text-white hover:bg-slate-800">
+                    <Download className="h-3.5 w-3.5" /> Project JSON
+                  </button>
+                  <button onClick={() => exportProjectMarkdown(project)} className="inline-flex h-8 items-center gap-1.5 border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">
+                    <Download className="h-3.5 w-3.5" /> Project summary
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-px bg-slate-200 md:grid-cols-[1fr_auto]">
+                <div className="bg-white p-4">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-semibold text-slate-900">Blueprint pack</h3>
+                    {project.blueprintPackStatus && <span className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-500">{project.blueprintPackStatus}</span>}
+                  </div>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                    {blueprintSummary
+                      ? `${blueprintSummary.totalSheets} sheets · ${blueprintSummary.missingDataSheets} missing-data sheets · ${blueprintSummary.blockers} blockers`
+                      : 'No blueprint pack has been generated from the current project state.'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 bg-white p-4 md:justify-end">
+                  <button onClick={() => project.generateBlueprintPack()} className="inline-flex h-8 items-center gap-1.5 border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">
+                    <RefreshCw className="h-3.5 w-3.5" /> {project.blueprintPack ? 'Regenerate' : 'Generate'}
+                  </button>
+                  {project.blueprintPack && (
+                    <>
+                      <button onClick={() => downloadTextFile('blueprint_pack.json', exportBlueprintPackJson(project.blueprintPack!), 'application/json')} className="h-8 border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">JSON</button>
+                      <button onClick={() => downloadTextFile('blueprint_pack.md', exportBlueprintPackMarkdown(project.blueprintPack!))} className="h-8 border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">MD</button>
+                      <button onClick={() => downloadTextFile('blueprint_pack.html', exportBlueprintPackHtml(project.blueprintPack!), 'text/html')} className="h-8 border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">HTML</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Manufacturing</p>
+                  <h2 className="mt-1 text-sm font-semibold text-slate-950">Board-bound draft outputs</h2>
+                  {context && <p className="mt-1 text-xs text-slate-500">{context.board.name} · {context.components.length} components · {context.traces.length} traces · {context.vias.length} vias</p>}
+                </div>
+                {manufacturing.ready && (
+                  <button onClick={() => safeDownload('Release manifest', 'release_manifest.json', () => generateReleasePackageManifest(project), 'application/json')} className="inline-flex h-8 shrink-0 items-center gap-1.5 border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">
+                    <Download className="h-3.5 w-3.5" /> Manifest
+                  </button>
+                )}
+              </div>
+
+              {!manufacturing.ready ? (
+                <div className="p-4">
+                  <div className="border border-rose-200 bg-rose-50/60">
+                    <div className="border-b border-rose-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-rose-700">Resolve before manufacturing export</div>
+                    <div className="divide-y divide-rose-100">
+                      {manufacturing.blockers.slice(0, 6).map((blocker) => (
+                        <div key={`${blocker.code}-${blocker.objectId || blocker.message}`} className="flex gap-2 px-3 py-2.5 text-xs leading-5 text-rose-900">
+                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                          <span>{blocker.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {manufacturing.blockers.length > 6 && <div className="border-t border-rose-200 px-3 py-2 text-[10px] text-rose-700">+ {manufacturing.blockers.length - 6} additional blockers</div>}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-3">
+                  {manufacturingExports.map((file) => (
+                    <button
+                      key={file.filename}
+                      onClick={() => safeDownload(file.label, file.filename, file.generate, file.mime)}
+                      className="group flex min-h-20 items-center justify-between gap-3 bg-white px-3.5 py-3 text-left transition hover:bg-slate-50"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-slate-800">{file.label}</div>
+                        <div className="mt-1 truncate font-mono text-[9px] text-slate-400">{file.filename}</div>
+                      </div>
+                      <Download className="h-3.5 w-3.5 shrink-0 text-slate-400 transition group-hover:text-slate-700" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <details className="group border border-slate-200 bg-white shadow-sm">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Secondary exports</p>
+                  <h2 className="mt-1 text-sm font-semibold text-slate-950">Engineering data & review documents</h2>
+                  <p className="mt-1 text-xs text-slate-500">Open this only when you need interchange, audit or firmware support files.</p>
+                </div>
+                <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
+              </summary>
+              <div className="grid gap-px border-t border-slate-200 bg-slate-200 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  { label: 'Board layout JSON', filename: 'board_layout.json', mime: 'application/json', generate: () => generateNativeBoardLayoutJson(project) },
+                  { label: 'Netlist JSON', filename: 'netlist.json', mime: 'application/json', generate: () => generateNativeNetlistJson(project) },
+                  { label: 'Handoff state', filename: 'handoff_manifest.json', mime: 'application/json', generate: () => exportHandoffManifestJson(project) },
+                  { label: 'Factory readiness', filename: 'factory_readiness.json', mime: 'application/json', generate: () => exportFactoryReadinessJson(project) },
+                  { label: 'Factory review guide', filename: 'factory_review_readme.md', mime: 'text/markdown', generate: () => generateFactoryReviewReadme(project) },
+                  { label: 'Missing factory files', filename: 'missing_factory_files.md', mime: 'text/markdown', generate: () => exportMissingFactoryFilesMarkdown(project) },
+                  { label: 'Editor layout JSON', filename: 'editor_layout.json', mime: 'application/json', generate: () => exportEditorLayoutsJson(project) },
+                  { label: 'Mechanical project JSON', filename: 'mechanical_layout.json', mime: 'application/json', generate: () => exportConceptualMechanicalLayoutJson(project) },
+                  { label: 'Schematic project JSON', filename: 'schematic_graph.json', mime: 'application/json', generate: () => exportConceptualSchematicJson(project) },
+                  { label: 'Firmware architecture', filename: 'firmware_architecture.json', mime: 'application/json', generate: () => exportFirmwareArchitectureJson(project) },
+                ].map((item) => (
+                  <button key={item.filename} onClick={() => safeDownload(item.label, item.filename, item.generate, item.mime)} className="flex items-center justify-between gap-3 bg-white px-3.5 py-3 text-left hover:bg-slate-50">
+                    <div>
+                      <div className="text-[11px] font-semibold text-slate-700">{item.label}</div>
+                      <div className="mt-0.5 font-mono text-[9px] text-slate-400">{item.filename}</div>
+                    </div>
+                    <Download className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  </button>
+                ))}
+              </div>
+              <div className="grid gap-3 border-t border-slate-200 p-4 md:grid-cols-3">
+                <button onClick={() => downloadTextFile('blueprint_dossier.md', exportBlueprintDossierMarkdown(project))} className="border border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold text-slate-700 hover:bg-slate-100">Blueprint dossier MD</button>
+                <button onClick={() => downloadTextFile('blueprint_dossier.json', exportBlueprintDossierJson(project), 'application/json')} className="border border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold text-slate-700 hover:bg-slate-100">Blueprint dossier JSON</button>
+                <button onClick={() => downloadTextFile('firmware_skeleton.ino', generateFirmwareSkeleton(project))} className="border border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold text-slate-700 hover:bg-slate-100">Firmware skeleton</button>
+                <button onClick={() => downloadTextFile('blueprint_sheets.md', exportBlueprintSheetsMarkdown(project))} className="border border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold text-slate-700 hover:bg-slate-100">Blueprint sheets MD</button>
+                <button onClick={() => downloadTextFile('blueprint_sheets.json', exportBlueprintSheetsJson(project), 'application/json')} className="border border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold text-slate-700 hover:bg-slate-100">Blueprint sheets JSON</button>
+                <button onClick={() => downloadTextFile('blueprint_sheets.html', exportBlueprintSheetsHtml(project), 'text/html')} className="border border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold text-slate-700 hover:bg-slate-100">Blueprint sheets HTML</button>
+              </div>
+            </details>
+          </main>
+
+          <aside className="space-y-4 xl:sticky xl:top-5 xl:self-start">
+            <section className="border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <FileCode2 className="h-4 w-4 text-slate-500" />
+                <h2 className="text-sm font-semibold text-slate-950">Output boundaries</h2>
+              </div>
+              <div className="mt-4 space-y-3 text-[11px] leading-5 text-slate-600">
+                <div>
+                  <div className="font-semibold text-slate-800">Native draft now</div>
+                  <div>Board copper, outline, drill, placement, BOM and structured project data when preflight passes.</div>
+                </div>
+                <div className="border-t border-slate-100 pt-3">
+                  <div className="font-semibold text-slate-800">Explicitly unsupported</div>
+                  <div>Mask, paste, silkscreen artwork, authoritative bottom-side footprint mirroring and a complete fabrication ZIP.</div>
+                </div>
+                <div className="border-t border-slate-100 pt-3">
+                  <div className="font-semibold text-slate-800">Never implied</div>
+                  <div>Independent ERC/DRC/DFM qualification, supplier approval or fab-house acceptance.</div>
+                </div>
+              </div>
+            </section>
+
+            <section className="border border-amber-200 bg-amber-50/70 p-4 text-[11px] leading-5 text-amber-900">
+              <div className="flex gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <div className="font-semibold">Draft engineering output</div>
+                  <p className="mt-1">A downloadable file is not the same as a qualified manufacturing release. Final independent review remains mandatory.</p>
+                </div>
+              </div>
+            </section>
+          </aside>
         </div>
       </div>
     </div>
