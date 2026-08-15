@@ -39,24 +39,43 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
   const bcPcb = bc.pcb as Record<string, unknown> | undefined;
 
   const schematic = {
-    placed: (bcSchematic?.placed as boolean) ?? (bc.placementX != null),
-    x: (bcSchematic?.x as number) ?? (bc.placementX as number) ?? 150,
-    y: (bcSchematic?.y as number) ?? (bc.placementY as number) ?? 150,
-    rotation: (bcSchematic?.rotation as number) ?? (bc.rotationDeg as number) ?? 0,
+    placed: (bcSchematic?.placed as boolean) ?? false,
+    x: (bcSchematic?.x as number) ?? 150,
+    y: (bcSchematic?.y as number) ?? 150,
+    rotation: (bcSchematic?.rotation as number) ?? 0,
     locked: (bcSchematic?.locked as boolean) ?? false,
   };
 
+  // PCB coordinates are engineering facts. Preserve a valid zero coordinate,
+  // but never turn a missing coordinate into 0 just to make downstream editors
+  // easier to render. An unplaced component must remain geometrically unresolved.
+  const pcbX = typeof bcPcb?.xMm === 'number'
+    ? bcPcb.xMm
+    : typeof bc.placementX === 'number'
+      ? bc.placementX
+      : undefined;
+  const pcbY = typeof bcPcb?.yMm === 'number'
+    ? bcPcb.yMm
+    : typeof bc.placementY === 'number'
+      ? bc.placementY
+      : undefined;
+  const hasPcbCoordinates = pcbX !== undefined && pcbY !== undefined;
+  const requestedPlacementStatus = (
+    (bcPcb?.placementStatus as BoardComponent['placementStatus'])
+    || (bc.placementStatus as BoardComponent['placementStatus'])
+  );
+  const pcbPlaced = (bcPcb?.placed as boolean) ?? (requestedPlacementStatus === 'Placed' && hasPcbCoordinates);
+
   const pcb = {
-    placed: (bcPcb?.placed as boolean) ?? (bc.placementX != null),
-    xMm: (bcPcb?.xMm as number) ?? (bc.placementX as number) ?? 0,
-    yMm: (bcPcb?.yMm as number) ?? (bc.placementY as number) ?? 0,
+    placed: pcbPlaced && hasPcbCoordinates,
+    xMm: pcbX,
+    yMm: pcbY,
     rotationDeg: (bcPcb?.rotationDeg as number) ?? (bc.rotationDeg as number) ?? 0,
     side: ((bcPcb?.side as string) || (bc.side as string) || 'Top') as 'Top' | 'Bottom',
     locked: (bcPcb?.locked as boolean) ?? (bc.lockedPlacement as boolean) ?? false,
     placementStatus: (
-      (bcPcb?.placementStatus as BoardComponent['placementStatus'])
-      || (bc.placementStatus as BoardComponent['placementStatus'])
-      || (bc.placementX != null ? 'Placed' : 'Unplaced')
+      requestedPlacementStatus
+      || (hasPcbCoordinates ? 'Placed' : 'Unplaced')
     ),
   };
 
@@ -99,24 +118,25 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
 }
 
 export function syncLegacyPlacementFields(comp: BoardComponent): BoardComponent {
+  const hasCoordinates = comp.placementX !== undefined && comp.placementY !== undefined;
   if (!comp.pcb) {
     comp.pcb = {
-      placed: comp.placementX != null,
+      placed: hasCoordinates && comp.placementStatus !== 'Unplaced',
       xMm: comp.placementX,
       yMm: comp.placementY,
       rotationDeg: comp.rotationDeg,
       side: comp.side === 'Bottom' ? 'Bottom' : 'Top',
       locked: !!comp.lockedPlacement,
-      placementStatus: comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced'),
+      placementStatus: comp.placementStatus || (hasCoordinates ? 'Placed' : 'Unplaced'),
     };
   } else {
-    comp.pcb.placed = comp.placementX != null;
+    comp.pcb.placed = hasCoordinates && comp.placementStatus !== 'Unplaced';
     comp.pcb.xMm = comp.placementX;
     comp.pcb.yMm = comp.placementY;
     comp.pcb.rotationDeg = comp.rotationDeg;
     comp.pcb.side = comp.side === 'Bottom' ? 'Bottom' : 'Top';
     comp.pcb.locked = !!comp.lockedPlacement;
-    comp.pcb.placementStatus = comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced');
+    comp.pcb.placementStatus = comp.placementStatus || (hasCoordinates ? 'Placed' : 'Unplaced');
   }
   return comp;
 }
