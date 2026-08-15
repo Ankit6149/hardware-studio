@@ -1,3 +1,4 @@
+import React from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -171,7 +172,7 @@ function TechnicalBoard() {
       <svg viewBox="0 0 760 520" className="absolute inset-0 h-full w-full" role="img" aria-label="Technical PCB assembly illustration">
         <g transform="translate(78 52)">
           <rect x="0" y="0" width="560" height="390" rx="10" fill="#26352b" stroke="#8ca08f" strokeWidth="2" />
-          {[ [30,30],[530,30],[30,360],[530,360] ].map(([x,y]) => <g key={`${x}-${y}`}><circle cx={x} cy={y} r="11" fill="#0f0f0e" stroke="#c8c0b2" /><circle cx={x} cy={y} r="4" fill="#c8c0b2" /></g>)}
+          {[[30, 30], [530, 30], [30, 360], [530, 360]].map(([x, y]) => <g key={`${x}-${y}`}><circle cx={x} cy={y} r="11" fill="#0f0f0e" stroke="#c8c0b2" /><circle cx={x} cy={y} r="4" fill="#c8c0b2" /></g>)}
 
           <g transform="translate(210 112)">
             <rect width="136" height="136" fill="#171714" stroke="#d8c48f" strokeWidth="2" />
@@ -189,7 +190,7 @@ function TechnicalBoard() {
 
           <path d="M86 176H150V130H202M346 146H397M346 186H392V136H405M345 222H420V266M478 290H520V230H545M146 116H176V84H430V100M160 322H90V255H20" fill="none" stroke="#d9b85f" strokeWidth="3" />
           <path d="M86 188H168V262H210M346 204H375V300H400M478 300H520V350H298V248" fill="none" stroke="#7db098" strokeWidth="2.4" />
-          {[ [150,130],[392,136],[420,266],[168,262],[375,300],[520,350] ].map(([x,y]) => <g key={`${x}-${y}`}><circle cx={x} cy={y} r="5" fill="#d9b85f" stroke="#0f0f0e" strokeWidth="2" /></g>)}
+          {[[150,130],[392,136],[420,266],[168,262],[375,300],[520,350]].map(([x,y]) => <g key={`${x}-${y}`}><circle cx={x} cy={y} r="5" fill="#d9b85f" stroke="#0f0f0e" strokeWidth="2" /></g>)}
 
           <path d="M0 420H560M0 413v14M560 413v14" stroke="#bdb8ae" strokeWidth="1" /><text x="280" y="446" textAnchor="middle" fill="#bdb8ae" fontSize="10">84.00 mm</text>
           <path d="M590 0V390M583 0h14M583 390h14" stroke="#bdb8ae" strokeWidth="1" /><text x="612" y="202" fill="#bdb8ae" fontSize="10" transform="rotate(90 612 202)">58.00 mm</text>
