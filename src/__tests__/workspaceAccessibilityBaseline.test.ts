@@ -21,16 +21,19 @@ describe('workspace accessibility and focus baseline', () => {
     expect(sidebar).toContain('aria-label="Engineering domains"');
     expect(sidebar).toContain('Show contextual navigation');
     expect(sidebar).toContain('Hide contextual navigation');
-    expect(sidebar).toContain('w-[68px]');
+    expect(sidebar).toContain('w-[86px]');
     expect(sidebar).toContain("product: 'Product'");
-    expect(sidebar).toContain("mechanical: 'Mech'");
-    expect(sidebar).toContain("electronics: 'Elec'");
-    expect(sidebar).toContain("validation: 'Validate'");
+    expect(sidebar).toContain("mechanical: 'Mechanical'");
+    expect(sidebar).toContain("electronics: 'Electronics'");
+    expect(sidebar).toContain("validation: 'Validation'");
     expect(sidebar).toContain("outputs: 'Release'");
 
     expect(subnav).toContain('contextual navigation');
     expect(subnav).toContain('workbenches');
-    expect(subnav).toContain('min-h-9');
-    expect(subnav).toContain('w-[196px]');
+    expect(subnav).toContain('min-h-10');
+    expect(subnav).toContain('w-[184px]');
+    expect(subnav).toContain('Start here');
+    expect(subnav).toContain("'schematic-editor': ['Place project components on the sheet.'");
+    expect(subnav).toContain("'board-designer': ['Place footprints inside the real board outline.'");
   });
 });
