@@ -43,7 +43,7 @@ describe('Firmware State Machine Engine & Embedded C/C++ Workflows', () => {
   });
 
   it('should execute step-by-step virtual state machine logic simulation', () => {
-    let session = createSimulationSession(sampleStates, 's1');
+    const session = createSimulationSession(sampleStates, 's1');
     expect(session.currentStateId).toBe('s1');
 
     const result = triggerSimulationEvent(session, 'EVT_POWER_BUTTON', sampleStates, sampleTransitions);
