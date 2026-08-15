@@ -13,8 +13,6 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
   const libraryId = (bc.libraryId as string) || '';
   const sourceDefinition = defaultComponents.find((definition) => definition.libraryId === libraryId);
 
-  // Accept canonical project-pin fields and reusable library-definition fields.
-  // Every downstream editor must receive the same BoardComponentPin shape.
   const rawPins = (bc.pins as Record<string, unknown>[]) || [];
   const pins = rawPins.map((pin, index) => {
     const pinNumber = String(pin.pinNumber ?? pin.number ?? index + 1);
@@ -64,7 +62,10 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
     (bcPcb?.placementStatus as BoardComponent['placementStatus'])
     || (bc.placementStatus as BoardComponent['placementStatus'])
   );
-  const pcbPlaced = (bcPcb?.placed as boolean) ?? (requestedPlacementStatus === 'Placed' && hasPcbCoordinates);
+  const explicitPcbPlaced = typeof bcPcb?.placed === 'boolean' ? bcPcb.placed : undefined;
+  // Legacy projects sometimes only carried placementX/placementY. Those are
+  // real known coordinates, so preserve them as placed unless explicitly marked Unplaced.
+  const pcbPlaced = explicitPcbPlaced ?? (hasPcbCoordinates && requestedPlacementStatus !== 'Unplaced');
 
   const pcb = {
     placed: pcbPlaced && hasPcbCoordinates,
@@ -73,15 +74,10 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
     rotationDeg: (bcPcb?.rotationDeg as number) ?? (bc.rotationDeg as number) ?? 0,
     side: ((bcPcb?.side as string) || (bc.side as string) || 'Top') as 'Top' | 'Bottom',
     locked: (bcPcb?.locked as boolean) ?? (bc.lockedPlacement as boolean) ?? false,
-    placementStatus: (
-      requestedPlacementStatus
-      || (hasPcbCoordinates ? 'Placed' : 'Unplaced')
-    ),
+    placementStatus: requestedPlacementStatus || (hasPcbCoordinates ? 'Placed' : 'Unplaced'),
   };
 
   return {
-    // Preserve reviewed representation, sourcing, qualification, and provenance
-    // fields that are not rewritten by migration. Canonical fields below win.
     ...preserved,
     id: compId,
     libraryId,
@@ -94,8 +90,6 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
     partNumber: (bc.partNumber as string) || sourceDefinition?.partNumber || '',
     manufacturer: (bc.manufacturer as string) || sourceDefinition?.manufacturer || '',
     pins,
-    // Missing relationships remain explicitly unassigned. Runtime editors must
-    // never infer a fake board/circuit-block identity from absence.
     boardId: (bc.boardId as string) || '',
     circuitBlockId: (bc.circuitBlockId as string) || undefined,
     bomItemId: (bc.bomItemId as string) || '',
@@ -104,7 +98,6 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
     pcb,
     status: (bc.status as BoardComponent['status']) || 'Draft',
     notes: (bc.notes as string) || sourceDefinition?.description || '',
-
     placementX: pcb.xMm,
     placementY: pcb.yMm,
     rotationDeg: pcb.rotationDeg,
@@ -168,10 +161,7 @@ function resolveLegacyRelation(
 export function migrateProjectSchema(project: unknown): Project {
   const migrated = JSON.parse(JSON.stringify(project || {})) as Project & Record<string, unknown>;
 
-  if (!migrated.schemaVersion) {
-    migrated.schemaVersion = 1;
-  }
-
+  if (!migrated.schemaVersion) migrated.schemaVersion = 1;
   if (!migrated.boards) migrated.boards = [];
   if (!migrated.circuitBlocks) migrated.circuitBlocks = [];
   if (!migrated.boardComponents) migrated.boardComponents = [];
@@ -212,6 +202,5 @@ export function migrateProjectSchema(project: unknown): Project {
   });
 
   migrated.schemaVersion = CURRENT_SCHEMA_VERSION;
-
   return migrated;
 }
