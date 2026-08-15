@@ -1,344 +1,285 @@
 import React from 'react';
 import { useProjectStore } from '../store/projectStore';
-import { 
-  generateNativeGerberCopperTop,
-  generateNativeGerberCopperBottom,
-  generateNativeGerberBoardOutline,
-  generateNativeGerberTopSilkscreen,
-  generateNativeGerberTopMask,
-  generateNativeGerberBottomMask,
-  generateNativeGerberTopPaste,
-  generateNativeGerberBottomPaste,
-  generateNativeExcellonDrills,
-  generateNativeCplDraftCsv,
-  generateNativeNetlistJson,
-  generateNativeBoardLayoutJson,
+import {
+  exportBomCsv,
+  exportHandoffManifestJson,
   generateFactoryReviewReadme,
-  exportHandoffManifestJson
+  generateNativeBoardLayoutJson,
+  generateNativeCplDraftCsv,
+  generateNativeExcellonDrills,
+  generateNativeGerberBoardOutline,
+  generateNativeGerberCopperBottom,
+  generateNativeGerberCopperTop,
+  generateNativeNetlistJson,
+  generateReleasePackageManifest,
 } from '../lib/nativeExports';
-import { 
-  ShieldAlert, 
-  CheckCircle2, 
-  Hammer, 
-  Download, 
-  RotateCcw, 
-  AlertOctagon,
-  ListTodo
-} from 'lucide-react';
+import { evaluateManufacturingContext } from '../lib/manufacturing/manufacturingContext';
+import { useFeedback } from './feedback/FeedbackProvider';
+import { AlertTriangle, CheckCircle2, Download, FileCheck2, Hammer, RotateCcw, ShieldCheck } from 'lucide-react';
 import { Button } from '../ui/Button';
 
-// Helper to escape CSV quotes
-const csvCell = (val: string | number | boolean | null | undefined): string => {
-  if (val === null || val === undefined) return '""';
-  const str = String(val).replace(/"/g, '""');
-  return `"${str}"`;
-};
-
-// Safe download trigger
 const downloadFile = (content: string, filename: string, mimeType: string) => {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
 };
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'The export could not be generated from the current project state.';
+}
+
 export const FactoryPackageBuilder: React.FC = () => {
   const store = useProjectStore();
-  const { 
+  const { notify } = useFeedback();
+  const {
     projectName,
-    factoryPackageStatus = "Draft",
+    factoryPackageStatus = 'Draft',
     factoryReviewChecks = {},
     setFactoryPackageStatus,
     setFactoryReviewCheck,
     resetFactoryReview,
-    updateFactoryFileStatus
+    updateFactoryFileStatus,
   } = store;
 
-  // Checklist config
+  const manufacturing = evaluateManufacturingContext(store);
+  const context = manufacturing.context;
+
   const checklistItems = [
-    { key: "gerber_viewer", label: "Open in Gerber viewer" },
-    { key: "board_dims", label: "Verify board outline dimensions" },
-    { key: "pad_positions", label: "Verify footprint pad layout clearances" },
-    { key: "drill_align", label: "Verify Excellon drill alignment voids" },
-    { key: "rotations", label: "Verify component SMD rotations" },
-    { key: "bom_quantities", label: "Verify BOM parts sourcing quantities" },
-    { key: "cpl_rotations", label: "Verify pick-and-place side and rotation offsets" },
-    { key: "dfm_run", label: "Run DFM verification rules check" },
-    { key: "drc_erc", label: "Review DRC/ERC blockers listings" },
-    { key: "verified", label: "Mark release files as verified" }
+    { key: 'gerber_viewer', label: 'Independent Gerber viewer checked' },
+    { key: 'board_dims', label: 'Board contour and dimensions checked' },
+    { key: 'drill_align', label: 'Drill table, plating and alignment checked' },
+    { key: 'rotations', label: 'Component side and rotation checked' },
+    { key: 'bom_quantities', label: 'BOM part numbers and quantities reconciled' },
+    { key: 'cpl_rotations', label: 'CPL origin and assembly-house rotation convention checked' },
+    { key: 'dfm_run', label: 'External DFM review completed' },
+    { key: 'drc_erc', label: 'ERC/DRC blockers reviewed' },
   ];
 
-  const handleGenerateAllDrafts = () => {
-    // Generate and update statuses in the store
-    updateFactoryFileStatus("gerberZip", "Needs Final Review", "Top, bottom, and outline copper Gerber layers generated in app.", "Hardware Studio", "gerbers.zip");
-    updateFactoryFileStatus("drillFiles", "Needs Final Review", "Excellon NC drill coordinate hole list generated.", "Hardware Studio", "drills.drl");
-    updateFactoryFileStatus("bomCsv", "Needs Final Review", "BOM parts procurement list CSV.", "Hardware Studio", "bom.csv");
-    updateFactoryFileStatus("cplCsv", "Needs Final Review", "SMT Pick-and-Place centroid list CSV.", "Hardware Studio", "cpl.csv");
-    updateFactoryFileStatus("boardDrawing", "Needs Final Review", "Board outline mechanical geometry profile.", "Hardware Studio", "outline.gbr");
+  const reviewComplete = checklistItems.every((item) => factoryReviewChecks[item.key] === true);
 
-    setFactoryPackageStatus("Generated");
+  const exportFiles = [
+    { key: 'top_copper', label: 'Top copper', filename: 'top_copper.gbr', mime: 'text/plain', generate: () => generateNativeGerberCopperTop(store) },
+    { key: 'bottom_copper', label: 'Bottom copper', filename: 'bottom_copper.gbr', mime: 'text/plain', generate: () => generateNativeGerberCopperBottom(store) },
+    { key: 'outline', label: 'Board outline', filename: 'board_outline.gbr', mime: 'text/plain', generate: () => generateNativeGerberBoardOutline(store) },
+    { key: 'drill', label: 'NC drill', filename: 'drills.drl', mime: 'text/plain', generate: () => generateNativeExcellonDrills(store) },
+    { key: 'cpl', label: 'Pick & place', filename: 'cpl.csv', mime: 'text/csv', generate: () => generateNativeCplDraftCsv(store) },
+    { key: 'bom', label: 'BOM', filename: 'bom.csv', mime: 'text/csv', generate: () => exportBomCsv(store) },
+    { key: 'netlist', label: 'Netlist', filename: 'netlist.json', mime: 'application/json', generate: () => generateNativeNetlistJson(store) },
+    { key: 'layout', label: 'Board layout data', filename: 'board_layout.json', mime: 'application/json', generate: () => generateNativeBoardLayoutJson(store) },
+  ];
+
+  const handlePrepareDraft = () => {
+    if (!manufacturing.ready) {
+      notify({
+        tone: 'error',
+        title: 'Manufacturing draft blocked',
+        detail: manufacturing.blockers[0]?.message || 'Resolve the manufacturing preflight before generating draft outputs.',
+      });
+      return;
+    }
+
+    try {
+      exportFiles.forEach((file) => file.generate());
+      generateReleasePackageManifest(store);
+
+      updateFactoryFileStatus('gerberZip', 'Not Generated', 'Native Gerbers are currently exported as individual reviewed files; no ZIP bundle is synthesized.', 'Hardware Studio');
+      updateFactoryFileStatus('drillFiles', 'Needs Final Review', 'NC drill output generated from recorded via and drill geometry.', 'Hardware Studio', 'drills.drl');
+      updateFactoryFileStatus('bomCsv', 'Needs Final Review', 'BOM generated from board-bound component state.', 'Hardware Studio', 'bom.csv');
+      updateFactoryFileStatus('cplCsv', 'Needs Final Review', 'Pick-and-place data generated from explicit placement coordinates, side and rotation.', 'Hardware Studio', 'cpl.csv');
+      updateFactoryFileStatus('boardDrawing', 'Needs Final Review', 'Board outline Gerber generated from the explicit selected-board contour.', 'Hardware Studio', 'board_outline.gbr');
+      setFactoryPackageStatus('Needs Review');
+
+      notify({
+        tone: 'success',
+        title: 'Draft outputs validated',
+        detail: 'The supported board outputs can be generated from the current canonical project state. Independent review is still required.',
+      });
+    } catch (error) {
+      setFactoryPackageStatus('Blocked');
+      notify({ tone: 'error', title: 'Draft generation blocked', detail: errorMessage(error) });
+    }
   };
 
-  const handleVerifyPackage = () => {
-    // Mark files verified
-    updateFactoryFileStatus("gerberZip", "Verified", "Gerbers reviewed and approved.", "Hardware Studio", "gerbers.zip");
-    updateFactoryFileStatus("drillFiles", "Verified", "Excellon drills reviewed and approved.", "Hardware Studio", "drills.drl");
-    updateFactoryFileStatus("bomCsv", "Verified", "BOM reviewed and approved.", "Hardware Studio", "bom.csv");
-    updateFactoryFileStatus("cplCsv", "Verified", "CPL reviewed and approved.", "Hardware Studio", "cpl.csv");
-    updateFactoryFileStatus("boardDrawing", "Verified", "Outline geometry reviewed and approved.", "Hardware Studio", "outline.gbr");
+  const handleExport = (file: (typeof exportFiles)[number]) => {
+    try {
+      downloadFile(file.generate(), file.filename, file.mime);
+    } catch (error) {
+      notify({ tone: 'error', title: `${file.label} export blocked`, detail: errorMessage(error) });
+    }
+  };
 
-    // Check off all checkboxes
-    checklistItems.forEach(item => {
-      setFactoryReviewCheck(item.key, true);
-    });
-
-    setFactoryPackageStatus("Verified");
+  const handleDownloadReleaseManifest = () => {
+    try {
+      downloadFile(generateReleasePackageManifest(store), 'release_manifest.json', 'application/json');
+    } catch (error) {
+      notify({ tone: 'error', title: 'Release manifest blocked', detail: errorMessage(error) });
+    }
   };
 
   const handleReset = () => {
     resetFactoryReview();
-    updateFactoryFileStatus("gerberZip", "Not Generated");
-    updateFactoryFileStatus("drillFiles", "Not Generated");
-    updateFactoryFileStatus("bomCsv", "Not Generated");
-    updateFactoryFileStatus("cplCsv", "Not Generated");
-    updateFactoryFileStatus("boardDrawing", "Conceptual");
+    updateFactoryFileStatus('gerberZip', 'Not Generated');
+    updateFactoryFileStatus('drillFiles', 'Not Generated');
+    updateFactoryFileStatus('bomCsv', 'Not Generated');
+    updateFactoryFileStatus('cplCsv', 'Not Generated');
+    updateFactoryFileStatus('boardDrawing', 'Conceptual');
+    notify({ tone: 'info', title: 'Factory review reset', detail: 'Review evidence and declared file statuses were returned to draft state.' });
   };
 
-  // Individual exports triggers
-  const handleExportFile = (key: string) => {
-    if (key === 'top_copper') {
-      downloadFile(generateNativeGerberCopperTop(store), 'top_copper.gbr', 'text/plain');
-    } else if (key === 'bottom_copper') {
-      downloadFile(generateNativeGerberCopperBottom(store), 'bottom_copper.gbr', 'text/plain');
-    } else if (key === 'board_outline') {
-      downloadFile(generateNativeGerberBoardOutline(store), 'board_outline.gbr', 'text/plain');
-    } else if (key === 'top_silkscreen') {
-      downloadFile(generateNativeGerberTopSilkscreen(store), 'top_silkscreen.gbr', 'text/plain');
-    } else if (key === 'top_mask') {
-      downloadFile(generateNativeGerberTopMask(store), 'top_mask.gbr', 'text/plain');
-    } else if (key === 'bottom_mask') {
-      downloadFile(generateNativeGerberBottomMask(store), 'bottom_mask.gbr', 'text/plain');
-    } else if (key === 'top_paste') {
-      downloadFile(generateNativeGerberTopPaste(store), 'top_paste.gbr', 'text/plain');
-    } else if (key === 'bottom_paste') {
-      downloadFile(generateNativeGerberBottomPaste(store), 'bottom_paste.gbr', 'text/plain');
-    } else if (key === 'drill') {
-      downloadFile(generateNativeExcellonDrills(store), 'drills.drl', 'text/plain');
-    } else if (key === 'bom') {
-      // Export BOM from store
-      const headers = ["Designator", "Name", "Type", "Value", "Package", "Quantity"];
-      const rows = (store.boardComponents || []).map(c => [
-        c.referenceDesignator, c.componentName, c.componentType, c.value, c.packageName, c.quantity
-      ].map(csvCell).join(","));
-      const content = headers.join(",") + "\n" + rows.join("\n");
-      downloadFile(content, 'bom.csv', 'text/csv');
-    } else if (key === 'cpl') {
-      downloadFile(generateNativeCplDraftCsv(store), 'cpl.csv', 'text/csv');
-    } else if (key === 'netlist') {
-      downloadFile(generateNativeNetlistJson(store), 'netlist.json', 'application/json');
-    } else if (key === 'manifest') {
-      downloadFile(exportHandoffManifestJson(store), 'handoff_manifest.json', 'application/json');
-    } else if (key === 'readme') {
-      downloadFile(generateFactoryReviewReadme(store), 'factory_review_readme.md', 'text/markdown');
-    } else if (key === 'board_layout') {
-      downloadFile(generateNativeBoardLayoutJson(store), 'board_layout.json', 'application/json');
-    }
-  };
-
-  const statusColors = {
-    Draft: "bg-slate-800 text-slate-600 border-slate-700",
-    Generated: "bg-emerald-950 text-emerald-400 border-emerald-800",
-    "Needs Review": "bg-amber-950 text-amber-400 border-amber-800",
-    Verified: "bg-blue-950 text-blue-400 border-blue-800",
-    Blocked: "bg-rose-950 text-rose-400 border-rose-800"
-  };
-
-  const isGenerated = factoryPackageStatus !== 'Draft';
+  const statusLabel = manufacturing.ready
+    ? factoryPackageStatus === 'Needs Review' ? 'Draft prepared · review required' : 'Ready to prepare draft'
+    : `${manufacturing.blockers.length} blocker${manufacturing.blockers.length === 1 ? '' : 's'}`;
 
   return (
-    <div className="flex-1 bg-slate-50 text-slate-800 p-6 overflow-y-auto font-sans h-full">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-5 mb-6">
-        <div>
-          <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 bg-slate-100 rounded-lg text-indigo-650 border border-slate-200 shadow-inner">
-              <Hammer className="w-5 h-5" />
+    <div className="flex-1 overflow-y-auto bg-slate-100/80 text-slate-900">
+      <div className="mx-auto w-full max-w-7xl px-5 py-5 lg:px-7">
+        <header className="mb-5 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              <Hammer className="h-3.5 w-3.5" />
+              Manufacturing
             </div>
-            <h1 className="text-xl font-bold tracking-tight">Factory Package Builder</h1>
-          </div>
-          <p className="text-[11px] text-slate-600 mt-1">
-            Construct, verify, and release native manufacturing draft outputs for **{projectName}**.
-          </p>
-        </div>
-
-        <div className="mt-4 md:mt-0 flex items-center space-x-2">
-          <div className={`px-2.5 py-1 text-[10px] font-bold rounded-full border ${statusColors[factoryPackageStatus]}`}>
-            Status: {factoryPackageStatus}
-          </div>
-          <Button onClick={handleReset} variant="outline" className="h-7 text-[10px] text-slate-600 hover:text-slate-800 border-slate-200 bg-slate-100 hover:bg-slate-800">
-            <RotateCcw className="w-3 h-3 mr-1" />
-            Reset Release
-          </Button>
-        </div>
-      </div>
-
-      {/* Safety Alert */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start space-x-3 text-amber-800">
-        <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-        <div className="text-[11px] leading-relaxed">
-          <span className="font-bold">Manufacturing Disclaimer:</span> Generated manufacturing files require final engineering review, independent Gerber viewer review, and fab-house DFM validation before mass production. Do not run fabrications unchecked.
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Columns - Files Management */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Active Generation Card */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-800 tracking-wider uppercase mb-4 flex items-center">
-              <CheckCircle2 className="w-4 h-4 text-indigo-650 mr-1.5" />
-              1. Draft Package Generation
-            </h2>
-            <p className="text-[11px] text-slate-600 mb-4">
-              Compile local blueprints, component XY placement offsets, and routed track lines into RS-274X copper layer vectors and tool drill coordinates.
+            <h1 className="text-xl font-semibold tracking-tight text-slate-950">Factory package</h1>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">
+              Prepare only the manufacturing outputs supported by recorded engineering state for {projectName}. Generated files remain draft until independently reviewed.
             </p>
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={handleGenerateAllDrafts} className="h-8 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/20">
-                Generate Factory Draft Package
-              </Button>
-              <Button onClick={handleVerifyPackage} variant="outline" className="h-8 text-[11px] border-slate-200 bg-white hover:bg-slate-100 text-slate-700">
-                Mark Package Verified
-              </Button>
-              <Button onClick={() => setFactoryPackageStatus("Needs Review")} variant="outline" className="h-8 text-[11px] border-slate-200 bg-white hover:bg-slate-100 text-slate-700">
-                Mark Needs Review
-              </Button>
-            </div>
           </div>
+          <div className={`inline-flex w-fit items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] font-semibold ${manufacturing.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-800'}`}>
+            {manufacturing.ready ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+            {statusLabel}
+          </div>
+        </header>
 
-          {/* Files List Card */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-800 tracking-wider uppercase mb-4">
-              2. Files Compiled In App
-            </h2>
-            <div className="space-y-2">
-              {[
-                { key: 'top_copper', label: 'Top Copper Gerber', fn: 'top_copper.gbr', desc: 'Top component pads & copper trace routes.' },
-                { key: 'bottom_copper', label: 'Bottom Copper Gerber', fn: 'bottom_copper.gbr', desc: 'Bottom copper ground net runs.' },
-                { key: 'board_outline', label: 'Board Outline Gerber', fn: 'board_outline.gbr', desc: 'Mechanical profile boundary cutouts.' },
-                { key: 'top_silkscreen', label: 'Top Silkscreen Gerber', fn: 'top_silkscreen.gbr', desc: 'Top component outlines & reference text annotations.' },
-                { key: 'top_mask', label: 'Top Mask Gerber', fn: 'top_mask.gbr', desc: 'Top solder mask clearances.' },
-                { key: 'bottom_mask', label: 'Bottom Mask Gerber', fn: 'bottom_mask.gbr', desc: 'Bottom solder mask clearances.' },
-                { key: 'drill', label: 'Excellon Drill File', fn: 'drills.drl', desc: 'Plated vias & structural mounting drill list.' },
-                { key: 'bom', label: 'BOM CSV Sourcing List', fn: 'bom.csv', desc: 'Bill of Materials part numbers spreadsheet.' },
-                { key: 'cpl', label: 'CPL Pick-and-Place CSV', fn: 'cpl.csv', desc: 'Centroid XY placement coordinate rotation sheet.' },
-                { key: 'netlist', label: 'Netlist JSON Map', fn: 'netlist.json', desc: 'Electrical logical connections dictionary.' },
-                { key: 'board_layout', label: 'Board Layout JSON Data', fn: 'board_layout.json', desc: 'Hardware Studio ECAD layout workspace metadata.' },
-                { key: 'manifest', label: 'Handoff Manifest JSON', fn: 'handoff_manifest.json', desc: 'Package readiness index manifest summary.' },
-                { key: 'readme', label: 'Factory Review README', fn: 'factory_review_readme.md', desc: 'Inspection guidelines & checklist verification document.' }
-              ].map(f => {
-                const isFileGenerated = isGenerated;
-                return (
-                  <div key={f.key} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 transition">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-2 h-2 rounded-full ${isFileGenerated ? 'bg-emerald-500 animate-pulse' : 'bg-slate-700'}`} />
-                      <div>
-                        <div className="text-[11px] font-bold text-slate-800">{f.label}</div>
-                        <div className="text-[9px] text-slate-550 mt-0.5">{f.desc}</div>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={() => handleExportFile(f.key)}
-                      disabled={!isFileGenerated}
-                      className="h-7 px-2.5 text-[9px] font-semibold bg-slate-100 border border-slate-200 hover:bg-slate-850 disabled:opacity-40 text-slate-800 cursor-pointer"
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      Export
-                    </Button>
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <main className="min-w-0 space-y-4">
+            <section className="border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-col gap-4 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${manufacturing.ready ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                    <h2 className="text-sm font-semibold text-slate-950">Manufacturing preflight</h2>
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                  {context ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {context.board.name} · {context.components.length} components · {context.traces.length} traces · {context.vias.length} vias
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-500">No valid board context is available yet.</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={handlePrepareDraft} disabled={!manufacturing.ready} className="h-8 bg-slate-950 px-3 text-[11px] font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">
+                    <FileCheck2 className="mr-1.5 h-3.5 w-3.5" />
+                    Validate & prepare draft
+                  </Button>
+                  <Button onClick={handleReset} variant="outline" className="h-8 border-slate-300 bg-white px-3 text-[11px] text-slate-700 hover:bg-slate-50">
+                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                    Reset review
+                  </Button>
+                </div>
+              </div>
 
-          {/* Missing / Not Generated Card */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-800 tracking-wider uppercase mb-3 text-amber-500 flex items-center">
-              <AlertOctagon className="w-4 h-4 mr-1.5" />
-              3. Missing / Non-App Generated Layers
-            </h2>
-            <p className="text-[10px] text-slate-600 mb-4 leading-normal">
-              These layers represent manufacturing stencil outputs that are not generated automatically by the visual editor flow. They remain flagged for physical production review.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px]">
-              {[
-                { name: "Solder Paste Top Stencil", desc: "For SMD solder stencil deposition." },
-                { name: "Solder Paste Bottom Stencil", desc: "For double-sided SMD stencils." },
-                { name: "Bottom Silkscreen Artwork", desc: "Text annotations on bottom copper." },
-                { name: "3D Mechanical STEP Assembly", desc: "Full dimensional CAD enclosure model." },
-                { name: "3D STL Casing Mesh Profile", desc: "Outer shell contours for mock modeling." }
-              ].map((m, idx) => (
-                <div key={idx} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-start space-x-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 mt-1" />
-                  <div>
-                    <div className="font-bold text-slate-800">{m.name}</div>
-                    <div className="text-[9px] text-slate-550 mt-0.5">{m.desc}</div>
+              {!manufacturing.ready && (
+                <div className="p-4">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-rose-700">Resolve before export</p>
+                  <div className="divide-y divide-rose-100 border border-rose-200 bg-rose-50/60">
+                    {manufacturing.blockers.map((blocker) => (
+                      <div key={`${blocker.code}-${blocker.objectId || blocker.message}`} className="flex gap-2 px-3 py-2.5 text-xs leading-5 text-rose-900">
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>{blocker.message}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
+              )}
 
-        {/* Right Column - Review Checklist */}
-        <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <h2 className="text-xs font-bold text-slate-800 tracking-wider uppercase mb-4 flex items-center">
-              <ListTodo className="w-4 h-4 text-indigo-650 mr-1.5" />
-              4. Review Checklist
-            </h2>
-            <p className="text-[10px] text-slate-550 mb-4">
-              Tick checkpoints to sign off on specific design checks. Toggling checkpoints persists statuses to localStorage.
-            </p>
+              {manufacturing.ready && (
+                <div className="grid gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">
+                  {exportFiles.map((file) => (
+                    <button
+                      key={file.key}
+                      type="button"
+                      onClick={() => handleExport(file)}
+                      className="group flex min-h-20 items-center justify-between gap-3 bg-white px-3.5 py-3 text-left transition hover:bg-slate-50"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-slate-800">{file.label}</div>
+                        <div className="mt-1 truncate font-mono text-[9px] text-slate-400">{file.filename}</div>
+                      </div>
+                      <Download className="h-3.5 w-3.5 shrink-0 text-slate-400 transition group-hover:text-slate-700" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
 
-            <div className="space-y-3.5">
-              {checklistItems.map(item => {
-                const checked = factoryReviewChecks[item.key] === true;
-                return (
-                  <label key={item.key} className="flex items-start space-x-3 p-2.5 rounded-lg bg-slate-50 border border-slate-200/50 hover:bg-slate-100/30 transition cursor-pointer select-none">
-                    <input 
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => setFactoryReviewCheck(item.key, e.target.checked)}
-                      className="mt-0.5 rounded border-slate-200 bg-white text-emerald-650 focus:ring-emerald-500 focus:ring-offset-white w-3.5 h-3.5"
-                    />
-                    <span className={`text-[10px] tracking-wide font-medium ${checked ? 'text-slate-800 line-through' : 'text-slate-600'}`}>
-                      {item.label}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+            <section className="grid gap-4 lg:grid-cols-2">
+              <div className="border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-semibold text-slate-900">Package evidence</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">These files explain exactly what Hardware Studio can and cannot claim about the current package.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button onClick={handleDownloadReleaseManifest} disabled={!manufacturing.ready} variant="outline" className="h-8 border-slate-300 bg-white text-[11px] text-slate-700 disabled:opacity-40">
+                    <Download className="mr-1.5 h-3.5 w-3.5" /> Release manifest
+                  </Button>
+                  <Button onClick={() => downloadFile(exportHandoffManifestJson(store), 'handoff_manifest.json', 'application/json')} variant="outline" className="h-8 border-slate-300 bg-white text-[11px] text-slate-700">
+                    <Download className="mr-1.5 h-3.5 w-3.5" /> Handoff state
+                  </Button>
+                  <Button onClick={() => downloadFile(generateFactoryReviewReadme(store), 'factory_review_readme.md', 'text/markdown')} variant="outline" className="h-8 border-slate-300 bg-white text-[11px] text-slate-700">
+                    <Download className="mr-1.5 h-3.5 w-3.5" /> Review guide
+                  </Button>
+                </div>
+              </div>
 
-          {/* Guide Card */}
-          <div className="bg-slate-100/50 border border-slate-200 rounded-xl p-5">
-            <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-2">DFM Submission Guidelines</h3>
-            <ul className="list-disc pl-4 space-y-1.5 text-[9px] text-slate-550">
-              <li>Open Gerber layers in independent viewers to inspect trace margins.</li>
-              <li>Coordinate file metric definitions with Excellon drills configurations.</li>
-              <li>Verify Pick-and-Place rotations to match actual tape-and-reel orientation.</li>
-              <li>Verify supplier part availability and pricing prior to fabrications release.</li>
-            </ul>
-          </div>
+              <div className="border border-amber-200 bg-amber-50/70 p-4">
+                <h2 className="text-sm font-semibold text-amber-950">Not native fabrication outputs yet</h2>
+                <p className="mt-1 text-xs leading-5 text-amber-800">Solder mask, paste, silkscreen artwork, authoritative bottom-side footprint mirroring and complete factory ZIP packaging remain explicitly unsupported. They are not shown as normal export actions.</p>
+              </div>
+            </section>
+          </main>
+
+          <aside className="space-y-4 xl:sticky xl:top-5 xl:self-start">
+            <section className="border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">External review</p>
+                  <h2 className="mt-1 text-sm font-semibold text-slate-950">Evidence checklist</h2>
+                </div>
+                {reviewComplete && <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+              </div>
+              <p className="mt-2 text-[11px] leading-5 text-slate-500">Checklist state records review work only. It does not automatically mark the package Verified.</p>
+
+              <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100">
+                {checklistItems.map((item) => {
+                  const checked = factoryReviewChecks[item.key] === true;
+                  return (
+                    <label key={item.key} className="flex cursor-pointer items-start gap-2.5 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(event) => setFactoryReviewCheck(item.key, event.target.checked)}
+                        className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                      />
+                      <span className={`text-[11px] leading-4 ${checked ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{item.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className={`mt-4 border px-3 py-2.5 text-[11px] leading-5 ${reviewComplete ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+                {reviewComplete
+                  ? 'Review checklist complete. Release qualification still requires recorded evidence and the release gate.'
+                  : `${checklistItems.filter((item) => factoryReviewChecks[item.key] !== true).length} review checks remain.`}
+              </div>
+            </section>
+          </aside>
         </div>
       </div>
     </div>
   );
 };
-
-
