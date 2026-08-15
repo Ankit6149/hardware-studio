@@ -40,7 +40,8 @@ export type BoardDesignerUIState = {
 };
 
 export const DEFAULT_VIEW_STATE: BoardDesignerUIState = {
-  activeBoardId: 'board-main',
+  // A board must come from project data or shared studio context. Never invent one.
+  activeBoardId: null,
   activeTool: 'select',
   activeLayerId: 'top-copper',
   selectedComponentId: null,

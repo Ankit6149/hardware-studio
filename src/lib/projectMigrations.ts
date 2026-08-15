@@ -1,8 +1,11 @@
-// projectMigrations.ts — Phase 23 Project Import/Export Correctness and Schema Migrations
+// projectMigrations.ts — Project import/export correctness and schema migrations
 import { Project, BoardComponent } from '../types';
 import { defaultComponents } from './components/componentLibrary';
 
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
+
+const LEGACY_BOARD_SENTINELS = new Set(['board_0', 'board-main']);
+const LEGACY_BLOCK_SENTINELS = new Set(['block_0']);
 
 export function normalizeProjectComponent(bc: Record<string, unknown>): BoardComponent {
   const compId = (bc.id as string) || `cmp_${Date.now()}_${Math.random()}`;
@@ -50,7 +53,11 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
     rotationDeg: (bcPcb?.rotationDeg as number) ?? (bc.rotationDeg as number) ?? 0,
     side: ((bcPcb?.side as string) || (bc.side as string) || 'Top') as 'Top' | 'Bottom',
     locked: (bcPcb?.locked as boolean) ?? (bc.lockedPlacement as boolean) ?? false,
-    placementStatus: ((bcPcb?.placementStatus as BoardComponent['placementStatus']) || (bc.placementStatus as BoardComponent['placementStatus']) || (bc.placementX != null ? 'Placed' : 'Unplaced')),
+    placementStatus: (
+      (bcPcb?.placementStatus as BoardComponent['placementStatus'])
+      || (bc.placementStatus as BoardComponent['placementStatus'])
+      || (bc.placementX != null ? 'Placed' : 'Unplaced')
+    ),
   };
 
   return {
@@ -68,8 +75,10 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
     partNumber: (bc.partNumber as string) || sourceDefinition?.partNumber || '',
     manufacturer: (bc.manufacturer as string) || sourceDefinition?.manufacturer || '',
     pins,
-    boardId: (bc.boardId as string) || 'board_0',
-    circuitBlockId: (bc.circuitBlockId as string) || 'block_0',
+    // Missing relationships remain explicitly unassigned. Runtime editors must
+    // never infer a fake board/circuit-block identity from absence.
+    boardId: (bc.boardId as string) || '',
+    circuitBlockId: (bc.circuitBlockId as string) || undefined,
     bomItemId: (bc.bomItemId as string) || '',
     quantity: Number(bc.quantity) || sourceDefinition?.defaultQuantity || 1,
     schematic,
@@ -85,7 +94,7 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
     placementStatus: pcb.placementStatus,
     supplier: (bc.supplier as string) || '',
     datasheetUrl: (bc.datasheetUrl as string) || sourceDefinition?.datasheetUrl || '',
-    placementCriticality: (bc.placementCriticality as BoardComponent['placementCriticality']) || 'Low'
+    placementCriticality: (bc.placementCriticality as BoardComponent['placementCriticality']) || 'Low',
   };
 }
 
@@ -98,7 +107,7 @@ export function syncLegacyPlacementFields(comp: BoardComponent): BoardComponent 
       rotationDeg: comp.rotationDeg,
       side: comp.side === 'Bottom' ? 'Bottom' : 'Top',
       locked: !!comp.lockedPlacement,
-      placementStatus: (comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced')),
+      placementStatus: comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced'),
     };
   } else {
     comp.pcb.placed = comp.placementX != null;
@@ -107,7 +116,7 @@ export function syncLegacyPlacementFields(comp: BoardComponent): BoardComponent 
     comp.pcb.rotationDeg = comp.rotationDeg;
     comp.pcb.side = comp.side === 'Bottom' ? 'Bottom' : 'Top';
     comp.pcb.locked = !!comp.lockedPlacement;
-    comp.pcb.placementStatus = (comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced'));
+    comp.pcb.placementStatus = comp.placementStatus || (comp.placementX != null ? 'Placed' : 'Unplaced');
   }
   return comp;
 }
@@ -122,6 +131,18 @@ export function syncNestedPcbFields(comp: BoardComponent): BoardComponent {
     comp.placementStatus = comp.pcb.placementStatus;
   }
   return comp;
+}
+
+function resolveLegacyRelation(
+  candidate: string | undefined,
+  validIds: Set<string>,
+  legacySentinels: Set<string>
+): string | undefined {
+  if (!candidate) return undefined;
+  if (validIds.has(candidate)) return candidate;
+  if (!legacySentinels.has(candidate)) return candidate;
+  if (validIds.size !== 1) return undefined;
+  return validIds.values().next().value;
 }
 
 export function migrateProjectSchema(project: unknown): Project {
@@ -158,8 +179,16 @@ export function migrateProjectSchema(project: unknown): Project {
   if (!migrated.firmwareModules) migrated.firmwareModules = [];
   if (!migrated.validationTests) migrated.validationTests = [];
 
+  const boardIds = new Set((migrated.boards || []).map((board) => board.id).filter(Boolean));
+  const blockIds = new Set((migrated.circuitBlocks || []).map((block) => block.id).filter(Boolean));
+
   migrated.boardComponents = (migrated.boardComponents as BoardComponent[]).map((component) => {
-    return normalizeProjectComponent(component as unknown as Record<string, unknown>);
+    const normalized = normalizeProjectComponent(component as unknown as Record<string, unknown>);
+    return {
+      ...normalized,
+      boardId: resolveLegacyRelation(normalized.boardId, boardIds, LEGACY_BOARD_SENTINELS) || '',
+      circuitBlockId: resolveLegacyRelation(normalized.circuitBlockId, blockIds, LEGACY_BLOCK_SENTINELS),
+    };
   });
 
   migrated.schemaVersion = CURRENT_SCHEMA_VERSION;
