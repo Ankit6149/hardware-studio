@@ -2,22 +2,22 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  ArrowRight,
-  Boxes,
   CheckCircle2,
-  CircuitBoard,
+  FileCheck2,
   History,
   Link2,
   Play,
   Plus,
   RotateCcw,
   TestTube2,
+  X,
 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
 import { getValidationRunHistory, runValidationTest } from '../../lib/validationRunner';
 import { useFeedback } from '../feedback/FeedbackProvider';
 import { ValidationStudio } from '../validation/ValidationStudio';
+import { EditorDockButton } from '../editor/EditorDockButton';
 
 interface UnifiedValidationWorkbenchProps {
   initialMode: 'tests' | 'coverage' | 'factory-qa';
@@ -47,29 +47,21 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
     validationRuns = [],
     addValidationTest,
     executeProjectCommand,
-    setActiveView,
     updateProjectState,
     updateValidationTest,
   } = store;
-  const {
-    activeBoardId,
-    activeComponentId,
-    activeNetName,
-    setActiveComponent,
-    beginHandoff,
-  } = useStudioContextStore();
+  const { activeBoardId, activeComponentId, activeNetName } = useStudioContextStore();
+
+  const [runPanelOpen, setRunPanelOpen] = useState(false);
   const [selectedRunTestId, setSelectedRunTestId] = useState('');
   const [measurement, setMeasurement] = useState('');
   const [evidenceLink, setEvidenceLink] = useState('');
   const [operator, setOperator] = useState('');
   const [manualVerdict, setManualVerdict] = useState<'' | 'Pass' | 'Fail' | 'Inconclusive'>('');
 
-  const contextualComponents = useMemo(
-    () => boardComponents.filter((component) => !activeBoardId || component.boardId === activeBoardId),
-    [activeBoardId, boardComponents],
-  );
-  const selectedComponent = boardComponents.find((component) => component.id === activeComponentId)
-    || contextualComponents[0];
+  const selectedComponent = activeComponentId
+    ? boardComponents.find((component) => component.id === activeComponentId)
+    : undefined;
   const selectedNetIds = Array.from(new Set(
     (selectedComponent?.pins || [])
       .map((pin) => pin.netId)
@@ -85,8 +77,20 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
   const latestRun = runHistory[0];
   const automatedRun = isAutomatedValidation(runTest?.category, runTest?.name || runTest?.testName);
 
+  const contextualComponentCount = useMemo(
+    () => boardComponents.filter((component) => !activeBoardId || component.boardId === activeBoardId).length,
+    [activeBoardId, boardComponents],
+  );
+
   const createLinkedTest = () => {
-    if (!selectedComponent) return;
+    if (!selectedComponent) {
+      feedback.notify({
+        tone: 'warning',
+        title: 'Select a component first',
+        detail: 'Choose a canonical component in Electronics or PCB before creating component-linked validation evidence.',
+      });
+      return;
+    }
     executeProjectCommand('ADD_COMPONENT_TEST', `Create validation test for ${selectedComponent.referenceDesignator}`, () =>
       addValidationTest({
         name: `${selectedComponent.referenceDesignator} ${selectedComponent.componentName} validation`,
@@ -113,6 +117,7 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
         evidence: [],
       })
     );
+    feedback.notify({ tone: 'success', title: 'Linked test created', detail: `Validation now references ${selectedComponent.referenceDesignator} by canonical component ID.` });
   };
 
   const recordRun = () => {
@@ -129,6 +134,7 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
       return;
     }
 
+    const previousRunCount = runHistory.length;
     const { run, updatedRuns } = runValidationTest(store, runTest.id, {
       measuredValue: measurement.trim() || undefined,
       evidenceLink: evidenceLink.trim() || undefined,
@@ -140,7 +146,7 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
     feedback.notify({
       tone: run.status === 'Fail' || run.status === 'Failed' ? 'error' : run.status === 'Pass' || run.status === 'Passed' ? 'success' : 'warning',
       title: `${run.testName || runTest.name} · run #${run.runNumber || 1}`,
-      detail: runHistory.length > 0
+      detail: previousRunCount > 0
         ? `${run.status}. Retest recorded without replacing the previous run.`
         : `${run.status}. First immutable run record captured.`,
     });
@@ -149,103 +155,76 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
     setManualVerdict('');
   };
 
-  const navigate = (viewId: string) => {
-    beginHandoff('validation-studio', 'validation-studio');
-    setActiveView(viewId);
-  };
-
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-50" aria-label="Context-aware validation workbench">
-      <header className="shrink-0 border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-slate-300 bg-white px-3 py-1.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <TestTube2 className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <TestTube2 className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-indigo-700">Validation · evidence, runs, retests</p>
-            </div>
-            {selectedComponent ? (
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                <strong className="text-slate-950">{selectedComponent.referenceDesignator} · {selectedComponent.componentName}</strong>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">{linkedTests.length} linked test{linkedTests.length === 1 ? '' : 's'}</span>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">{selectedNetIds.length} linked net{selectedNetIds.length === 1 ? '' : 's'}</span>
-                {activeNetName && <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-sky-800">Active net: {activeNetName}</span>}
-              </div>
-            ) : (
-              <p className="mt-1 text-xs text-slate-500">No component is selected. Requirement, system, and factory tests remain available in the main workspace.</p>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => navigate('component-library')} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100"><Boxes className="h-3.5 w-3.5" /> Components</button>
-            <button type="button" onClick={() => navigate('board-designer')} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100"><CircuitBoard className="h-3.5 w-3.5" /> PCB</button>
-            <button type="button" onClick={createLinkedTest} disabled={!selectedComponent} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 text-[10px] font-bold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-3.5 w-3.5" /> Create linked test</button>
+            <p className="truncate text-[11px] font-semibold text-slate-900">
+              {initialMode === 'tests' ? 'Validation tests' : initialMode === 'coverage' ? 'Requirement coverage' : 'Factory QA'}
+            </p>
+            <p className="truncate text-[9px] text-slate-500">
+              {selectedComponent
+                ? `${selectedComponent.referenceDesignator} · ${selectedComponent.componentName} · ${linkedTests.length} linked tests · ${selectedNetIds.length} nets`
+                : `${validationTests.length} tests · ${validationRuns.length} immutable runs · ${contextualComponentCount} components in current board context`}
+              {activeNetName ? ` · active net ${activeNetName}` : ''}
+            </p>
           </div>
         </div>
 
-        <div className="mt-3 grid gap-2 xl:grid-cols-[minmax(220px,1.25fr)_minmax(140px,.8fr)_minmax(140px,.8fr)_minmax(160px,.8fr)_auto]">
-          <label className="min-w-0">
-            <span className="sr-only">Validation test to run</span>
-            <select value={runTest?.id || ''} onChange={(event) => setSelectedRunTestId(event.target.value)} className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500">
-              {validationTests.length === 0 && <option value="">No validation tests</option>}
-              {validationTests.map((test) => <option key={test.id} value={test.id}>{test.name} · {test.category || 'Manual'}</option>)}
-            </select>
-          </label>
-          <input value={measurement} onChange={(event) => setMeasurement(event.target.value)} placeholder={automatedRun ? 'Optional override/reading' : 'Measurement / observation'} className="h-9 rounded-lg border border-slate-300 bg-white px-2.5 text-xs outline-none focus:border-indigo-500" />
-          {automatedRun ? (
-            <div className="flex h-9 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-[10px] font-semibold text-emerald-800">Engine derives verdict</div>
-          ) : (
-            <select value={manualVerdict} onChange={(event) => setManualVerdict(event.target.value as typeof manualVerdict)} className="h-9 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold outline-none focus:border-indigo-500">
-              <option value="">Choose verdict…</option>
-              <option value="Pass">Pass</option>
-              <option value="Fail">Fail</option>
-              <option value="Inconclusive">Inconclusive</option>
-            </select>
+        <div className="ml-auto flex items-center gap-1.5">
+          {initialMode === 'tests' && (
+            <button type="button" onClick={createLinkedTest} className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400">
+              <Plus className="h-3.5 w-3.5" /> Linked test
+            </button>
           )}
-          <input value={evidenceLink} onChange={(event) => setEvidenceLink(event.target.value)} placeholder="Evidence link / file reference" className="h-9 rounded-lg border border-slate-300 bg-white px-2.5 text-xs outline-none focus:border-indigo-500" />
-          <button type="button" onClick={recordRun} disabled={!runTest} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">
-            {runHistory.length > 0 ? <RotateCcw className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-            {runHistory.length > 0 ? 'Record retest' : 'Record run'}
-          </button>
+          <EditorDockButton label="Run evidence" icon={FileCheck2} active={runPanelOpen} count={runHistory.length} onClick={() => setRunPanelOpen((value) => !value)} />
         </div>
-        <div className="mt-2 grid gap-2 md:grid-cols-[minmax(180px,.8fr)_minmax(0,1.8fr)]">
-          <input value={operator} onChange={(event) => setOperator(event.target.value)} placeholder="Operator / reviewer (recommended)" className="h-8 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[10px] outline-none focus:border-indigo-500" />
-          <div className="flex min-w-0 items-center gap-2 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[10px] text-slate-600">
-            <History className="h-3.5 w-3.5 shrink-0" />
-            {latestRun ? (
-              <span className="truncate"><strong className="text-slate-900">Latest:</strong> run #{latestRun.runNumber || 1} · {latestRun.status} · {latestRun.timestamp || 'time not recorded'} · {runHistory.length - 1} prior run{runHistory.length - 1 === 1 ? '' : 's'} preserved</span>
-            ) : (
-              <span>No run evidence yet. Test definitions and checkbox completion alone do not prove validation.</span>
-            )}
-          </div>
-        </div>
-
-        {selectedComponent && linkedTests.length > 0 && (
-          <div className="mt-2 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-[10px] leading-5 text-emerald-900">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <div className="min-w-0"><strong>Linked validation:</strong> {linkedTests.map((test) => `${test.name} (${test.status})`).join(' · ')}</div>
-          </div>
-        )}
-
-        {selectedComponent && linkedTests.length === 0 && (
-          <div className="mt-2 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-[10px] leading-5 text-amber-900">
-            <Link2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <p>This component has no validation definition yet. Create one here; it stores the same component ID and current net IDs rather than a copied label.</p>
-          </div>
-        )}
       </header>
 
-      <div className="min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         <ValidationStudio initialMode={initialMode} />
-      </div>
 
-      <footer className="flex shrink-0 items-center justify-between border-t border-slate-200 bg-white px-4 py-1.5 text-[9px] text-slate-500">
-        <span>Run history is append-only; retests add evidence instead of overwriting prior outcomes.</span>
-        {selectedComponent && (
-          <button type="button" onClick={() => setActiveComponent(selectedComponent.id)} className="inline-flex items-center gap-1 font-semibold text-indigo-700 hover:text-indigo-900">
-            Keep {selectedComponent.referenceDesignator} selected <ArrowRight className="h-3 w-3" />
-          </button>
+        {runPanelOpen && (
+          <aside className="absolute bottom-3 right-3 top-3 z-40 flex w-[min(360px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-lg border border-slate-300 bg-white shadow-xl" aria-label="Validation run evidence">
+            <div className="flex items-start justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div><p className="text-[11px] font-semibold text-slate-900">Record run evidence</p><p className="mt-0.5 text-[9px] leading-4 text-slate-500">Runs are append-only. Manual measurements never imply Pass without an explicit verdict.</p></div>
+              <button type="button" onClick={() => setRunPanelOpen(false)} className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-slate-500 hover:bg-slate-200" aria-label="Close run evidence"><X className="h-3.5 w-3.5" /></button>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+              <label className="block"><span className="text-[9px] font-semibold text-slate-500">Test</span><select value={runTest?.id || ''} onChange={(event) => setSelectedRunTestId(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-800 outline-none focus:border-slate-500">{validationTests.length === 0 && <option value="">No validation tests</option>}{validationTests.map((test) => <option key={test.id} value={test.id}>{test.name} · {test.category || 'Manual'}</option>)}</select></label>
+
+              <label className="block"><span className="text-[9px] font-semibold text-slate-500">Measurement / observation</span><textarea value={measurement} onChange={(event) => setMeasurement(event.target.value)} placeholder={automatedRun ? 'Optional reading or observation' : 'Record the observed result'} className="mt-1 min-h-20 w-full resize-y rounded-md border border-slate-300 bg-white p-2.5 text-[10px] leading-5 outline-none focus:border-slate-500" /></label>
+
+              {automatedRun ? (
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2.5 text-[10px] font-semibold text-emerald-800">The validation engine derives this verdict from recorded project state.</div>
+              ) : (
+                <label className="block"><span className="text-[9px] font-semibold text-slate-500">Manual verdict</span><select value={manualVerdict} onChange={(event) => setManualVerdict(event.target.value as typeof manualVerdict)} className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] font-semibold outline-none focus:border-slate-500"><option value="">Choose verdict…</option><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="Inconclusive">Inconclusive</option></select></label>
+              )}
+
+              <label className="block"><span className="text-[9px] font-semibold text-slate-500">Evidence reference</span><input value={evidenceLink} onChange={(event) => setEvidenceLink(event.target.value)} placeholder="File, URL, log, image, or lab reference" className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] outline-none focus:border-slate-500" /></label>
+              <label className="block"><span className="text-[9px] font-semibold text-slate-500">Operator / reviewer</span><input value={operator} onChange={(event) => setOperator(event.target.value)} placeholder="Name or role" className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] outline-none focus:border-slate-500" /></label>
+
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-2.5">
+                <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700"><History className="h-3.5 w-3.5" /> Run history</div>
+                {latestRun ? <p className="mt-1 text-[9px] leading-4 text-slate-500"><strong className="text-slate-700">Latest:</strong> run #{latestRun.runNumber || 1} · {latestRun.status} · {latestRun.timestamp || 'time not recorded'} · {Math.max(0, runHistory.length - 1)} prior preserved</p> : <p className="mt-1 text-[9px] leading-4 text-slate-500">No immutable run evidence yet.</p>}
+              </div>
+
+              {selectedComponent && linkedTests.length > 0 && <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-2.5 text-[9px] leading-4 text-emerald-900"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span><strong>Linked:</strong> {linkedTests.map((test) => `${test.name} (${test.status})`).join(' · ')}</span></div>}
+              {selectedComponent && linkedTests.length === 0 && <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-[9px] leading-4 text-amber-900"><Link2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>This selected component has no linked validation definition yet.</span></div>}
+            </div>
+
+            <div className="border-t border-slate-200 bg-slate-50 p-3">
+              <button type="button" onClick={recordRun} disabled={!runTest} className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-md bg-slate-950 px-3 text-[10px] font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">
+                {runHistory.length > 0 ? <RotateCcw className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                {runHistory.length > 0 ? 'Record retest' : 'Record run'}
+              </button>
+            </div>
+          </aside>
         )}
-      </footer>
+      </div>
     </section>
   );
 };
