@@ -52,11 +52,13 @@ describe('shared cross-workbench engineering context', () => {
 });
 
 describe('golden-path regression guards', () => {
-  it('does not send an empty PCB editor to the removed dashboard generator', () => {
+  it('does not send an empty PCB editor to the removed dashboard generator or manufacture starter geometry', () => {
     const boardDesigner = source('../components/board/BoardDesigner.tsx');
     expect(boardDesigner).not.toContain('Generate a Full Product Plan from the Project Dashboard');
     expect(boardDesigner).not.toContain('Go to Dashboard');
-    expect(boardDesigner).toContain('Create starter board');
+    expect(boardDesigner).not.toContain('Create starter board');
+    expect(boardDesigner).not.toContain("dimensionsMm: '50 x 30'");
+    expect(boardDesigner).toContain('Define or select a real board before PCB layout');
     expect(boardDesigner).toContain("setActiveView('board-settings')");
     expect(boardDesigner).toContain("setActiveView('component-library')");
     expect(boardDesigner).toContain("setActiveView('schematic-editor')");
