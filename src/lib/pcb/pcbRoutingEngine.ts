@@ -1,4 +1,4 @@
-// pcbRoutingEngine.ts — Production PCB Routing Engine
+// pcbRoutingEngine.ts — PCB routing anchors and connectivity
 import { BoardComponent, Trace, Via, PadNetAssignment, Project } from '../../types';
 import { getComponentPads, getNearestPad } from '../../components/board/boardGeometry';
 
@@ -45,8 +45,6 @@ export function resolvePCBAnchor(
 ): PCBAnchor | null {
   if (!activeBoardId) return null;
 
-  // 1. Check pads on the active board. Unassigned entities do not silently
-  // become members of a synthetic board.
   const activeComps = (boardComponents || []).filter((component) => component.boardId === activeBoardId);
   const allPads = activeComps.flatMap((component) => {
     if (component.placementX == null || component.placementY == null) return [];
@@ -74,7 +72,6 @@ export function resolvePCBAnchor(
     };
   }
 
-  // 2. Check vias on the active board.
   const activeVias = (vias || []).filter((via) => via.boardId === activeBoardId);
   for (const via of activeVias) {
     if (via.x != null && via.y != null) {
@@ -85,14 +82,16 @@ export function resolvePCBAnchor(
           viaId: via.id,
           xMm: via.x,
           yMm: via.y,
-          netName: via.netId || '',
+          // netId is identity, not a display/connectivity name. Prefer the
+          // persisted canonical netName so pad → via → trace routing compares
+          // like with like.
+          netName: via.netName || via.netId || '',
           layer: layerId,
         };
       }
     }
   }
 
-  // 3. Check trace endpoints on the active board.
   const activeTraces = (traces || []).filter(
     (trace) => trace.boardId === activeBoardId && (trace.layerId || 'top-copper') === layerId
   );
@@ -101,6 +100,7 @@ export function resolvePCBAnchor(
     if (points.length >= 2) {
       const startPoint = points[0];
       const endPoint = points[points.length - 1];
+      const canonicalNetName = trace.netName || trace.netId || '';
 
       const startDist = Math.hypot(point.x - startPoint.x, point.y - startPoint.y);
       if (startDist <= (trace.width || 0.25) / 2 + toleranceMm) {
@@ -110,7 +110,7 @@ export function resolvePCBAnchor(
           endpoint: 'start',
           xMm: startPoint.x,
           yMm: startPoint.y,
-          netName: trace.netId || '',
+          netName: canonicalNetName,
           layer: trace.layerId || 'top-copper',
         };
       }
@@ -123,7 +123,7 @@ export function resolvePCBAnchor(
           endpoint: 'end',
           xMm: endPoint.x,
           yMm: endPoint.y,
-          netName: trace.netId || '',
+          netName: canonicalNetName,
           layer: trace.layerId || 'top-copper',
         };
       }
@@ -133,66 +133,39 @@ export function resolvePCBAnchor(
   return null;
 }
 
-/** Validate whether a route can start from an anchor. */
 export function validateRouteStartAnchor(
   anchor: PCBAnchor | null,
   requestedNetName?: string
 ): ValidationResult {
   if (!anchor) {
-    return {
-      valid: false,
-      error: 'Cannot start route in empty space. Click on a pad, via, or trace endpoint.',
-    };
+    return { valid: false, error: 'Cannot start route in empty space. Click on a pad, via, or trace endpoint.' };
   }
-
   const anchorNet = anchor.netName;
   if (!anchorNet) {
-    return {
-      valid: false,
-      error: `Selected anchor (${anchor.type}) is not assigned to any net.`,
-    };
+    return { valid: false, error: `Selected anchor (${anchor.type}) is not assigned to any net.` };
   }
-
   if (requestedNetName && anchorNet !== requestedNetName) {
-    return {
-      valid: false,
-      error: `Net mismatch: Anchor belongs to net '${anchorNet}', but selected net is '${requestedNetName}'.`,
-    };
+    return { valid: false, error: `Net mismatch: Anchor belongs to net '${anchorNet}', but selected net is '${requestedNetName}'.` };
   }
-
   return { valid: true, targetAnchor: anchor };
 }
 
-/** Validate whether a route can finish at a target anchor. */
 export function validateRouteFinishAnchor(
   startNetName: string,
   targetAnchor: PCBAnchor | null
 ): ValidationResult {
   if (!targetAnchor) {
-    return {
-      valid: false,
-      error: 'Normal routing cannot finish in empty space. Use "Finish as Dangling Draft" to place a draft trace.',
-    };
+    return { valid: false, error: 'Normal routing cannot finish in empty space. Continue the route or finish on a pad, via, or trace endpoint.' };
   }
-
   if (!targetAnchor.netName) {
-    return {
-      valid: false,
-      error: `Target ${targetAnchor.type} is unassigned.`,
-    };
+    return { valid: false, error: `Target ${targetAnchor.type} is unassigned.` };
   }
-
   if (targetAnchor.netName !== startNetName) {
-    return {
-      valid: false,
-      error: `Wrong Net Connection Rejected! Target belongs to net '${targetAnchor.netName}', but active route is '${startNetName}'.`,
-    };
+    return { valid: false, error: `Wrong net connection rejected. Target belongs to '${targetAnchor.netName}', but the active route is '${startNetName}'.` };
   }
-
   return { valid: true, targetAnchor };
 }
 
-/** Begin a routing session from an anchor. */
 export function beginRouteFromAnchor(
   anchor: PCBAnchor,
   boardId: string,
@@ -208,7 +181,6 @@ export function beginRouteFromAnchor(
   };
 }
 
-/** Compute net connectivity graph for one real board. */
 export function computeNetConnectivity(project: Project, boardId: string): Record<string, boolean> {
   if (!boardId) return {};
 
@@ -216,7 +188,6 @@ export function computeNetConnectivity(project: Project, boardId: string): Recor
   const boardTraces = (project.traces || []).filter((trace) => trace.boardId === boardId);
   const padAssignments = project.padNetAssignments || [];
   const nets = project.nets || [];
-
   const connectivityMap: Record<string, boolean> = {};
 
   for (const net of nets) {
@@ -240,7 +211,7 @@ export function computeNetConnectivity(project: Project, boardId: string): Recor
       continue;
     }
 
-    const netTraces = boardTraces.filter((trace) => trace.netId === netName || trace.netName === netName);
+    const netTraces = boardTraces.filter((trace) => trace.netName === netName || trace.netId === net.id);
     if (netTraces.length === 0) {
       connectivityMap[netName] = false;
       continue;
