@@ -48,7 +48,13 @@ function loadManufacturableProject() {
     traces: [],
     vias: [],
     drillHoles: [],
-    boardOutlines: [],
+    boardOutlines: [{
+      id: 'outline_mfg',
+      boardId: 'board_mfg',
+      width: 50,
+      height: 40,
+      units: 'mm',
+    }],
     blueprintPackStatus: 'Current',
   });
 }
