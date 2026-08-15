@@ -32,7 +32,6 @@ export interface ValidationResult {
   targetAnchor?: PCBAnchor;
 }
 
-/** Resolve an anchor at given coordinates for one real board. */
 export function resolvePCBAnchor(
   point: { x: number; y: number },
   boardComponents: BoardComponent[],
@@ -82,9 +81,6 @@ export function resolvePCBAnchor(
           viaId: via.id,
           xMm: via.x,
           yMm: via.y,
-          // netId is identity, not a display/connectivity name. Prefer the
-          // persisted canonical netName so pad → via → trace routing compares
-          // like with like.
           netName: via.netName || via.netId || '',
           layer: layerId,
         };
@@ -161,7 +157,7 @@ export function validateRouteFinishAnchor(
     return { valid: false, error: `Target ${targetAnchor.type} is unassigned.` };
   }
   if (targetAnchor.netName !== startNetName) {
-    return { valid: false, error: `Wrong net connection rejected. Target belongs to '${targetAnchor.netName}', but the active route is '${startNetName}'.` };
+    return { valid: false, error: `Wrong Net Connection Rejected. Target belongs to '${targetAnchor.netName}', but the active route is '${startNetName}'.` };
   }
   return { valid: true, targetAnchor };
 }
