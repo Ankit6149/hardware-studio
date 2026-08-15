@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { HardwareStudioMCPServer } from '../../packages/mcp-server/mcpServer';
 import { createStdioMCPServer } from '../../packages/mcp-server/mcpServerStdio';
 import { useProjectStore } from '../store/projectStore';
@@ -8,93 +8,56 @@ describe('Slice 8 MCP Live Project Integration & Stdio Server', () => {
     useProjectStore.getState().resetProject();
   });
 
-  it('should initialize MCP server with live project context', () => {
+  it('initializes MCP server with live project context', () => {
     const liveProject = useProjectStore.getState();
     const mcpServer = new HardwareStudioMCPServer(liveProject);
 
-    const summaryRes = mcpServer.callTool('get_product_summary');
-    expect(summaryRes.success).toBe(true);
-    expect(summaryRes.data.projectName).toBe(liveProject.projectName);
-    expect(summaryRes.data.componentsCount).toBe((liveProject.boardComponents || []).length);
+    const summary = mcpServer.callTool('get_product_summary');
+    expect(summary.success).toBe(true);
+    expect(summary.data.projectName).toBe(liveProject.projectName);
+    expect(summary.data.componentsCount).toBe((liveProject.boardComponents || []).length);
   });
 
-  it('should create reversible draft proposal without mutating live state until applied', () => {
+  it('keeps draft requirements reversible until the host records human approval', () => {
     const liveProject = useProjectStore.getState();
     const mcpServer = new HardwareStudioMCPServer(liveProject);
+    const initialRequirementCount = (liveProject.requirements || []).length;
 
-    const initialCompCount = (liveProject.boardComponents || []).length;
-
-    // 1. Create draft proposal
-    const draftRes = mcpServer.callTool('draft_requirement', {
+    const draft = mcpServer.callTool('draft_requirement', {
       title: 'IP67 Waterproof Enclosure Requirement',
-      description: 'Must withstand 1m submersion for 30 minutes',
-      priority: 'High'
+      description: 'Must withstand the approved ingress test procedure.',
+      priority: 'High',
     });
+    expect(draft.success).toBe(true);
+    const proposalId = draft.data.proposalId as string;
+    expect(mcpServer.getProject().requirements || []).toHaveLength(initialRequirementCount);
 
-    expect(draftRes.success).toBe(true);
-    const proposalId = draftRes.data.proposalId;
-    expect(proposalId).toBeDefined();
+    const blockedApply = mcpServer.callTool('apply_draft', { proposalId, userApproved: true });
+    expect(blockedApply.success).toBe(false);
 
-    // Verify live state has pending proposal record
-    const proposals = mcpServer.getProject().mcpProposals || [];
-    expect(proposals.length).toBe(1);
-    expect(proposals[0].status).toBe('Pending');
-
-    // 2. Apply draft proposal
-    const applyRes = mcpServer.callTool('apply_draft', { proposalId });
-    expect(applyRes.success).toBe(true);
-    expect(applyRes.data.status).toBe('Applied');
-
-    const updatedProposals = mcpServer.getProject().mcpProposals || [];
-    expect(updatedProposals[0].status).toBe('Applied');
+    expect(mcpServer.approveProposal(proposalId, 'Local reviewer').success).toBe(true);
+    const applied = mcpServer.callTool('apply_draft', { proposalId });
+    expect(applied.success).toBe(true);
+    expect(applied.data.status).toBe('Applied');
+    expect((mcpServer.getProject().requirements || []).length).toBe(initialRequirementCount + 1);
   });
 
-  it('should require explicit user approval for high-impact delete_component tool', () => {
+  it('disables direct destructive MCP mutation even when the agent supplies userApproved', () => {
     const liveProject = useProjectStore.getState();
-    liveProject.boardComponents = [
-      {
-        id: 'comp_temp_c1',
-        boardId: 'board_main',
-        referenceDesignator: 'C1',
-        componentName: '100nF Capacitor',
-        componentType: 'Capacitor',
-        footprint: '0603',
-        packageName: '0603',
-        placementCriticality: 'Medium',
-        partNumber: 'CAP_100NF',
-        quantity: 1,
-        value: '100nF',
-        notes: ''
-      }
-    ];
-
     const mcpServer = new HardwareStudioMCPServer(liveProject);
-
-    // 1. Delete without user approval -> Rejected
-    const noApprovalRes = mcpServer.callTool('delete_component', {
+    const response = mcpServer.callTool('delete_component', {
       componentId: 'comp_temp_c1',
-      userApproved: false
+      userApproved: true,
     });
 
-    expect(noApprovalRes.success).toBe(false);
-    expect(noApprovalRes.error).toContain('requires user approval');
-
-    // 2. Delete with user approval -> Success
-    const approvedRes = mcpServer.callTool('delete_component', {
-      componentId: 'comp_temp_c1',
-      userApproved: true
-    });
-
-    expect(approvedRes.success).toBe(true);
-    expect(approvedRes.data.status).toBe('Deleted');
-
-    const remaining = mcpServer.getProject().boardComponents || [];
-    expect(remaining.length).toBe(0);
+    expect(response.success).toBe(false);
+    expect(response.error).toContain('Direct component deletion through MCP is disabled');
   });
 
-  it('should instantiate stdio MCP server cleanly', () => {
+  it('instantiates the stdio MCP server cleanly with the hardened core', () => {
     const stdioApp = createStdioMCPServer();
     expect(stdioApp.server).toBeDefined();
     expect(stdioApp.mcpCore).toBeDefined();
+    expect(stdioApp.mcpCore.getResource('hardware-studio://changes')).not.toHaveProperty('error');
   });
 });
