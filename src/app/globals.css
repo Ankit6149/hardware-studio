@@ -38,12 +38,13 @@
   --color-sky-900: #292622;
   --color-sky-950: #171614;
 
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.625rem;
-  --radius-2xl: 0.75rem;
-  --radius-3xl: 0.875rem;
+  /* Brand rule: application surfaces are sharp and architectural. */
+  --radius-sm: 0rem;
+  --radius-md: 0rem;
+  --radius-lg: 0rem;
+  --radius-xl: 0rem;
+  --radius-2xl: 0rem;
+  --radius-3xl: 0rem;
 }
 
 :root {
@@ -130,20 +131,9 @@ textarea {
   box-shadow: 0 10px 32px rgba(17, 17, 15, 0.08);
 }
 
-.hs-app .rounded-2xl {
-  border-radius: 0.75rem;
-}
-
-.hs-app .rounded-xl {
-  border-radius: 0.625rem;
-}
-
-.hs-app .rounded-lg {
-  border-radius: 0.5rem;
-}
-
+/* Pills are labels, not decorative bubbles. True circles (pads, vias, status dots) keep rounded-full. */
 .hs-app span.rounded-full[class*="px-"] {
-  border-radius: 0.45rem;
+  border-radius: 0 !important;
 }
 
 .hs-app [class~="text-[7px]"],
@@ -218,7 +208,7 @@ textarea {
 ::-webkit-scrollbar-thumb {
   background: #b9b1a3;
   border: 2px solid #ebe7de;
-  border-radius: 999px;
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -283,7 +273,7 @@ textarea {
 .react-flow__minimap {
   background-color: #fbfaf6 !important;
   border: 1px solid #ddd7cb !important;
-  border-radius: 6px !important;
+  border-radius: 0 !important;
   overflow: hidden;
 }
 
