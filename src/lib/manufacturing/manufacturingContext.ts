@@ -5,6 +5,7 @@ export type ManufacturingBlockerCode =
   | 'NO_BOARD'
   | 'STALE_ACTIVE_BOARD'
   | 'AMBIGUOUS_BOARD'
+  | 'MULTI_BOARD_EXPORT_UNSUPPORTED'
   | 'MISSING_BOARD_GEOMETRY'
   | 'UNASSIGNED_COMPONENT'
   | 'UNPLACED_COMPONENT'
@@ -139,6 +140,18 @@ export function evaluateManufacturingContext(project: Project): ManufacturingCon
 
   const board = boardResolution.board;
   const boardId = board.id;
+
+  // The current legacy serializers still contain cross-board/global assumptions.
+  // Until those are replaced, a multi-board project must fail closed rather than
+  // silently package geometry/components from the wrong board.
+  if ((project.boards || []).length > 1) {
+    blockers.push({
+      code: 'MULTI_BOARD_EXPORT_UNSUPPORTED',
+      objectId: boardId,
+      message: 'Manufacturing package generation is blocked for multi-board projects until every serializer is board-isolated.',
+    });
+  }
+
   const dimensions = parseBoardDimensionsMm(board.dimensionsMm);
   const outline = (project.boardOutlines || []).find(
     (candidate) => candidate.boardId === boardId && isUsableOutline(candidate),
