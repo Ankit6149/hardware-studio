@@ -7,29 +7,29 @@ import { HardwareStudioMCPServer } from '../../packages/mcp-server/mcpServer';
 import { createNamedRevision, createBranch, createReleaseCandidate, approveRelease } from '../lib/releaseEngine';
 import { exportBlueprintSheetsJson } from '../lib/exportBlueprintSheets';
 import { generateReleasePackageManifest } from '../lib/nativeExports';
+import { evaluateManufacturingContext } from '../lib/manufacturing/manufacturingContext';
 
-describe('Hardware Studio V1 Full Integration & Readiness Suite (20 Acceptance Gates)', () => {
-  it('should execute complete connected product-development workflow across all 20 vertical gates', () => {
+describe('Hardware Studio broad integration smoke suite', () => {
+  it('keeps connected product-development foundations consistent without overriding V1 truth gates', () => {
     const store = useProjectStore.getState();
 
-    // Gate 1: Canonical Serialization & Domain Persistence
+    // Canonical serialization & domain persistence
     const cleanState = store.exportProjectJSON();
     expect(cleanState).toContain('projectName');
 
-    // Gate 2: Pointer Command Lifecycle & Undo/Redo
+    // Pointer command lifecycle & undo/redo
     store.beginCommand('TEST_COMMAND', 'Integration drag test');
     store.updateTransientPreview({ description: 'Preview description' });
     store.commitCommand();
     expect(useProjectStore.getState().pastCommands?.length).toBeGreaterThan(0);
     store.undoProjectCommand();
 
-    // Gate 3: Schematic Structured Wire Anchors
+    // Schematic structured wire anchors
     const wireRes = store.connectComponentPins('comp_mcu', '1', 'comp_sensor', '1', 'I2C_SDA');
     expect(wireRes.wire.sourceAnchor).toBeDefined();
     expect(wireRes.wire.sourceAnchor?.type).toBe('pin');
 
-    // Gate 4 & 5: Active-Board PCB Isolation & Routing Rules.
-    // Establish a real board explicitly; the product no longer invents board-main.
+    // Active-board PCB isolation & routing foundations.
     const current = useProjectStore.getState();
     const existingBoard = (current.boards || []).find(board => board.id === current.activeBoardId)
       || (current.boards || [])[0];
@@ -54,7 +54,7 @@ describe('Hardware Studio V1 Full Integration & Readiness Suite (20 Acceptance G
     const vias = (pcbState.vias || []).filter(via => via.boardId === board.id);
     expect(vias.length).toBeGreaterThan(0);
 
-    // Gate 6 & 7: Mechanical 2D & Lightweight Constraints
+    // Mechanical 2D & lightweight constraints
     store.addMechanicalObject({
       name: 'Main Shell',
       type: 'Outer Profile',
@@ -69,21 +69,21 @@ describe('Hardware Studio V1 Full Integration & Readiness Suite (20 Acceptance G
     });
     expect(useProjectStore.getState().mechanicalObjects?.length).toBeGreaterThan(0);
 
-    // Gate 8 & 9: WebGL 3D Mesh Sync & Real Collision Engine
+    // WebGL/geometry collision foundation
     const collisions = checkMechanicalInterference(useProjectStore.getState());
     expect(collisions.hasCollision).toBeDefined();
 
-    // Gate 10: Firmware Source Workspace
+    // Firmware workspace foundation
     expect(useProjectStore.getState().firmwareSourceFiles).toBeDefined();
 
-    // Gate 11: Secure Local Bridge
+    // Secure local bridge configuration foundation
     expect(process.env.BRIDGE_PORT || 4040).toBeDefined();
 
-    // Gate 12: Real Validation Run Engine
+    // Validation run foundation
     const valResult = runValidationTest(useProjectStore.getState(), 'val_test_integration');
     expect(valResult.run.status).toBeDefined();
 
-    // Gate 13 & 14: Revisions, Branches & Immutable Release Protection
+    // Revisions, branches & release helper foundation
     const initialRev = createNamedRevision(useProjectStore.getState(), 'v1.0-rc', 'RC Snapshot', 'main');
     const branch = createBranch(initialRev, 'patch-1');
     expect(branch.branchName).toBe('patch-1');
@@ -92,7 +92,7 @@ describe('Hardware Studio V1 Full Integration & Readiness Suite (20 Acceptance G
     const rel = approveRelease(rc, 'Principal Engineer');
     expect(rel.status).toBe('Released');
 
-    // Gate 15 & 16: MCP Live Server, Proposals & Audit Records
+    // MCP server, proposals & audit foundations
     const mcpServer = new HardwareStudioMCPServer(useProjectStore.getState());
     const mcpSummary = mcpServer.callTool('get_project_summary');
     expect(mcpSummary.success).toBe(true);
@@ -107,22 +107,30 @@ describe('Hardware Studio V1 Full Integration & Readiness Suite (20 Acceptance G
     const applyRes = mcpServer.callTool('apply_engineering_change', { proposalId: proposalRes.data.proposalId });
     expect(applyRes.success).toBe(true);
 
-    // Gate 17: Multi-Sheet Blueprint Pack Generation & Stale Tracking
+    // Blueprint generation & stale tracking
     const bpJson = exportBlueprintSheetsJson(useProjectStore.getState());
     expect(bpJson).toContain('Blueprint Drawing Compiler');
     store.markDerivedArtifactsStale('Integration test trigger');
     expect(useProjectStore.getState().blueprintPackStatus).toBe('Stale');
 
-    // Gate 18: Manufacturing Outputs & SHA-256 Release Manifest
-    const manifestJson = generateReleasePackageManifest(useProjectStore.getState());
-    expect(manifestJson).toContain('"sha256": "');
+    // Manufacturing is now a truth gate, not a file-exists gate.
+    // This broad fixture intentionally contains multiple boards/copper shapes, so
+    // release-manifest generation must stay blocked rather than synthesize output.
+    const manufacturing = evaluateManufacturingContext(useProjectStore.getState());
+    if (manufacturing.ready) {
+      const manifestJson = generateReleasePackageManifest(useProjectStore.getState());
+      expect(manifestJson).toContain('"sha256": "');
+    } else {
+      expect(manufacturing.blockers.length).toBeGreaterThan(0);
+      expect(() => generateReleasePackageManifest(useProjectStore.getState())).toThrow();
+    }
 
-    // Gate 19: Readiness Engine Overall Score
+    // Readiness engine remains informational and must expose blockers.
     const report = calculateReadinessScore(useProjectStore.getState());
     expect(report.overallScore).toBeGreaterThanOrEqual(0);
     expect(Array.isArray(report.blockers)).toBe(true);
 
-    // Gate 20: Full System Clean Integration Verification
+    // Smoke-suite identity check
     expect(useProjectStore.getState().id).toBeDefined();
   });
 });
