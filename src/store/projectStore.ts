@@ -508,6 +508,14 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     })).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   };
 
+  const resolveTargetBoard = (state: Pick<ProjectState, 'boards' | 'activeBoardId'>): BoardItem | undefined => {
+    const boards = state.boards || [];
+    if (state.activeBoardId) {
+      return boards.find(board => board.id === state.activeBoardId);
+    }
+    return boards.length === 1 ? boards[0] : undefined;
+  };
+
   const getCleanProjectData = (state: ProjectState): Project => {
     return {
       id: state.id,
@@ -560,7 +568,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       customComponentLibrary: state.customComponentLibrary || [],
       blueprintPack: state.blueprintPack || undefined,
       blueprintPackStatus: state.blueprintPackStatus || 'Stale',
-      activeBoardId: state.activeBoardId || 'board-main',
+      activeBoardId: state.activeBoardId || '',
       requirements: state.requirements || [],
       architectureNodes: state.architectureNodes || [],
       architectureConnections: state.architectureConnections || [],
@@ -580,7 +588,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       releaseCandidates: state.releaseCandidates || [],
       releases: state.releases || [],
       activeBranch: state.activeBranch || 'main',
-mcpProposals: state.mcpProposals || [],
+      mcpProposals: state.mcpProposals || [],
       mcpAuditRecords: state.mcpAuditRecords || []
     };
   };
@@ -637,7 +645,7 @@ mcpProposals: state.mcpProposals || [],
     customComponentLibrary: initialProject.customComponentLibrary || [],
     blueprintPack: initialProject.blueprintPack || undefined,
     blueprintPackStatus: initialProject.blueprintPackStatus || 'Stale',
-    activeBoardId: initialProject.activeBoardId || 'board-main',
+    activeBoardId: initialProject.activeBoardId || '',
 
     requirements: initialProject.requirements || [],
     architectureNodes: initialProject.architectureNodes || [],
@@ -684,6 +692,7 @@ mcpProposals: state.mcpProposals || [],
     },
 
     setActiveBoard: (boardId) => {
+      if (boardId && !(get().boards || []).some(board => board.id === boardId)) return;
       persistChange({ activeBoardId: boardId });
     },
 
@@ -1238,6 +1247,7 @@ mcpProposals: state.mcpProposals || [],
         const proj = migrateProjectSchema(rawProj);
         set({
           ...proj,
+          activeBoardId: proj.activeBoardId || '',
           selectedNodeId: null,
           projectsList: syncProjectsList(saved)
         });
@@ -1291,6 +1301,7 @@ mcpProposals: state.mcpProposals || [],
 
         set({
           ...copy,
+          activeBoardId: copy.activeBoardId || '',
           selectedNodeId: null,
           projectsList: syncProjectsList(saved)
         });
@@ -1316,12 +1327,11 @@ mcpProposals: state.mcpProposals || [],
 
         persistChange({
           ...fresh,
+          activeBoardId: fresh.activeBoardId || '',
           selectedNodeId: null
         });
       }
     },
-
-
 
     loadProjectFromLocalStorage: () => {
       const allProjects = getSavedProjects();
@@ -1342,8 +1352,8 @@ mcpProposals: state.mcpProposals || [],
         name: item.name,
         boardType: item.boardType || 'Main PCB',
         purpose: item.purpose || '',
-        dimensionsMm: item.dimensionsMm || '50x50',
-        layerCount: item.layerCount || 2,
+        dimensionsMm: item.dimensionsMm || undefined,
+        layerCount: item.layerCount ?? 2,
         substrate: item.substrate || 'FR4',
         placement: item.placement || 'Internal',
         mountingNotes: item.mountingNotes || '',
@@ -1365,7 +1375,8 @@ mcpProposals: state.mcpProposals || [],
 
     deleteBoard: (id) => {
       const boards = (get().boards || []).filter(b => b.id !== id);
-      persistChange({ boards });
+      const activeBoardId = get().activeBoardId === id ? '' : get().activeBoardId;
+      persistChange({ boards, activeBoardId });
     },
 
     addCircuitBlock: (item) => {
@@ -1388,7 +1399,7 @@ mcpProposals: state.mcpProposals || [],
     addBoardComponent: (item) => {
       const id = item.id || `comp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       const newComp: BoardComponent = {
-        boardId: get().activeBoardId || 'board_main',
+        boardId: item.boardId || get().activeBoardId || '',
         referenceDesignator: 'U1',
         componentName: 'Component',
         componentType: 'General',
@@ -1420,10 +1431,12 @@ mcpProposals: state.mcpProposals || [],
       const currentComp = (state.boardComponents || []).find(c => c.id === componentId);
       if (!currentComp) return;
 
-      const targetX = placement.placementX ?? placement.pcb?.xMm ?? currentComp.placementX ?? 0;
-      const targetY = placement.placementY ?? placement.pcb?.yMm ?? currentComp.placementY ?? 0;
+      const targetX = placement.placementX ?? placement.pcb?.xMm ?? currentComp.placementX ?? currentComp.pcb?.xMm;
+      const targetY = placement.placementY ?? placement.pcb?.yMm ?? currentComp.placementY ?? currentComp.pcb?.yMm;
       const targetSide = placement.side ?? placement.pcb?.side ?? currentComp.side ?? 'Top';
-      const targetStatus = placement.placementStatus ?? currentComp.placementStatus ?? 'Placed';
+      const targetStatus = placement.placementStatus ?? placement.pcb?.placementStatus ?? currentComp.placementStatus ?? 'Unplaced';
+      const hasCoordinates = targetX != null && targetY != null;
+      const placed = placement.pcb?.placed ?? (targetStatus !== 'Unplaced' && hasCoordinates);
 
       const updatedComp: BoardComponent = {
         ...currentComp,
@@ -1435,7 +1448,7 @@ mcpProposals: state.mcpProposals || [],
         pcb: {
           ...currentComp.pcb,
           ...placement.pcb,
-          placed: true,
+          placed,
           xMm: targetX,
           yMm: targetY,
           side: (targetSide === 'Bottom' ? 'Bottom' : 'Top') as 'Top' | 'Bottom',
@@ -1448,7 +1461,7 @@ mcpProposals: state.mcpProposals || [],
       
       let mechanicalObjects = state.mechanicalObjects;
       const linkedMechId = currentComp.mechanicalObjectId || currentComp.linkedMechanicalObjectId;
-      if (linkedMechId && mechanicalObjects) {
+      if (linkedMechId && mechanicalObjects && targetX != null && targetY != null) {
         mechanicalObjects = mechanicalObjects.map(mo => mo.id === linkedMechId ? { ...mo, xMm: targetX, yMm: targetY } : mo);
       }
 
@@ -1690,13 +1703,13 @@ mcpProposals: state.mcpProposals || [],
     },
 
     generateCircuitsFromBlueprint: () => {
-      const boards = get().boards || [];
-      if (boards.length === 0) return;
-      const mainBoardId = boards[0].id;
+      const targetBoard = resolveTargetBoard(get());
+      if (!targetBoard) return;
+      const mainBoardId = targetBoard.id;
       const circuitBlocks = [...(get().circuitBlocks || [])];
 
       const addIfUnique = (item: Omit<CircuitBlock, 'id'>) => {
-        if (!circuitBlocks.some(cb => cb.name.toLowerCase() === item.name.toLowerCase())) {
+        if (!circuitBlocks.some(cb => cb.name.toLowerCase() === item.name.toLowerCase() && cb.boardId === item.boardId)) {
           circuitBlocks.push({
             ...item,
             id: `circuit_gen_${Math.random()}_${Date.now()}`
@@ -1820,14 +1833,14 @@ mcpProposals: state.mcpProposals || [],
     },
 
     generateBoardComponentsFromBOM: () => {
-      const boards = get().boards || [];
-      if (boards.length === 0) return;
-      const mainBoardId = boards[0].id;
-      const circuitBlocks = get().circuitBlocks || [];
+      const targetBoard = resolveTargetBoard(get());
+      if (!targetBoard) return;
+      const mainBoardId = targetBoard.id;
+      const circuitBlocks = (get().circuitBlocks || []).filter(block => block.boardId === mainBoardId);
       const boardComponents = [...(get().boardComponents || [])];
 
       const addIfUnique = (item: Omit<BoardComponent, 'id'>) => {
-        if (!boardComponents.some(bc => bc.referenceDesignator.toLowerCase() === item.referenceDesignator.toLowerCase())) {
+        if (!boardComponents.some(bc => bc.boardId === item.boardId && bc.referenceDesignator.toLowerCase() === item.referenceDesignator.toLowerCase())) {
           boardComponents.push({
             ...item,
             id: `cmp_gen_${Math.random()}_${Date.now()}`
@@ -1875,7 +1888,7 @@ mcpProposals: state.mcpProposals || [],
 
         addIfUnique({
           boardId: mainBoardId,
-          circuitBlockId: blockId,
+          circuitBlockId: blockId || undefined,
           referenceDesignator: ref,
           componentName: bomItem.candidateComponent || "Passive Component",
           componentType: bomItem.blockName,
@@ -1976,9 +1989,8 @@ mcpProposals: state.mcpProposals || [],
     },
 
     generatePCBConstraintsFromBoard: () => {
-      const boards = get().boards || [];
-      if (boards.length === 0) return;
-      const mainBoard = boards[0];
+      const mainBoard = resolveTargetBoard(get());
+      if (!mainBoard) return;
       const pcbConstraints = [...(get().pcbConstraints || [])];
 
       const addIfUnique = (item: Omit<PCBConstraint, 'id'>) => {
@@ -2032,14 +2044,16 @@ mcpProposals: state.mcpProposals || [],
           severity: "Info"
         });
       } else {
-        addIfUnique({
-          boardId: mainBoard.id,
-          constraintType: "Board Outline",
-          value: mainBoard.dimensionsMm || '100x60',
-          unit: "mm",
-          description: "Board geometry outline size constraint bounds.",
-          severity: "Info"
-        });
+        if (mainBoard.dimensionsMm) {
+          addIfUnique({
+            boardId: mainBoard.id,
+            constraintType: "Board Outline",
+            value: mainBoard.dimensionsMm,
+            unit: "mm",
+            description: "Board geometry outline size constraint bounds.",
+            severity: "Info"
+          });
+        }
         addIfUnique({
           boardId: mainBoard.id,
           constraintType: "Trace Width",
@@ -2715,13 +2729,16 @@ mcpProposals: state.mcpProposals || [],
     },
 
     addI2cPullupResistor: () => {
+      const targetBoard = resolveTargetBoard(get());
+      if (!targetBoard) return;
       const components = [...(get().boardComponents || [])];
       const nextIdx = components.length + 1;
+      const circuitBlockId = (get().circuitBlocks || []).find(block => block.boardId === targetBoard.id && block.circuitType === 'MCU')?.id;
       
       const r1: BoardComponent = {
         id: `cmp_r_pull1_${Date.now()}`,
-        boardId: "board_main",
-        circuitBlockId: "circuit_mcu",
+        boardId: targetBoard.id,
+        circuitBlockId,
         referenceDesignator: `R${nextIdx}`,
         componentName: "Resistor 10kΩ 0603",
         componentType: "Resistor",
@@ -2732,15 +2749,14 @@ mcpProposals: state.mcpProposals || [],
         quantity: 1,
         side: "Top",
         placementCriticality: "Medium",
-        placementX: 200,
-        placementY: 90,
+        placementStatus: 'Unplaced',
         notes: "I2C SDA pullup"
       };
 
       const r2: BoardComponent = {
         id: `cmp_r_pull2_${Date.now()}`,
-        boardId: "board_main",
-        circuitBlockId: "circuit_mcu",
+        boardId: targetBoard.id,
+        circuitBlockId,
         referenceDesignator: `R${nextIdx + 1}`,
         componentName: "Resistor 10kΩ 0603",
         componentType: "Resistor",
@@ -2751,8 +2767,7 @@ mcpProposals: state.mcpProposals || [],
         quantity: 1,
         side: "Top",
         placementCriticality: "Medium",
-        placementX: 200,
-        placementY: 100,
+        placementStatus: 'Unplaced',
         notes: "I2C SCL pullup"
       };
 
@@ -2762,13 +2777,16 @@ mcpProposals: state.mcpProposals || [],
     },
 
     addFlybackDiode: () => {
+      const targetBoard = resolveTargetBoard(get());
+      if (!targetBoard) return;
       const components = [...(get().boardComponents || [])];
       const nextIdx = components.length + 1;
+      const circuitBlockId = (get().circuitBlocks || []).find(block => block.boardId === targetBoard.id && block.circuitType === 'Haptic')?.id;
       
-      const d: BoardComponent = {
+      const diode: BoardComponent = {
         id: `cmp_d_fly_${Date.now()}`,
-        boardId: "board_main",
-        circuitBlockId: "circuit_haptic",
+        boardId: targetBoard.id,
+        circuitBlockId,
         referenceDesignator: `D${nextIdx}`,
         componentName: "Schottky Diode SOD123",
         componentType: "Diode",
@@ -2779,24 +2797,26 @@ mcpProposals: state.mcpProposals || [],
         quantity: 1,
         side: "Top",
         placementCriticality: "High",
-        placementX: 180,
-        placementY: 160,
+        placementStatus: 'Unplaced',
         notes: "Motor flyback clamp protection"
       };
 
-      persistChange({ boardComponents: [...components, d] });
+      persistChange({ boardComponents: [...components, diode] });
       get().generateEditorLayouts();
       get().runFullDesignReview();
     },
 
     addDebugTestPad: () => {
+      const targetBoard = resolveTargetBoard(get());
+      if (!targetBoard) return;
       const components = [...(get().boardComponents || [])];
       const nextIdx = components.length + 1;
+      const circuitBlockId = (get().circuitBlocks || []).find(block => block.boardId === targetBoard.id && block.circuitType === 'Debug')?.id;
       
       const tp1: BoardComponent = {
         id: `cmp_tp_swdio_${Date.now()}`,
-        boardId: "board_main",
-        circuitBlockId: "circuit_debug",
+        boardId: targetBoard.id,
+        circuitBlockId,
         referenceDesignator: `TP${nextIdx}`,
         componentName: "Programming Pad SWDIO",
         componentType: "Connector",
@@ -2807,15 +2827,14 @@ mcpProposals: state.mcpProposals || [],
         quantity: 1,
         side: "Bottom",
         placementCriticality: "High",
-        placementX: 280,
-        placementY: 50,
+        placementStatus: 'Unplaced',
         notes: "MCU SWDIO target interface point"
       };
 
       const tp2: BoardComponent = {
         id: `cmp_tp_swclk_${Date.now()}`,
-        boardId: "board_main",
-        circuitBlockId: "circuit_debug",
+        boardId: targetBoard.id,
+        circuitBlockId,
         referenceDesignator: `TP${nextIdx + 1}`,
         componentName: "Programming Pad SWCLK",
         componentType: "Connector",
@@ -2826,8 +2845,7 @@ mcpProposals: state.mcpProposals || [],
         quantity: 1,
         side: "Bottom",
         placementCriticality: "High",
-        placementX: 280,
-        placementY: 60,
+        placementStatus: 'Unplaced',
         notes: "MCU SWCLK target interface point"
       };
 
@@ -2835,7 +2853,21 @@ mcpProposals: state.mcpProposals || [],
       get().generateEditorLayouts();
       get().runFullDesignReview();
     },
+
     addProjectComponentFromLibrary: (libComp, boardId, circuitBlockId) => {
+      const targetBoardId = boardId || get().activeBoardId;
+      const targetBoard = (get().boards || []).find(board => board.id === targetBoardId);
+      if (!targetBoard) {
+        throw new Error('A real project board must be selected before adding a component from the library.');
+      }
+
+      const targetBlock = circuitBlockId
+        ? (get().circuitBlocks || []).find(block => block.id === circuitBlockId && block.boardId === targetBoard.id)
+        : undefined;
+      if (circuitBlockId && !targetBlock) {
+        throw new Error('The selected circuit block does not belong to the target board.');
+      }
+
       const components = get().boardComponents || [];
       const prefix = libComp.category === 'Resistor' ? 'R' :
                      libComp.category === 'Capacitor' ? 'C' :
@@ -2861,7 +2893,7 @@ mcpProposals: state.mcpProposals || [],
       const bomItem: BOMItem = {
         id: bomId,
         componentId: compId,
-        blockName: circuitBlockId || 'Block',
+        blockName: targetBlock?.name || 'Unassigned',
         candidateComponent: libComp.name,
         partNumber: libComp.partNumber || '',
         stage: 'Prototype',
@@ -2874,7 +2906,7 @@ mcpProposals: state.mcpProposals || [],
         costEstimate: '0.00',
         supplier: libComp.manufacturer || 'Generic',
         supplierUrl: '',
-        datasheetUrl: '',
+        datasheetUrl: libComp.datasheetUrl || '',
         status: 'Not Started',
         risk: '',
         alternative: '',
@@ -2891,13 +2923,15 @@ mcpProposals: state.mcpProposals || [],
         packageName: libComp.packageName,
         footprint: libComp.footprintName,
         partNumber: libComp.partNumber || '',
+        manufacturer: libComp.manufacturer || '',
+        datasheetUrl: libComp.datasheetUrl || '',
         pins: libComp.pins || [],
-        boardId: boardId || get().activeBoardId || 'board-main',
-        circuitBlockId: circuitBlockId || '',
+        boardId: targetBoard.id,
+        circuitBlockId: targetBlock?.id,
         bomItemId: bomId,
         quantity: libComp.defaultQuantity || 1,
         schematic: { placed: false, x: 150, y: 150, rotation: 0, locked: false },
-        pcb: { placed: false, xMm: 0, yMm: 0, rotationDeg: 0, side: 'Top' as const, locked: false, placementStatus: 'Unplaced' as const },
+        pcb: { placed: false, xMm: undefined, yMm: undefined, rotationDeg: 0, side: 'Top' as const, locked: false, placementStatus: 'Unplaced' as const },
         status: 'Selected' as const,
         notes: libComp.description || ''
       };
@@ -2909,7 +2943,8 @@ mcpProposals: state.mcpProposals || [],
       
       persistChange({
         boardComponents: updatedComponents,
-        bom: updatedBom
+        bom: updatedBom,
+        activeBoardId: targetBoard.id
       });
 
       return newComp;
@@ -3706,7 +3741,11 @@ mcpProposals: state.mcpProposals || [],
       const migrated = migrateProjectSchema(deserialized);
       const issues = validateProjectIntegrity(migrated);
 
-      const cleanProject = getCleanProjectData(migrated as ProjectState);
+      const cleanProject = getCleanProjectData({
+        ...get(),
+        ...migrated,
+        activeBoardId: migrated.activeBoardId || ''
+      } as ProjectState);
       const saved = getSavedProjects();
       saved[cleanProject.id] = cleanProject;
       saveProjectsToStorage(saved, cleanProject.id);
