@@ -17,7 +17,7 @@ describe('editor-first interaction model', () => {
     const dashboard = source('../components/ProjectDashboard.tsx');
     const readiness = source('../components/ReadinessDashboard.tsx');
 
-    expect(subnav).toContain('clicking the row itself does not mutate the project');
+    expect(subnav).toContain('Clicking the row itself does not mutate the project');
     expect(subnav).toContain('aria-label={`Add ${libraryItem.name} to the blueprint`}');
     expect(subnav).not.toContain('onClick={() => handleAddBlock(libraryItem)}\n                            className="group flex');
 
