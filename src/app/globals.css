@@ -175,6 +175,36 @@ textarea {
   accent-color: #11110f;
 }
 
+/* Component-library technical previews should read like engineering drawings, not game cards. */
+.hs-app svg[aria-label$="footprint preview"] {
+  background: #f4f1e9 !important;
+  border-color: #c8c0b2 !important;
+}
+
+.hs-app svg[aria-label$="footprint preview"] > rect:first-of-type {
+  stroke: #2d2b27 !important;
+  stroke-width: 1.4px !important;
+}
+
+.hs-app svg[aria-label$="footprint preview"] > rect:nth-of-type(2) {
+  stroke: #9e978b !important;
+  stroke-dasharray: 3 3 !important;
+}
+
+.hs-app svg[aria-label$="footprint preview"] g rect {
+  fill: #d7c7aa !important;
+  stroke: #6d604d !important;
+}
+
+.hs-app svg[aria-label$="footprint preview"] g text {
+  fill: #1d1c19 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+.hs-app svg[aria-label$="footprint preview"] > circle {
+  fill: #11110f !important;
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar {
   width: 7px;
