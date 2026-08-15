@@ -118,7 +118,6 @@ describe('SHA-256 manufacturing manifest engine', () => {
   it('blocks multi-board packaging until serializers are fully board-isolated', () => {
     loadManufacturableProject();
     useProjectStore.getState().addBoard({
-      id: 'board_secondary',
       name: 'Secondary PCB',
       boardType: 'Rigid',
       dimensionsMm: '20 x 20 mm',
