@@ -46,9 +46,10 @@ describe('decision-first product UX baseline', () => {
     expect(productStudio).toContain('<ProductRequirementsPanel mode="compact" />');
   });
 
-  it('keeps two distinct navigation levels instead of one long module sidebar', () => {
+  it('keeps two distinct navigation levels while editor object tools stay inside their workbench', () => {
     const sidebar = source('../components/Sidebar.tsx');
     const subnav = source('../components/ContextSubnav.tsx');
+    const productStudio = source('../components/product/ProductStudio.tsx');
 
     expect(sidebar).toContain('Primary product-area navigation');
     expect(sidebar).toContain('Engineering domains');
@@ -59,7 +60,13 @@ describe('decision-first product UX baseline', () => {
     expect(subnav).toContain('contextual navigation');
     expect(subnav).toContain('workbenches');
     expect(subnav).toContain('activeDomain.items.map');
-    expect(subnav).toContain('showDeviceLibrary');
-    expect(subnav).not.toContain('Primary rail chooses the engineering area');
+    expect(subnav).toContain('Start here');
+    expect(subnav).toContain('quickStartByView');
+    expect(subnav).not.toContain('showDeviceLibrary');
+    expect(subnav).not.toContain('libraryItem');
+
+    expect(productStudio).toContain('ArchitectureGlyph');
+    expect(productStudio).toContain('onClick={() => handleAddElement(preset)}');
+    expect(productStudio).toContain('aria-label={`Place ${preset.name}`}');
   });
 });
