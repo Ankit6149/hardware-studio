@@ -1,61 +1,89 @@
-import React, { useState } from 'react';
+'use client';
+
+import React from 'react';
+import {
+  ChevronDown,
+  Copy,
+  Globe,
+  Link2,
+  Tag,
+  Trash2,
+} from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
-import { Trash2, Link2, Info, ChevronDown, ChevronRight, Copy, Globe, Tag } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { useFeedback } from './feedback/FeedbackProvider';
+
+const inputClass = 'w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-100';
+const textAreaClass = `${inputClass} resize-y font-sans leading-5`;
+
+const Section: React.FC<React.PropsWithChildren<{ title: string; count?: number; open?: boolean }>> = ({
+  title,
+  count,
+  open = false,
+  children,
+}) => (
+  <details open={open} className="group border-b border-slate-200 last:border-b-0">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+      <span>{title}{typeof count === 'number' ? ` · ${count}` : ''}</span>
+      <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" aria-hidden="true" />
+    </summary>
+    <div className="space-y-3 px-4 pb-4">{children}</div>
+  </details>
+);
+
+const Field: React.FC<React.PropsWithChildren<{ label: string; htmlFor: string }>> = ({ label, htmlFor, children }) => (
+  <label htmlFor={htmlFor} className="block">
+    <span className="mb-1 block text-[10px] font-semibold text-slate-600">{label}</span>
+    {children}
+  </label>
+);
 
 export const PropertiesPanel: React.FC = () => {
-  const { 
-    selectedNodeId, 
-    nodes, 
-    edges, 
-    updateNode, 
+  const {
+    selectedNodeId,
+    nodes,
+    edges,
+    updateNode,
     deleteNode,
     addNode,
-    setSelectedNodeId
+    setSelectedNodeId,
   } = useProjectStore();
+  const { confirm, notify } = useFeedback();
 
-  // Accordion toggle states
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    general: true,
-    engineering: true,
-    risk: false,
-    views: false,
-    trace: false
-  });
+  const selectedNode = nodes.find((node) => node.id === selectedNodeId);
 
-  const toggleSection = (section: string) => {
-    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
+  // The inspector is contextual UI, not permanent workspace chrome. When no
+  // blueprint object is selected the canvas keeps the width instead of showing
+  // an empty global rail.
+  if (!selectedNode) return null;
 
-  const selectedNode = nodes.find(n => n.id === selectedNodeId);
-
-  if (!selectedNode) {
-    return (
-      <aside className="w-80 border-l border-slate-200 bg-white flex flex-col items-center justify-center p-6 text-center text-slate-400 shrink-0 shadow-sm z-20 font-mono">
-        <Info className="w-8 h-8 text-slate-350 mb-2" />
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">No Block Selected</p>
-        <p className="text-[10px] text-slate-400 mt-1 max-w-[200px] leading-relaxed">
-          Click a block on the blueprint canvas to configure parameters, electrical pins, sourcing details, and risk mitigations.
-        </p>
-      </aside>
-    );
-  }
-
-  const d = selectedNode.data;
+  const data = selectedNode.data;
   const isBoundary = selectedNode.type === 'boundaryNode';
-
-  // Connections
-  const inbound = edges.filter(e => e.target === selectedNodeId);
-  const outbound = edges.filter(e => e.source === selectedNodeId);
+  const inbound = edges.filter((edge) => edge.target === selectedNodeId);
+  const outbound = edges.filter((edge) => edge.source === selectedNodeId);
+  const connectionCount = inbound.length + outbound.length;
 
   const handleFieldChange = (key: string, value: string | string[]) => {
     updateNode(selectedNode.id, { [key]: value });
   };
 
-  const handleDelete = () => {
-    if (window.confirm(`Delete the block "${d.name}"?`)) {
-      deleteNode(selectedNode.id);
-    }
+  const handleDelete = async () => {
+    const approved = await confirm({
+      title: `Delete “${data.name}”?`,
+      description: connectionCount > 0
+        ? `This blueprint block has ${connectionCount} connected ${connectionCount === 1 ? 'edge' : 'edges'}. Deleting the block will also remove relationships owned by this node.`
+        : 'This removes the blueprint block from the current project graph.',
+      variant: 'destructive',
+      confirmLabel: 'Delete block',
+      cancelLabel: 'Keep block',
+    });
+    if (!approved) return;
+
+    deleteNode(selectedNode.id);
+    notify({
+      tone: 'success',
+      title: 'Blueprint block deleted',
+      detail: `${data.name} was removed from the project graph.`,
+    });
   };
 
   const handleDuplicate = () => {
@@ -65,431 +93,352 @@ export const PropertiesPanel: React.FC = () => {
       width: selectedNode.width,
       height: selectedNode.height,
       data: {
-        ...d,
-        name: `${d.name} (Copy)`
-      }
+        ...data,
+        name: `${data.name} (Copy)`,
+      },
+    });
+    notify({
+      tone: 'success',
+      title: 'Blueprint block duplicated',
+      detail: `${data.name} was copied as a separate project-graph node.`,
     });
   };
 
   const handleToggleView = (viewId: string) => {
-    const currentViews = d.views || [];
-    let updatedViews: string[];
-    if (currentViews.includes(viewId)) {
-      // Don't remove if it is the only view
-      if (currentViews.length <= 1) return;
-      updatedViews = currentViews.filter(v => v !== viewId);
-    } else {
-      updatedViews = [...currentViews, viewId];
+    const currentViews = data.views || [];
+    if (currentViews.includes(viewId) && currentViews.length <= 1) {
+      notify({
+        tone: 'warning',
+        title: 'Keep at least one visible view',
+        detail: 'A blueprint block cannot be hidden from every configured view.',
+      });
+      return;
     }
-    handleFieldChange('views', updatedViews);
+
+    handleFieldChange(
+      'views',
+      currentViews.includes(viewId)
+        ? currentViews.filter((id) => id !== viewId)
+        : [...currentViews, viewId],
+    );
   };
 
   const viewDefinitions = [
-    { id: 'master', label: 'Master View' },
-    { id: 'outer', label: 'Outer Design' },
-    { id: 'internal', label: 'Internal Layout' },
+    { id: 'master', label: 'Master' },
+    { id: 'outer', label: 'Outer design' },
+    { id: 'internal', label: 'Internal layout' },
     { id: 'electronics', label: 'Electronics' },
     { id: 'firmware', label: 'Firmware' },
-    { id: 'power', label: 'Power System' },
-    { id: 'hardware-studio', label: 'Hardware Studio' }
+    { id: 'power', label: 'Power system' },
+    { id: 'hardware-studio', label: 'Hardware Studio' },
   ];
 
   return (
-    <aside className="w-80 border-l border-slate-200 bg-white flex flex-col h-full shrink-0 shadow-sm z-20 overflow-hidden font-mono">
-      {/* Block Title Header */}
-      <div className="p-3 border-b border-slate-150 flex items-center justify-between bg-slate-50/50">
-        <span className="text-[10px] font-bold text-slate-800 uppercase tracking-widest truncate max-w-[150px]">
-          {d.name}
-        </span>
-        <div className="flex items-center space-x-1 shrink-0">
-          <Button 
+    <aside className="flex h-full w-72 shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-white" aria-label={`Properties for ${data.name}`}>
+      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">Selection</p>
+          <h2 className="mt-0.5 truncate text-sm font-semibold text-slate-900">{data.name}</h2>
+          <p className="mt-0.5 text-[10px] text-slate-500">{data.category || selectedNode.type || 'Blueprint block'}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
             onClick={handleDuplicate}
-            variant="secondary"
-            size="xs"
-            title="Duplicate Block"
-            icon={<Copy className="w-3 h-3" />}
-          />
-          <Button 
-            onClick={handleDelete}
-            variant="danger"
-            size="xs"
-            title="Delete Block"
-            icon={<Trash2 className="w-3 h-3" />}
-          />
-        </div>
-      </div>
-
-      {/* Accordions Scroll Body */}
-      <div className="flex-1 overflow-y-auto divide-y divide-slate-150">
-        
-        {/* GROUP 1: GENERAL */}
-        <div className="p-3.5 space-y-3">
-          <button 
-            onClick={() => toggleSection('general')}
-            className="w-full flex items-center justify-between text-left mb-1.5 focus:outline-none"
+            className="grid h-8 w-8 place-items-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400"
+            aria-label={`Duplicate ${data.name}`}
+            title="Duplicate block"
           >
-            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
-              General Attributes
-            </span>
-            {openSections.general ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
-
-          {openSections.general && (
-            <div className="space-y-3 animate-in fade-in duration-100">
-              <div>
-                <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Block Name</label>
-                <input
-                  type="text"
-                  value={d.name}
-                  onChange={(e) => handleFieldChange('name', e.target.value)}
-                  className="w-full bg-white border border-slate-250 rounded px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-slate-400"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Category</label>
-                  <select
-                    value={d.category}
-                    onChange={(e) => handleFieldChange('category', e.target.value)}
-                    className="w-full bg-white border border-slate-250 rounded px-2 py-1 text-xs text-slate-800 focus:outline-none"
-                  >
-                    {["Product", "Interaction", "Electronics", "Firmware", "Mechanical", "Power", "Software", "Testing", "Manufacturing", "Safety"].map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Status</label>
-                  <select
-                    value={d.status}
-                    onChange={(e) => handleFieldChange('status', e.target.value)}
-                    className="w-full bg-white border border-slate-250 rounded px-2 py-1 text-xs text-slate-800 focus:outline-none"
-                  >
-                    <option value="MVP">MVP Now</option>
-                    <option value="Later">Later Phase</option>
-                    <option value="Future">Future Context</option>
-                    <option value="External">External</option>
-                    <option value="Risk">Critical Risk</option>
-                    <option value="Complete">Complete</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Description</label>
-                <textarea
-                  rows={2}
-                  value={d.description || ''}
-                  onChange={(e) => handleFieldChange('description', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100/30 hover:border-slate-350 focus:bg-white focus:border-slate-900 rounded p-1.5 text-xs text-slate-700 font-sans resize-none"
-                  placeholder="Functional summary of this component..."
-                />
-              </div>
-
-              <div>
-                <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Purpose & Goal</label>
-                <textarea
-                  rows={2}
-                  value={d.purpose || ''}
-                  onChange={(e) => handleFieldChange('purpose', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100/30 hover:border-slate-350 focus:bg-white focus:border-slate-900 rounded p-1.5 text-xs text-slate-700 font-sans resize-none"
-                  placeholder="Why is this block required?"
-                />
-              </div>
-
-              <div>
-                <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Functional Specs</label>
-                <textarea
-                  rows={2}
-                  value={d.requirements || ''}
-                  onChange={(e) => handleFieldChange('requirements', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100/30 hover:border-slate-350 focus:bg-white focus:border-slate-900 rounded p-1.5 text-xs text-slate-700 font-sans resize-none"
-                  placeholder="e.g. Dimensions, operating voltages..."
-                />
-              </div>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            className="grid h-8 w-8 place-items-center rounded-md text-rose-600 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-400"
+            aria-label={`Delete ${data.name}`}
+            title="Delete block"
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
         </div>
+      </header>
 
-        {/* GROUP 2: ENGINEERING */}
-        {!isBoundary && (
-          <div className="p-3.5 space-y-3">
-            <button 
-              onClick={() => toggleSection('engineering')}
-              className="w-full flex items-center justify-between text-left mb-1.5 focus:outline-none"
-            >
-              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
-                Engineering Details
-              </span>
-              {openSections.engineering ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
-            </button>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <Section title="General" open>
+          <Field label="Block name" htmlFor={`prop-name-${selectedNode.id}`}>
+            <input
+              id={`prop-name-${selectedNode.id}`}
+              type="text"
+              value={data.name}
+              onChange={(event) => handleFieldChange('name', event.target.value)}
+              className={inputClass}
+            />
+          </Field>
 
-            {openSections.engineering && (
-              <div className="space-y-3 animate-in fade-in duration-100">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Component candidate</label>
-                    <input
-                      type="text"
-                      value={d.candidateComponents || ''}
-                      onChange={(e) => handleFieldChange('candidateComponents', e.target.value)}
-                      className="w-full bg-white border border-slate-250 rounded px-2 py-1 text-xs text-slate-750 focus:outline-none"
-                      placeholder="e.g. nRF52840"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Priority</label>
-                    <select
-                      value={d.priority || 'Medium'}
-                      onChange={(e) => handleFieldChange('priority', e.target.value)}
-                      className="w-full bg-white border border-slate-250 rounded px-2 py-1 text-xs text-slate-750 focus:outline-none"
-                    >
-                      <option value="High">High</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Low">Low</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Electrical details</label>
-                  <textarea
-                    rows={2}
-                    value={d.electricalNotes || ''}
-                    onChange={(e) => handleFieldChange('electricalNotes', e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded p-1.5 text-xs text-slate-700 font-sans resize-none"
-                    placeholder="Decoupling, pins configuration, test points..."
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Mechanical chassis constraints</label>
-                  <textarea
-                    rows={2}
-                    value={d.mechanicalNotes || ''}
-                    onChange={(e) => handleFieldChange('mechanicalNotes', e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded p-1.5 text-xs text-slate-700 font-sans resize-none"
-                    placeholder="Shielding zones, clearance buffers, heights..."
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Firmware requirements</label>
-                  <textarea
-                    rows={2}
-                    value={d.firmwareNotes || ''}
-                    onChange={(e) => handleFieldChange('firmwareNotes', e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded p-1.5 text-xs text-slate-700 font-sans resize-none"
-                    placeholder="Driver state enums, polling speeds..."
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Datasheet link</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={d.datasheetUrl || ''}
-                      onChange={(e) => handleFieldChange('datasheetUrl', e.target.value)}
-                      className="w-full bg-white border border-slate-250 rounded pl-7 pr-2 py-1 text-xs text-blue-700 truncate focus:outline-none"
-                      placeholder="https://..."
-                    />
-                    <Globe className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Supplier purchasing link</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={d.supplierUrl || ''}
-                      onChange={(e) => handleFieldChange('supplierUrl', e.target.value)}
-                      className="w-full bg-white border border-slate-250 rounded pl-7 pr-2 py-1 text-xs text-slate-750 truncate focus:outline-none"
-                      placeholder="https://..."
-                    />
-                    <Globe className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1 flex items-center">
-                    <Tag className="w-3 h-3 text-slate-450 mr-1" />
-                    <span>Tags (comma separated)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={d.tags ? d.tags.join(', ') : ''}
-                    onChange={(e) => handleFieldChange('tags', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                    className="w-full bg-white border border-slate-250 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none"
-                    placeholder="e.g. sensor, i2c, high-power"
-                  />
-                </div>
-              </div>
-            )}
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Category" htmlFor={`prop-category-${selectedNode.id}`}>
+              <select
+                id={`prop-category-${selectedNode.id}`}
+                value={data.category}
+                onChange={(event) => handleFieldChange('category', event.target.value)}
+                className={inputClass}
+              >
+                {['Product', 'Interaction', 'Electronics', 'Firmware', 'Mechanical', 'Power', 'Software', 'Testing', 'Manufacturing', 'Safety'].map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Status" htmlFor={`prop-status-${selectedNode.id}`}>
+              <select
+                id={`prop-status-${selectedNode.id}`}
+                value={data.status}
+                onChange={(event) => handleFieldChange('status', event.target.value)}
+                className={inputClass}
+              >
+                <option value="MVP">MVP now</option>
+                <option value="Later">Later phase</option>
+                <option value="Future">Future context</option>
+                <option value="External">External</option>
+                <option value="Risk">Critical risk</option>
+                <option value="Complete">Complete</option>
+              </select>
+            </Field>
           </div>
+
+          <Field label="Description" htmlFor={`prop-description-${selectedNode.id}`}>
+            <textarea
+              id={`prop-description-${selectedNode.id}`}
+              rows={3}
+              value={data.description || ''}
+              onChange={(event) => handleFieldChange('description', event.target.value)}
+              className={textAreaClass}
+              placeholder="What this block does…"
+            />
+          </Field>
+
+          <Field label="Purpose / decision" htmlFor={`prop-purpose-${selectedNode.id}`}>
+            <textarea
+              id={`prop-purpose-${selectedNode.id}`}
+              rows={2}
+              value={data.purpose || ''}
+              onChange={(event) => handleFieldChange('purpose', event.target.value)}
+              className={textAreaClass}
+              placeholder="Why this block exists…"
+            />
+          </Field>
+
+          <Field label="Functional requirements" htmlFor={`prop-requirements-${selectedNode.id}`}>
+            <textarea
+              id={`prop-requirements-${selectedNode.id}`}
+              rows={3}
+              value={data.requirements || ''}
+              onChange={(event) => handleFieldChange('requirements', event.target.value)}
+              className={textAreaClass}
+              placeholder="Known constraints and acceptance requirements…"
+            />
+          </Field>
+        </Section>
+
+        {!isBoundary && (
+          <Section title="Engineering" open>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Candidate" htmlFor={`prop-candidate-${selectedNode.id}`}>
+                <input
+                  id={`prop-candidate-${selectedNode.id}`}
+                  type="text"
+                  value={data.candidateComponents || ''}
+                  onChange={(event) => handleFieldChange('candidateComponents', event.target.value)}
+                  className={inputClass}
+                  placeholder="e.g. nRF52840"
+                />
+              </Field>
+              <Field label="Priority" htmlFor={`prop-priority-${selectedNode.id}`}>
+                <select
+                  id={`prop-priority-${selectedNode.id}`}
+                  value={data.priority || 'Medium'}
+                  onChange={(event) => handleFieldChange('priority', event.target.value)}
+                  className={inputClass}
+                >
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </Field>
+            </div>
+
+            <Field label="Electrical" htmlFor={`prop-electrical-${selectedNode.id}`}>
+              <textarea
+                id={`prop-electrical-${selectedNode.id}`}
+                rows={3}
+                value={data.electricalNotes || ''}
+                onChange={(event) => handleFieldChange('electricalNotes', event.target.value)}
+                className={textAreaClass}
+                placeholder="Pins, rails, decoupling, interfaces…"
+              />
+            </Field>
+            <Field label="Mechanical" htmlFor={`prop-mechanical-${selectedNode.id}`}>
+              <textarea
+                id={`prop-mechanical-${selectedNode.id}`}
+                rows={3}
+                value={data.mechanicalNotes || ''}
+                onChange={(event) => handleFieldChange('mechanicalNotes', event.target.value)}
+                className={textAreaClass}
+                placeholder="Clearance, height, shielding, enclosure…"
+              />
+            </Field>
+            <Field label="Firmware" htmlFor={`prop-firmware-${selectedNode.id}`}>
+              <textarea
+                id={`prop-firmware-${selectedNode.id}`}
+                rows={3}
+                value={data.firmwareNotes || ''}
+                onChange={(event) => handleFieldChange('firmwareNotes', event.target.value)}
+                className={textAreaClass}
+                placeholder="Drivers, states, timing, interrupts…"
+              />
+            </Field>
+
+            <Field label="Datasheet URL" htmlFor={`prop-datasheet-${selectedNode.id}`}>
+              <div className="relative">
+                <Globe className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                <input
+                  id={`prop-datasheet-${selectedNode.id}`}
+                  type="url"
+                  value={data.datasheetUrl || ''}
+                  onChange={(event) => handleFieldChange('datasheetUrl', event.target.value)}
+                  className={`${inputClass} pl-8`}
+                  placeholder="https://…"
+                />
+              </div>
+            </Field>
+            <Field label="Supplier URL" htmlFor={`prop-supplier-${selectedNode.id}`}>
+              <div className="relative">
+                <Globe className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                <input
+                  id={`prop-supplier-${selectedNode.id}`}
+                  type="url"
+                  value={data.supplierUrl || ''}
+                  onChange={(event) => handleFieldChange('supplierUrl', event.target.value)}
+                  className={`${inputClass} pl-8`}
+                  placeholder="https://…"
+                />
+              </div>
+            </Field>
+            <Field label="Tags" htmlFor={`prop-tags-${selectedNode.id}`}>
+              <div className="relative">
+                <Tag className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                <input
+                  id={`prop-tags-${selectedNode.id}`}
+                  type="text"
+                  value={data.tags ? data.tags.join(', ') : ''}
+                  onChange={(event) => handleFieldChange('tags', event.target.value.split(',').map((tag) => tag.trim()).filter(Boolean))}
+                  className={`${inputClass} pl-8`}
+                  placeholder="sensor, i2c, high-power"
+                />
+              </div>
+            </Field>
+          </Section>
         )}
 
-        {/* GROUP 3: RISK ASSESSMENT */}
-        <div className="p-3.5 space-y-3">
-          <button 
-            onClick={() => toggleSection('risk')}
-            className="w-full flex items-center justify-between text-left mb-1.5 focus:outline-none"
-          >
-            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
-              Risks & Mitigation
-            </span>
-            {openSections.risk ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
-          </button>
+        <Section title="Risks & open decisions">
+          <Field label="Potential failure modes" htmlFor={`prop-risks-${selectedNode.id}`}>
+            <textarea
+              id={`prop-risks-${selectedNode.id}`}
+              rows={3}
+              value={data.risks || ''}
+              onChange={(event) => handleFieldChange('risks', event.target.value)}
+              className={textAreaClass}
+              placeholder="What could fail or invalidate this decision?"
+            />
+          </Field>
+          <Field label="Mitigation" htmlFor={`prop-mitigation-${selectedNode.id}`}>
+            <textarea
+              id={`prop-mitigation-${selectedNode.id}`}
+              rows={3}
+              value={data.mitigation || ''}
+              onChange={(event) => handleFieldChange('mitigation', event.target.value)}
+              className={textAreaClass}
+              placeholder="How will the risk be reduced or detected?"
+            />
+          </Field>
+          <Field label="Open questions" htmlFor={`prop-questions-${selectedNode.id}`}>
+            <textarea
+              id={`prop-questions-${selectedNode.id}`}
+              rows={3}
+              value={data.openQuestions || ''}
+              onChange={(event) => handleFieldChange('openQuestions', event.target.value)}
+              className={textAreaClass}
+              placeholder="What still needs a decision or evidence?"
+            />
+          </Field>
+        </Section>
 
-          {openSections.risk && (
-            <div className="space-y-3 animate-in fade-in duration-100">
-              <div>
-                <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Potential failure modes</label>
-                <textarea
-                  rows={2}
-                  value={d.risks || ''}
-                  onChange={(e) => handleFieldChange('risks', e.target.value)}
-                  className="w-full bg-rose-50/40 border border-rose-150 rounded p-1.5 text-xs text-rose-800 font-sans resize-none"
-                  placeholder="e.g. Over-temperature during continuous haptic usage..."
-                />
-              </div>
+        <Section title="Visible in">
+          <p className="text-[10px] leading-4 text-slate-500">These are representations of the same project node, not separate copies.</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {viewDefinitions.map((view) => {
+              const checked = (data.views || []).includes(view.id);
+              return (
+                <label key={view.id} className="flex cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-2 py-2 text-[10px] font-medium text-slate-700 hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => handleToggleView(view.id)}
+                    className="rounded border-slate-300"
+                  />
+                  <span>{view.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </Section>
 
-              <div>
-                <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Mitigation actions</label>
-                <textarea
-                  rows={2}
-                  value={d.mitigation || ''}
-                  onChange={(e) => handleFieldChange('mitigation', e.target.value)}
-                  className="w-full bg-emerald-50/40 border border-emerald-150 rounded p-1.5 text-xs text-emerald-800 font-sans resize-none"
-                  placeholder="e.g. Adding PTC resettable fuse inline..."
-                />
-              </div>
-
-              <div>
-                <label className="text-[9px] font-extrabold text-slate-550 uppercase tracking-wider block mb-1">Open Design questions</label>
-                <textarea
-                  rows={2}
-                  value={d.openQuestions || ''}
-                  onChange={(e) => handleFieldChange('openQuestions', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded p-1.5 text-xs text-slate-750 font-sans resize-none"
-                  placeholder="e.g. Is LDO efficiency high enough, or do we need switching buck?"
-                />
-              </div>
+        <Section title="Connections" count={connectionCount}>
+          <div>
+            <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+              <Link2 className="h-3 w-3 rotate-45" aria-hidden="true" /> Inbound · {inbound.length}
             </div>
-          )}
-        </div>
-
-        {/* GROUP 4: VIEW VISIBILITY */}
-        <div className="p-3.5 space-y-3">
-          <button 
-            onClick={() => toggleSection('views')}
-            className="w-full flex items-center justify-between text-left mb-1.5 focus:outline-none"
-          >
-            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
-              View Visibility
-            </span>
-            {openSections.views ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
-          </button>
-
-          {openSections.views && (
-            <div className="space-y-1.5 animate-in fade-in duration-100">
-              <span className="text-[9px] font-bold text-slate-400 block mb-2 leading-tight">
-                Select which blueprint flow sheets display this block card:
-              </span>
-              {viewDefinitions.map(view => {
-                const isChecked = (d.views || []).includes(view.id);
+            <div className="flex flex-wrap gap-1.5">
+              {inbound.length === 0 && <span className="text-[10px] text-slate-400">No inbound relationships.</span>}
+              {inbound.map((edge) => {
+                const sourceNode = nodes.find((node) => node.id === edge.source);
                 return (
-                  <label 
-                    key={view.id} 
-                    className="flex items-center space-x-2 bg-slate-50 border border-slate-100 px-2 py-1.5 rounded text-xs text-slate-705 cursor-pointer hover:bg-slate-100 transition-colors"
+                  <button
+                    key={edge.id}
+                    type="button"
+                    onClick={() => setSelectedNodeId(edge.source)}
+                    className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-700 hover:bg-slate-50"
+                    title={edge.label ? `via ${edge.label}` : 'Direct relationship'}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleToggleView(view.id)}
-                      className="rounded text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span className="font-semibold text-[10px] uppercase tracking-wider">{view.label}</span>
-                  </label>
+                    {sourceNode?.data?.name || edge.source}
+                  </button>
                 );
               })}
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* GROUP 5: CONNECTIONS TRACE */}
-        <div className="p-3.5 space-y-3">
-          <button 
-            onClick={() => toggleSection('trace')}
-            className="w-full flex items-center justify-between text-left mb-1.5 focus:outline-none"
-          >
-            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
-              Connections Trace ({inbound.length + outbound.length})
-            </span>
-            {openSections.trace ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
-          </button>
-
-          {openSections.trace && (
-            <div className="space-y-3 animate-in fade-in duration-100">
-              <div className="space-y-2">
-                <div className="text-[9px] text-slate-450 font-extrabold uppercase tracking-widest flex items-center space-x-1">
-                  <Link2 className="w-3 h-3 rotate-45" />
-                  <span>Inbound Inputs ({inbound.length})</span>
-                </div>
-                {inbound.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5 pl-0.5">
-                    {inbound.map(e => {
-                      const srcNode = nodes.find(n => n.id === e.source);
-                      return (
-                        <button 
-                          key={e.id} 
-                          onClick={() => setSelectedNodeId(e.source)}
-                          className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[10px] px-2 py-0.5 rounded transition-all cursor-pointer font-bold shadow-sm inline-flex items-center space-x-1"
-                          title={e.label ? `via ${e.label}` : 'Direct Link'}
-                        >
-                          <span className="h-1 w-1 rounded-full bg-indigo-500 mr-0.5" />
-                          <span>{srcNode?.data?.name || e.source}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <span className="text-[9px] text-slate-400 italic block pl-4">No inputs mapped</span>
-                )}
-
-                <div className="text-[9px] text-slate-450 font-extrabold uppercase tracking-widest flex items-center space-x-1 pt-1.5 border-t border-slate-200/50">
-                  <Link2 className="w-3 h-3 -rotate-45" />
-                  <span>Outbound Outputs ({outbound.length})</span>
-                </div>
-                {outbound.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5 pl-0.5">
-                    {outbound.map(e => {
-                      const tgtNode = nodes.find(n => n.id === e.target);
-                      return (
-                        <button 
-                          key={e.id} 
-                          onClick={() => setSelectedNodeId(e.target)}
-                          className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[10px] px-2 py-0.5 rounded transition-all cursor-pointer font-bold shadow-sm inline-flex items-center space-x-1"
-                          title={e.label ? `via ${e.label}` : 'Direct Link'}
-                        >
-                          <span className="h-1 w-1 rounded-full bg-emerald-500 mr-0.5" />
-                          <span>{tgtNode?.data?.name || e.target}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <span className="text-[9px] text-slate-400 italic block pl-4">No outputs mapped</span>
-                )}
-              </div>
+          <div>
+            <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+              <Link2 className="h-3 w-3 -rotate-45" aria-hidden="true" /> Outbound · {outbound.length}
             </div>
-          )}
-        </div>
-
+            <div className="flex flex-wrap gap-1.5">
+              {outbound.length === 0 && <span className="text-[10px] text-slate-400">No outbound relationships.</span>}
+              {outbound.map((edge) => {
+                const targetNode = nodes.find((node) => node.id === edge.target);
+                return (
+                  <button
+                    key={edge.id}
+                    type="button"
+                    onClick={() => setSelectedNodeId(edge.target)}
+                    className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-700 hover:bg-slate-50"
+                    title={edge.label ? `via ${edge.label}` : 'Direct relationship'}
+                  >
+                    {targetNode?.data?.name || edge.target}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Section>
       </div>
     </aside>
   );
