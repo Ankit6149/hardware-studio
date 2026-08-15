@@ -4,10 +4,9 @@ import React, { useEffect, useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore, type MechanicalWorkbenchMode } from '../../store/studioContextStore';
 import { ComponentLibraryWorkbench } from '../component-library/ComponentLibraryWorkbench';
-import { BoardDesigner } from '../board/BoardDesigner';
-import { UnifiedSchematicEditor } from '../schematic/UnifiedSchematicEditor';
-import { MechanicalStudio } from '../mechanical/MechanicalStudio';
-import { MechanicalDecisionBar } from '../mechanical/MechanicalDecisionBar';
+import { EngineeringBoardWorkbench } from '../board/EngineeringBoardWorkbench';
+import { EngineeringSchematicWorkbench } from '../schematic/EngineeringSchematicWorkbench';
+import { EngineeringMechanicalWorkbench } from '../mechanical/EngineeringMechanicalWorkbench';
 import { UnifiedBoard3DView } from '../mechanical/UnifiedBoard3DView';
 
 export const UnifiedComponentLibraryWorkbench: React.FC = () => {
@@ -30,35 +29,17 @@ export const UnifiedComponentLibraryWorkbench: React.FC = () => {
   return <ComponentLibraryWorkbench />;
 };
 
-export const UnifiedSchematicWorkbench: React.FC = () => {
-  const activeBoardId = useStudioContextStore((state) => state.activeBoardId);
-  const activeComponentId = useStudioContextStore((state) => state.activeComponentId);
-  const activeNetName = useStudioContextStore((state) => state.activeNetName);
+export const UnifiedSchematicWorkbench: React.FC = () => <EngineeringSchematicWorkbench />;
 
-  // Opening an editor must never mutate engineering state. Components are placed
-  // only from an explicit Place action inside the schematic workspace.
-  return <UnifiedSchematicEditor key={`${activeBoardId || ''}:${activeComponentId || ''}:${activeNetName || ''}`} />;
-};
-
-export const UnifiedBoardDesignerWorkbench: React.FC = () => {
-  const activeBoardId = useStudioContextStore((state) => state.activeBoardId);
-  const activeComponentId = useStudioContextStore((state) => state.activeComponentId);
-  const activeNetName = useStudioContextStore((state) => state.activeNetName);
-  return <BoardDesigner key={`${activeBoardId || ''}:${activeComponentId || ''}:${activeNetName || ''}`} />;
-};
+export const UnifiedBoardDesignerWorkbench: React.FC = () => <EngineeringBoardWorkbench />;
 
 export const UnifiedMechanicalWorkbench: React.FC<{ defaultMode: MechanicalWorkbenchMode }> = ({ defaultMode }) => {
   const requestedMode = useStudioContextStore((state) => state.requestedMechanicalMode);
   const resolvedMode = requestedMode || defaultMode;
 
-  return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-50" aria-label="Mechanical decision workspace">
-      <MechanicalDecisionBar currentMode={resolvedMode} />
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {resolvedMode === 'webgl-3d'
-          ? <UnifiedBoard3DView />
-          : <MechanicalStudio key={resolvedMode} initialMode={resolvedMode} />}
-      </div>
-    </section>
-  );
+  if (resolvedMode === 'webgl-3d' || resolvedMode === '3d-preview') {
+    return <UnifiedBoard3DView />;
+  }
+
+  return <EngineeringMechanicalWorkbench key={resolvedMode} initialMode={resolvedMode} />;
 };
