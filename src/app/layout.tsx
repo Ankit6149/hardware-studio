@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './editor-layout.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://hardware-studio.vercel.app'),
