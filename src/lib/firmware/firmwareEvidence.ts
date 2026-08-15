@@ -99,39 +99,39 @@ function isRealSourceFile(file: FirmwareSourceFile | undefined): boolean {
   );
 }
 
-function moduleRealSourceFiles(project: Project, module: FirmwareModule): FirmwareSourceFile[] {
+function moduleRealSourceFiles(project: Project, firmwareModule: FirmwareModule): FirmwareSourceFile[] {
   const projectFiles = project.firmwareSourceFiles || [];
   const referenced = new Set<string>();
-  for (const source of module.sourceFiles || []) {
+  for (const source of firmwareModule.sourceFiles || []) {
     if (typeof source === 'string') referenced.add(source);
     else referenced.add(source.id);
   }
   return projectFiles.filter((file) =>
     isRealSourceFile(file)
-    && (file.linkedModuleIds?.includes(module.id) || referenced.has(file.id) || referenced.has(file.path)),
+    && (file.linkedModuleIds?.includes(firmwareModule.id) || referenced.has(file.id) || referenced.has(file.path)),
   );
 }
 
-function moduleMappedToHardware(module: FirmwareModule): boolean {
-  return module.linkedComponentIds.length > 0
-    && (module.linkedPinIds.length > 0 || module.linkedNetIds.length > 0);
+function firmwareModuleMappedToHardware(firmwareModule: FirmwareModule): boolean {
+  return firmwareModule.linkedComponentIds.length > 0
+    && (firmwareModule.linkedPinIds.length > 0 || firmwareModule.linkedNetIds.length > 0);
 }
 
-export function getModuleVerificationBlockers(project: Project, module: FirmwareModule): string[] {
+export function getModuleVerificationBlockers(project: Project, firmwareModule: FirmwareModule): string[] {
   const blockers: string[] = [];
-  const realSources = moduleRealSourceFiles(project, module);
+  const realSources = moduleRealSourceFiles(project, firmwareModule);
   if (realSources.length === 0) blockers.push('Link at least one non-generated source file to this module.');
-  if (!moduleMappedToHardware(module)) blockers.push('Link the module to canonical hardware plus at least one pin or net.');
+  if (!firmwareModuleMappedToHardware(firmwareModule)) blockers.push('Link the module to canonical hardware plus at least one pin or net.');
 
   const realSourceIds = new Set(realSources.map((file) => file.id));
   const successfulBuilds = getFirmwareBuildEvidence(project).filter(
     (record) => record.outcome === 'Succeeded'
-      && record.moduleIds.includes(module.id)
+      && record.moduleIds.includes(firmwareModule.id)
       && record.sourceFileIds.some((fileId) => realSourceIds.has(fileId)),
   );
   if (successfulBuilds.length === 0) blockers.push('Record a successful build result that includes this module’s real source file.');
 
-  const tests = deviceEvidenceTests(project).filter((test) => test.linkedFirmwareModuleIds?.includes(module.id));
+  const tests = deviceEvidenceTests(project).filter((test) => test.linkedFirmwareModuleIds?.includes(firmwareModule.id));
   const testIds = new Set(tests.map((test) => test.id));
   const passingDeviceRun = (project.validationRuns || []).some(
     (run) => testIds.has(run.testId) && (run.status === 'Pass' || run.status === 'Passed'),
@@ -142,19 +142,19 @@ export function getModuleVerificationBlockers(project: Project, module: Firmware
 }
 
 export function evaluateFirmwareEvidence(project: Project): FirmwareEvidenceSnapshot {
-  const modules = project.firmwareModules || [];
+  const firmwareModules = project.firmwareModules || [];
   const blockersByModuleId: Record<string, string[]> = {};
   const verificationReadyModuleIds: string[] = [];
 
-  for (const module of modules) {
-    const blockers = getModuleVerificationBlockers(project, module);
-    blockersByModuleId[module.id] = blockers;
-    if (blockers.length === 0) verificationReadyModuleIds.push(module.id);
+  for (const firmwareModule of firmwareModules) {
+    const blockers = getModuleVerificationBlockers(project, firmwareModule);
+    blockersByModuleId[firmwareModule.id] = blockers;
+    if (blockers.length === 0) verificationReadyModuleIds.push(firmwareModule.id);
   }
 
   return {
     sourceFileCount: (project.firmwareSourceFiles || []).filter(isRealSourceFile).length,
-    mappedModuleCount: modules.filter(moduleMappedToHardware).length,
+    mappedModuleCount: firmwareModules.filter(firmwareModuleMappedToHardware).length,
     successfulBuildCount: getFirmwareBuildEvidence(project).filter((record) => record.outcome === 'Succeeded').length,
     deviceEvidenceCount: deviceEvidenceRuns(project).length,
     verificationReadyModuleIds,
@@ -166,30 +166,30 @@ export function createDeviceEvidenceRecords(
   project: Project,
   input: DeviceEvidenceInput,
 ): { test: ValidationTest; run: ValidationRun } {
-  const module = (project.firmwareModules || []).find((candidate) => candidate.id === input.moduleId);
-  if (!module) throw new Error('The selected firmware module no longer exists.');
+  const firmwareModule = (project.firmwareModules || []).find((candidate) => candidate.id === input.moduleId);
+  if (!firmwareModule) throw new Error('The selected firmware module no longer exists.');
   if (!input.deviceLabel.trim()) throw new Error('Name the real local device used for this observation.');
   if (!input.observation.trim()) throw new Error('Record what was actually observed on the local device.');
 
   const build = getFirmwareBuildEvidence(project).find((record) => record.id === input.buildRecordId);
-  if (!build || build.outcome !== 'Succeeded' || !build.moduleIds.includes(module.id)) {
+  if (!build || build.outcome !== 'Succeeded' || !build.moduleIds.includes(firmwareModule.id)) {
     throw new Error('Local-device evidence must reference a successful build for the selected module.');
   }
 
   const testId = `fw_device_test_${input.id}`;
   const test: ValidationTest = {
     id: testId,
-    name: `Local device evidence · ${module.name} · ${input.deviceLabel.trim()}`,
+    name: `Local device evidence · ${firmwareModule.name} · ${input.deviceLabel.trim()}`,
     stage: 'EVT',
     category: 'Firmware',
     linkedRequirementIds: [],
-    linkedArchitectureNodeIds: [...module.linkedArchitectureNodeIds],
-    linkedComponentIds: [...module.linkedComponentIds],
-    linkedNetIds: [...module.linkedNetIds],
-    linkedFirmwareModuleIds: [module.id],
+    linkedArchitectureNodeIds: [...firmwareModule.linkedArchitectureNodeIds],
+    linkedComponentIds: [...firmwareModule.linkedComponentIds],
+    linkedNetIds: [...firmwareModule.linkedNetIds],
+    linkedFirmwareModuleIds: [firmwareModule.id],
     steps: [{
       stepNumber: 1,
-      instruction: `Observe ${module.name} on ${input.deviceLabel.trim()} using ${input.connection}.`,
+      instruction: `Observe ${firmwareModule.name} on ${input.deviceLabel.trim()} using ${input.connection}.`,
       expectedResult: 'Observed behavior matches the firmware acceptance criteria for the physical hardware.',
       completed: true,
     }],
