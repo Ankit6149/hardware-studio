@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { BUILD_STAGES, ELECTRONICS_FLOW } from '../components/studio/StudioBuildMap';
 import { useStudioContextStore } from '../store/studioContextStore';
 
 function source(relativePath: string): string {
@@ -9,34 +8,6 @@ function source(relativePath: string): string {
 
 afterEach(() => {
   useStudioContextStore.getState().clearContext();
-});
-
-describe('unified Hardware Studio build map', () => {
-  it('keeps every major product domain discoverable in one stable order', () => {
-    expect(BUILD_STAGES.map((stage) => stage.id)).toEqual([
-      'product',
-      'mechanical',
-      'electronics',
-      'pcb',
-      'firmware',
-      'validation',
-      'outputs',
-    ]);
-    expect(new Set(BUILD_STAGES.map((stage) => stage.viewId)).size).toBe(BUILD_STAGES.length);
-  });
-
-  it('defines a single connected electronics golden path including real 3D and Checks entries', () => {
-    expect(ELECTRONICS_FLOW.map((step) => step.id)).toEqual([
-      'component-library',
-      'schematic-editor',
-      'board-settings',
-      'board-designer',
-      'mechanical-studio',
-      'pcb-drc',
-    ]);
-    expect(ELECTRONICS_FLOW.find((step) => step.id === 'mechanical-studio')?.label).toBe('Assembly / 3D');
-    expect(ELECTRONICS_FLOW.find((step) => step.id === 'pcb-drc')?.label).toBe('Checks');
-  });
 });
 
 describe('shared cross-workbench engineering context', () => {
@@ -91,9 +62,9 @@ describe('golden-path regression guards', () => {
     expect(boardDesigner).toContain("setActiveView('schematic-editor')");
   });
 
-  it('mounts one persistent build map and shared engineering context above workbenches', () => {
+  it('mounts one shared engineering context above the workbench instead of duplicate global navigation', () => {
     const appShell = source('../components/AppShell.tsx');
-    expect(appShell).toContain('<StudioBuildMap />');
+    expect(appShell).not.toContain('<StudioBuildMap />');
     expect(appShell).toContain('<EngineeringContextBar />');
     expect(appShell).toContain('UnifiedComponentLibraryWorkbench');
     expect(appShell).toContain('UnifiedSchematicWorkbench');

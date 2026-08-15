@@ -25,7 +25,6 @@ import { FactoryPackageBuilder } from './FactoryPackageBuilder';
 import { RevisionsStudio } from './revisions/RevisionsStudio';
 import { ProductStudio } from './product/ProductStudio';
 import { FirmwareStudio } from './firmware/FirmwareStudio';
-import { StudioBuildMap } from './studio/StudioBuildMap';
 import { EngineeringContextBar } from './studio/EngineeringContextBar';
 import { UnifiedBOMWorkbench } from './studio/UnifiedBOMWorkbench';
 import { UnifiedBoardDRCWorkbench } from './studio/UnifiedBoardDRCWorkbench';
@@ -150,13 +149,12 @@ export const AppShell: React.FC = () => {
       <div className="relative flex min-h-0 flex-1">
         <Sidebar />
         <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-          <StudioBuildMap />
           <EngineeringContextBar />
           {activeHiddenDomain && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-amber-950">
               <div className="flex min-w-0 items-center gap-2">
                 <EyeOff className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <p className="text-xs leading-5"><strong>This domain is outside the focused workflow.</strong> It stays fully available in the build map, and its project data has not been changed.</p>
+                <p className="text-xs leading-5"><strong>This domain is outside the focused workflow.</strong> Its project data is unchanged.</p>
               </div>
               <div className="flex shrink-0 gap-2">
                 <button type="button" onClick={() => toggleDomain(activeHiddenDomain)} className="rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500">Add to focus</button>

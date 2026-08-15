@@ -1,1 +1,0 @@
-Capture the raw staged payload for byte-level comparison before verification.
