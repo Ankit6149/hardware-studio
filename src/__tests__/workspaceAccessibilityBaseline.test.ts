@@ -6,9 +6,10 @@ function source(relativePath: string): string {
 }
 
 describe('workspace accessibility and focus baseline', () => {
-  it('provides a skip target, route announcement, and collapsible responsive navigation', () => {
+  it('provides a skip target, route announcement, and collapsible two-level navigation', () => {
     const shell = source('../components/AppShell.tsx');
     const sidebar = source('../components/Sidebar.tsx');
+    const subnav = source('../components/ContextSubnav.tsx');
 
     expect(shell).toContain('href="#workspace-main"');
     expect(shell).toContain('id="workspace-main"');
@@ -16,10 +17,16 @@ describe('workspace accessibility and focus baseline', () => {
     expect(shell).toContain('sidebarCollapsed');
     expect(shell).toContain('onToggleCollapsed');
 
-    expect(sidebar).toContain('aria-label="Primary workspace navigation"');
-    expect(sidebar).toContain('Collapse navigation');
-    expect(sidebar).toContain('Expand navigation');
-    expect(sidebar).toContain('h-10');
-    expect(sidebar).toContain('lg:w-[240px]');
+    expect(sidebar).toContain('aria-label="Primary product-area navigation"');
+    expect(sidebar).toContain('aria-label="Engineering domains"');
+    expect(sidebar).toContain('Show contextual navigation');
+    expect(sidebar).toContain('Hide contextual navigation');
+    expect(sidebar).toContain('h-11');
+    expect(sidebar).toContain('w-16');
+
+    expect(subnav).toContain('contextual navigation');
+    expect(subnav).toContain('workbenches');
+    expect(subnav).toContain('min-h-10');
+    expect(subnav).toContain('w-[220px]');
   });
 });
