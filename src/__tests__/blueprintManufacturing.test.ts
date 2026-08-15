@@ -1,72 +1,109 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { useProjectStore } from '../store/projectStore';
 import { exportBlueprintSheetsJson } from '../lib/exportBlueprintSheets';
 import {
-  generateNativeGerberCopperTop,
-  generateNativeExcellonDrills,
-  generateNativeCplDraftCsv,
   exportBomCsv,
-  generateReleasePackageManifest
+  generateNativeCplDraftCsv,
+  generateNativeExcellonDrills,
+  generateNativeGerberCopperTop,
+  generateReleasePackageManifest,
 } from '../lib/nativeExports';
 
-describe('Slice 12 Complete Blueprints & Manufacturing Release Workflow Tests', () => {
-  it('should generate multi-sheet blueprint pack, track stale state on edits, export manufacturing package, and generate release manifest checksums', () => {
+describe('Blueprint and manufacturing release workflow', () => {
+  it('keeps blueprint staleness and manufacturing exports tied to explicit board state', () => {
     const store = useProjectStore.getState();
 
-    // 1. Setup project state
     store.importProjectJSON({
       id: 'proj_blueprint_mfg_1',
       projectName: 'Blueprint Manufacturing System',
       activeBoardId: 'board_main',
-      boards: [{ id: 'board_main', name: 'Main Board', boardType: 'Rigid', layerCount: 2, status: 'Draft' }],
-      boardComponents: [
-        {
-          id: 'cmp_bp_1',
-          boardId: 'board_main',
-          referenceDesignator: 'U1',
-          componentName: 'MCU',
-          componentType: 'MCU',
-          packageName: 'QFN_32',
-          footprint: 'QFN_32',
-          quantity: 1,
+      boards: [{
+        id: 'board_main',
+        name: 'Main Board',
+        boardType: 'Rigid',
+        dimensionsMm: '50 x 40 mm',
+        layerCount: 2,
+        status: 'Draft',
+      }],
+      boardOutlines: [{
+        id: 'outline_main',
+        boardId: 'board_main',
+        width: 50,
+        height: 40,
+        units: 'mm',
+      }],
+      boardComponents: [{
+        id: 'cmp_bp_1',
+        boardId: 'board_main',
+        referenceDesignator: 'U1',
+        componentName: 'MCU',
+        componentType: 'MCU',
+        packageName: 'QFN_32',
+        footprint: 'QFN_32',
+        quantity: 1,
+        side: 'Top',
+        placementX: 0,
+        placementY: 0,
+        rotationDeg: 0,
+        placementStatus: 'Placed',
+        placementCriticality: 'Medium',
+        pcb: {
+          placed: true,
+          xMm: 0,
+          yMm: 0,
+          rotationDeg: 0,
           side: 'Top',
-          placementX: 25,
-          placementY: 25,
+          locked: false,
           placementStatus: 'Placed',
-          pins: [{ id: 'pin_bp_1', componentId: 'cmp_bp_1', pinNumber: '1', pinName: 'VDD', electricalType: 'PowerIn', netName: '3V3' }]
-        }
-      ],
+        },
+        pins: [{
+          id: 'pin_bp_1',
+          componentId: 'cmp_bp_1',
+          pinNumber: '1',
+          pinName: 'VDD',
+          electricalType: 'PowerIn',
+          netName: '3V3',
+          netId: 'net_3v3',
+        }],
+      }],
       nets: [{ id: 'net_3v3', netName: '3V3', netType: 'Power' }],
-      blueprintPackStatus: 'Current'
+      traces: [],
+      vias: [],
+      drillHoles: [],
+      copperShapes: [],
+      blueprintPackStatus: 'Current',
     });
 
-    // 2. Generate multi-sheet blueprint pack
     const bpJsonStr = exportBlueprintSheetsJson(useProjectStore.getState());
-    const bpData = JSON.parse(bpJsonStr);
+    const bpData = JSON.parse(bpJsonStr) as { sheets: unknown[]; projectName: string };
     expect(bpData.sheets.length).toBeGreaterThanOrEqual(10);
     expect(bpData.projectName).toBe('Blueprint Manufacturing System');
 
-    // 3. Make edit in schematic -> confirm blueprint marked stale
     store.markDerivedArtifactsStale('Pin connected via wire');
     expect(useProjectStore.getState().blueprintPackStatus).toBe('Stale');
 
-    // 4. Generate Manufacturing Package Exports (Gerber, Drill, Pick & Place, BOM)
-    const gerberData = generateNativeGerberCopperTop(useProjectStore.getState());
-    const drillData = generateNativeExcellonDrills(useProjectStore.getState());
-    const cplData = generateNativeCplDraftCsv(useProjectStore.getState());
-    const bomData = exportBomCsv(useProjectStore.getState());
+    const project = useProjectStore.getState();
+    const gerberData = generateNativeGerberCopperTop(project);
+    const drillData = generateNativeExcellonDrills(project);
+    const cplData = generateNativeCplDraftCsv(project);
+    const bomData = exportBomCsv(project);
 
-    expect(gerberData).toContain('Gerber');
+    expect(gerberData).toContain('explicit project geometry only');
+    expect(gerberData).not.toContain('board-main');
     expect(drillData).toContain('M48');
-    expect(cplData).toContain('Designator');
+    expect(cplData).toContain('canonical PCB millimetres');
+    expect(cplData).toContain('"0"');
     expect(bomData).toContain('Reference Designator');
 
-    // 5. Generate Release Package Manifest with SHA-256 Checksums
-    const manifestJson = generateReleasePackageManifest(useProjectStore.getState());
-    const manifest = JSON.parse(manifestJson);
+    const manifest = JSON.parse(generateReleasePackageManifest(project)) as {
+      releaseManifestVersion: string;
+      boardId: string;
+      artifacts: { sha256: string; sizeBytes: number }[];
+    };
 
-    expect(manifest.releaseManifestVersion).toBe('1.0.0');
-    expect(manifest.artifacts.length).toBe(5);
+    expect(manifest.releaseManifestVersion).toBe('2.0.0');
+    expect(manifest.boardId).toBe('board_main');
+    expect(manifest.artifacts).toHaveLength(5);
     expect(manifest.artifacts[0].sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(manifest.artifacts[0].sizeBytes).toBeGreaterThan(0);
   });
