@@ -1,5 +1,4 @@
-// schematicInteraction.ts — Part of Phase 6 Schematic Editor Interaction State
-
+// schematicInteraction.ts — schematic editor interaction state
 
 export type SchematicTool =
   | 'select'
@@ -17,12 +16,16 @@ export interface SchematicUIState {
   panX: number;
   panY: number;
   activeTool: SchematicTool;
-  
+
   // Selection targets
   selectedComponentId: string | null;
   selectedSymbolId: string | null;
   selectedWireId: string | null;
   selectedNetName: string | null;
+
+  // Explicit symbol placement. Choosing a part arms placement; the project is
+  // not mutated until the user clicks a sheet coordinate.
+  placingComponentId: string | null;
 
   // Active routing / wire placement
   isDrawingWire: boolean;
@@ -44,6 +47,7 @@ export const initialSchematicUIState: SchematicUIState = {
   selectedSymbolId: null,
   selectedWireId: null,
   selectedNetName: null,
+  placingComponentId: null,
   isDrawingWire: false,
   wirePoints: [],
   activeNetName: 'GND',
