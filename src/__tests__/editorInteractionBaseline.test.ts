@@ -24,13 +24,18 @@ describe('editor-first interaction model', () => {
 
   it('keeps navigation, selection, and mutation as visibly separate actions', () => {
     const subnav = source('../components/ContextSubnav.tsx');
+    const product = source('../components/product/ProductStudio.tsx');
     const dashboard = source('../components/ProjectDashboard.tsx');
     const readiness = source('../components/ReadinessDashboard.tsx');
     const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
     const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
 
-    expect(subnav).toContain('Clicking the row itself does not mutate the project');
-    expect(subnav).toContain('aria-label={`Add ${libraryItem.name} to the blueprint`}');
+    expect(subnav).toContain('onClick={() => setActiveView(item.id)}');
+    expect(subnav).not.toContain('addBlockLibraryItemToProject');
+    expect(subnav).not.toContain('libraryItem');
+    expect(product).toContain('onClick={() => handleAddElement(preset)}');
+    expect(product).toContain('aria-label={`Place ${preset.name}`}');
+
     expect(dashboard).toContain('Rows are information. Only the Open button changes workspaces.');
     expect(readiness).toContain('Evidence text is inert. Use the explicit Resolve button to change workspaces.');
     expect(readiness).toContain('Gate rows show state. Only Review changes the workspace.');
