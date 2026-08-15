@@ -1,0 +1,29 @@
+/* Editor-first layout rules shared by legacy workbenches that already expose panel toggles. */
+@media (min-width: 1024px) {
+  .hs-app [aria-label="Product Design Studio"] > div.flex.min-h-0.flex-1 {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hs-app [aria-label="Product Design Studio"] > div.flex.min-h-0.flex-1 > aside.w-64 {
+    position: absolute;
+    inset-block: 0.75rem;
+    left: 0.75rem;
+    z-index: 30;
+    height: auto;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 32px rgba(17, 17, 15, 0.08);
+  }
+
+  .hs-app [aria-label="Product Design Studio"] > div.flex.min-h-0.flex-1 > aside.w-72 {
+    position: absolute;
+    inset-block: 0.75rem;
+    right: 0.75rem;
+    z-index: 30;
+    height: auto;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 32px rgba(17, 17, 15, 0.08);
+  }
+}
