@@ -1,4 +1,4 @@
-import { Project, ValidationRun, ValidationTest } from '../types';
+import { Project, ValidationRun } from '../types';
 import { runBoardDRC } from './boardDRC';
 import { checkMechanicalInterference } from './mechanical/mechanicalGeometry';
 import { validateStateMachine } from './firmware/firmwareValidation';
@@ -8,6 +8,22 @@ export interface ExecuteRunOptions {
   evidenceLink?: string;
   notes?: string;
   runBy?: string;
+  manualVerdict?: 'Pass' | 'Fail' | 'Inconclusive';
+}
+
+function runTimestamp(run: ValidationRun): number {
+  const parsed = run.timestamp ? Date.parse(run.timestamp) : 0;
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function getValidationRunHistory(project: Project, testId: string): ValidationRun[] {
+  return (project.validationRuns || [])
+    .filter((run) => run.testId === testId)
+    .slice()
+    .sort((a, b) => {
+      const runNumberDelta = (b.runNumber || 0) - (a.runNumber || 0);
+      return runNumberDelta || runTimestamp(b) - runTimestamp(a);
+    });
 }
 
 export function runValidationTest(
@@ -16,88 +32,120 @@ export function runValidationTest(
   options?: ExecuteRunOptions
 ): { run: ValidationRun; updatedRuns: ValidationRun[] } {
   const tests = project.validationTests || [];
-  const rawTest = tests.find(t => t.id === testId || t.name === testId || t.testName === testId);
+  const rawTest = tests.find((test) => test.id === testId || test.name === testId || test.testName === testId);
   const testName = rawTest?.testName || rawTest?.name || testId || 'Manual Validation Test';
   const category = rawTest?.category || (testId.toLowerCase().includes('drc') ? 'DRC' : 'Manual');
   const rawCriteria = rawTest?.passCriteria || 'Verification criteria';
   const passCriteriaStr = Array.isArray(rawCriteria) ? rawCriteria.join(', ') : String(rawCriteria);
+  const priorRuns = getValidationRunHistory(project, rawTest?.id || testId);
+  const previousRun = priorRuns[0];
+  const nextRunNumber = Math.max(0, ...priorRuns.map((run) => run.runNumber || 0)) + 1;
 
   const logs: string[] = [];
-  logs.push(`[${new Date().toISOString()}] Executing validation run for: ${testName}`);
+  const now = new Date().toISOString();
+  logs.push(`[${now}] Executing validation run #${nextRunNumber} for: ${testName}`);
+  if (previousRun) {
+    logs.push(`RETEST: supersedes evidence review of run ${previousRun.id} (${previousRun.status}). Prior history remains immutable.`);
+  }
 
-  let status: ValidationRun['status'] = 'Pass';
-  let measuredValue: number | string = options?.measuredValue ?? 0;
+  let status: ValidationRun['status'] = 'Needs Review';
+  let measuredValue: number | string = options?.measuredValue ?? 'Pending Verification';
+  const isAutomatedCategory = category === 'DRC'
+    || category === 'Thermal'
+    || category === 'Mechanical'
+    || category === 'Firmware'
+    || testName.toLowerCase().includes('drc')
+    || testName.toLowerCase().includes('3d')
+    || testName.toLowerCase().includes('clearance')
+    || testName.toLowerCase().includes('state');
 
   if (category === 'DRC' || testName.toLowerCase().includes('drc')) {
     const drcIssues = runBoardDRC(project);
-    const blockers = drcIssues.filter(i => i.severity === 'Blocker' || i.severity === 'Error');
+    const blockers = drcIssues.filter((issue) => issue.severity === 'Blocker' || issue.severity === 'Error');
     measuredValue = options?.measuredValue ?? `${blockers.length} errors`;
-    logs.push(`DRC Scan completed: ${drcIssues.length} total issues, ${blockers.length} blocking errors.`);
+    logs.push(`DRC scan completed: ${drcIssues.length} total issues, ${blockers.length} blocking errors.`);
     if (blockers.length > 0) {
       status = 'Fail';
       logs.push(`FAILED: ${blockers.length} design rule violations detected.`);
     } else {
-      logs.push('PASSED: Zero design rule violations found.');
+      status = 'Pass';
+      logs.push('PASSED: Zero blocking design rule violations found.');
     }
   } else if (category === 'Thermal' || category === 'Mechanical' || testName.toLowerCase().includes('3d') || testName.toLowerCase().includes('clearance')) {
     const interference = checkMechanicalInterference(project);
-    measuredValue = options?.measuredValue ?? (interference.hasCollision ? `${interference.collisions.length} collisions` : `Clearance ${interference.minClearanceMm}mm`);
-    logs.push(`3D Spatial Collision scan completed: min clearance ${interference.minClearanceMm}mm.`);
+    measuredValue = options?.measuredValue ?? (interference.hasCollision
+      ? `${interference.collisions.length} collisions`
+      : `Clearance ${interference.minClearanceMm}mm`);
+    logs.push(`3D spatial collision scan completed: minimum clearance ${interference.minClearanceMm}mm.`);
     if (interference.hasCollision) {
       status = 'Fail';
       logs.push(`FAILED: ${interference.collisions.length} 3D mechanical spatial collisions detected.`);
     } else {
-      logs.push('PASSED: 3D spatial clearance verified.');
+      status = 'Pass';
+      logs.push('PASSED: 3D spatial clearance verified by the local geometry engine.');
     }
   } else if (category === 'Firmware' || testName.toLowerCase().includes('state')) {
     const warnings = validateStateMachine(project.firmwareStates || [], project.firmwareTransitions || []);
     measuredValue = options?.measuredValue ?? `${warnings.length} warnings`;
-    logs.push(`Firmware state machine scan: ${warnings.length} warnings.`);
-    if (warnings.some(w => w.severity === 'Error')) {
+    logs.push(`Firmware state-machine scan completed: ${warnings.length} warnings.`);
+    if (warnings.some((warning) => warning.severity === 'Error')) {
       status = 'Fail';
-      logs.push('FAILED: Unreachable states or invalid state machine transitions.');
+      logs.push('FAILED: Unreachable states or invalid state-machine transitions were detected.');
     } else {
-      logs.push('PASSED: State machine graph is valid and reachable.');
+      status = 'Pass';
+      logs.push('PASSED: State-machine graph is valid and reachable according to the local validator.');
+    }
+  } else if (options?.manualVerdict) {
+    status = options.manualVerdict;
+    measuredValue = options.measuredValue ?? 'No numeric measurement recorded';
+    logs.push(`MANUAL VERDICT RECORDED: ${options.manualVerdict}.`);
+    if (options.measuredValue != null) {
+      logs.push(`Manual measurement recorded: ${options.measuredValue}`);
     }
   } else {
-    // Unknown or manual category MUST NOT auto-pass!
     if (options?.measuredValue != null) {
       measuredValue = options.measuredValue;
-      status = options.measuredValue.toString().toLowerCase().includes('fail') ? 'Fail' : 'Pass';
-      logs.push(`MANUAL MEASUREMENT ENTERED: ${measuredValue}`);
-    } else {
-      measuredValue = 'Pending Verification';
-      status = 'Needs Review';
-      logs.push('NEEDS REVIEW: Manual execution, physical testing, or measurement entry required.');
+      logs.push(`Manual measurement recorded without a verdict: ${options.measuredValue}`);
     }
+    status = 'Needs Review';
+    logs.push('NEEDS REVIEW: Manual/physical validation cannot auto-pass from a measurement value alone. Record an explicit engineer verdict after reviewing the procedure and evidence.');
   }
 
-  // If evidence link was provided, record and validate format
-  const evidenceLink = options?.evidenceLink;
+  const evidenceLink = options?.evidenceLink?.trim() || undefined;
   if (evidenceLink) {
-    logs.push(`Evidence attached: ${evidenceLink}`);
+    logs.push(`Evidence link attached: ${evidenceLink}`);
+  }
+  if (options?.notes?.trim()) {
+    logs.push(`Notes: ${options.notes.trim()}`);
   }
 
-  if (options?.notes) {
-    logs.push(`Notes: ${options.notes}`);
+  const frozenEvidence = JSON.parse(JSON.stringify(rawTest?.evidence || [])) as unknown[];
+  if (evidenceLink) {
+    frozenEvidence.push({
+      type: 'Link',
+      value: evidenceLink,
+      createdAt: now,
+      notes: 'Captured with this validation run.'
+    });
   }
 
   const newRun: ValidationRun = {
     id: `val_run_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-    testId,
+    testId: rawTest?.id || testId,
+    runNumber: nextRunNumber,
     testName,
-    timestamp: new Date().toISOString(),
+    timestamp: now,
     status,
     measuredValue,
     passCriteria: passCriteriaStr,
     evidenceLink,
+    evidence: frozenEvidence,
+    stepResults: JSON.parse(JSON.stringify(rawTest?.steps || [])),
     logs,
-    runBy: options?.runBy || 'Local Engineering Validation Engine',
+    runBy: options?.runBy?.trim() || (isAutomatedCategory ? 'Local Engineering Validation Engine' : 'Local engineer — attribution not recorded'),
     environment: 'Desktop Hardware Studio V1'
   };
 
-  // Immutable history prepending
   const updatedRuns = [newRun, ...(project.validationRuns || [])];
-
   return { run: newRun, updatedRuns };
 }
