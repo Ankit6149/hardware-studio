@@ -56,7 +56,9 @@ describe('electronics workspace lifecycle evidence', () => {
       nextStage: 'schematic-editor',
     });
     expect(
-      useProjectStore.getState().boardComponents.find((candidate) => candidate.id === component.id)?.bomItemId,
+      (useProjectStore.getState().boardComponents || []).find(
+        (candidate) => candidate.id === component.id,
+      )?.bomItemId,
     ).toBeTruthy();
 
     store.placeComponentOnSchematic(component.id, 120, 120);
