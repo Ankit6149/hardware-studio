@@ -25,10 +25,12 @@ import {
   Boxes,
   CircuitBoard,
   Cpu,
+  Layers,
   Network,
-  PenTool,
+  PanelRight,
 } from 'lucide-react';
 import { useFeedback } from '../feedback/FeedbackProvider';
+import { EditorDockButton } from '../editor/EditorDockButton';
 
 type RightTab = 'inspector' | 'nets' | 'drc';
 
@@ -70,6 +72,9 @@ export const BoardDesigner: React.FC = () => {
   });
   const [rightTab, setRightTab] = useState<RightTab>('inspector');
   const [drcResults, setDrcResults] = useState<ReviewResult[]>([]);
+  const [layersOpen, setLayersOpen] = useState(false);
+  const [rightDockOpen, setRightDockOpen] = useState(false);
+  const [componentsOpen, setComponentsOpen] = useState(false);
 
   const updateView = useCallback((patch: Partial<BoardDesignerUIState>) => {
     setViewState((previous) => ({ ...previous, ...patch }));
@@ -89,6 +94,7 @@ export const BoardDesigner: React.FC = () => {
     });
     setDrcResults(results);
     setRightTab('drc');
+    setRightDockOpen(true);
   }, [viewState.activeBoardId]);
 
   const handleAutoPlace = useCallback(() => {
@@ -107,7 +113,7 @@ export const BoardDesigner: React.FC = () => {
       notify({
         tone: 'warning',
         title: 'Board outline required',
-        detail: 'Auto placement needs the selected board’s real outline. Hardware Studio will not place components inside a hidden 50 × 30 mm fallback.',
+        detail: 'Auto placement needs the selected board’s real outline. Hardware Studio will not place components inside a hidden fallback.',
       });
       return;
     }
@@ -197,54 +203,42 @@ export const BoardDesigner: React.FC = () => {
   const activeBoardComponents = activeBoard
     ? boardComponents.filter((component) => component.boardId === activeBoard.id)
     : [];
+  const activeBoardTraceCount = activeBoard ? traces.filter((trace) => trace.boardId === activeBoard.id).length : 0;
 
   if (!activeBoard) {
     return (
       <section className="flex h-full min-h-0 flex-1 items-center justify-center overflow-y-auto bg-slate-50 p-4 sm:p-6" aria-labelledby="pcb-empty-title">
-        <div className="w-full max-w-5xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <div className="w-full max-w-3xl rounded-lg border border-slate-300 bg-white p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-2xl">
-              <span className="grid h-12 w-12 place-items-center rounded-md border border-slate-200 bg-slate-50 text-indigo-700"><CircuitBoard className="h-6 w-6" aria-hidden="true" /></span>
-              <p className="mt-4 text-[10px] font-extrabold uppercase tracking-[0.14em] text-indigo-700">PCB · Connected entry</p>
-              <h1 id="pcb-empty-title" className="mt-1 text-2xl font-bold tracking-tight text-slate-950">Define or select a real board before PCB layout</h1>
-              <p className="mt-2 text-sm leading-6 text-slate-600">PCB layout consumes the same project components and connectivity as the schematic. Hardware Studio no longer creates a hidden starter board with invented dimensions; define the board data you actually know, then place and route against that identity.</p>
+            <div className="max-w-xl">
+              <span className="grid h-11 w-11 place-items-center rounded-md border border-slate-200 bg-slate-50 text-slate-700"><CircuitBoard className="h-5 w-5" aria-hidden="true" /></span>
+              <h1 id="pcb-empty-title" className="mt-4 text-xl font-semibold tracking-tight text-slate-950">PCB layout needs an explicit board</h1>
+              <p className="mt-2 text-sm leading-6 text-slate-600">The editor will not invent a board, outline, dimensions, or physical placement. Create or select the board identity first; the PCB canvas then consumes the same canonical project components and nets as the schematic.</p>
             </div>
-            <button type="button" onClick={() => setActiveView('board-settings')} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">
-              <CircuitBoard className="h-4 w-4" aria-hidden="true" /> Open Board settings
+            <button type="button" onClick={() => setActiveView('board-settings')} className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">
+              Open Board settings<ArrowRight className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
 
           {boards.length > 0 && (
-            <div className="mt-6 border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold text-slate-700">Existing boards</div>
+            <div className="mt-5 border-t border-slate-200 pt-4">
+              <p className="text-[11px] font-semibold text-slate-700">Existing board identities</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {boards.map((board) => (
-                  <button
-                    key={board.id}
-                    type="button"
-                    onClick={() => updateView({ activeBoardId: board.id })}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-700"
-                  >
-                    {board.name}
-                  </button>
+                  <div key={board.id} className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-2 py-1.5">
+                    <span className="text-[11px] font-medium text-slate-700">{board.name}</span>
+                    <button type="button" onClick={() => updateView({ activeBoardId: board.id })} className="min-h-7 rounded-md bg-slate-950 px-2 text-[9px] font-semibold text-white hover:bg-slate-800">Use board</button>
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
-            <button type="button" onClick={() => setActiveView('board-settings')} className="group border border-slate-200 bg-slate-50 p-4 text-left hover:border-indigo-200 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <span className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-bold text-slate-900"><CircuitBoard className="h-4 w-4 text-indigo-600" /> Board settings</span><ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-indigo-700" /></span>
-              <span className="mt-2 block text-xs leading-5 text-slate-500">Create the physical board identity and record only known dimensions, layer count, substrate, mounting, thermal, connector, and RF constraints.</span>
-            </button>
-            <button type="button" onClick={() => setActiveView('component-library')} className="group border border-slate-200 bg-slate-50 p-4 text-left hover:border-indigo-200 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <span className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-bold text-slate-900"><Boxes className="h-4 w-4 text-indigo-600" /> Component library</span><ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-indigo-700" /></span>
-              <span className="mt-2 block text-xs leading-5 text-slate-500">Choose reviewed definitions and create canonical project component instances before PCB placement.</span>
-            </button>
-            <button type="button" onClick={() => setActiveView('schematic-editor')} className="group border border-slate-200 bg-slate-50 p-4 text-left hover:border-indigo-200 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <span className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-bold text-slate-900"><PenTool className="h-4 w-4 text-indigo-600" /> Schematic</span><ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-indigo-700" /></span>
-              <span className="mt-2 block text-xs leading-5 text-slate-500">Place the same project components, connect pins, and create the nets that PCB layout will consume.</span>
-            </button>
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-200 pt-4 text-[10px] text-slate-500">
+            <span>Need parts or connectivity first?</span>
+            <button type="button" onClick={() => setActiveView('component-library')} className="font-semibold text-slate-800 underline underline-offset-2">Component library</button>
+            <span>or</span>
+            <button type="button" onClick={() => setActiveView('schematic-editor')} className="font-semibold text-slate-800 underline underline-offset-2">Schematic</button>
           </div>
         </div>
       </section>
@@ -252,16 +246,16 @@ export const BoardDesigner: React.FC = () => {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-slate-50 text-slate-900">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2 shadow-xs">
-        <div className="min-w-0">
-          <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-indigo-600">Active board context</p>
-          <p className="truncate text-xs font-bold text-slate-900">{activeBoard.name} · {activeBoardComponents.length} components · {nets.length} nets · {traces.filter((trace) => trace.boardId === activeBoard.id).length} traces</p>
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-50 text-slate-900" aria-label="PCB layout editor">
+      <div className="flex min-h-10 shrink-0 items-center gap-2 border-b border-slate-300 bg-white px-3 py-1.5">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] font-semibold text-slate-900">{activeBoard.name}</p>
+          <p className="truncate text-[9px] text-slate-500">{activeBoardComponents.length} components · {nets.length} nets · {activeBoardTraceCount} traces</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setActiveView('component-library')} className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100">Add component</button>
-          <button type="button" onClick={() => setActiveView('schematic-editor')} className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100">Open schematic</button>
-          <button type="button" onClick={() => setActiveView('board-settings')} className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100">Board settings</button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <EditorDockButton label="Layers" icon={Layers} active={layersOpen} onClick={() => setLayersOpen((value) => !value)} />
+          <EditorDockButton label="Components" icon={Boxes} active={componentsOpen} count={activeBoardComponents.filter((component) => component.placementX == null || component.placementY == null).length} onClick={() => setComponentsOpen((value) => !value)} />
+          <EditorDockButton label="Inspect" icon={PanelRight} active={rightDockOpen} count={drcCount} onClick={() => setRightDockOpen((value) => !value)} />
         </div>
       </div>
 
@@ -277,42 +271,51 @@ export const BoardDesigner: React.FC = () => {
         onOpenFactory={handleOpenFactory}
       />
 
-      <div className="flex min-h-0 flex-1">
-        <BoardLayerPanel viewState={viewState} onViewStateChange={updateView} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="relative min-h-0 flex-1">
-            <BoardCanvas viewState={viewState} onViewStateChange={updateView} drcResults={drcResults} />
-          </div>
-          <BoardComponentBin viewState={viewState} onViewStateChange={updateView} onAutoPlace={handleAutoPlace} />
-          <BoardStatusBar viewState={viewState} />
-        </div>
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-white">
+        <BoardCanvas viewState={viewState} onViewStateChange={updateView} drcResults={drcResults} />
 
-        <div className="flex w-56 shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-xs">
-          <div className="flex shrink-0 border-b border-slate-200 bg-slate-50/50">
-            {([
-              { key: 'inspector' as const, label: 'Inspector', Icon: Cpu },
-              { key: 'nets' as const, label: 'Nets', Icon: Network },
-              { key: 'drc' as const, label: 'DRC', Icon: AlertTriangle },
-            ]).map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setRightTab(tab.key)}
-                className={`flex flex-1 items-center justify-center gap-1 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all ${rightTab === tab.key ? 'border-b-2 border-indigo-600 bg-white font-extrabold text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <tab.Icon className="h-3 w-3" aria-hidden="true" />
-                {tab.label}
-                {tab.key === 'drc' && drcCount > 0 && <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-600 text-[7px] font-bold text-white">{drcCount > 9 ? '9+' : drcCount}</span>}
-              </button>
-            ))}
+        {layersOpen && (
+          <div className="absolute bottom-3 left-3 top-3 z-30 flex overflow-hidden rounded-lg border border-slate-300 bg-white shadow-xl" aria-label="PCB layers panel">
+            <BoardLayerPanel viewState={viewState} onViewStateChange={updateView} />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto bg-white">
-            {rightTab === 'inspector' && <BoardInspector viewState={viewState} onViewStateChange={updateView} />}
-            {rightTab === 'nets' && <BoardNetPanel viewState={viewState} onViewStateChange={updateView} />}
-            {rightTab === 'drc' && <BoardDRCPanel results={drcResults} viewState={viewState} onViewStateChange={updateView} />}
+        )}
+
+        {rightDockOpen && (
+          <aside className="absolute bottom-3 right-3 top-3 z-30 flex w-64 flex-col overflow-hidden rounded-lg border border-slate-300 bg-white shadow-xl" aria-label="PCB inspector">
+            <div className="flex shrink-0 border-b border-slate-200 bg-slate-50">
+              {([
+                { key: 'inspector' as const, label: 'Inspector', Icon: Cpu },
+                { key: 'nets' as const, label: 'Nets', Icon: Network },
+                { key: 'drc' as const, label: 'DRC', Icon: AlertTriangle },
+              ]).map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setRightTab(tab.key)}
+                  aria-pressed={rightTab === tab.key}
+                  className={`flex min-h-9 flex-1 items-center justify-center gap-1 border-b-2 text-[10px] font-semibold ${rightTab === tab.key ? 'border-slate-950 bg-white text-slate-950' : 'border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
+                >
+                  <tab.Icon className="h-3 w-3" aria-hidden="true" /> {tab.label}
+                  {tab.key === 'drc' && drcCount > 0 && <span className="rounded bg-red-100 px-1 text-[8px] text-red-700">{drcCount}</span>}
+                </button>
+              ))}
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto bg-white">
+              {rightTab === 'inspector' && <BoardInspector viewState={viewState} onViewStateChange={updateView} />}
+              {rightTab === 'nets' && <BoardNetPanel viewState={viewState} onViewStateChange={updateView} />}
+              {rightTab === 'drc' && <BoardDRCPanel results={drcResults} viewState={viewState} onViewStateChange={updateView} />}
+            </div>
+          </aside>
+        )}
+
+        {componentsOpen && (
+          <div className="absolute bottom-3 left-1/2 z-40 w-[min(900px,calc(100%-2rem))] -translate-x-1/2 overflow-hidden rounded-lg border border-slate-700 shadow-xl" aria-label="PCB component placement panel">
+            <BoardComponentBin viewState={viewState} onViewStateChange={updateView} onAutoPlace={handleAutoPlace} />
           </div>
-        </div>
+        )}
       </div>
-    </div>
+
+      <BoardStatusBar viewState={viewState} />
+    </section>
   );
 };
