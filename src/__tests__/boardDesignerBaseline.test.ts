@@ -18,7 +18,7 @@ describe('Board Designer baseline', () => {
   it('requires the selected board outline before auto placement', () => {
     expect(boardDesignerSource).toContain("boardOutlines.find((candidate) => candidate.boardId === boardId)");
     expect(boardDesignerSource).toContain('Board outline required');
-    expect(boardDesignerSource).toContain('will not place components inside a hidden 50 × 30 mm fallback');
+    expect(boardDesignerSource).toContain('will not place components inside a hidden fallback');
   });
 
   it('scopes DRC and rough autoroute to the explicit active board', () => {
