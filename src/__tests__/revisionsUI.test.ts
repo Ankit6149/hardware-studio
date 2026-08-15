@@ -5,18 +5,48 @@ import {
   createBranch,
   createReleaseCandidate,
   approveRelease,
-  validateReleaseEligibility
 } from '../lib/releaseEngine';
+import type { Project } from '../types';
+
+function releaseReadyProject(project: Project): Project {
+  return {
+    ...JSON.parse(JSON.stringify(project)),
+    activeBoardId: 'board_release_ready',
+    boards: [{
+      id: 'board_release_ready',
+      name: 'Release Ready Board',
+      boardType: 'Main PCB',
+      layerCount: 2,
+      substrate: 'FR4',
+      status: 'Reviewed',
+    }],
+    boardOutlines: [{
+      id: 'outline_release_ready',
+      boardId: 'board_release_ready',
+      points: [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 30 }, { x: 0, y: 30 }],
+      width: 40,
+      height: 30,
+      units: 'mm',
+    }],
+    boardComponents: [],
+    traces: [],
+    vias: [],
+    drillHoles: [],
+    keepoutZones: [],
+    nets: [],
+    validationTests: [],
+    validationRuns: [],
+  };
+}
 
 describe('Slice 10 Revisions, Branches, Immutable Releases, and Release Candidates Workflow Tests', () => {
-  it('should execute complete branching, tagged revisions, release candidate, immutable release, and edit protection workflow', () => {
+  it('should execute branching, tagged revisions, integrity-checked candidate release, and edit protection workflow', () => {
+    useProjectStore.getState().resetProject();
     const store = useProjectStore.getState();
 
-    // 1. Initial state check on main branch
     useProjectStore.setState({ activeBranch: 'main', isFrozen: false });
     expect(useProjectStore.getState().activeBranch).toBe('main');
 
-    // 2. Create branch "feature-mesh"
     const initialRev = createNamedRevision(store, 'v1.0-base', 'Base Commit', 'main');
     const branchRev = createBranch(initialRev, 'feature-mesh');
 
@@ -27,7 +57,6 @@ describe('Slice 10 Revisions, Branches, Immutable Releases, and Release Candidat
     });
     expect(useProjectStore.getState().activeBranch).toBe('feature-mesh');
 
-    // 3. Make edits on "feature-mesh"
     store.addMechanicalObject({
       name: 'Mesh Antenna Zone',
       type: 'Outer Profile',
@@ -43,36 +72,34 @@ describe('Slice 10 Revisions, Branches, Immutable Releases, and Release Candidat
     });
     expect(useProjectStore.getState().mechanicalObjects?.length).toBeGreaterThan(0);
 
-    // 4. Create tag revision "v1.0-alpha"
-    const alphaRev = createNamedRevision(useProjectStore.getState(), 'v1.0-alpha', 'Tagged Alpha Release', 'feature-mesh');
+    const releasableState = releaseReadyProject(useProjectStore.getState());
+    const alphaRev = createNamedRevision(releasableState, 'v1.0-alpha', 'Tagged Alpha Release', 'feature-mesh');
     useProjectStore.setState({
       revisions: [...(useProjectStore.getState().revisions || []), alphaRev]
     });
     expect(useProjectStore.getState().revisions?.length).toBe(3);
 
-    // 5. Merge "feature-mesh" back into "main"
     useProjectStore.setState({ activeBranch: 'main' });
     expect(useProjectStore.getState().activeBranch).toBe('main');
 
-    // 6. Create release candidate "RC-1"
-    const rc = createReleaseCandidate(alphaRev);
+    const rc = createReleaseCandidate(alphaRev, 'RC-1');
     expect(rc.status).toBe('Release Candidate');
+    expect(rc.name).toBe('RC-1');
 
     useProjectStore.setState({
       releaseCandidates: [...(useProjectStore.getState().releaseCandidates || []), rc]
     });
     expect(useProjectStore.getState().releaseCandidates?.length).toBe(1);
 
-    // 7. Freeze immutable release "v1.0.0"
     const released = approveRelease(rc, 'Lead Engineer Sign-off');
     expect(released.status).toBe('Released');
+    expect(released.parentRevisionId).toBe(rc.id);
 
     useProjectStore.setState({
       releases: [...(useProjectStore.getState().releases || []), released],
       isFrozen: true
     });
 
-    // 8. Verify edit rejection on frozen release
     expect(() => {
       useProjectStore.getState().addMechanicalObject({
         name: 'Illegal Edit Object',

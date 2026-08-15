@@ -17,11 +17,12 @@ describe('Slice 6 Validation Execution Engine', () => {
     expect(result.run.logs.some(l => l.includes('NEEDS REVIEW'))).toBe(true);
   });
 
-  it('should support manual measurement entry and evidence attachment', () => {
+  it('should support explicit manual verdict, measurement entry, and evidence attachment', () => {
     const project = useProjectStore.getState();
 
     const result = runValidationTest(project, 'test_drop_survivability', {
       measuredValue: '10 drops survived without fracture',
+      manualVerdict: 'Pass',
       evidenceLink: 'https://storage.internal/evidence/drop_test_log.pdf',
       notes: 'Verified casing integrity post drop sequence',
       runBy: 'Senior Test Engineer'
@@ -31,6 +32,7 @@ describe('Slice 6 Validation Execution Engine', () => {
     expect(result.run.measuredValue).toBe('10 drops survived without fracture');
     expect(result.run.evidenceLink).toBe('https://storage.internal/evidence/drop_test_log.pdf');
     expect(result.run.runBy).toBe('Senior Test Engineer');
+    expect(result.run.logs.some(l => l.includes('MANUAL VERDICT RECORDED: Pass'))).toBe(true);
   });
 
   it('should maintain immutable run history prepending new runs', () => {

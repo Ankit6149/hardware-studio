@@ -10,6 +10,38 @@ import {
   approveRelease,
   ProductRevision
 } from '../lib/releaseEngine';
+import type { Project } from '../types';
+
+function releaseReadyProject(project: Project): Project {
+  return {
+    ...JSON.parse(JSON.stringify(project)),
+    activeBoardId: 'board_release_ready',
+    boards: [{
+      id: 'board_release_ready',
+      name: 'Release Ready Board',
+      boardType: 'Main PCB',
+      layerCount: 2,
+      substrate: 'FR4',
+      status: 'Reviewed',
+    }],
+    boardOutlines: [{
+      id: 'outline_release_ready',
+      boardId: 'board_release_ready',
+      points: [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 30 }, { x: 0, y: 30 }],
+      width: 40,
+      height: 30,
+      units: 'mm',
+    }],
+    boardComponents: [],
+    traces: [],
+    vias: [],
+    drillHoles: [],
+    keepoutZones: [],
+    nets: [],
+    validationTests: [],
+    validationRuns: [],
+  };
+}
 
 describe('Slice 7 Real Branches, Revisions & Releases Engine', () => {
   beforeEach(() => {
@@ -19,7 +51,6 @@ describe('Slice 7 Real Branches, Revisions & Releases Engine', () => {
   it('should restore project data state when switching branches', () => {
     const store = useProjectStore.getState();
 
-    // 1. Add mechanical object on main branch
     store.addMechanicalObject({
       name: 'Main Enclosure Frame',
       type: 'Outer Profile',
@@ -36,7 +67,6 @@ describe('Slice 7 Real Branches, Revisions & Releases Engine', () => {
     const mainRev = createNamedRevision(useProjectStore.getState(), 'v1.0-main', 'Main release snapshot', 'main');
     const branchRev = createBranch(mainRev, 'feature-flex-board');
 
-    // Attach revisions to store
     store.executeProjectCommand('SAVE_REVS', 'Save revisions', () => {
       useProjectStore.setState({
         revisions: [mainRev, branchRev],
@@ -44,24 +74,21 @@ describe('Slice 7 Real Branches, Revisions & Releases Engine', () => {
       });
     });
 
-    // 2. Switch to feature-flex-board branch
     const switchRes = switchBranchState(useProjectStore.getState(), 'feature-flex-board');
     expect(switchRes.success).toBe(true);
     expect(switchRes.updatedProject?.activeBranch).toBe('feature-flex-board');
     expect(switchRes.updatedProject?.mechanicalObjects?.[0]?.name).toBe('Main Enclosure Frame');
   });
 
-  it('should create a working branch from a Released revision', () => {
-    const store = useProjectStore.getState();
-
-    const namedRev = createNamedRevision(store, 'v1.0.0', 'Production Release v1.0.0', 'main');
+  it('should create a working branch from an actually eligible Released revision', () => {
+    const eligible = releaseReadyProject(useProjectStore.getState());
+    const namedRev = createNamedRevision(eligible, 'v1.0.0', 'Production Release v1.0.0', 'main');
     const rcRev = createReleaseCandidate(namedRev);
     const releasedRev = approveRelease(rcRev, 'Lead Hardware Engineer');
 
     expect(releasedRev.status).toBe('Released');
     expect(releasedRev.releaseArtifacts?.approvalSignoff).toBe('Lead Hardware Engineer');
 
-    // Create working branch from release
     const featureBranchRev = createWorkingBranchFromRelease(releasedRev, 'hotfix-battery-clip');
     expect(featureBranchRev.status).toBe('Working');
     expect(featureBranchRev.branchName).toBe('hotfix-battery-clip');
@@ -71,7 +98,6 @@ describe('Slice 7 Real Branches, Revisions & Releases Engine', () => {
   it('should merge non-conflicting branches and detect conflicts when entities overlap', () => {
     const store = useProjectStore.getState();
 
-    // Source revision with a new component
     const sourceProject = JSON.parse(JSON.stringify(store));
     sourceProject.boardComponents = sourceProject.boardComponents || [];
     sourceProject.boardComponents.push({
@@ -92,13 +118,11 @@ describe('Slice 7 Real Branches, Revisions & Releases Engine', () => {
       status: 'Named Version'
     };
 
-    // Clean merge into target project
     const mergeRes = mergeBranches(sourceRev, store);
     expect(mergeRes.success).toBe(true);
     expect(mergeRes.conflicts.length).toBe(0);
     expect(mergeRes.mergedProject?.boardComponents?.some(c => c.id === 'cmp_feature_led')).toBe(true);
 
-    // Conflict test: modify same component differently on target
     const targetWithConflict = JSON.parse(JSON.stringify(store));
     targetWithConflict.boardComponents = targetWithConflict.boardComponents || [];
     targetWithConflict.boardComponents.push({
