@@ -52,7 +52,7 @@ export const FirmwareCodePreview: React.FC = () => {
   const editorContent = selectedFileId ? editingContent : (activeFile?.content ?? '');
   const normalizedSearch = search.trim().toLowerCase();
   const filteredFiles = normalizedSearch
-    ? sourceFiles.filter((file) => file.path.toLowerCase().includes(normalizedSearch) || file.name.toLowerCase().includes(normalizedSearch))
+    ? sourceFiles.filter((file) => file.path.toLowerCase().includes(normalizedSearch) || (file.name || file.path).toLowerCase().includes(normalizedSearch))
     : sourceFiles;
   const lineCount = Math.max(1, editorContent.split('\n').length);
   const lineNumbers = Array.from({ length: lineCount }, (_, index) => String(index + 1)).join('\n');
@@ -238,7 +238,7 @@ export const FirmwareCodePreview: React.FC = () => {
             <div className="flex min-h-9 shrink-0 items-end border-b border-[#34312c] bg-[#211f1c]">
               <div className="flex h-9 max-w-[320px] items-center gap-2 border-r border-[#34312c] border-t-2 border-t-[#e8e4da] bg-[#171614] px-3">
                 <FileText className="h-3.5 w-3.5 shrink-0 text-[#cbb895]" aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-[#e8e4da]">{activeFile.name}</span>
+                <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-[#e8e4da]">{activeFile.name || activeFile.path}</span>
                 {activeFile.dirty && <span className="h-1.5 w-1.5 rounded-full bg-[#d8a85d]" aria-label="Unsaved edits" />}
               </div>
             </div>
