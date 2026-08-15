@@ -1,4 +1,8 @@
 /* Editor-first layout rules shared by legacy workbenches that already expose panel toggles. */
+.hs-app nav[aria-label="Firmware workspace sections"] {
+  display: none;
+}
+
 @media (min-width: 1024px) {
   .hs-app [aria-label="Product Design Studio"] > div.flex.min-h-0.flex-1 {
     position: relative;
@@ -22,6 +26,28 @@
     right: 0.75rem;
     z-index: 30;
     height: auto;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 32px rgba(17, 17, 15, 0.08);
+  }
+
+  /* State-machine canvas owns the width. The existing inspector becomes a floating context panel. */
+  .hs-app [aria-label="Firmware engineering workspace"] > div > div.grid {
+    position: relative;
+    display: block;
+  }
+
+  .hs-app [aria-label="Firmware engineering workspace"] > div > div.grid > div:first-child {
+    height: 100%;
+  }
+
+  .hs-app [aria-label="Firmware engineering workspace"] > div > div.grid > aside {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    z-index: 30;
+    width: 18rem;
     border: 1px solid var(--line-strong);
     border-radius: 0.5rem;
     box-shadow: 0 10px 32px rgba(17, 17, 15, 0.08);
