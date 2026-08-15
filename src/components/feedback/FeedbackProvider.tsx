@@ -33,6 +33,11 @@ function createId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+function getFocusedElement(): HTMLElement | null {
+  if (typeof document === 'undefined') return null;
+  return document.activeElement instanceof HTMLElement ? document.activeElement : null;
+}
+
 const tonePresentation: Record<FeedbackTone, { icon: React.ReactNode; className: string; live: 'polite' | 'assertive' }> = {
   success: {
     icon: <CheckCircle2 className="h-4 w-4" aria-hidden="true" />,
@@ -133,18 +138,21 @@ const ToastItem: React.FC<{
 
 const DecisionDialog: React.FC<{
   decision: DecisionRequest;
+  returnFocusTarget: HTMLElement | null;
   onConfirm: (value?: string) => void;
   onCancel: () => void;
-}> = ({ decision, onConfirm, onCancel }) => {
+}> = ({ decision, returnFocusTarget, onConfirm, onCancel }) => {
   const promptDecision = decision.kind === 'prompt' ? decision : null;
   const [value, setValue] = useState(promptDecision?.defaultValue || '');
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const promptError = promptDecision ? validatePromptValue(promptDecision, value) : null;
+  const validationError = hasInteracted ? promptError : null;
+  const submitDisabled = Boolean(promptDecision && promptError);
 
   const submit = () => {
     if (promptDecision) {
-      const error = validatePromptValue(promptDecision, value);
-      if (error) {
-        setValidationError(error);
+      if (promptError) {
+        setHasInteracted(true);
         return;
       }
       onConfirm(value.trim());
@@ -164,6 +172,11 @@ const DecisionDialog: React.FC<{
           onEscapeKeyDown={(event) => {
             event.preventDefault();
             onCancel();
+          }}
+          onCloseAutoFocus={(event) => {
+            if (!returnFocusTarget) return;
+            event.preventDefault();
+            returnFocusTarget.focus();
           }}
         >
           <div className="flex items-start gap-3">
@@ -188,15 +201,15 @@ const DecisionDialog: React.FC<{
                 autoFocus
                 value={value}
                 placeholder={promptDecision.placeholder}
+                onBlur={() => setHasInteracted(true)}
                 onChange={(event) => {
                   setValue(event.target.value);
-                  if (validationError) setValidationError(null);
+                  setHasInteracted(true);
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    submit();
-                  }
+                  if (event.key !== 'Enter') return;
+                  event.preventDefault();
+                  submit();
                 }}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
                 aria-invalid={Boolean(validationError)}
@@ -222,7 +235,9 @@ const DecisionDialog: React.FC<{
             <button
               type="button"
               onClick={submit}
-              className={`rounded-lg px-3.5 py-2 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${destructive ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500' : 'bg-slate-950 hover:bg-slate-800 focus:ring-slate-500'}`}
+              disabled={submitDisabled}
+              aria-disabled={submitDisabled}
+              className={`rounded-lg px-3.5 py-2 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 ${destructive ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500' : 'bg-slate-950 hover:bg-slate-800 focus:ring-slate-500'}`}
             >
               {decision.confirmLabel || (promptDecision ? 'Continue' : 'Confirm')}
             </button>
@@ -236,6 +251,7 @@ const DecisionDialog: React.FC<{
 export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(feedbackReducer, initialFeedbackState);
   const resolvers = useRef(new Map<string, (value: boolean | string | null) => void>());
+  const focusTargets = useRef(new Map<string, HTMLElement | null>());
 
   const dismiss = useCallback((id: string) => {
     dispatch({ type: 'dismiss-toast', id });
@@ -250,6 +266,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const confirm = useCallback((options: ConfirmOptions) => {
     const id = createId('confirm');
     const decision: ConfirmDecision = { ...options, id, kind: 'confirm' };
+    focusTargets.current.set(id, getFocusedElement());
     dispatch({ type: 'enqueue-decision', decision });
     return new Promise<boolean>((resolve) => {
       resolvers.current.set(id, resolve as (value: boolean | string | null) => void);
@@ -259,6 +276,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const prompt = useCallback((options: PromptOptions) => {
     const id = createId('prompt');
     const decision: PromptDecision = { ...options, id, kind: 'prompt' };
+    focusTargets.current.set(id, getFocusedElement());
     dispatch({ type: 'enqueue-decision', decision });
     return new Promise<string | null>((resolve) => {
       resolvers.current.set(id, resolve as (value: boolean | string | null) => void);
@@ -269,11 +287,13 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const resolver = resolvers.current.get(decision.id);
     resolver?.(result);
     resolvers.current.delete(decision.id);
+    focusTargets.current.delete(decision.id);
     dispatch({ type: 'complete-decision', id: decision.id });
   }, []);
 
   const api = useMemo<FeedbackApi>(() => ({ notify, confirm, prompt, dismiss }), [confirm, dismiss, notify, prompt]);
   const activeDecision = state.decisions[0];
+  const returnFocusTarget = activeDecision ? focusTargets.current.get(activeDecision.id) || null : null;
 
   return (
     <FeedbackContext.Provider value={api}>
@@ -287,6 +307,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         <DecisionDialog
           key={activeDecision.id}
           decision={activeDecision}
+          returnFocusTarget={returnFocusTarget}
           onConfirm={(value) => completeDecision(activeDecision, activeDecision.kind === 'confirm' ? true : value || '')}
           onCancel={() => completeDecision(activeDecision, activeDecision.kind === 'confirm' ? false : null)}
         />
