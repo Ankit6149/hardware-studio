@@ -215,7 +215,7 @@ textarea {
   background: #8f877a;
 }
 
-/* React Flow — warm technical drawing treatment */
+/* React Flow — warm technical drawing treatment. Inline engineering semantics win. */
 .react-flow__node {
   cursor: grab;
 }
@@ -227,27 +227,27 @@ textarea {
 .react-flow__handle {
   width: 7px !important;
   height: 7px !important;
-  background-color: #a69d90 !important;
+  background-color: #a69d90;
   border: 1.5px solid #fbfaf6 !important;
   box-shadow: 0 0 0 1px rgba(17, 17, 15, 0.08);
-  transition: transform 120ms ease, background-color 120ms ease;
+  transition: transform 120ms ease, filter 120ms ease;
 }
 
 .react-flow__handle:hover {
-  background-color: #11110f !important;
   transform: scale(1.18);
+  filter: brightness(0.82);
 }
 
 .react-flow__edge-path {
-  stroke: #9e978b !important;
-  stroke-width: 1.35px !important;
+  stroke: #9e978b;
+  stroke-width: 1.35px;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #11110f !important;
+  filter: brightness(0.72);
   stroke-dasharray: 4;
   animation: dash 1s linear infinite;
-  stroke-width: 1.75px !important;
+  stroke-width: 1.9px !important;
 }
 
 @keyframes dash {
