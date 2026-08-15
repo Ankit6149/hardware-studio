@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { generateFirmwareWorkspace } from '../../lib/exportFirmware';
 import type { FirmwareSourceFile } from '../../types';
@@ -50,19 +50,13 @@ export const FirmwareCodePreview: React.FC = () => {
   const effectiveSelectedFileId = selectedFileId ?? sourceFiles[0]?.id ?? null;
   const activeFile = sourceFiles.find((file) => file.id === effectiveSelectedFileId);
   const editorContent = selectedFileId ? editingContent : (activeFile?.content ?? '');
-
-  const filteredFiles = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return sourceFiles;
-    return sourceFiles.filter((file) => file.path.toLowerCase().includes(query) || file.name.toLowerCase().includes(query));
-  }, [search, sourceFiles]);
-
-  const lineNumbers = useMemo(() => {
-    const count = Math.max(1, editorContent.split('\n').length);
-    return Array.from({ length: count }, (_, index) => String(index + 1)).join('\n');
-  }, [editorContent]);
-
-  const cursor = useMemo(() => lineAndColumn(editorContent, cursorOffset), [cursorOffset, editorContent]);
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredFiles = normalizedSearch
+    ? sourceFiles.filter((file) => file.path.toLowerCase().includes(normalizedSearch) || file.name.toLowerCase().includes(normalizedSearch))
+    : sourceFiles;
+  const lineCount = Math.max(1, editorContent.split('\n').length);
+  const lineNumbers = Array.from({ length: lineCount }, (_, index) => String(index + 1)).join('\n');
+  const cursor = lineAndColumn(editorContent, cursorOffset);
 
   const handleSelectFile = (file: FirmwareSourceFile) => {
     setSelectedFileId(file.id);
