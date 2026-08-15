@@ -7,6 +7,7 @@ import { ComponentLibraryWorkbench } from '../component-library/ComponentLibrary
 import { BoardDesigner } from '../board/BoardDesigner';
 import { UnifiedSchematicEditor } from '../schematic/UnifiedSchematicEditor';
 import { MechanicalStudio } from '../mechanical/MechanicalStudio';
+import { MechanicalDecisionBar } from '../mechanical/MechanicalDecisionBar';
 import { UnifiedBoard3DView } from '../mechanical/UnifiedBoard3DView';
 
 export const UnifiedComponentLibraryWorkbench: React.FC = () => {
@@ -65,6 +66,15 @@ export const UnifiedBoardDesignerWorkbench: React.FC = () => {
 export const UnifiedMechanicalWorkbench: React.FC<{ defaultMode: MechanicalWorkbenchMode }> = ({ defaultMode }) => {
   const requestedMode = useStudioContextStore((state) => state.requestedMechanicalMode);
   const resolvedMode = requestedMode || defaultMode;
-  if (resolvedMode === 'webgl-3d') return <UnifiedBoard3DView />;
-  return <MechanicalStudio key={resolvedMode} initialMode={resolvedMode} />;
+
+  return (
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-50" aria-label="Mechanical decision workspace">
+      <MechanicalDecisionBar currentMode={resolvedMode} />
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {resolvedMode === 'webgl-3d'
+          ? <UnifiedBoard3DView />
+          : <MechanicalStudio key={resolvedMode} initialMode={resolvedMode} />}
+      </div>
+    </section>
+  );
 };
