@@ -15,11 +15,13 @@ describe('shared feedback accessibility baseline', () => {
     expect(source).toContain('aria-disabled={submitDisabled}');
   });
 
-  it('captures and restores focus for imperative confirm and prompt decisions', () => {
-    expect(source).toContain('const focusTargets = useRef(new Map<string, HTMLElement | null>());');
-    expect(source).toContain('focusTargets.current.set(id, getFocusedElement());');
+  it('captures focus as render state and restores it after imperative decisions', () => {
+    expect(source).toContain('const [focusTargets, setFocusTargets] = useState<Record<string, HTMLElement | null>>({});');
+    expect(source).toContain('const focusTarget = getFocusedElement();');
+    expect(source).toContain('setFocusTargets((current) => ({ ...current, [id]: focusTarget }));');
     expect(source).toContain('onCloseAutoFocus={(event) => {');
     expect(source).toContain('returnFocusTarget.focus();');
+    expect(source).not.toContain('focusTargets.current');
   });
 
   it('keeps cancel as the default focus for confirmation decisions', () => {
