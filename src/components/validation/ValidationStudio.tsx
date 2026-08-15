@@ -6,6 +6,7 @@ import { ValidationTest, ValidationMeasurement, ValidationEvidence, ValidationTe
 import { evaluateValidationMeasurement, calculateTestStatus } from '../../lib/validation/measurementEvaluation';
 import { calculateRequirementCoverage, CoverageEntry } from '../../lib/validation/validationCoverage';
 import { Plus, Trash2, CheckCircle, XCircle, AlertCircle, HelpCircle } from 'lucide-react';
+import { useFeedback } from '../feedback/FeedbackProvider';
 
 interface ValidationStudioProps {
   initialMode?: string;
@@ -13,6 +14,7 @@ interface ValidationStudioProps {
 
 export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode }) => {
   const store = useProjectStore();
+  const feedback = useFeedback();
   const [mode, setMode] = useState<'tests' | 'coverage' | 'factory-qa'>(
     (initialMode === 'coverage' || initialMode === 'factory-qa') ? initialMode : 'tests'
   );
@@ -75,6 +77,30 @@ export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode 
     );
   };
 
+  const handleDeleteTest = async () => {
+    if (!selectedTest) return;
+
+    const confirmed = await feedback.confirm({
+      title: `Delete ${selectedTest.name}?`,
+      description: 'This removes the validation test, including its steps, measurements, pass criteria, and attached evidence from the current project state. The deletion is not applied until you confirm.',
+      confirmLabel: 'Delete test',
+      cancelLabel: 'Keep test',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+
+    const deletedName = selectedTest.name;
+    store.executeProjectCommand('DEL_TEST', `Delete validation test ${deletedName}`, () =>
+      store.deleteValidationTest(selectedTest.id)
+    );
+    setSelectedTestId(null);
+    feedback.notify({
+      tone: 'success',
+      title: 'Validation test deleted',
+      detail: `${deletedName} was removed from the current project state.`,
+    });
+  };
+
   const statusIcon = (status: string) => {
     switch (status) {
       case 'Passed': case 'Pass': return <CheckCircle size={12} color="#22c55e" />;
@@ -84,7 +110,6 @@ export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode 
     }
   };
 
-  // Coverage mode
   if (mode === 'coverage') {
     const coverage = calculateRequirementCoverage(requirements, validationTests);
     const covered = coverage.filter(c => c.status === 'Covered').length;
@@ -134,7 +159,6 @@ export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode 
     );
   }
 
-  // Factory QA mode
   if (mode === 'factory-qa') {
     const factoryTests = validationTests.filter(t => t.stage === 'Factory QA');
     return (
@@ -184,7 +208,6 @@ export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode 
     );
   }
 
-  // Tests mode (main)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <div style={{ display: 'flex', gap: 4, padding: '6px 12px', borderBottom: '1px solid #e2e8f0', background: 'white', flexShrink: 0 }}>
@@ -199,7 +222,6 @@ export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode 
       </div>
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {/* Test list */}
         <div style={{ width: 280, borderRight: '1px solid #e2e8f0', overflow: 'auto', flexShrink: 0, background: '#fafbfc', padding: 8 }}>
           {validationTests.map(test => {
             const calcStatus = calculateTestStatus(test);
@@ -222,7 +244,6 @@ export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode 
           })}
         </div>
 
-        {/* Test detail */}
         <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
           {selectedTest ? (
             <>
@@ -247,11 +268,10 @@ export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode 
                     </span>
                   </div>
                 </div>
-                <button onClick={() => { store.executeProjectCommand('DEL_TEST', 'Delete test', () => store.deleteValidationTest(selectedTest.id)); setSelectedTestId(null); }}
+                <button onClick={handleDeleteTest}
                   style={{ ...btnStyle, color: '#ef4444' }}><Trash2 size={12} /> Delete</button>
               </div>
 
-              {/* Steps */}
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>Steps ({selectedTest.steps.length})</div>
@@ -286,7 +306,6 @@ export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode 
                 ))}
               </div>
 
-              {/* Measurements */}
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>Measurements ({selectedTest.measurements.length})</div>
@@ -408,7 +427,6 @@ export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode 
                 })}
               </div>
 
-              {/* Evidence */}
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>Evidence ({selectedTest.evidence.length})</div>
@@ -438,7 +456,6 @@ export const ValidationStudio: React.FC<ValidationStudioProps> = ({ initialMode 
                 ))}
               </div>
 
-              {/* Pass Criteria */}
               <div>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Pass Criteria</div>
                 <textarea value={selectedTest.passCriteria.join('\n')} onChange={e =>
