@@ -31,28 +31,12 @@ export const UnifiedComponentLibraryWorkbench: React.FC = () => {
 };
 
 export const UnifiedSchematicWorkbench: React.FC = () => {
-  const activeComponentId = useStudioContextStore((state) => state.activeComponentId);
   const activeBoardId = useStudioContextStore((state) => state.activeBoardId);
+  const activeComponentId = useStudioContextStore((state) => state.activeComponentId);
   const activeNetName = useStudioContextStore((state) => state.activeNetName);
-  const boardComponents = useProjectStore((state) => state.boardComponents || []);
-  const placeComponentOnSchematic = useProjectStore((state) => state.placeComponentOnSchematic);
-  const setActiveComponentDefinition = useStudioContextStore((state) => state.setActiveComponentDefinition);
-  const setActiveComponent = useStudioContextStore((state) => state.setActiveComponent);
 
-  useEffect(() => {
-    const selected = boardComponents.find((component) => component.id === activeComponentId)
-      || boardComponents.find((component) => !activeBoardId || component.boardId === activeBoardId);
-    if (!selected) return;
-    if (!activeComponentId) setActiveComponent(selected.id);
-    if (selected.libraryId) setActiveComponentDefinition(selected.libraryId);
-    if (selected.schematic?.placed) return;
-
-    const boardPeers = boardComponents.filter((component) => component.boardId === selected.boardId && component.schematic?.placed);
-    const column = boardPeers.length % 4;
-    const row = Math.floor(boardPeers.length / 4);
-    placeComponentOnSchematic(selected.id, 140 + column * 180, 140 + row * 140);
-  }, [activeBoardId, activeComponentId, boardComponents, placeComponentOnSchematic, setActiveComponent, setActiveComponentDefinition]);
-
+  // Opening an editor must never mutate engineering state. Components are placed
+  // only from an explicit Place action inside the schematic workspace.
   return <UnifiedSchematicEditor key={`${activeBoardId || ''}:${activeComponentId || ''}:${activeNetName || ''}`} />;
 };
 
