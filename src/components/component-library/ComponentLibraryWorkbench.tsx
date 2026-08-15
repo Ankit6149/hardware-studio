@@ -110,35 +110,20 @@ function parsePins(value: string): ComponentPinDefinition[] {
     });
 }
 
-function referencePrefix(category: ElectronicComponentDefinition['category']): string {
-  if (category === 'Resistor') return 'R';
-  if (category === 'Capacitor') return 'C';
-  if (category === 'Inductor') return 'L';
-  if (category === 'Diode') return 'D';
-  if (category === 'LED') return 'LED';
-  if (category === 'Connector') return 'J';
-  if (category === 'Transistor' || category === 'MOSFET') return 'Q';
-  if (category === 'Button' || category === 'Touch') return 'SW';
-  if (category === 'Test Point') return 'TP';
-  if (category === 'Antenna' || category === 'RF') return 'ANT';
-  if (category === 'Battery') return 'BT';
-  return 'U';
-}
-
 const Field: React.FC<React.PropsWithChildren<{ label: string; htmlFor: string }>> = ({ label, htmlFor, children }) => (
   <label className="block" htmlFor={htmlFor}>
-    <span className="mb-1 block text-xs font-bold text-slate-600">{label}</span>
+    <span className="mb-1 block text-xs font-semibold text-slate-600">{label}</span>
     {children}
   </label>
 );
 
-const inputClass = 'h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100';
+const inputClass = 'h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100';
 
 function FootprintPreview({ component }: { component: ElectronicComponentDefinition }) {
   const footprint = getFootprint(component.footprintName);
   if (!footprint?.pads?.length) {
     return (
-      <div className="grid h-40 place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-center text-xs text-slate-500">
+      <div className="grid h-40 place-items-center border border-dashed border-slate-300 bg-slate-50 px-6 text-center text-xs text-slate-500">
         No verified footprint geometry is available for this definition.
       </div>
     );
@@ -150,7 +135,7 @@ function FootprintPreview({ component }: { component: ElectronicComponentDefinit
   const center = 80;
 
   return (
-    <svg viewBox="0 0 160 160" className="h-40 w-full rounded-xl border border-slate-200 bg-slate-950" role="img" aria-label={`${component.name} footprint preview`}>
+    <svg viewBox="0 0 160 160" className="h-40 w-full border border-slate-200 bg-slate-950" role="img" aria-label={`${component.name} footprint preview`}>
       <rect
         x={center - (bodyWidth * scale) / 2}
         y={center - (bodyHeight * scale) / 2}
@@ -187,18 +172,19 @@ function FootprintPreview({ component }: { component: ElectronicComponentDefinit
 }
 
 export const ComponentLibraryWorkbench: React.FC = () => {
-  const store = useProjectStore();
   const {
     boardComponents = [],
     boards = [],
     circuitBlocks = [],
     customComponentLibrary = [],
-    addBoardComponent,
-    addBOMItem,
+    addProjectComponentFromLibrary,
+    updateBOMItem,
     addCustomComponentDefinition,
     updateCustomComponentDefinition,
     duplicateComponentDefinition,
-  } = store;
+    setActiveBoard,
+    setActiveView,
+  } = useProjectStore();
   const { notify } = useFeedback();
   const { openKnowledgeForComponent } = useKnowledge();
 
@@ -211,8 +197,8 @@ export const ComponentLibraryWorkbench: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ComponentDraft>(emptyDraft);
-  const [selectedBoardId, setSelectedBoardId] = useState(boards[0]?.id ?? 'board_0');
-  const [selectedCircuitBlockId, setSelectedCircuitBlockId] = useState(circuitBlocks[0]?.id ?? 'block_0');
+  const [selectedBoardId, setSelectedBoardId] = useState('');
+  const [selectedCircuitBlockId, setSelectedCircuitBlockId] = useState('');
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -242,6 +228,12 @@ export const ComponentLibraryWorkbench: React.FC = () => {
   const selectedIsCustom = Boolean(selectedComponent && customComponents.some((component) => component.libraryId === selectedComponent.libraryId));
   const selectedKnowledgeId = selectedComponent ? resolveKnowledgeIdForComponent(selectedComponent) : undefined;
 
+  const effectiveBoard = boards.find((board) => board.id === selectedBoardId) ?? boards[0];
+  const blocksForBoard = effectiveBoard
+    ? circuitBlocks.filter((block) => block.boardId === effectiveBoard.id)
+    : [];
+  const effectiveCircuitBlock = blocksForBoard.find((block) => block.id === selectedCircuitBlockId);
+
   const openCreate = () => {
     setEditingId(null);
     setDraft(emptyDraft());
@@ -253,6 +245,12 @@ export const ComponentLibraryWorkbench: React.FC = () => {
     setEditingId(selectedComponent.libraryId);
     setDraft(draftFromComponent(selectedComponent));
     setIsEditorOpen(true);
+  };
+
+  const openAdd = () => {
+    setSelectedBoardId(boards[0]?.id ?? '');
+    setSelectedCircuitBlockId('');
+    setIsAddOpen(true);
   };
 
   const saveDefinition = (event: React.FormEvent) => {
@@ -286,72 +284,63 @@ export const ComponentLibraryWorkbench: React.FC = () => {
       notify({ tone: 'success', title: 'Custom component updated', detail: `${definition.name} now uses the revised metadata and pin definition.` });
     } else {
       addCustomComponentDefinition(definition);
-      notify({ tone: 'success', title: 'Custom component created', detail: `${definition.name} is available in this local project library.` });
+      notify({ tone: 'success', title: 'Custom component created', detail: `${definition.name} is available in this project library.` });
     }
     setSelectedId(definition.libraryId);
     setIsEditorOpen(false);
   };
 
+  const duplicateSelected = () => {
+    if (!selectedComponent) return;
+    if (selectedIsCustom) {
+      duplicateComponentDefinition(selectedComponent.libraryId);
+      notify({ tone: 'success', title: 'Component definition duplicated', detail: 'The duplicate is available as a project-owned custom definition.' });
+      return;
+    }
+
+    const copy: ElectronicComponentDefinition = {
+      ...selectedComponent,
+      libraryId: `${selectedComponent.libraryId}-copy-${Date.now()}`,
+      name: `${selectedComponent.name} Copy`,
+      pins: selectedComponent.pins.map((pin) => ({ ...pin })),
+      tags: [...selectedComponent.tags, 'custom-copy'],
+    };
+    addCustomComponentDefinition(copy);
+    setSelectedId(copy.libraryId);
+    notify({ tone: 'success', title: 'Built-in definition copied', detail: 'The copy is now project-owned and can be edited without changing the built-in library.' });
+  };
+
   const addSelectedToProject = () => {
     if (!selectedComponent) return;
-    const prefix = referencePrefix(selectedComponent.category);
-    const existing = new Set(boardComponents.map((component) => component.referenceDesignator));
-    let index = 1;
-    while (existing.has(`${prefix}${index}`)) index += 1;
-    const referenceDesignator = `${prefix}${index}`;
-    const componentId = `comp_${Date.now()}`;
-    const boardId = selectedBoardId || boards[0]?.id || 'board_0';
-    const circuitBlockId = selectedCircuitBlockId || circuitBlocks[0]?.id || 'block_0';
+    if (!effectiveBoard) {
+      notify({
+        tone: 'warning',
+        title: 'Create a real board first',
+        detail: 'A project component must have an explicit board identity before it can enter PCB placement.',
+      });
+      return;
+    }
 
-    addBoardComponent({
-      id: componentId,
-      boardId,
-      circuitBlockId,
-      referenceDesignator,
-      componentName: selectedComponent.name,
-      componentType: selectedComponent.category,
-      value: selectedComponent.value || '',
-      packageName: selectedComponent.packageName,
-      footprint: selectedComponent.footprintName,
-      partNumber: selectedComponent.partNumber || '',
-      quantity: 1,
-      side: 'Top',
-      placementCriticality: 'Medium',
-      notes: selectedComponent.description,
-      placementStatus: 'Unplaced',
-      libraryId: selectedComponent.libraryId,
-      manufacturer: selectedComponent.manufacturer,
-      status: 'Draft',
-      pins: selectedComponent.pins.map((pin) => ({
-        id: `pin_${componentId}_${pin.number}`,
-        componentId,
-        pinNumber: pin.number,
-        pinName: pin.name,
-        electricalType: pin.electricalType,
-        netName: pin.defaultNetName || '',
-      })),
-      schematic: { placed: false },
-      pcb: { placed: false, side: 'Top', locked: false, placementStatus: 'Unplaced' },
-    });
+    const component = addProjectComponentFromLibrary(
+      selectedComponent,
+      effectiveBoard.id,
+      effectiveCircuitBlock?.id,
+    );
+    setActiveBoard(effectiveBoard.id);
 
-    addBOMItem({
-      blockName: circuitBlocks.find((block) => block.id === circuitBlockId)?.name || 'Main',
-      candidateComponent: selectedComponent.name,
-      partNumber: selectedComponent.partNumber,
-      stage: 'EVT',
-      quantity: 1,
-      voltage: selectedComponent.electrical.typicalVoltage ? `${selectedComponent.electrical.typicalVoltage}V` : '',
-      currentEstimate: selectedComponent.electrical.currentTypicalMa ? `${selectedComponent.electrical.currentTypicalMa}mA` : '',
-      packageSize: selectedComponent.packageName,
-      status: 'Sourced',
-      notes: selectedComponent.description,
-    });
+    if (component.bomItemId) {
+      updateBOMItem(component.bomItemId, {
+        componentId: component.id,
+        blockName: effectiveCircuitBlock?.name || 'Unassigned',
+        status: 'Not Started',
+      });
+    }
 
     setIsAddOpen(false);
     notify({
       tone: 'success',
-      title: `${referenceDesignator} added to the project`,
-      detail: `${selectedComponent.name} is registered in the project component set, PCB placement bin, schematic bin, and BOM. It remains unplaced until those workbenches assign it.`,
+      title: `${component.referenceDesignator} added to ${effectiveBoard.name}`,
+      detail: `${selectedComponent.name} now has one canonical project identity linked to a Not Started BOM record. Schematic and PCB placement remain explicit next steps.`,
       durationMs: 7000,
     });
   };
@@ -360,144 +349,156 @@ export const ComponentLibraryWorkbench: React.FC = () => {
     <section className="flex h-full min-h-0 flex-col bg-slate-50" aria-label="Electronics component library">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><Boxes className="h-5 w-5" aria-hidden="true" /></span>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-indigo-600">
+            <Boxes className="h-4 w-4" />
+          </span>
           <div className="min-w-0">
-            <h1 className="text-sm font-bold text-slate-950">Electronics Component Library</h1>
-            <p className="mt-0.5 text-xs text-slate-500">Choose a definition, understand it, then register one linked project instance.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-sm font-semibold text-slate-900">Component library</h1>
+              <span className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                {fullLibrary.length} definitions
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-slate-500">Choose reviewed device metadata, then create one canonical project component shared by schematic, PCB, BOM, and validation.</p>
           </div>
         </div>
-        <button type="button" onClick={openCreate} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">
-          <Plus className="h-4 w-4" aria-hidden="true" /> Create custom
+        <button type="button" onClick={openCreate} className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          <Plus className="h-3.5 w-3.5" /> Custom definition
         </button>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[390px_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[20rem_minmax(0,1fr)]">
         <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-white xl:border-b-0 xl:border-r">
-          <div className="space-y-3 border-b border-slate-200 p-3">
+          <div className="space-y-2 border-b border-slate-200 p-3">
             <label className="relative block">
-              <span className="sr-only">Search components</span>
-              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
-              <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, MPN, package, tag, pin…" className={`${inputClass} pl-9`} />
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search part, package, pin, tag…"
+                className="h-9 w-full rounded-md border border-slate-300 bg-white pl-8 pr-3 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
             </label>
-            <div className="flex gap-1.5 overflow-x-auto pb-1" aria-label="Component category filter">
-              {(['All', ...COMPONENT_CATEGORIES] as const).map((item) => (
-                <button key={item} type="button" onClick={() => setCategory(item)} aria-pressed={category === item} className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${category === item ? 'border-indigo-200 bg-indigo-50 text-indigo-800' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'} focus:outline-none focus:ring-2 focus:ring-indigo-500`}>
-                  {item}
-                </button>
-              ))}
-            </div>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value as ElectronicComponentDefinition['category'] | 'All')}
+              className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-700 outline-none focus:border-indigo-500"
+              aria-label="Component category"
+            >
+              <option value="All">All categories</option>
+              {COMPONENT_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-2.5">
-            {filtered.length > 0 ? (
-              <div className="space-y-2">
-                {filtered.map((component) => {
-                  const knowledgeId = resolveKnowledgeIdForComponent(component);
-                  const active = selectedComponent?.libraryId === component.libraryId;
-                  return (
-                    <div key={component.libraryId} className={`rounded-xl border p-3 transition ${active ? 'border-indigo-200 bg-indigo-50 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
-                      <button type="button" onClick={() => setSelectedId(component.libraryId)} className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-slate-900">{component.name}</p>
-                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{component.description}</p>
-                          </div>
-                          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">{component.category}</span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                          <span className="font-mono">{component.partNumber || component.libraryId}</span>
-                          <span>·</span><span>{component.packageName}</span>
-                          <span>·</span><span>{component.pins.length} pins</span>
-                        </div>
-                      </button>
-                      {knowledgeId && (
-                        <button type="button" onClick={() => openKnowledgeForComponent(component)} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                          <BookOpen className="h-3.5 w-3.5" aria-hidden="true" /> Learn this device family
-                        </button>
-                      )}
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-8 text-center text-xs text-slate-500">No component definitions match this filter.</div>
+            ) : filtered.map((component) => {
+              const isSelected = selectedComponent?.libraryId === component.libraryId;
+              const isCustom = customComponents.some((candidate) => candidate.libraryId === component.libraryId);
+              return (
+                <button
+                  key={component.libraryId}
+                  type="button"
+                  onClick={() => setSelectedId(component.libraryId)}
+                  className={`mb-1 w-full border px-3 py-2.5 text-left transition ${isSelected ? 'border-indigo-300 bg-indigo-50' : 'border-transparent hover:border-slate-200 hover:bg-slate-50'}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-xs font-semibold text-slate-900">{component.name}</div>
+                      <div className="mt-0.5 truncate font-mono text-[10px] text-slate-500">{component.partNumber || component.libraryId}</div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-                <Search className="mx-auto h-5 w-5 text-slate-400" aria-hidden="true" />
-                <p className="mt-2 text-sm font-semibold text-slate-700">No matching component</p>
-                <p className="mt-1 text-xs text-slate-500">Clear the search or choose another category.</p>
-              </div>
-            )}
+                    <span className="shrink-0 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-medium text-slate-500">{isCustom ? 'Custom' : component.category}</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-500">
+                    <span>{component.packageName || 'Package unresolved'}</span>
+                    <span>·</span>
+                    <span>{component.pins.length} pins</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </aside>
 
-        <main className="min-h-0 overflow-y-auto bg-slate-50">
-          {selectedComponent ? (
-            <div className="mx-auto max-w-5xl space-y-4 p-4 pb-10 lg:p-5">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-700">{selectedComponent.category}</span>
-                      {selectedIsCustom && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-700">Project custom</span>}
-                    </div>
-                    <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">{selectedComponent.name}</h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{selectedComponent.description}</p>
+        <main className="min-h-0 overflow-y-auto">
+          {!selectedComponent ? (
+            <div className="grid h-full min-h-72 place-items-center text-sm text-slate-500">Select a component definition.</div>
+          ) : (
+            <div className="mx-auto max-w-6xl p-4 lg:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Cpu className="h-4 w-4 text-indigo-600" />
+                    <h2 className="text-lg font-semibold text-slate-950">{selectedComponent.name}</h2>
+                    <span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-500">{selectedComponent.category}</span>
+                    {selectedIsCustom && <span className="rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">Project-owned</span>}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedKnowledgeId && (
-                      <button type="button" onClick={() => openKnowledgeForComponent(selectedComponent)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <BookOpen className="h-4 w-4" aria-hidden="true" /> Understand before using
-                      </button>
-                    )}
-                    {selectedIsCustom && (
-                      <button type="button" onClick={openEdit} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500">
-                        <Edit3 className="h-4 w-4" aria-hidden="true" /> Edit
-                      </button>
-                    )}
-                    <button type="button" onClick={() => duplicateComponentDefinition(selectedComponent.libraryId)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500">
-                      <Copy className="h-4 w-4" aria-hidden="true" /> Duplicate
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{selectedComponent.description || 'No description is available for this definition.'}</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedKnowledgeId && (
+                    <button type="button" onClick={() => openKnowledgeForComponent(selectedComponent)} className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                      <BookOpen className="h-3.5 w-3.5" /> Device guide
                     </button>
-                    <button type="button" onClick={() => setIsAddOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">
-                      <PackagePlus className="h-4 w-4" aria-hidden="true" /> Add to project
+                  )}
+                  <button type="button" onClick={duplicateSelected} className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                    <Copy className="h-3.5 w-3.5" /> Copy
+                  </button>
+                  {selectedIsCustom && (
+                    <button type="button" onClick={openEdit} className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                      <Edit3 className="h-3.5 w-3.5" /> Edit
                     </button>
-                  </div>
+                  )}
+                  <button type="button" onClick={openAdd} className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700">
+                    <PackagePlus className="h-3.5 w-3.5" /> Add to project
+                  </button>
                 </div>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_330px]">
-                <div className="space-y-4">
-                  <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <h3 className="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-500">Definition metadata</h3>
-                    <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                <div className="space-y-5">
+                  <section className="border border-slate-200 bg-white">
+                    <div className="border-b border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-700">Definition metadata</div>
+                    <dl className="grid gap-px bg-slate-200 sm:grid-cols-2">
                       {[
-                        ['Manufacturer', selectedComponent.manufacturer || 'Not specified'],
-                        ['Part number', selectedComponent.partNumber || 'Not specified'],
-                        ['Value', selectedComponent.value || 'Not specified'],
-                        ['Package', selectedComponent.packageName],
-                        ['Footprint', selectedComponent.footprintName],
-                        ['Symbol', selectedComponent.symbolName],
+                        ['Library ID', selectedComponent.libraryId],
+                        ['Manufacturer', selectedComponent.manufacturer || 'Unresolved'],
+                        ['Part number', selectedComponent.partNumber || 'Unresolved'],
+                        ['Value', selectedComponent.value || 'Unresolved'],
+                        ['Package', selectedComponent.packageName || 'Unresolved'],
+                        ['Footprint', selectedComponent.footprintName || 'Unresolved'],
+                        ['Symbol', selectedComponent.symbolName || 'Unresolved'],
+                        ['Typical voltage', selectedComponent.electrical.typicalVoltage ? `${selectedComponent.electrical.typicalVoltage} V` : 'Unresolved'],
                       ].map(([label, value]) => (
-                        <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                          <dt className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</dt>
-                          <dd className="mt-1 break-words text-sm font-semibold text-slate-900">{value}</dd>
+                        <div key={label} className="bg-white px-4 py-3">
+                          <dt className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{label}</dt>
+                          <dd className="mt-1 break-words text-xs font-medium text-slate-700">{value}</dd>
                         </div>
                       ))}
                     </dl>
-                    <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
-                      <div className="flex gap-2"><Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><p>Library metadata is not automatically qualified. Verify the exact datasheet, symbol pinout, footprint, package geometry, and sourcing record before release.</p></div>
-                    </div>
                   </section>
 
-                  <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-500">Pins and electrical roles</h3>
-                      <span className="text-xs text-slate-500">{selectedComponent.pins.length} terminals</span>
+                  <section className="border border-slate-200 bg-white">
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5">
+                      <span className="text-xs font-semibold text-slate-700">Pins</span>
+                      <span className="text-[10px] text-slate-400">{selectedComponent.pins.length} defined</span>
                     </div>
-                    <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
-                      <table className="min-w-full border-collapse text-left text-xs">
-                        <thead className="bg-slate-100 text-slate-600"><tr><th className="px-3 py-2">Pin</th><th className="px-3 py-2">Name</th><th className="px-3 py-2">Electrical type</th><th className="px-3 py-2">Protocol</th><th className="px-3 py-2">Default net</th><th className="px-3 py-2">Required</th></tr></thead>
-                        <tbody className="divide-y divide-slate-200 bg-white">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[34rem] text-left text-xs">
+                        <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+                          <tr><th className="px-4 py-2">Pin</th><th className="px-4 py-2">Name</th><th className="px-4 py-2">Electrical type</th><th className="px-4 py-2">Protocol</th><th className="px-4 py-2">Required</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
                           {selectedComponent.pins.map((pin) => (
-                            <tr key={`${pin.number}-${pin.name}`}><td className="px-3 py-2 font-mono font-bold text-indigo-700">{pin.number}</td><td className="px-3 py-2 font-semibold text-slate-900">{pin.name}</td><td className="px-3 py-2 text-slate-600">{pin.electricalType}</td><td className="px-3 py-2 text-slate-600">{pin.protocol || '—'}</td><td className="px-3 py-2 font-mono text-slate-600">{pin.defaultNetName || '—'}</td><td className="px-3 py-2">{pin.required ? <Check className="h-4 w-4 text-emerald-600" aria-label="Required" /> : '—'}</td></tr>
+                            <tr key={`${pin.number}-${pin.name}`}>
+                              <td className="px-4 py-2 font-mono font-semibold text-slate-800">{pin.number}</td>
+                              <td className="px-4 py-2 text-slate-700">{pin.name}</td>
+                              <td className="px-4 py-2 text-slate-600">{pin.electricalType}</td>
+                              <td className="px-4 py-2 text-slate-600">{pin.protocol || '—'}</td>
+                              <td className="px-4 py-2 text-slate-600">{pin.required ? 'Yes' : 'No'}</td>
+                            </tr>
                           ))}
                         </tbody>
                       </table>
@@ -505,67 +506,127 @@ export const ComponentLibraryWorkbench: React.FC = () => {
                   </section>
                 </div>
 
-                <aside className="space-y-4">
-                  <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <h3 className="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-500">PCB footprint preview</h3>
-                    <div className="mt-3"><FootprintPreview component={selectedComponent} /></div>
+                <div className="space-y-5">
+                  <section>
+                    <div className="mb-2 text-xs font-semibold text-slate-700">Footprint preview</div>
+                    <FootprintPreview component={selectedComponent} />
                   </section>
-                  <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <h3 className="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-500">Electrical summary</h3>
-                    <dl className="mt-3 space-y-2 text-sm">
-                      <div className="flex justify-between gap-3"><dt className="text-slate-500">Operating voltage</dt><dd className="text-right font-semibold text-slate-900">{selectedComponent.electrical.operatingVoltageMin ?? '—'} to {selectedComponent.electrical.operatingVoltageMax ?? '—'} V</dd></div>
-                      <div className="flex justify-between gap-3"><dt className="text-slate-500">Typical voltage</dt><dd className="font-semibold text-slate-900">{selectedComponent.electrical.typicalVoltage ? `${selectedComponent.electrical.typicalVoltage} V` : '—'}</dd></div>
-                      <div className="flex justify-between gap-3"><dt className="text-slate-500">Typical current</dt><dd className="font-semibold text-slate-900">{selectedComponent.electrical.currentTypicalMa ? `${selectedComponent.electrical.currentTypicalMa} mA` : '—'}</dd></div>
-                      <div className="flex justify-between gap-3"><dt className="text-slate-500">Maximum current</dt><dd className="font-semibold text-slate-900">{selectedComponent.electrical.currentMaxMa ? `${selectedComponent.electrical.currentMaxMa} mA` : '—'}</dd></div>
-                    </dl>
+                  <section className="border border-slate-200 bg-white p-4">
+                    <div className="flex items-start gap-2">
+                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div>
+                        <div className="text-xs font-semibold text-slate-700">Project usage</div>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">{boardComponents.filter((component) => component.libraryId === selectedComponent.libraryId).length} canonical project instance(s) currently use this definition.</p>
+                      </div>
+                    </div>
                   </section>
-                </aside>
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="grid h-full place-items-center p-6 text-center text-sm text-slate-500"><Cpu className="mb-2 h-8 w-8 text-slate-300" aria-hidden="true" />Select or create a component definition.</div>
           )}
         </main>
       </div>
 
       <Dialog.Root open={isAddOpen} onOpenChange={setIsAddOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[100] bg-slate-950/45 backdrop-blur-sm" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[110] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl outline-none">
-            <div className="flex items-start justify-between gap-3"><div><Dialog.Title className="text-base font-bold text-slate-950">Add component instance</Dialog.Title><Dialog.Description className="mt-1 text-sm leading-6 text-slate-500">Register the selected definition in the project component set, schematic bin, PCB placement bin, and BOM.</Dialog.Description></div><Dialog.Close asChild><button type="button" className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label="Close add component dialog"><X className="h-4 w-4" /></button></Dialog.Close></div>
-            <div className="mt-5 space-y-4">
-              <Field label="Board" htmlFor="component-board"><select id="component-board" value={selectedBoardId} onChange={(event) => setSelectedBoardId(event.target.value)} className={inputClass}>{boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}{boards.length === 0 && <option value="board_0">Default board</option>}</select></Field>
-              <Field label="Circuit block" htmlFor="component-block"><select id="component-block" value={selectedCircuitBlockId} onChange={(event) => setSelectedCircuitBlockId(event.target.value)} className={inputClass}>{circuitBlocks.map((block) => <option key={block.id} value={block.id}>{block.name}</option>)}{circuitBlocks.length === 0 && <option value="block_0">Main</option>}</select></Field>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600"><strong className="text-slate-900">{selectedComponent?.name}</strong> will be created as an unplaced draft instance. Schematic and PCB placement remain explicit next steps.</div>
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/35" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 border border-slate-200 bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <Dialog.Title className="text-sm font-semibold text-slate-900">Add {selectedComponent?.name || 'component'} to project</Dialog.Title>
+                <Dialog.Description className="mt-1 text-xs leading-5 text-slate-500">Create one canonical component identity. A real board is required; circuit-block assignment is optional and can stay unresolved.</Dialog.Description>
+              </div>
+              <Dialog.Close className="grid h-8 w-8 place-items-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close"><X className="h-4 w-4" /></Dialog.Close>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><Dialog.Close asChild><button type="button" className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">Cancel</button></Dialog.Close><button type="button" onClick={addSelectedToProject} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"><PackagePlus className="h-4 w-4" /> Add instance</button></div>
+
+            {boards.length === 0 ? (
+              <div className="mt-5 border border-amber-200 bg-amber-50 p-4">
+                <div className="text-xs font-semibold text-amber-900">No physical board exists yet.</div>
+                <p className="mt-1 text-xs leading-5 text-amber-800">Hardware Studio will not manufacture a placeholder board ID. Define the actual board first, then return here to add components.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddOpen(false);
+                    setActiveView('board-settings');
+                  }}
+                  className="mt-3 rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+                >
+                  Open Board settings
+                </button>
+              </div>
+            ) : (
+              <div className="mt-5 space-y-4">
+                <Field label="Physical board *" htmlFor="component-target-board">
+                  <select
+                    id="component-target-board"
+                    value={effectiveBoard?.id || ''}
+                    onChange={(event) => {
+                      setSelectedBoardId(event.target.value);
+                      setSelectedCircuitBlockId('');
+                    }}
+                    className={inputClass}
+                  >
+                    {boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
+                  </select>
+                </Field>
+
+                <Field label="Circuit block (optional)" htmlFor="component-target-block">
+                  <select id="component-target-block" value={effectiveCircuitBlock?.id || ''} onChange={(event) => setSelectedCircuitBlockId(event.target.value)} className={inputClass}>
+                    <option value="">Unassigned</option>
+                    {blocksForBoard.map((block) => <option key={block.id} value={block.id}>{block.name}</option>)}
+                  </select>
+                </Field>
+
+                {blocksForBoard.length === 0 && (
+                  <p className="text-xs leading-5 text-slate-500">This board has no circuit blocks yet. That is valid—the component will remain explicitly unassigned at the block level.</p>
+                )}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2 border-t border-slate-200 pt-4">
+              <Dialog.Close className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</Dialog.Close>
+              <button type="button" disabled={!effectiveBoard} onClick={addSelectedToProject} className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">
+                <Check className="h-3.5 w-3.5" /> Add canonical component
+              </button>
+            </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
 
       <Dialog.Root open={isEditorOpen} onOpenChange={setIsEditorOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[100] bg-slate-950/45 backdrop-blur-sm" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[110] max-h-[90vh] w-[calc(100vw-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl outline-none">
-            <div className="flex items-start justify-between gap-3"><div><Dialog.Title className="text-base font-bold text-slate-950">{editingId ? 'Edit custom component' : 'Create custom component'}</Dialog.Title><Dialog.Description className="mt-1 text-sm leading-6 text-slate-500">Define reusable metadata and exact pins. This remains a local project definition until independently reviewed.</Dialog.Description></div><Dialog.Close asChild><button type="button" className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label="Close component editor"><X className="h-4 w-4" /></button></Dialog.Close></div>
-            <form onSubmit={saveDefinition} className="mt-5 space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Component name" htmlFor="custom-name"><input id="custom-name" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} className={inputClass} required /></Field>
-                <Field label="Library ID" htmlFor="custom-id"><input id="custom-id" value={draft.libraryId} onChange={(event) => setDraft((current) => ({ ...current, libraryId: event.target.value }))} className={inputClass} disabled={Boolean(editingId)} required /></Field>
-                <Field label="Category" htmlFor="custom-category"><select id="custom-category" value={draft.category} onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value as ElectronicComponentDefinition['category'] }))} className={inputClass}>{COMPONENT_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
-                <Field label="Manufacturer" htmlFor="custom-manufacturer"><input id="custom-manufacturer" value={draft.manufacturer} onChange={(event) => setDraft((current) => ({ ...current, manufacturer: event.target.value }))} className={inputClass} /></Field>
-                <Field label="Part number" htmlFor="custom-part"><input id="custom-part" value={draft.partNumber} onChange={(event) => setDraft((current) => ({ ...current, partNumber: event.target.value }))} className={inputClass} /></Field>
-                <Field label="Value" htmlFor="custom-value"><input id="custom-value" value={draft.value} onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))} className={inputClass} /></Field>
-                <Field label="Package" htmlFor="custom-package"><input id="custom-package" value={draft.packageName} onChange={(event) => setDraft((current) => ({ ...current, packageName: event.target.value }))} className={inputClass} required /></Field>
-                <Field label="Footprint" htmlFor="custom-footprint"><input id="custom-footprint" value={draft.footprintName} onChange={(event) => setDraft((current) => ({ ...current, footprintName: event.target.value }))} className={inputClass} required /></Field>
-                <Field label="Symbol" htmlFor="custom-symbol"><input id="custom-symbol" value={draft.symbolName} onChange={(event) => setDraft((current) => ({ ...current, symbolName: event.target.value }))} className={inputClass} required /></Field>
-                <Field label="Typical voltage (V)" htmlFor="custom-voltage"><input id="custom-voltage" inputMode="decimal" value={draft.typicalVoltage} onChange={(event) => setDraft((current) => ({ ...current, typicalVoltage: event.target.value }))} className={inputClass} /></Field>
-                <Field label="Tags, comma separated" htmlFor="custom-tags"><input id="custom-tags" value={draft.tags} onChange={(event) => setDraft((current) => ({ ...current, tags: event.target.value }))} className={inputClass} /></Field>
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/35" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[min(46rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto border border-slate-200 bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <Dialog.Title className="text-sm font-semibold text-slate-900">{editingId ? 'Edit custom component' : 'Create custom component'}</Dialog.Title>
+                <Dialog.Description className="mt-1 text-xs text-slate-500">Define reusable metadata. Unknown engineering values can remain blank rather than being invented.</Dialog.Description>
               </div>
-              <Field label="Description" htmlFor="custom-description"><textarea id="custom-description" rows={3} value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" required /></Field>
-              <Field label="Pins: number,name,electrical type,required" htmlFor="custom-pins"><textarea id="custom-pins" rows={8} value={draft.pinsText} onChange={(event) => setDraft((current) => ({ ...current, pinsText: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-slate-950 px-3 py-2 font-mono text-xs leading-6 text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" spellCheck={false} /></Field>
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">Allowed electrical types: {PIN_TYPES.join(', ')}. A custom definition is provisional until its symbol, footprint, pin mapping, package, and source documentation are reviewed.</div>
-              <div className="flex justify-end gap-2"><Dialog.Close asChild><button type="button" className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">Cancel</button></Dialog.Close><button type="submit" className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"><Check className="h-4 w-4" /> Save definition</button></div>
+              <Dialog.Close className="grid h-8 w-8 place-items-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close"><X className="h-4 w-4" /></Dialog.Close>
+            </div>
+
+            <form onSubmit={saveDefinition} className="mt-5 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Name *" htmlFor="custom-component-name"><input id="custom-component-name" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} className={inputClass} /></Field>
+                <Field label="Library ID *" htmlFor="custom-component-id"><input id="custom-component-id" value={draft.libraryId} disabled={Boolean(editingId)} onChange={(event) => setDraft((current) => ({ ...current, libraryId: event.target.value }))} className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-500`} /></Field>
+                <Field label="Category" htmlFor="custom-component-category"><select id="custom-component-category" value={draft.category} onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value as ElectronicComponentDefinition['category'] }))} className={inputClass}>{COMPONENT_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
+                <Field label="Manufacturer" htmlFor="custom-component-manufacturer"><input id="custom-component-manufacturer" value={draft.manufacturer} onChange={(event) => setDraft((current) => ({ ...current, manufacturer: event.target.value }))} className={inputClass} /></Field>
+                <Field label="Part number" htmlFor="custom-component-part"><input id="custom-component-part" value={draft.partNumber} onChange={(event) => setDraft((current) => ({ ...current, partNumber: event.target.value }))} className={inputClass} /></Field>
+                <Field label="Value" htmlFor="custom-component-value"><input id="custom-component-value" value={draft.value} onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))} className={inputClass} /></Field>
+                <Field label="Package" htmlFor="custom-component-package"><input id="custom-component-package" value={draft.packageName} onChange={(event) => setDraft((current) => ({ ...current, packageName: event.target.value }))} className={inputClass} /></Field>
+                <Field label="Footprint" htmlFor="custom-component-footprint"><input id="custom-component-footprint" value={draft.footprintName} onChange={(event) => setDraft((current) => ({ ...current, footprintName: event.target.value }))} className={inputClass} /></Field>
+                <Field label="Symbol" htmlFor="custom-component-symbol"><input id="custom-component-symbol" value={draft.symbolName} onChange={(event) => setDraft((current) => ({ ...current, symbolName: event.target.value }))} className={inputClass} /></Field>
+                <Field label="Typical voltage (V)" htmlFor="custom-component-voltage"><input id="custom-component-voltage" inputMode="decimal" value={draft.typicalVoltage} onChange={(event) => setDraft((current) => ({ ...current, typicalVoltage: event.target.value }))} className={inputClass} /></Field>
+              </div>
+
+              <Field label="Tags (comma separated)" htmlFor="custom-component-tags"><input id="custom-component-tags" value={draft.tags} onChange={(event) => setDraft((current) => ({ ...current, tags: event.target.value }))} className={inputClass} /></Field>
+              <Field label="Description" htmlFor="custom-component-description"><textarea id="custom-component-description" rows={3} value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} className="w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" /></Field>
+              <Field label="Pins — number,name,electrical type,required" htmlFor="custom-component-pins"><textarea id="custom-component-pins" rows={8} value={draft.pinsText} onChange={(event) => setDraft((current) => ({ ...current, pinsText: event.target.value }))} className="w-full resize-y rounded-md border border-slate-300 bg-slate-950 px-3 py-2 font-mono text-xs text-slate-100 outline-none focus:border-indigo-500" /></Field>
+
+              <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
+                <Dialog.Close className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</Dialog.Close>
+                <button type="submit" className="rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700">{editingId ? 'Save definition' : 'Create definition'}</button>
+              </div>
             </form>
           </Dialog.Content>
         </Dialog.Portal>
