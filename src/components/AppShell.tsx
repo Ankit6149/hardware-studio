@@ -12,7 +12,6 @@ import { Sidebar } from './Sidebar';
 import { BlueprintCanvas } from './BlueprintCanvas';
 import { ExportCenter } from './ExportCenter';
 import { PropertiesPanel } from './PropertiesPanel';
-import { ReviewWarnings } from './ReviewWarnings';
 import { ProductVisualizer } from './ProductVisualizer';
 import { PowerBudgetTable } from './PowerBudgetTable';
 import { PinMapTable } from './PinMapTable';
@@ -24,7 +23,6 @@ import { FactoryPackageBuilder } from './FactoryPackageBuilder';
 import { RevisionsStudio } from './revisions/RevisionsStudio';
 import { ProductStudio } from './product/ProductStudio';
 import { FirmwareStudio } from './firmware/FirmwareStudio';
-import { EngineeringContextBar } from './studio/EngineeringContextBar';
 import { UnifiedValidationWorkbench } from './studio/UnifiedValidationWorkbench';
 import { UnifiedMechanicalWorkbench } from './studio/UnifiedWorkbenchAdapters';
 import { ElectronicsWorkspace, ELECTRONICS_WORKSPACE_VIEW_IDS } from './studio/ElectronicsWorkspace';
@@ -64,15 +62,15 @@ function renderSurface(surface: NavigationSurface, viewId: string): React.ReactN
 }
 
 const UnavailableWorkspace: React.FC<{ viewId: string; onReturn: () => void }> = ({ viewId, onReturn }) => (
-  <section className="flex h-full min-h-0 flex-1 items-center justify-center bg-slate-50 px-6 py-10">
-    <div className="w-full max-w-lg rounded-lg border border-amber-300 bg-white p-5">
+  <section className="flex h-full min-h-0 flex-1 items-center justify-center bg-[#f7f5ef] px-6 py-10">
+    <div className="w-full max-w-lg border border-amber-300 bg-white p-5">
       <div className="flex items-start gap-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-amber-50 text-amber-700"><AlertTriangle className="h-4 w-4" aria-hidden="true" /></span>
+        <span className="grid h-9 w-9 shrink-0 place-items-center bg-amber-50 text-amber-700"><AlertTriangle className="h-4 w-4" aria-hidden="true" /></span>
         <div className="min-w-0">
           <p className="text-[11px] font-semibold text-amber-800">Workspace unavailable</p>
           <h1 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">This view is not registered.</h1>
-          <p className="mt-2 text-xs leading-5 text-slate-600">The saved view ID <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-800">{viewId}</code> does not match a current Hardware Studio workbench. No project data was changed.</p>
-          <button type="button" onClick={onReturn} className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-md bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500/70 focus:ring-offset-1">
+          <p className="mt-2 text-xs leading-5 text-slate-600">The saved view ID <code className="bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-800">{viewId}</code> does not match a current Hardware Studio workbench. No project data was changed.</p>
+          <button type="button" onClick={onReturn} className="mt-4 inline-flex min-h-9 items-center gap-2 bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500/70 focus:ring-offset-1">
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Return to dashboard
           </button>
         </div>
@@ -140,17 +138,16 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="hs-app flex h-screen w-screen flex-col overflow-hidden font-sans text-slate-900" data-ui="hardware-studio">
-      <a href="#workspace-main" className="sr-only z-[100] rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to workspace</a>
+      <a href="#workspace-main" className="sr-only z-[100] bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to workspace</a>
       <TopBar />
       <div className="relative flex min-h-0 flex-1 bg-[#ebe7dc]">
         <Sidebar collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((value) => !value)} />
         <main id="workspace-main" tabIndex={-1} className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[#f7f5ef] outline-none" aria-label={`${activeViewLabel} workspace`}>
           <p className="sr-only" aria-live="polite" aria-atomic="true">Opened {activeViewLabel} workspace</p>
-          <EngineeringContextBar />
           {activeHiddenDomain && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-300 bg-amber-50 px-3 py-1.5 text-amber-950" role="status">
               <div className="flex min-w-0 items-center gap-2"><EyeOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><p className="text-[11px] leading-4"><strong>Outside the focused workflow.</strong> Project data is unchanged.</p></div>
-              <div className="flex shrink-0 gap-1.5"><button type="button" onClick={() => toggleDomain(activeHiddenDomain)} className="min-h-8 rounded-md border border-amber-300 bg-white px-2.5 text-[11px] font-semibold hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500">Add to focus</button><button type="button" onClick={openSetup} className="inline-flex min-h-8 items-center gap-1.5 rounded-md bg-amber-900 px-2.5 text-[11px] font-semibold text-white hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600"><Settings2 className="h-3.5 w-3.5" aria-hidden="true" /> Configure</button></div>
+              <div className="flex shrink-0 gap-1.5"><button type="button" onClick={() => toggleDomain(activeHiddenDomain)} className="min-h-8 border border-amber-300 bg-white px-2.5 text-[11px] font-semibold hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500">Add to focus</button><button type="button" onClick={openSetup} className="inline-flex min-h-8 items-center gap-1.5 bg-amber-900 px-2.5 text-[11px] font-semibold text-white hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600"><Settings2 className="h-3.5 w-3.5" aria-hidden="true" /> Configure</button></div>
             </div>
           )}
           <div className="relative flex min-h-0 flex-1">
@@ -161,7 +158,6 @@ export const AppShell: React.FC = () => {
             </div>
             {isCanvasView && <PropertiesPanel />}
           </div>
-          <ReviewWarnings />
         </main>
       </div>
     </div>
