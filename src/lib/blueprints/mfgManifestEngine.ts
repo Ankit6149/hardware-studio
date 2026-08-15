@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Project } from '../../types';
+import { assertManufacturingContext } from '../manufacturing/manufacturingContext';
 import {
   generateNativeGerberCopperTop,
   generateNativeGerberCopperBottom,
@@ -21,6 +22,8 @@ export interface ManufacturingFileManifest {
 export interface ManufacturingManifestPackage {
   packageId: string;
   projectName: string;
+  boardId: string;
+  boardName: string;
   generatedAt: string;
   files: ManufacturingFileManifest[];
   packageSha256: string;
@@ -31,15 +34,26 @@ export function computeSHA256(content: string): string {
   return crypto.createHash('sha256').update(content, 'utf8').digest('hex');
 }
 
-/** Generate real SHA-256 manufacturing manifest package */
+/**
+ * Generate a SHA-256 manufacturing manifest package only when the project has a
+ * real, unambiguous manufacturing board context. This gate intentionally sits
+ * before the legacy serializers so missing board identity/geometry/placements
+ * cannot be converted into a file-shaped package and then labelled generated.
+ */
 export function generateManufacturingManifestPackage(project: Project): ManufacturingManifestPackage {
-  const gerberTop = generateNativeGerberCopperTop(project);
-  const gerberBottom = generateNativeGerberCopperBottom(project);
-  const gerberOutline = generateNativeGerberBoardOutline(project);
-  const excellonDrill = generateNativeExcellonDrills(project);
-  const cplCsv = generateNativeCplDraftCsv(project);
-  const bomCsv = exportBomCsv(project);
-  const netlistJson = generateNativeNetlistJson(project);
+  const context = assertManufacturingContext(project);
+  const normalizedProject: Project = {
+    ...project,
+    activeBoardId: context.boardId,
+  };
+
+  const gerberTop = generateNativeGerberCopperTop(normalizedProject);
+  const gerberBottom = generateNativeGerberCopperBottom(normalizedProject);
+  const gerberOutline = generateNativeGerberBoardOutline(normalizedProject);
+  const excellonDrill = generateNativeExcellonDrills(normalizedProject);
+  const cplCsv = generateNativeCplDraftCsv(normalizedProject);
+  const bomCsv = exportBomCsv(normalizedProject);
+  const netlistJson = generateNativeNetlistJson(normalizedProject);
 
   const files: ManufacturingFileManifest[] = [
     {
@@ -99,6 +113,8 @@ export function generateManufacturingManifestPackage(project: Project): Manufact
   return {
     packageId: `mfg_pkg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
     projectName: project.projectName,
+    boardId: context.boardId,
+    boardName: context.board.name,
     generatedAt: new Date().toISOString(),
     files,
     packageSha256
