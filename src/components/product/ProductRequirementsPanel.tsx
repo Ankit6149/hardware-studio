@@ -48,6 +48,7 @@ export const ProductRequirementsPanel: React.FC<ProductRequirementsPanelProps> =
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [criterion, setCriterion] = useState('');
+  const [criterionDraft, setCriterionDraft] = useState('');
   const [type, setType] = useState<ProductRequirement['type']>('Functional');
   const [priority, setPriority] = useState<ProductRequirement['priority']>('Medium');
 
@@ -151,13 +152,12 @@ export const ProductRequirementsPanel: React.FC<ProductRequirementsPanelProps> =
   };
 
   const addAcceptanceCriterion = () => {
-    if (!selectedRequirement) return;
-    const next = window.prompt('Acceptance criterion');
-    if (!next?.trim()) return;
+    if (!selectedRequirement || !criterionDraft.trim()) return;
     updateRequirement(
-      { acceptanceCriteria: [...selectedRequirement.acceptanceCriteria, next.trim()] },
+      { acceptanceCriteria: [...selectedRequirement.acceptanceCriteria, criterionDraft.trim()] },
       `Add acceptance criterion to ${selectedRequirement.title}`,
     );
+    setCriterionDraft('');
   };
 
   const removeAcceptanceCriterion = (index: number) => {
@@ -170,6 +170,11 @@ export const ProductRequirementsPanel: React.FC<ProductRequirementsPanelProps> =
 
   const createLinkedValidationTest = () => {
     if (!selectedRequirement) return;
+    if (selectedRequirement.acceptanceCriteria.length === 0) {
+      feedback.notify({ tone: 'warning', title: 'Validation needs criteria', detail: 'Define acceptance criteria before creating a linked validation procedure.' });
+      return;
+    }
+
     store.executeProjectCommand('CREATE_REQUIREMENT_TEST', `Create validation for ${selectedRequirement.title}`, () => {
       store.addValidationTest({
         name: `${selectedRequirement.title} acceptance test`,
@@ -269,13 +274,7 @@ export const ProductRequirementsPanel: React.FC<ProductRequirementsPanelProps> =
           {requirements.map((requirement) => {
             const selected = requirement.id === selectedRequirement?.id;
             return (
-              <button
-                key={requirement.id}
-                type="button"
-                onClick={() => setSelectedRequirementId(requirement.id)}
-                aria-current={selected ? 'true' : undefined}
-                className={`mb-1.5 w-full rounded-xl border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-indigo-500 ${selected ? 'border-indigo-300 bg-indigo-50 shadow-sm' : 'border-transparent bg-white hover:border-slate-200 hover:bg-slate-50'}`}
-              >
+              <button key={requirement.id} type="button" onClick={() => setSelectedRequirementId(requirement.id)} aria-current={selected ? 'true' : undefined} className={`mb-1.5 w-full rounded-xl border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-indigo-500 ${selected ? 'border-indigo-300 bg-indigo-50 shadow-sm' : 'border-transparent bg-white hover:border-slate-200 hover:bg-slate-50'}`}>
                 <p className="text-xs font-semibold leading-4 text-slate-950">{requirement.title}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <span className={`rounded-full border px-1.5 py-0.5 text-[8px] font-bold ${priorityStyle[requirement.priority]}`}>{requirement.priority}</span>
@@ -303,12 +302,25 @@ export const ProductRequirementsPanel: React.FC<ProductRequirementsPanelProps> =
             <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
               <main className="min-w-0 space-y-5">
                 <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="requirement-evidence-title">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-500">Evidence needed to decide</p>
-                      <h2 id="requirement-evidence-title" className="mt-1 text-base font-bold text-slate-950">Acceptance criteria</h2>
-                    </div>
-                    <button type="button" onClick={addAcceptanceCriterion} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"><Plus className="h-3.5 w-3.5" /> Criterion</button>
+                  <div>
+                    <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-500">Evidence needed to decide</p>
+                    <h2 id="requirement-evidence-title" className="mt-1 text-base font-bold text-slate-950">Acceptance criteria</h2>
+                  </div>
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <input
+                      value={criterionDraft}
+                      onChange={(event) => setCriterionDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          addAcceptanceCriterion();
+                        }
+                      }}
+                      className={`${smallInputClass} flex-1`}
+                      placeholder="Add a measurable acceptance criterion"
+                      aria-label="New acceptance criterion"
+                    />
+                    <button type="button" onClick={addAcceptanceCriterion} disabled={!criterionDraft.trim()} className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-3.5 w-3.5" /> Add criterion</button>
                   </div>
                   <div className="mt-4 space-y-2">
                     {selectedRequirement.acceptanceCriteria.map((item, index) => (
