@@ -55,9 +55,11 @@ describe('decision-first product UX baseline', () => {
     expect(sidebar).toContain('<ContextSubnav collapsed={collapsed} />');
     expect(sidebar).not.toContain('domain.items.map');
 
+    expect(subnav).toContain('data-context-subnav');
     expect(subnav).toContain('contextual navigation');
     expect(subnav).toContain('workbenches');
     expect(subnav).toContain('activeDomain.items.map');
-    expect(subnav).toContain('Primary rail chooses the engineering area');
+    expect(subnav).toContain('showDeviceLibrary');
+    expect(subnav).not.toContain('Primary rail chooses the engineering area');
   });
 });
