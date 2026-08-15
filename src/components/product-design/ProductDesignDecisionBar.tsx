@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { ArrowRight, Box, CheckCircle2, Link2, Ruler, Shapes } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useProductDesignStore } from '../../store/productDesignStore';
@@ -19,20 +19,15 @@ export const ProductDesignDecisionBar: React.FC = () => {
 
   const requirements = project.requirements || [];
   const objects = document?.objects || [];
-  const conceptParts = useMemo(
-    () => objects.filter((object): object is ProductDesignConceptPart => object.type === 'concept-part'),
-    [objects],
-  );
+  const conceptParts = objects.filter((object): object is ProductDesignConceptPart => object.type === 'concept-part');
   const dimensions = objects.filter((object) => object.type === 'dimension');
   const selectedConcept = conceptParts.find((part) => selectedObjectIds.includes(part.id));
   const linkTarget = selectedConcept || (conceptParts.length === 1 ? conceptParts[0] : undefined);
   const linkedRequirementIds = new Set(conceptParts.flatMap((part) => part.linkedRequirementIds || []));
   const [requirementId, setRequirementId] = useState('');
-
-  useEffect(() => {
-    if (requirements.some((requirement) => requirement.id === requirementId)) return;
-    setRequirementId(requirements[0]?.id || '');
-  }, [requirementId, requirements]);
+  const effectiveRequirementId = requirements.some((requirement) => requirement.id === requirementId)
+    ? requirementId
+    : requirements[0]?.id || '';
 
   let title = 'Capture the first product-form decision';
   let detail = 'The canvas is empty. Start with the smallest amount of geometry needed to express form or layout intent.';
@@ -65,11 +60,11 @@ export const ProductDesignDecisionBar: React.FC = () => {
     consequence = 'The product-form decision gains traceability without turning concept geometry into manufacturing geometry.';
     actionLabel = linkTarget ? 'Link requirement' : 'Select one concept part';
     action = () => {
-      if (!linkTarget || !requirementId) {
+      if (!linkTarget || !effectiveRequirementId) {
         setActiveTool('select');
         return;
       }
-      const nextIds = Array.from(new Set([...(linkTarget.linkedRequirementIds || []), requirementId]));
+      const nextIds = Array.from(new Set([...(linkTarget.linkedRequirementIds || []), effectiveRequirementId]));
       updateObjectById(linkTarget.id, { linkedRequirementIds: nextIds }, 'Link concept part to requirement');
       notify({
         tone: 'success',
@@ -119,17 +114,17 @@ export const ProductDesignDecisionBar: React.FC = () => {
           <span className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-white/80 bg-white/75 px-2.5 text-[10px] font-semibold text-slate-600"><Link2 className="h-3.5 w-3.5" aria-hidden="true" /> {linkedRequirementIds.size} linked needs</span>
 
           {conceptParts.length > 0 && linkedRequirementIds.size === 0 && requirements.length > 0 && linkTarget && (
-            <label className="sr-only" htmlFor="product-design-requirement-link">Requirement to link</label>
-          )}
-          {conceptParts.length > 0 && linkedRequirementIds.size === 0 && requirements.length > 0 && linkTarget && (
-            <select
-              id="product-design-requirement-link"
-              value={requirementId}
-              onChange={(event) => setRequirementId(event.target.value)}
-              className="min-h-10 max-w-52 rounded-lg border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            >
-              {requirements.map((requirement) => <option key={requirement.id} value={requirement.id}>{requirement.title}</option>)}
-            </select>
+            <>
+              <label className="sr-only" htmlFor="product-design-requirement-link">Requirement to link</label>
+              <select
+                id="product-design-requirement-link"
+                value={effectiveRequirementId}
+                onChange={(event) => setRequirementId(event.target.value)}
+                className="min-h-10 max-w-52 rounded-lg border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+              >
+                {requirements.map((requirement) => <option key={requirement.id} value={requirement.id}>{requirement.title}</option>)}
+              </select>
+            </>
           )}
 
           <button
