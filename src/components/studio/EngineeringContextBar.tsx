@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo } from 'react';
 import {
-  ArrowRight,
   Boxes,
   CircuitBoard,
   FileSpreadsheet,
@@ -109,77 +108,96 @@ export const EngineeringContextBar: React.FC = () => {
     setActiveComponent(firstComponent?.id || null);
   };
 
-  const schematicActionLabel = selectedComponent?.schematic?.placed ? 'Schematic' : 'Place in schematic';
-  const pcbActionLabel = selectedBoard ? 'PCB' : 'Create board';
+  const schematicActionLabel = selectedComponent?.schematic?.placed ? 'Schematic' : 'Place';
+  const pcbActionLabel = selectedBoard ? 'PCB' : 'Board';
 
   const handoffs = [
-    { viewId: 'component-library', label: 'Components', Icon: Boxes },
+    { viewId: 'component-library', label: 'Parts', Icon: Boxes },
     { viewId: 'schematic-editor', label: schematicActionLabel, Icon: PenTool },
     { viewId: 'board-designer', label: pcbActionLabel, Icon: CircuitBoard },
-    { viewId: 'mechanical-studio', label: 'Inspect in 3D', Icon: Layers3 },
+    { viewId: 'mechanical-studio', label: '3D', Icon: Layers3 },
     { viewId: 'bom', label: 'BOM', Icon: FileSpreadsheet },
     { viewId: 'validation-studio', label: 'Validate', Icon: TestTube2 },
   ] as const;
 
+  const schematicState = selectedComponent ? selectedComponent.schematic?.placed ? 'Placed' : 'Unplaced' : 'No instance';
+  const pcbState = selectedComponent
+    ? selectedComponent.pcb?.placed || selectedComponent.placementStatus === 'Placed' ? 'Placed' : 'Unplaced'
+    : 'No instance';
+
   return (
-    <section className="shrink-0 border-b border-slate-200 bg-slate-50 px-3 py-2" aria-label="Shared engineering context">
-      <div className="flex flex-col gap-2 2xl:flex-row 2xl:items-center 2xl:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-500">Working context</span>
+    <section className="relative z-10 shrink-0 border-b border-slate-300 bg-[#f8f5ee] px-2.5 py-1.5" aria-label="Shared engineering context">
+      <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
+        <span className="mr-1 hidden shrink-0 text-[10px] font-semibold text-slate-500 xl:inline">Context</span>
 
-          <label className="flex min-w-[180px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
-            <CircuitBoard className="h-3.5 w-3.5 shrink-0 text-indigo-600" aria-hidden="true" />
-            <span className="sr-only">Active board</span>
-            <select value={resolvedBoardId} onChange={(event) => changeBoard(event.target.value)} className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-800 outline-none">
-              {boards.length === 0 && <option value="">No board yet</option>}
-              {boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
-            </select>
-          </label>
+        <label className="flex h-8 min-w-[150px] shrink-0 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2">
+          <CircuitBoard className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+          <span className="sr-only">Active board</span>
+          <select value={resolvedBoardId} onChange={(event) => changeBoard(event.target.value)} className="min-w-0 flex-1 bg-transparent text-[11px] font-medium text-slate-800 outline-none">
+            {boards.length === 0 && <option value="">No board</option>}
+            {boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
+          </select>
+        </label>
 
-          <label className="flex min-w-[220px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
-            <Boxes className="h-3.5 w-3.5 shrink-0 text-indigo-600" aria-hidden="true" />
-            <span className="sr-only">Active component instance</span>
-            <select value={selectedComponent?.id || ''} onChange={(event) => setActiveComponent(event.target.value || null)} className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-800 outline-none">
-              {componentsForBoard.length === 0 && <option value="">No component instance</option>}
-              {componentsForBoard.map((component) => <option key={component.id} value={component.id}>{component.referenceDesignator} · {component.componentName}</option>)}
-            </select>
-          </label>
+        <label className="flex h-8 min-w-[190px] shrink-0 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2">
+          <Boxes className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+          <span className="sr-only">Active component instance</span>
+          <select value={selectedComponent?.id || ''} onChange={(event) => setActiveComponent(event.target.value || null)} className="min-w-0 flex-1 bg-transparent text-[11px] font-medium text-slate-800 outline-none">
+            {componentsForBoard.length === 0 && <option value="">No component</option>}
+            {componentsForBoard.map((component) => <option key={component.id} value={component.id}>{component.referenceDesignator} · {component.componentName}</option>)}
+          </select>
+        </label>
 
-          <label className="flex min-w-[150px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
-            <ListTree className="h-3.5 w-3.5 shrink-0 text-indigo-600" aria-hidden="true" />
-            <span className="sr-only">Active net</span>
-            <select value={activeNetName || ''} onChange={(event) => setActiveNet(event.target.value || null)} className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-800 outline-none">
-              <option value="">No net selected</option>
-              {nets.map((net) => <option key={net.id} value={net.netName}>{net.netName}</option>)}
-            </select>
-          </label>
-        </div>
+        <label className="flex h-8 min-w-[130px] shrink-0 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2">
+          <ListTree className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+          <span className="sr-only">Active net</span>
+          <select value={activeNetName || ''} onChange={(event) => setActiveNet(event.target.value || null)} className="min-w-0 flex-1 bg-transparent text-[11px] font-medium text-slate-800 outline-none">
+            <option value="">No net</option>
+            {nets.map((net) => <option key={net.id} value={net.netName}>{net.netName}</option>)}
+          </select>
+        </label>
 
-        <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
-          {handoffs.map(({ viewId, label, Icon }, index) => (
-            <React.Fragment key={viewId}>
-              {index > 0 && <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300" aria-hidden="true" />}
-              <button
-                type="button"
-                onClick={() => navigate(viewId)}
-                aria-current={activeView === viewId ? 'step' : undefined}
-                className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 ${activeView === viewId ? 'border-indigo-300 bg-indigo-100 text-indigo-900' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50'}`}
-              >
-                <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {label}
-              </button>
-            </React.Fragment>
+        <div className="mx-1 h-5 w-px shrink-0 bg-slate-300" aria-hidden="true" />
+
+        <div className="flex shrink-0 items-center gap-0.5" aria-label="Connected handoffs">
+          {handoffs.map(({ viewId, label, Icon }) => (
+            <button
+              key={viewId}
+              type="button"
+              onClick={() => navigate(viewId)}
+              aria-current={activeView === viewId ? 'step' : undefined}
+              className={`inline-flex h-8 items-center gap-1 rounded-md px-2 text-[10px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400/70 ${
+                activeView === viewId ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>{label}</span>
+            </button>
           ))}
         </div>
-      </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] font-semibold text-slate-600">
-        <span className="rounded-full border border-slate-200 bg-white px-2 py-1">Board: {selectedBoard ? `${selectedBoard.layerCount} layers · ${selectedBoard.dimensionsMm} mm` : 'not created'}</span>
-        <span className={`rounded-full border px-2 py-1 ${selectedComponent?.schematic?.placed ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>Schematic: {selectedComponent ? selectedComponent.schematic?.placed ? 'placed' : 'unplaced' : 'no instance'}</span>
-        <span className={`rounded-full border px-2 py-1 ${selectedComponent?.pcb?.placed || selectedComponent?.placementStatus === 'Placed' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>PCB: {selectedComponent ? selectedComponent.pcb?.placed || selectedComponent.placementStatus === 'Placed' ? 'placed' : 'unplaced' : 'no instance'}</span>
-        <span className="rounded-full border border-slate-200 bg-white px-2 py-1">Footprint: {selectedComponent?.footprint || 'unresolved'}</span>
-        <span className="rounded-full border border-slate-200 bg-white px-2 py-1">Pins: {selectedComponent?.pins?.length || 0}</span>
-        <span className="rounded-full border border-slate-200 bg-white px-2 py-1">BOM: {selectedComponent?.bomItemId ? 'linked' : 'unlinked'}</span>
-        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">3D: preview context, not exact CAD</span>
+        <details className="relative ml-auto shrink-0">
+          <summary className="flex h-8 cursor-pointer list-none items-center rounded-md border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-400/70 [&::-webkit-details-marker]:hidden">
+            Evidence
+          </summary>
+          <div className="absolute right-0 top-10 z-50 w-72 rounded-lg border border-slate-300 bg-white p-3 shadow-lg">
+            <dl className="grid grid-cols-[92px_1fr] gap-x-3 gap-y-2 text-[11px]">
+              <dt className="text-slate-500">Board</dt>
+              <dd className="font-medium text-slate-900">{selectedBoard ? `${selectedBoard.layerCount || '?'} layers · ${selectedBoard.dimensionsMm || 'dimensions unresolved'}` : 'Not created'}</dd>
+              <dt className="text-slate-500">Schematic</dt>
+              <dd className="font-medium text-slate-900">{schematicState}</dd>
+              <dt className="text-slate-500">PCB</dt>
+              <dd className="font-medium text-slate-900">{pcbState}</dd>
+              <dt className="text-slate-500">Footprint</dt>
+              <dd className="font-medium text-slate-900">{selectedComponent?.footprint || 'Unresolved'}</dd>
+              <dt className="text-slate-500">Pins</dt>
+              <dd className="font-medium text-slate-900">{selectedComponent?.pins?.length || 0}</dd>
+              <dt className="text-slate-500">BOM</dt>
+              <dd className="font-medium text-slate-900">{selectedComponent?.bomItemId ? 'Linked' : 'Unlinked'}</dd>
+            </dl>
+            <p className="mt-3 border-t border-slate-200 pt-2 text-[10px] leading-4 text-amber-800">3D is preview context, not authoritative CAD geometry.</p>
+          </div>
+        </details>
       </div>
     </section>
   );

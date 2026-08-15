@@ -14,29 +14,26 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyle = "inline-flex items-center justify-center font-mono font-medium rounded transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-1 focus:ring-slate-400 select-none";
-  
+  const baseStyle = 'inline-flex items-center justify-center gap-1.5 rounded-md font-semibold transition-colors duration-150 disabled:pointer-events-none disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-500/60 focus:ring-offset-1 select-none';
+
   const variants = {
-    primary: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm border border-emerald-700/50",
-    secondary: "bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 shadow-sm",
-    outline: "bg-transparent hover:bg-slate-50 text-slate-700 border border-slate-300",
-    danger: "bg-rose-600 hover:bg-rose-700 text-white shadow-sm border border-rose-700/50",
-    ghost: "bg-transparent hover:bg-slate-100 text-slate-700"
+    primary: 'border border-slate-950 bg-slate-950 text-white hover:bg-slate-800',
+    secondary: 'border border-slate-300 bg-white text-slate-800 hover:border-slate-400 hover:bg-slate-100',
+    outline: 'border border-slate-300 bg-transparent text-slate-700 hover:border-slate-500 hover:bg-slate-100',
+    danger: 'border border-rose-700 bg-rose-700 text-white hover:bg-rose-800',
+    ghost: 'border border-transparent bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-950',
   };
 
   const sizes = {
-    xs: "px-2 py-1 text-[10px] space-x-1",
-    sm: "px-2.5 py-1.5 text-xs space-x-1.5",
-    md: "px-4 py-2 text-xs space-x-2",
-    lg: "px-5 py-2.5 text-sm space-x-2"
+    xs: 'min-h-8 px-2 text-[11px]',
+    sm: 'min-h-9 px-2.5 text-[11px]',
+    md: 'min-h-10 px-3 text-xs',
+    lg: 'min-h-10 px-4 text-sm',
   };
 
   return (
-    <button
-      className={`${baseStyle} ${variants[variant]} ${sizes[size]} ${className}`}
-      {...props}
-    >
-      {icon && <span className="flex-shrink-0">{icon}</span>}
+    <button className={`${baseStyle} ${variants[variant]} ${sizes[size]} ${className}`} {...props}>
+      {icon && <span className="shrink-0" aria-hidden="true">{icon}</span>}
       {children && <span>{children}</span>}
     </button>
   );

@@ -1,8 +1,62 @@
 @import "tailwindcss";
 
+@theme {
+  --color-slate-50: #f8f6f0;
+  --color-slate-100: #efebe2;
+  --color-slate-200: #ddd7cb;
+  --color-slate-300: #c8c0b2;
+  --color-slate-400: #9e978b;
+  --color-slate-500: #777168;
+  --color-slate-600: #5d5851;
+  --color-slate-700: #45413c;
+  --color-slate-800: #2d2b27;
+  --color-slate-900: #1d1c19;
+  --color-slate-950: #11110f;
+
+  /* Legacy indigo/sky utilities intentionally resolve to the warm brand system. */
+  --color-indigo-50: #f5f1e8;
+  --color-indigo-100: #ebe3d4;
+  --color-indigo-200: #d9ccb5;
+  --color-indigo-300: #c2b090;
+  --color-indigo-400: #a38d69;
+  --color-indigo-500: #806c4f;
+  --color-indigo-600: #665640;
+  --color-indigo-700: #504434;
+  --color-indigo-800: #393129;
+  --color-indigo-900: #28231f;
+  --color-indigo-950: #171512;
+
+  --color-sky-50: #f7f4ed;
+  --color-sky-100: #eee9df;
+  --color-sky-200: #ded6c8;
+  --color-sky-300: #c9bead;
+  --color-sky-400: #aa9d88;
+  --color-sky-500: #8b7d6b;
+  --color-sky-600: #6f6355;
+  --color-sky-700: #574e44;
+  --color-sky-800: #3d3832;
+  --color-sky-900: #292622;
+  --color-sky-950: #171614;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 0.875rem;
+}
+
 :root {
   --background: #f3f0e8;
   --foreground: #11110f;
+  --surface: #fbfaf6;
+  --surface-muted: #f1ede4;
+  --canvas: #f7f5ef;
+  --line: #d9d3c7;
+  --line-strong: #c6bdad;
+  --muted: #716c63;
+  --accent: #11110f;
+  --accent-soft: #e8e1d4;
 }
 
 html {
@@ -13,13 +67,14 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   margin: 0;
   padding: 0;
   min-height: 100%;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 * {
@@ -34,26 +89,113 @@ textarea {
   font-family: inherit;
 }
 
-/* Premium Scrollbars */
+button,
+a,
+summary,
+select,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: #ddd2be;
+  color: #11110f;
+}
+
+:focus-visible {
+  outline-color: #746957;
+}
+
+/* Global product polish: legacy screens inherit this without being individually recolored. */
+.hs-app {
+  background: #ebe7dc;
+}
+
+.hs-app .bg-white {
+  background-color: var(--surface);
+}
+
+.hs-app .shadow-sm {
+  box-shadow: 0 1px 2px rgba(17, 17, 15, 0.035);
+}
+
+.hs-app .shadow-md {
+  box-shadow: 0 5px 16px rgba(17, 17, 15, 0.055);
+}
+
+.hs-app .shadow-lg,
+.hs-app .shadow-xl,
+.hs-app .shadow-2xl {
+  box-shadow: 0 10px 32px rgba(17, 17, 15, 0.08);
+}
+
+.hs-app .rounded-2xl {
+  border-radius: 0.75rem;
+}
+
+.hs-app .rounded-xl {
+  border-radius: 0.625rem;
+}
+
+.hs-app .rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.hs-app span.rounded-full[class*="px-"] {
+  border-radius: 0.45rem;
+}
+
+.hs-app [class~="text-[7px]"],
+.hs-app [class~="text-[8px]"] {
+  font-size: 0.625rem !important;
+  line-height: 0.875rem !important;
+}
+
+.hs-app [class~="text-[9px]"],
+.hs-app [class~="text-[10px]"] {
+  font-size: 0.6875rem !important;
+  line-height: 0.95rem !important;
+}
+
+.hs-app button.font-mono,
+.hs-app input.font-mono,
+.hs-app select.font-mono,
+.hs-app textarea.font-mono {
+  font-family: inherit;
+}
+
+.hs-app button {
+  letter-spacing: -0.005em;
+}
+
+.hs-app input,
+.hs-app select,
+.hs-app textarea {
+  accent-color: #11110f;
+}
+
+/* Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #e8e4da;
+  background: #ebe7de;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #aaa69c;
+  background: #b9b1a3;
+  border: 2px solid #ebe7de;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #77736b;
+  background: #8f877a;
 }
 
-/* React Flow custom styling adjustments for professional blueprint look */
+/* React Flow — warm technical drawing treatment */
 .react-flow__node {
   cursor: grab;
 }
@@ -65,53 +207,60 @@ textarea {
 .react-flow__handle {
   width: 7px !important;
   height: 7px !important;
-  background-color: #cbd5e1 !important;
-  border: 1.5px solid #ffffff !important;
-  box-shadow: 0 0 2px rgba(15, 23, 42, 0.1);
-  transition: all 150ms ease-in-out;
+  background-color: #a69d90 !important;
+  border: 1.5px solid #fbfaf6 !important;
+  box-shadow: 0 0 0 1px rgba(17, 17, 15, 0.08);
+  transition: transform 120ms ease, background-color 120ms ease;
 }
 
 .react-flow__handle:hover {
-  background-color: #475569 !important;
-  transform: scale(1.2);
+  background-color: #11110f !important;
+  transform: scale(1.18);
 }
 
 .react-flow__edge-path {
-  stroke: #94a3b8 !important;
-  stroke-width: 1.5px !important;
+  stroke: #9e978b !important;
+  stroke-width: 1.35px !important;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #475569 !important;
+  stroke: #11110f !important;
   stroke-dasharray: 4;
   animation: dash 1s linear infinite;
-  stroke-width: 2px !important;
+  stroke-width: 1.75px !important;
 }
 
 @keyframes dash {
-  from {
-    stroke-dashoffset: 8;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
+  from { stroke-dashoffset: 8; }
+  to { stroke-dashoffset: 0; }
+}
+
+.react-flow__controls {
+  box-shadow: 0 3px 12px rgba(17, 17, 15, 0.08) !important;
 }
 
 .react-flow__controls-button {
-  background-color: #ffffff !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  color: #475569 !important;
+  background-color: #fbfaf6 !important;
+  border-bottom: 1px solid #ddd7cb !important;
+  color: #45413c !important;
   fill: currentColor !important;
 }
 
 .react-flow__controls-button:hover {
-  background-color: #f8fafc !important;
+  background-color: #efebe2 !important;
 }
 
 .react-flow__minimap {
-  background-color: #ffffff !important;
-  border-radius: 8px !important;
+  background-color: #fbfaf6 !important;
+  border: 1px solid #ddd7cb !important;
+  border-radius: 6px !important;
   overflow: hidden;
+}
+
+@media (max-width: 1100px) {
+  .hs-app [data-context-subnav] {
+    width: 188px;
+  }
 }
 
 /* Print Styles */
@@ -122,7 +271,7 @@ textarea {
     background-color: #ffffff !important;
     color: #000000 !important;
   }
-  
+
   header, aside, .print\:hidden {
     display: none !important;
   }

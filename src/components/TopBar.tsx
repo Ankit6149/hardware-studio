@@ -40,8 +40,8 @@ const ProjectNameEditor: React.FC<ProjectNameEditorProps> = ({ projectName, onCo
           event.currentTarget.blur();
         }
       }}
-      className="min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-mono text-[10px] font-semibold text-slate-800 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus:border-slate-400 focus:bg-white focus:ring-1 focus:ring-slate-300"
-      placeholder="Unnamed Project"
+      className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-[12px] font-semibold text-slate-900 outline-none transition-colors hover:bg-slate-100 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-300/70"
+      placeholder="Unnamed project"
       aria-label="Project name"
     />
   );
@@ -91,15 +91,15 @@ export const TopBar: React.FC = () => {
     });
   };
 
-  const statusClass = storageHealth.status === 'saved'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+  const statusDot = storageHealth.status === 'saved'
+    ? 'bg-emerald-600'
     : storageHealth.status === 'saving'
-      ? 'border-sky-200 bg-sky-50 text-sky-800'
+      ? 'bg-slate-500'
       : ['failed', 'unavailable'].includes(storageHealth.status)
-        ? 'border-rose-200 bg-rose-50 text-rose-800'
+        ? 'bg-rose-600'
         : storageHealth.status === 'memory-fallback'
-          ? 'border-amber-200 bg-amber-50 text-amber-800'
-          : 'border-slate-200 bg-slate-100 text-slate-600';
+          ? 'bg-amber-600'
+          : 'bg-slate-400';
 
   const StatusIcon = storageHealth.status === 'saving'
     ? LoaderCircle
@@ -114,38 +114,51 @@ export const TopBar: React.FC = () => {
     : null;
 
   return (
-    <header className="z-30 flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm">
-      <div className="flex min-w-[190px] items-center gap-2.5">
+    <header className="z-40 flex h-12 shrink-0 items-center border-b border-slate-300 bg-[#f8f5ee] px-3 text-slate-900">
+      <div className="flex w-[190px] shrink-0 items-center gap-2.5">
         <BrandMark className="h-7 w-7" />
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate text-[11px] font-extrabold leading-none tracking-[-0.015em] text-slate-950">Hardware Studio</span>
-          <span className="mt-1 text-[7px] font-bold uppercase tracking-[0.18em] text-slate-400">Connected engineering workspace</span>
+        <div className="min-w-0">
+          <div className="truncate text-[12px] font-bold leading-none tracking-[-0.02em] text-slate-950">Hardware Studio</div>
+          <div className="mt-1 truncate text-[10px] leading-none text-slate-500">Connected engineering</div>
         </div>
       </div>
 
-      <div className="mx-4 flex max-w-[500px] flex-1 items-center gap-2.5">
+      <div className="mx-3 flex min-w-0 max-w-[560px] flex-1 items-center gap-2 border-l border-slate-300 pl-3">
         <ProjectNameEditor key={projectName} projectName={projectName} onCommit={handleNameCommit} />
         <button
           type="button"
           onClick={showStorageDetail}
-          className={`hidden shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[8px] font-extrabold uppercase tracking-[0.1em] focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 sm:flex ${statusClass}`}
+          className="hidden min-h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400/60 sm:inline-flex"
           title={[storageHealth.message, savedTime ? `Last saved ${savedTime}` : ''].filter(Boolean).join(' ')}
         >
-          <StatusIcon className={`h-3 w-3 ${storageHealth.status === 'saving' ? 'animate-spin' : ''}`} aria-hidden="true" />
-          {storageHealthLabel(storageHealth)}{savedTime && storageHealth.status === 'saved' ? ` ${savedTime}` : ''}
+          <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} aria-hidden="true" />
+          <StatusIcon className={`h-3.5 w-3.5 ${storageHealth.status === 'saving' ? 'animate-spin' : ''}`} aria-hidden="true" />
+          <span>{storageHealthLabel(storageHealth)}{savedTime && storageHealth.status === 'saved' ? ` · ${savedTime}` : ''}</span>
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5">
-        <div className="hidden max-w-[120px] items-center gap-1 rounded border border-slate-200 bg-slate-100 px-2 py-1 font-mono text-[7px] font-bold uppercase tracking-[0.1em] text-slate-600 lg:flex">
-          <span className="text-slate-400">TPL</span>
-          <span className="truncate">{templateName || 'Custom'}</span>
-        </div>
-
-        <Button onClick={() => openKnowledge()} variant="secondary" size="sm" icon={<BookOpen className="h-3.5 w-3.5 text-indigo-600" />}>Learn</Button>
-        <Button onClick={() => setIsProjOpen(true)} variant="secondary" size="sm" icon={<FolderOpen className="h-3.5 w-3.5 text-slate-500" />}>Workspaces</Button>
-        <Button onClick={() => setIsTplOpen(true)} variant="secondary" size="sm" className="hidden md:inline-flex" icon={<LayoutTemplate className="h-3.5 w-3.5 text-slate-500" />}>Templates</Button>
-        <Button onClick={() => void handleReset()} variant="ghost" size="sm" className="border border-rose-100 text-rose-700 hover:bg-rose-50" icon={<RotateCcw className="h-3.5 w-3.5 text-rose-500" />}>Reset</Button>
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        <Button onClick={() => openKnowledge()} variant="ghost" size="sm" icon={<BookOpen className="h-3.5 w-3.5" />}>Learn</Button>
+        <Button onClick={() => setIsProjOpen(true)} variant="ghost" size="sm" icon={<FolderOpen className="h-3.5 w-3.5" />}>Workspaces</Button>
+        <Button
+          onClick={() => setIsTplOpen(true)}
+          variant="ghost"
+          size="sm"
+          className="hidden md:inline-flex"
+          icon={<LayoutTemplate className="h-3.5 w-3.5" />}
+          title={`Template: ${templateName || 'Custom'}`}
+        >
+          Templates
+        </Button>
+        <button
+          type="button"
+          onClick={() => void handleReset()}
+          className="grid h-9 w-9 place-items-center rounded-md text-slate-500 hover:bg-rose-50 hover:text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+          aria-label="Reset project"
+          title="Reset project"
+        >
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
       </div>
 
       <ProjectManager isOpen={isProjOpen} onClose={() => setIsProjOpen(false)} />

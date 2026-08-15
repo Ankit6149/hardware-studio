@@ -80,7 +80,7 @@ const iconByKey: Record<NavigationIconKey, LucideIcon> = {
 export const ContextSubnav: React.FC<ContextSubnavProps> = ({ collapsed = false }) => {
   const { activeView, setActiveView, addNode } = useProjectStore();
   const { enabledDomains, showAllDomains } = useWorkflowPreferencesStore();
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({ Interaction: true, Electronics: true });
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   const domains = useMemo(
     () => getVisibleNavigationDomains(enabledDomains, activeView, showAllDomains),
@@ -120,13 +120,17 @@ export const ContextSubnav: React.FC<ContextSubnavProps> = ({ collapsed = false 
   };
 
   return (
-    <aside className="z-20 flex h-full w-[220px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white max-xl:w-[200px]" aria-label={`${activeDomain.label} contextual navigation`}>
-      <div className="shrink-0 border-b border-slate-200 px-3 py-3">
-        <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-indigo-700">{activeDomain.label}</p>
-        <p className="mt-1 text-[10px] leading-4 text-slate-500">{activeDomain.purpose}</p>
+    <aside
+      data-context-subnav
+      className="z-20 flex h-full w-[204px] shrink-0 flex-col overflow-hidden border-r border-slate-300 bg-[#f6f2e9]"
+      aria-label={`${activeDomain.label} contextual navigation`}
+    >
+      <div className="shrink-0 border-b border-slate-300 px-3 py-3">
+        <h2 className="text-[13px] font-semibold tracking-[-0.015em] text-slate-950">{activeDomain.label}</h2>
+        <p className="mt-1 text-[11px] leading-4 text-slate-500">{activeDomain.purpose}</p>
       </div>
 
-      <nav className="shrink-0 space-y-1 p-2" aria-label={`${activeDomain.label} workbenches`}>
+      <nav className="shrink-0 p-1.5" aria-label={`${activeDomain.label} workbenches`}>
         {activeDomain.items.map((item) => {
           const Icon = iconByKey[item.icon];
           const active = activeView === item.id;
@@ -137,42 +141,43 @@ export const ContextSubnav: React.FC<ContextSubnavProps> = ({ collapsed = false 
               onClick={() => setActiveView(item.id)}
               aria-current={active ? 'page' : undefined}
               title={item.purpose}
-              className={`group flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left transition focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                active ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+              className={`group relative flex min-h-9 w-full items-center gap-2 rounded-md px-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400/70 ${
+                active ? 'bg-[#e6dfd1] text-slate-950' : 'text-slate-600 hover:bg-[#ece7dd] hover:text-slate-950'
               }`}
             >
-              <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-emerald-300' : 'text-slate-400 group-hover:text-slate-700'}`} aria-hidden="true" />
-              <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">{item.label}</span>
-              <span className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[7px] font-bold uppercase tracking-[0.08em] ${active ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-400'}`}>{item.badge}</span>
+              {active && <span className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-slate-950" aria-hidden="true" />}
+              <Icon className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'}`} aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate text-[11px] font-medium">{item.label}</span>
+              <span className="shrink-0 font-mono text-[8px] uppercase tracking-[0.05em] text-slate-400">{item.badge}</span>
             </button>
           );
         })}
       </nav>
 
       {showDeviceLibrary && (
-        <section className="min-h-0 flex-1 overflow-y-auto border-t border-slate-200 px-2 py-3" aria-labelledby="context-device-library-title">
-          <div className="mb-2 flex items-center justify-between px-1">
-            <h2 id="context-device-library-title" className="text-[8px] font-bold uppercase tracking-[0.15em] text-slate-400">Device library</h2>
-            <span className="text-[7px] font-semibold text-slate-400">Drag or click</span>
+        <section className="min-h-0 flex-1 overflow-y-auto border-t border-slate-300 px-2 py-2.5" aria-labelledby="context-device-library-title">
+          <div className="mb-1.5 flex items-center justify-between px-1">
+            <h2 id="context-device-library-title" className="text-[10px] font-semibold text-slate-600">Device library</h2>
+            <span className="text-[9px] text-slate-400">Drag or click</span>
           </div>
 
-          <div className="space-y-1.5">
+          <div>
             {Object.entries(blockLibrary).map(([category, items]) => {
               const expanded = Boolean(expandedCategories[category]);
               return (
-                <div key={category} className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <div key={category} className="border-b border-slate-200 last:border-b-0">
                   <button
                     type="button"
                     onClick={() => setExpandedCategories((current) => ({ ...current, [category]: !expanded }))}
-                    className="flex min-h-10 w-full items-center justify-between bg-slate-50 px-2.5 py-2 text-left hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                    className="flex min-h-9 w-full items-center justify-between px-1 py-1.5 text-left text-slate-700 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-400/70"
                     aria-expanded={expanded}
                   >
-                    <span className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-600">{category}</span>
+                    <span className="text-[10px] font-semibold">{category}</span>
                     {expanded ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />}
                   </button>
 
                   {expanded && (
-                    <div className="space-y-1 border-t border-slate-100 p-1.5">
+                    <div className="pb-1.5">
                       {items.map((libraryItem, index) => {
                         const familyId = resolveVisualFamilyId(libraryItem);
                         const family = getVisualFamily(familyId);
@@ -183,15 +188,15 @@ export const ContextSubnav: React.FC<ContextSubnavProps> = ({ collapsed = false 
                             draggable
                             onDragStart={(event) => handleDragStart(event, libraryItem)}
                             onClick={() => handleAddBlock(libraryItem)}
-                            className="group flex min-h-10 w-full cursor-grab items-center gap-2 rounded-md p-1.5 text-left text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="group flex min-h-9 w-full cursor-grab items-center gap-2 rounded-md px-1 py-1 text-left text-slate-700 hover:bg-[#ece7dd] focus:outline-none focus:ring-2 focus:ring-slate-400/70"
                             title={`${libraryItem.name}: ${libraryItem.description}`}
                           >
-                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: family.accent, color: family.color }}>
-                              <ArchitectureGlyph familyId={familyId} className="h-5 w-5" />
+                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-slate-200" style={{ backgroundColor: family.accent, color: family.color }}>
+                              <ArchitectureGlyph familyId={familyId} className="h-4 w-4" />
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[9px] font-semibold text-slate-800">{libraryItem.name}</span>
-                              <span className="mt-0.5 block truncate text-[8px] text-slate-400">{family.shortLabel}</span>
+                              <span className="block truncate text-[10px] font-medium text-slate-800">{libraryItem.name}</span>
+                              <span className="block truncate text-[9px] text-slate-400">{family.shortLabel}</span>
                             </span>
                             <Plus className="h-3.5 w-3.5 shrink-0 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />
                           </button>
@@ -204,12 +209,6 @@ export const ContextSubnav: React.FC<ContextSubnavProps> = ({ collapsed = false 
             })}
           </div>
         </section>
-      )}
-
-      {!showDeviceLibrary && (
-        <div className="mt-auto border-t border-slate-200 px-3 py-3 text-[9px] leading-4 text-slate-400">
-          Primary rail chooses the engineering area. This panel only shows decisions and workbenches relevant to that area.
-        </div>
       )}
     </aside>
   );

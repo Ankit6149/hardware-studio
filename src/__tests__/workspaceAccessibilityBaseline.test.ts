@@ -21,12 +21,12 @@ describe('workspace accessibility and focus baseline', () => {
     expect(sidebar).toContain('aria-label="Engineering domains"');
     expect(sidebar).toContain('Show contextual navigation');
     expect(sidebar).toContain('Hide contextual navigation');
-    expect(sidebar).toContain('h-11');
-    expect(sidebar).toContain('w-16');
+    expect(sidebar).toContain('h-10');
+    expect(sidebar).toContain('w-14');
 
     expect(subnav).toContain('contextual navigation');
     expect(subnav).toContain('workbenches');
-    expect(subnav).toContain('min-h-10');
-    expect(subnav).toContain('w-[220px]');
+    expect(subnav).toContain('min-h-9');
+    expect(subnav).toContain('w-[204px]');
   });
 });
