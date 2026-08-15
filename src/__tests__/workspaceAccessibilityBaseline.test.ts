@@ -27,6 +27,6 @@ describe('workspace accessibility and focus baseline', () => {
     expect(subnav).toContain('contextual navigation');
     expect(subnav).toContain('workbenches');
     expect(subnav).toContain('min-h-9');
-    expect(subnav).toContain('w-[204px]');
+    expect(subnav).toContain('w-[196px]');
   });
 });
