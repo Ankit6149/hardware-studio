@@ -108,7 +108,8 @@ describe('golden-path regression guards', () => {
   it('keeps BOM records linked to the selected canonical component', () => {
     const bom = source('../components/studio/UnifiedBOMWorkbench.tsx');
     expect(bom).toContain('activeComponentId');
-    expect(bom).toContain('linkedComponentId');
+    expect(bom).toContain('selectedComponent?.bomItemId');
+    expect(bom).toContain('updateBoardComponent(selectedComponent.id, { bomItemId: id })');
   });
 
   it('links validation to the selected component and its actual net IDs', () => {
@@ -128,7 +129,8 @@ describe('golden-path regression guards', () => {
   it('uses an event-driven selected-board 3D preview instead of permanent animation', () => {
     const view3d = source('../components/mechanical/UnifiedBoard3DView.tsx');
     expect(view3d).toContain('activeBoardId');
-    expect(view3d).toContain('invalidate');
-    expect(view3d).toContain('frameloop="demand"');
+    expect(view3d).toContain("controls.addEventListener('change', render)");
+    expect(view3d).toContain('IntersectionObserver');
+    expect(view3d).not.toContain('requestAnimationFrame');
   });
 });
