@@ -36,6 +36,14 @@ export interface ReadinessReport {
   canMoveToFabrication: boolean;
 }
 
+function pushUnique(target: string[], message: string): void {
+  if (!target.includes(message)) target.push(message);
+}
+
+function hasGeneratedFactoryFile(file: { status?: string } | undefined): boolean {
+  return Boolean(file && file.status && file.status !== 'Not Generated');
+}
+
 export const calculateReadinessScore = (project: Project): ReadinessReport => {
   const blockers: string[] = [];
   const warnings: string[] = [];
@@ -58,138 +66,139 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   const boardOutlines = project.boardOutlines || [];
   const traces = project.traces || [];
 
-  const isRing = project.projectName.toLowerCase().includes("ring") || project.templateName?.toLowerCase().includes("ring");
+  const isRing = project.projectName.toLowerCase().includes('ring') || project.templateName?.toLowerCase().includes('ring');
 
   // 1. PRODUCT ARCHITECTURE
   let archScore = 100;
   if (nodes.length > 0) {
-    const hasInput = nodes.some(n => n.data?.name.toLowerCase().includes('button') || n.data?.name.toLowerCase().includes('touch') || n.data?.name.toLowerCase().includes('input'));
-    const hasFeedback = nodes.some(n => n.data?.name.toLowerCase().includes('haptic') || n.data?.name.toLowerCase().includes('led') || n.data?.name.toLowerCase().includes('vibe'));
+    const hasInput = nodes.some((node) => node.data?.name.toLowerCase().includes('button') || node.data?.name.toLowerCase().includes('touch') || node.data?.name.toLowerCase().includes('input'));
+    const hasFeedback = nodes.some((node) => node.data?.name.toLowerCase().includes('haptic') || node.data?.name.toLowerCase().includes('led') || node.data?.name.toLowerCase().includes('vibe'));
     if (!hasInput) {
-      warnings.push("Architecture lacks user input node (Button/Touch).");
+      warnings.push('Architecture lacks user input node (Button/Touch).');
       archScore -= 30;
     }
     if (!hasFeedback) {
-      warnings.push("Architecture lacks user feedback node (LED/Haptics).");
+      warnings.push('Architecture lacks user feedback node (LED/Haptics).');
       archScore -= 30;
     }
   } else {
     archScore = 0;
-    blockers.push("Product architecture map has no active blocks.");
+    blockers.push('Product architecture map has no active blocks.');
   }
 
   // 2. MECHANICAL LAYOUT
   let mechanicalScore = 100;
-  const mObjs = project.editorLayouts?.mechanical || [];
-  if (mObjs.length === 0) {
-    warnings.push("No mechanical volume zones configured in the editor.");
+  const mechanicalLayoutObjects = project.editorLayouts?.mechanical || [];
+  if (mechanicalLayoutObjects.length === 0) {
+    warnings.push('No mechanical volume zones configured in the editor.');
     mechanicalScore -= 50;
   }
   if (isRing) {
-    const shell = mObjs.find(o => o.label.toLowerCase().includes('shell') || o.label.toLowerCase().includes('outline'));
+    const shell = mechanicalLayoutObjects.find((object) => object.label.toLowerCase().includes('shell') || object.label.toLowerCase().includes('outline'));
     if (!shell) {
-      warnings.push("Flagship ring mechanical layout requires outer casing shell circles.");
+      warnings.push('Flagship ring mechanical layout requires outer casing shell circles.');
       mechanicalScore -= 30;
     }
   }
 
   // 3. ASSEMBLY LAYOUT
   let assemblyScore = 100;
-  const aObjs = project.editorLayouts?.assembly || [];
-  if (aObjs.length === 0) {
-    suggestions.push("Assembly layers checklist has no steps generated.");
+  const assemblyObjects = project.editorLayouts?.assembly || [];
+  if (assemblyObjects.length === 0) {
+    suggestions.push('Assembly layers checklist has no steps generated.');
     assemblyScore -= 40;
   }
 
   // 4. BOARD LAYOUT PREP
   let boardPrepScore = 100;
   if (boards.length > 0) {
-    boards.forEach(b => {
-      if (!b.dimensionsMm || b.dimensionsMm.toLowerCase().includes('required') || b.dimensionsMm === '0 x 0') {
-        blockers.push(`Board [${b.name}] dimensions not configured.`);
+    boards.forEach((board) => {
+      if (!board.dimensionsMm || board.dimensionsMm.toLowerCase().includes('required') || board.dimensionsMm === '0 x 0') {
+        blockers.push(`Board [${board.name}] dimensions not configured.`);
         boardPrepScore -= 40;
       }
     });
   } else {
     boardPrepScore = 0;
-    blockers.push("No active boards defined in database.");
+    blockers.push('No active boards defined in database.');
   }
 
   // 5. COMPONENT PLACEMENT
   let compScore = 100;
   if (boardComponents.length > 0) {
-    const unplaced = boardComponents.filter(c => !c.placementX || !c.placementY);
+    // Zero is a valid engineering coordinate. Only null/undefined means unplaced.
+    const unplaced = boardComponents.filter((component) => component.placementX == null || component.placementY == null);
     if (unplaced.length > 0) {
       warnings.push(`${unplaced.length} SMT footprints have no placement coordinates.`);
       compScore -= Math.min(60, unplaced.length * 15);
     }
   } else {
     compScore = 0;
-    warnings.push("SMT components placement coordinates list is empty.");
+    warnings.push('SMT components placement coordinates list is empty.');
   }
 
   // 6. CIRCUIT/SCHEMATIC PREP
   let electronicsScore = 100;
   if (circuitBlocks.length > 0) {
-    circuitBlocks.forEach(cb => {
-      if (!cb.powerNets || cb.powerNets.toLowerCase().includes('required')) {
-        warnings.push(`Circuit block [${cb.name}] missing power connection nets.`);
+    circuitBlocks.forEach((block) => {
+      if (!block.powerNets || block.powerNets.toLowerCase().includes('required')) {
+        warnings.push(`Circuit block [${block.name}] missing power connection nets.`);
         electronicsScore -= 20;
       }
     });
   } else {
     electronicsScore = 0;
-    blockers.push("No functional circuit blocks configured in Circuit Planner.");
+    blockers.push('No functional circuit blocks configured in Circuit Planner.');
   }
 
   // 7. NET ROUTING
   let netsScore = 100;
   if (nets.length > 0) {
-    const hasGnd = nets.some(n => n.netName.toUpperCase() === 'GND');
-    if (!hasGnd) {
-      blockers.push("ERC Block: GND reference net path required.");
+    const hasGround = nets.some((net) => net.netName.toUpperCase() === 'GND');
+    if (!hasGround) {
+      blockers.push('ERC Block: GND reference net path required.');
       netsScore -= 50;
     }
   } else {
     netsScore = 0;
-    warnings.push("Net routing tracks matrix is empty.");
+    warnings.push('Net routing tracks matrix is empty.');
   }
 
   // 8. POWER BUDGET
-  let pwrScore = 100;
+  let powerScore = 100;
   if (powerBudget.length > 0) {
     const capacity = project.batteryCapacityMah || 0;
     if (capacity <= 0) {
-      warnings.push("Battery cell capacity not configured (0mAh).");
-      pwrScore -= 40;
+      warnings.push('Battery cell capacity not configured (0mAh).');
+      powerScore -= 40;
     }
   } else {
-    pwrScore = 0;
+    powerScore = 0;
   }
 
   // 9. PIN MAP
   let pinMapScore = 100;
   if (pinMap.length === 0) {
-    warnings.push("MCU interface pin configuration is empty.");
+    warnings.push('MCU interface pin configuration is empty.');
     pinMapScore -= 50;
   }
 
   // 10. FIRMWARE
-  let fwScore = 100;
+  let firmwareScore = 100;
   if (fwTasks.length > 0) {
-    const blocked = fwTasks.filter(t => t.status === 'Blocked');
-    if (blocked.length > 0) {
-      warnings.push(`${blocked.length} driver tasks are blocked.`);
-      fwScore -= 30;
+    const blockedTasks = fwTasks.filter((task) => task.status === 'Blocked');
+    if (blockedTasks.length > 0) {
+      warnings.push(`${blockedTasks.length} driver tasks are blocked.`);
+      firmwareScore -= 30;
     }
   } else {
-    fwScore = 0;
+    firmwareScore = 0;
   }
 
   // 11. TESTING
   let testScore = 100;
   if (testing.length > 0) {
-    const failed = testing.filter(t => t.status === 'Failed');
+    const failed = testing.filter((test) => test.status === 'Failed');
     if (failed.length > 0) {
       blockers.push(`${failed.length} test procedures failed.`);
       testScore -= 40;
@@ -199,34 +208,34 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   }
 
   // 12. MANUFACTURING HANDOFF
-  let mfgScore = 100;
+  let manufacturingScore = 100;
   if (mfgChecklist.length > 0) {
-    const blockedCheck = mfgChecklist.filter(m => m.status === 'Blocked');
-    if (blockedCheck.length > 0) {
-      blockers.push(`${blockedCheck.length} handoff checks are blocked.`);
-      mfgScore -= 30;
+    const blockedChecks = mfgChecklist.filter((item) => item.status === 'Blocked');
+    if (blockedChecks.length > 0) {
+      blockers.push(`${blockedChecks.length} handoff checks are blocked.`);
+      manufacturingScore -= 30;
     }
   } else {
-    mfgScore = 0;
+    manufacturingScore = 0;
   }
 
   // 13. NATIVE EXPORTS
   let exportsScore = 100;
   const layoutData = project.editorLayouts || {};
-  const totalLayoutObjs = Object.values(layoutData).reduce((sum, arr) => sum + (arr?.length || 0), 0);
-  if (totalLayoutObjs === 0) {
+  const totalLayoutObjects = Object.values(layoutData).reduce((sum, items) => sum + (items?.length || 0), 0);
+  if (totalLayoutObjects === 0) {
     exportsScore -= 50;
-    suggestions.push("Generate drawing layouts in editor to prepare native coordinates exports.");
+    suggestions.push('Generate drawing layouts in editor to prepare native coordinates exports.');
   }
 
   // 14. FACTORY FILE STATUS
   let fileScore = 100;
-  const keys = Object.keys(fFiles);
-  if (keys.length > 0) {
-    const notGen = Object.values(fFiles).filter(f => f.status === 'Not Generated');
-    fileScore = Math.max(0, 100 - notGen.length * 10);
-    if (notGen.length > 0) {
-      suggestions.push(`${notGen.length} production factory files are missing (Not Generated).`);
+  const fileKeys = Object.keys(fFiles);
+  if (fileKeys.length > 0) {
+    const notGenerated = Object.values(fFiles).filter((file) => file.status === 'Not Generated');
+    fileScore = Math.max(0, 100 - notGenerated.length * 10);
+    if (notGenerated.length > 0) {
+      suggestions.push(`${notGenerated.length} production factory files are missing (Not Generated).`);
     }
   } else {
     fileScore = 0;
@@ -235,75 +244,90 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   // 15. SAFETY / COMPLIANCE
   let safetyScore = 100;
   if (isRing) {
-    const skinCheck = mfgChecklist.find(m => m.item.toLowerCase().includes('skin') || m.item.toLowerCase().includes('material'));
+    const skinCheck = mfgChecklist.find((item) => item.item.toLowerCase().includes('skin') || item.item.toLowerCase().includes('material'));
     if (!skinCheck || skinCheck.status !== 'Done') {
-      warnings.push("Safety: Skin hypoallergenic comfort verification is pending.");
+      warnings.push('Safety: Skin hypoallergenic comfort verification is pending.');
       safetyScore -= 30;
     }
   }
 
-  // Calculate Weighted Overall score (15 categories)
   const overallScore = Math.round(
-    archScore * 0.06 +
-    mechanicalScore * 0.06 +
-    assemblyScore * 0.06 +
-    boardPrepScore * 0.06 +
-    compScore * 0.06 +
-    electronicsScore * 0.06 +
-    netsScore * 0.06 +
-    pwrScore * 0.06 +
-    pinMapScore * 0.06 +
-    fwScore * 0.06 +
-    testScore * 0.06 +
-    mfgScore * 0.06 +
-    exportsScore * 0.06 +
-    fileScore * 0.06 +
-    safetyScore * 0.16
+    archScore * 0.06
+    + mechanicalScore * 0.06
+    + assemblyScore * 0.06
+    + boardPrepScore * 0.06
+    + compScore * 0.06
+    + electronicsScore * 0.06
+    + netsScore * 0.06
+    + powerScore * 0.06
+    + pinMapScore * 0.06
+    + firmwareScore * 0.06
+    + testScore * 0.06
+    + manufacturingScore * 0.06
+    + exportsScore * 0.06
+    + fileScore * 0.06
+    + safetyScore * 0.16
   );
 
-  // ERC / DRC blockers checks for schematic and pcb
-  const reviewRes = runDesignReview(project);
-  const schemBlockers = reviewRes.filter(r => r.category === 'Schematic ERC' && (r.severity === 'Error' || r.severity === 'Blocker'));
-  const pcbBlockers = reviewRes.filter(r => r.category === 'PCB DRC' && (r.severity === 'Error' || r.severity === 'Blocker'));
+  // ERC / DRC findings are release evidence, not a hidden scoring detail.
+  const reviewResults = runDesignReview(project);
+  const schematicBlockers = reviewResults.filter((result) => result.category === 'Schematic ERC' && (result.severity === 'Error' || result.severity === 'Blocker'));
+  const pcbBlockers = reviewResults.filter((result) => result.category === 'PCB DRC' && (result.severity === 'Error' || result.severity === 'Blocker'));
+  schematicBlockers.forEach((result) => pushUnique(blockers, `Schematic ERC: ${result.title}`));
+  pcbBlockers.forEach((result) => pushUnique(blockers, `PCB DRC: ${result.title}`));
 
-  // V4 10 Gates logic computation
+  // Gate computation. A score alone never authorizes a lifecycle transition.
   const isPlanningReady = nodes.length > 0 && bom.length > 0 && powerBudget.length > 0 && pinMap.length > 0 && fwTasks.length > 0;
   const isBlueprintPackReady = isPlanningReady && boards.length > 0;
-  const isEditorLayoutReady = totalLayoutObjs > 0;
-  
-  const isSchematicDraftReady = (circuitBlocks.length > 0 || schematicSymbols.length > 0 || project.editorLayouts?.circuits?.length ? true : false) && schemBlockers.length === 0;
+  const isEditorLayoutReady = totalLayoutObjects > 0;
+  const isSchematicDraftReady = Boolean(circuitBlocks.length > 0 || schematicSymbols.length > 0 || project.editorLayouts?.circuits?.length) && schematicBlockers.length === 0;
   const isPcbLayoutDraftReady = boards.length > 0 && boardOutlines.length > 0 && boardComponents.length > 0 && pcbBlockers.length === 0;
-  const isRoutingDraftReady = traces.length > 0 || project.editorLayouts?.nets?.length ? true : false;
-  
-  const canMoveToPrototype = isBlueprintPackReady && isEditorLayoutReady && testing.length > 0 && overallScore >= 70 && blockers.length === 0;
-  
-  const factoryGenerated = fFiles.gerberZip?.status !== 'Not Generated' && fFiles.drillFiles?.status !== 'Not Generated' && fFiles.bomCsv?.status !== 'Not Generated' && fFiles.cplCsv?.status !== 'Not Generated';
-  const canMoveToFactoryHandoff = canMoveToPrototype && mfgChecklist.length > 0 && mfgChecklist.every(m => m.status === 'Done') && factoryGenerated && overallScore >= 80;
+  const isRoutingDraftReady = Boolean(traces.length > 0 || project.editorLayouts?.nets?.length);
 
-  // Strict fabrication release verification checks
+  const canMoveToPrototype = isBlueprintPackReady
+    && isEditorLayoutReady
+    && testing.length > 0
+    && overallScore >= 70
+    && blockers.length === 0;
+
+  const factoryGenerated = hasGeneratedFactoryFile(fFiles.gerberZip)
+    && hasGeneratedFactoryFile(fFiles.drillFiles)
+    && hasGeneratedFactoryFile(fFiles.bomCsv)
+    && hasGeneratedFactoryFile(fFiles.cplCsv);
+  const canMoveToFactoryHandoff = canMoveToPrototype
+    && mfgChecklist.length > 0
+    && mfgChecklist.every((item) => item.status === 'Done')
+    && factoryGenerated
+    && overallScore >= 80;
+
   const gerberOk = fFiles.gerberZip?.status === 'Verified';
   const drillOk = fFiles.drillFiles?.status === 'Verified';
   const bomOk = fFiles.bomCsv?.status === 'Verified';
   const cplOk = fFiles.cplCsv?.status === 'Verified';
-  
   const isPackageVerified = project.factoryPackageStatus === 'Verified';
-  const canMoveToFabrication = canMoveToFactoryHandoff && isPackageVerified && gerberOk && drillOk && bomOk && cplOk && blockers.length === 0;
+  const canMoveToFabrication = canMoveToFactoryHandoff
+    && isPackageVerified
+    && gerberOk
+    && drillOk
+    && bomOk
+    && cplOk
+    && blockers.length === 0;
 
-  // Review package requirements checks
   const isDirectFabReviewRequired = (project.factoryPackageStatus === 'Generated' || project.factoryPackageStatus === 'Needs Review') && !canMoveToFabrication;
 
-  // Next Priority Actions builder
   if (blockers.length > 0) {
-    nextActions.push(...blockers.slice(0, 3).map(b => `Blocker: ${b}`));
+    nextActions.push(...blockers.slice(0, 3).map((blocker) => `Blocker: ${blocker}`));
   }
   if (warnings.length > 0) {
-    nextActions.push(...warnings.slice(0, 2).map(w => `Warning: ${w}`));
+    nextActions.push(...warnings.slice(0, 2).map((warning) => `Warning: ${warning}`));
   }
   if (nextActions.length < 5 && suggestions.length > 0) {
-    nextActions.push(...suggestions.slice(0, 5 - nextActions.length).map(s => `Suggestion: ${s}`));
+    nextActions.push(...suggestions.slice(0, 5 - nextActions.length).map((suggestion) => `Suggestion: ${suggestion}`));
   }
   if (nextActions.length === 0) {
-    nextActions.push("Factory handoff ready. Export your Handoff Manifest JSON to submit pre-fab plans!");
+    nextActions.push(canMoveToFabrication
+      ? 'Decision: fabrication evidence gates are satisfied. Review the frozen release candidate before external handoff.'
+      : 'Review the next locked lifecycle gate and record the missing evidence before advancing.');
   }
 
   return {
@@ -316,14 +340,14 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
       components: compScore,
       electronics: electronicsScore,
       nets: netsScore,
-      power: pwrScore,
+      power: powerScore,
       pinMap: pinMapScore,
-      firmware: fwScore,
+      firmware: firmwareScore,
       testing: testScore,
-      manufacturing: mfgScore,
+      manufacturing: manufacturingScore,
       nativeExports: exportsScore,
       factoryFiles: fileScore,
-      safety: safetyScore
+      safety: safetyScore,
     },
     blockers,
     warnings,
@@ -338,6 +362,6 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
     canMoveToPrototype,
     canMoveToFactoryHandoff,
     isDirectFabReviewRequired,
-    canMoveToFabrication
+    canMoveToFabrication,
   };
 };
