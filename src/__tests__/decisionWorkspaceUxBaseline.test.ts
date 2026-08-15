@@ -1,0 +1,48 @@
+import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+
+function source(relativePath: string): string {
+  return readFileSync(new URL(relativePath, import.meta.url), 'utf8');
+}
+
+describe('decision-first product UX baseline', () => {
+  it('keeps project overview and readiness focused on decisions, consequences, and responsible workspaces', () => {
+    const dashboard = source('../components/ProjectDashboard.tsx');
+    const readiness = source('../components/ReadinessDashboard.tsx');
+    const engine = source('../lib/readinessScore.ts');
+
+    expect(dashboard).toContain('Next engineering decision');
+    expect(dashboard).toContain('Why this matters / consequence');
+    expect(dashboard).toContain('Counts, not decisions');
+    expect(dashboard).toContain("setActiveView('readiness')");
+
+    expect(readiness).toContain('What can this project safely do next?');
+    expect(readiness).toContain('Blocking evidence');
+    expect(readiness).toContain('Consequence');
+    expect(readiness).toContain('Gate evidence');
+    expect(readiness).toContain('routeForIssue');
+
+    expect(engine).toContain('component.placementX == null || component.placementY == null');
+    expect(engine).toContain("file.status !== 'Not Generated'");
+    expect(engine).toContain('PCB DRC: ${result.title}');
+  });
+
+  it('turns requirements into evidence-gated decisions rather than CRUD records', () => {
+    const requirements = source('../components/product/ProductRequirementsPanel.tsx');
+    const productStudio = source('../components/product/ProductStudio.tsx');
+
+    expect(requirements).toContain('Requirement decision workspace');
+    expect(requirements).toContain('Evidence needed to decide');
+    expect(requirements).toContain('Decision state');
+    expect(requirements).toContain('Consequence');
+    expect(requirements).toContain('Create linked validation');
+    expect(requirements).toContain("nextStatus === 'Verified'");
+    expect(requirements).toContain('passedLinkedTests.length === 0');
+    expect(requirements).toContain('feedback.confirm');
+    expect(requirements).not.toContain('window.prompt');
+    expect(requirements).not.toContain('window.confirm');
+
+    expect(productStudio).toContain('<ProductRequirementsPanel mode="full" />');
+    expect(productStudio).toContain('<ProductRequirementsPanel mode="compact" />');
+  });
+});
