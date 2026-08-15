@@ -42,10 +42,10 @@ function renderSurface(surface: NavigationSurface, viewId: string): React.ReactN
     case 'power-budget': return <PowerBudgetTable />;
     case 'pin-map': return <PinMapTable />;
     case 'pcb-constraints': return <PCBConstraints />;
-    case 'firmware-modules': return <FirmwareStudio initialMode="modules" />;
-    case 'firmware-state-machine': return <FirmwareStudio initialMode="state-machine" />;
-    case 'firmware-hardware-map': return <FirmwareStudio initialMode="hardware-map" />;
-    case 'firmware-source': return <FirmwareStudio initialMode="source" />;
+    case 'firmware-modules': return <FirmwareStudio key={viewId} initialMode={viewId === 'firmware-evidence' ? 'evidence' : 'modules'} />;
+    case 'firmware-state-machine': return <FirmwareStudio key={viewId} initialMode="state-machine" />;
+    case 'firmware-hardware-map': return <FirmwareStudio key={viewId} initialMode="hardware-map" />;
+    case 'firmware-source': return <FirmwareStudio key={viewId} initialMode="source" />;
     case 'validation-tests': return <UnifiedValidationWorkbench initialMode="tests" />;
     case 'validation-coverage': return <UnifiedValidationWorkbench initialMode="coverage" />;
     case 'validation-factory-qa': return <UnifiedValidationWorkbench initialMode="factory-qa" />;
@@ -134,51 +134,28 @@ export const AppShell: React.FC = () => {
   const activeViewLabel = activeNavigationItem?.label || 'Workspace';
 
   if (!mounted) {
-    return (
-      <div className="flex h-screen w-screen select-none items-center justify-center bg-[#f3f0e8] text-[11px] font-medium text-slate-500">Initializing Hardware Studio…</div>
-    );
+    return <div className="flex h-screen w-screen select-none items-center justify-center bg-[#f3f0e8] text-[11px] font-medium text-slate-500">Initializing Hardware Studio…</div>;
   }
 
   return (
     <div className="hs-app flex h-screen w-screen flex-col overflow-hidden font-sans text-slate-900" data-ui="hardware-studio">
-      <a
-        href="#workspace-main"
-        className="sr-only z-[100] rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
-      >
-        Skip to workspace
-      </a>
+      <a href="#workspace-main" className="sr-only z-[100] rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to workspace</a>
       <TopBar />
       <div className="relative flex min-h-0 flex-1 bg-[#ebe7dc]">
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          onToggleCollapsed={() => setSidebarCollapsed((value) => !value)}
-        />
-        <main
-          id="workspace-main"
-          tabIndex={-1}
-          className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[#f7f5ef] outline-none"
-          aria-label={`${activeViewLabel} workspace`}
-        >
+        <Sidebar collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((value) => !value)} />
+        <main id="workspace-main" tabIndex={-1} className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[#f7f5ef] outline-none" aria-label={`${activeViewLabel} workspace`}>
           <p className="sr-only" aria-live="polite" aria-atomic="true">Opened {activeViewLabel} workspace</p>
           <EngineeringContextBar />
           {activeHiddenDomain && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-300 bg-amber-50 px-3 py-1.5 text-amber-950" role="status">
-              <div className="flex min-w-0 items-center gap-2">
-                <EyeOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                <p className="text-[11px] leading-4"><strong>Outside the focused workflow.</strong> Project data is unchanged.</p>
-              </div>
-              <div className="flex shrink-0 gap-1.5">
-                <button type="button" onClick={() => toggleDomain(activeHiddenDomain)} className="min-h-8 rounded-md border border-amber-300 bg-white px-2.5 text-[11px] font-semibold hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500">Add to focus</button>
-                <button type="button" onClick={openSetup} className="inline-flex min-h-8 items-center gap-1.5 rounded-md bg-amber-900 px-2.5 text-[11px] font-semibold text-white hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600"><Settings2 className="h-3.5 w-3.5" aria-hidden="true" /> Configure</button>
-              </div>
+              <div className="flex min-w-0 items-center gap-2"><EyeOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><p className="text-[11px] leading-4"><strong>Outside the focused workflow.</strong> Project data is unchanged.</p></div>
+              <div className="flex shrink-0 gap-1.5"><button type="button" onClick={() => toggleDomain(activeHiddenDomain)} className="min-h-8 rounded-md border border-amber-300 bg-white px-2.5 text-[11px] font-semibold hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500">Add to focus</button><button type="button" onClick={openSetup} className="inline-flex min-h-8 items-center gap-1.5 rounded-md bg-amber-900 px-2.5 text-[11px] font-semibold text-white hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600"><Settings2 className="h-3.5 w-3.5" aria-hidden="true" /> Configure</button></div>
             </div>
           )}
           <div className="relative flex min-h-0 flex-1">
             {showVisualizer && <ProductVisualizer />}
             <div className="relative flex h-full min-w-0 flex-1 flex-col">
-              {activeNavigationItem ? renderSurface(activeNavigationItem.surface, activeView) : (
-                <UnavailableWorkspace viewId={activeView} onReturn={() => setActiveView('dashboard')} />
-              )}
+              {activeNavigationItem ? renderSurface(activeNavigationItem.surface, activeView) : <UnavailableWorkspace viewId={activeView} onReturn={() => setActiveView('dashboard')} />}
             </div>
             {isCanvasView && <PropertiesPanel />}
           </div>
