@@ -1,4 +1,5 @@
 import type { Project } from '../../types';
+import { runBoardDRC } from '../boardDRC';
 
 export type ElectronicsWorkflowStageId =
   | 'component-library'
@@ -18,8 +19,12 @@ export interface ElectronicsWorkflowSnapshot {
   netCount: number;
   routedNetCount: number;
   linkedBomCount: number;
+  missingFootprintCount: number;
+  drcFindingCount: number;
+  blockingDrcCount: number;
   blockers: string[];
   nextStage: ElectronicsWorkflowStageId;
+  readyForValidation: boolean;
 }
 
 function resolveActiveBoard(project: Project) {
@@ -55,21 +60,40 @@ export function evaluateElectronicsWorkflow(project: Project): ElectronicsWorkfl
   const hasBoardOutline = Boolean(
     activeBoardId && (project.boardOutlines || []).some((outline) => outline.boardId === activeBoardId),
   );
+  const missingFootprintCount = boardComponents.filter((component) => !component.footprint || !component.packageName).length;
+
+  const canRunDrc = Boolean(activeBoardId && hasBoardOutline && boardComponents.length > 0 && pcbPlacedCount === boardComponents.length);
+  const drcResults = canRunDrc ? runBoardDRC(project) : [];
+  const openDrcResults = drcResults.filter((result) => result.status === 'Open');
+  const blockingDrcCount = openDrcResults.filter((result) => result.severity === 'Error' || result.severity === 'Blocker').length;
 
   const blockers: string[] = [];
+  if (boardComponents.length === 0) blockers.push('Add at least one canonical project component from the library.');
+  if (missingFootprintCount > 0) blockers.push(`${missingFootprintCount} component${missingFootprintCount === 1 ? '' : 's'} still lack authoritative footprint/package data.`);
+  if (boardComponents.length > 0 && schematicPlacedCount < boardComponents.length) blockers.push(`${boardComponents.length - schematicPlacedCount} component${boardComponents.length - schematicPlacedCount === 1 ? '' : 's'} still need schematic placement.`);
   if (!activeBoard) blockers.push('Define a real board before PCB placement or routing.');
   if (activeBoard && !hasBoardOutline) blockers.push('Record the selected board outline before physical layout.');
-  if (boardComponents.length === 0) blockers.push('Add at least one canonical project component from the library.');
-  const missingFootprints = boardComponents.filter((component) => !component.footprint || !component.packageName).length;
-  if (missingFootprints > 0) blockers.push(`${missingFootprints} component${missingFootprints === 1 ? '' : 's'} still lack authoritative footprint/package data.`);
+  if (activeBoard && hasBoardOutline && pcbPlacedCount < boardComponents.length) blockers.push(`${boardComponents.length - pcbPlacedCount} component${boardComponents.length - pcbPlacedCount === 1 ? '' : 's'} still need explicit PCB placement.`);
+  if (blockingDrcCount > 0) blockers.push(`${blockingDrcCount} open PCB DRC blocker${blockingDrcCount === 1 ? '' : 's'} must be resolved before electronics handoff.`);
+  if (boardComponents.length > 0 && linkedBomCount < boardComponents.length) blockers.push(`${boardComponents.length - linkedBomCount} component${boardComponents.length - linkedBomCount === 1 ? '' : 's'} still need canonical BOM linkage.`);
 
   let nextStage: ElectronicsWorkflowStageId = 'component-library';
-  if (boardComponents.length > 0 && schematicPlacedCount < boardComponents.length) nextStage = 'schematic-editor';
-  else if (boardComponents.length > 0 && !activeBoard) nextStage = 'board-settings';
-  else if (activeBoard && !hasBoardOutline) nextStage = 'board-settings';
-  else if (boardComponents.length > 0 && pcbPlacedCount < boardComponents.length) nextStage = 'board-designer';
-  else if (boardComponents.length > 0 && pcbPlacedCount === boardComponents.length) nextStage = 'pcb-drc';
-  if (boardComponents.length > 0 && linkedBomCount < boardComponents.length && pcbPlacedCount === boardComponents.length) nextStage = 'bom';
+  if (boardComponents.length === 0 || missingFootprintCount > 0) nextStage = 'component-library';
+  else if (schematicPlacedCount < boardComponents.length) nextStage = 'schematic-editor';
+  else if (!activeBoard || !hasBoardOutline) nextStage = 'board-settings';
+  else if (pcbPlacedCount < boardComponents.length) nextStage = 'board-designer';
+  else if (blockingDrcCount > 0) nextStage = 'pcb-drc';
+  else if (linkedBomCount < boardComponents.length) nextStage = 'bom';
+  else nextStage = 'pcb-drc';
+
+  const readyForValidation = boardComponents.length > 0
+    && missingFootprintCount === 0
+    && schematicPlacedCount === boardComponents.length
+    && Boolean(activeBoard)
+    && hasBoardOutline
+    && pcbPlacedCount === boardComponents.length
+    && blockingDrcCount === 0
+    && linkedBomCount === boardComponents.length;
 
   return {
     activeBoardId,
@@ -81,7 +105,11 @@ export function evaluateElectronicsWorkflow(project: Project): ElectronicsWorkfl
     netCount: boardNets.length,
     routedNetCount: routedNetNames.size,
     linkedBomCount,
+    missingFootprintCount,
+    drcFindingCount: openDrcResults.length,
+    blockingDrcCount,
     blockers,
     nextStage,
+    readyForValidation,
   };
 }
