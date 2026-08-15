@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { useStudioContextStore } from '../store/studioContextStore';
 
 function source(relativePath: string): string {
@@ -60,11 +60,12 @@ describe('golden-path regression guards', () => {
     expect(pcb).toContain('Define the board outline first');
   });
 
-  it('mounts one shared engineering context and one connected electronics workspace instead of duplicate global navigation', () => {
+  it('mounts one connected workspace without duplicate global strips around every editor', () => {
     const appShell = source('../components/AppShell.tsx');
     const electronicsWorkspace = source('../components/studio/ElectronicsWorkspace.tsx');
     expect(appShell).not.toContain('<StudioBuildMap />');
-    expect(appShell).toContain('<EngineeringContextBar />');
+    expect(appShell).not.toContain('<EngineeringContextBar />');
+    expect(appShell).not.toContain('<ReviewWarnings />');
     expect(appShell).toContain('<ElectronicsWorkspace />');
     expect(appShell).toContain('ELECTRONICS_WORKSPACE_VIEW_IDS.has(viewId)');
     expect(appShell).toContain('UnifiedMechanicalWorkbench');
@@ -74,13 +75,15 @@ describe('golden-path regression guards', () => {
     expect(electronicsWorkspace).toContain('UnifiedBoardDesignerWorkbench');
     expect(electronicsWorkspace).toContain('<UnifiedBoardDRCWorkbench />');
     expect(electronicsWorkspace).toContain('<UnifiedBOMWorkbench />');
+    expect(existsSync(new URL('../components/studio/EngineeringContextBar.tsx', import.meta.url))).toBe(false);
   });
 
   it('adapts editors to selected canonical context without mutating the schematic on open', () => {
     const adapters = source('../components/studio/UnifiedWorkbenchAdapters.tsx');
     const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
-    const contextBar = source('../components/studio/EngineeringContextBar.tsx');
+    const appShell = source('../components/AppShell.tsx');
     expect(adapters).not.toContain('placeComponentOnSchematic');
+    expect(appShell).not.toContain('placeComponentOnSchematic');
     expect(adapters).toContain('<EngineeringSchematicWorkbench />');
     expect(adapters).toContain('setActiveComponentDefinition(added.libraryId || null)');
     expect(adapters).toContain('setActiveComponent(added.id)');
@@ -88,10 +91,6 @@ describe('golden-path regression guards', () => {
     expect(schematic).toContain('placingComponentId');
     expect(schematic).toContain('placeAtPointer');
     expect(schematic).toContain('placeComponentOnSchematic(componentId, x, y)');
-    expect(contextBar).toContain("requestMechanicalMode(viewId === 'mechanical-studio' ? 'webgl-3d' : null)");
-    expect(contextBar).toContain("viewId === 'board-designer' && !selectedBoard");
-    expect(contextBar).toContain("viewId: 'bom'");
-    expect(contextBar).toContain("viewId: 'validation-studio'");
   });
 
   it('routes the live schematic surface through canonical project actions without creating a parallel component model', () => {
