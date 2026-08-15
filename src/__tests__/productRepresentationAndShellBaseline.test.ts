@@ -55,10 +55,10 @@ describe('semantic product representation and calm shell contracts', () => {
 
   it('lets typed port and edge colors survive the global React Flow skin', () => {
     const css = source('../app/globals.css');
-    expect(css).toContain('Inline engineering semantics win');
-    expect(css).toContain('background-color: #a69d90;');
-    expect(css).not.toContain('background-color: #a69d90 !important');
-    expect(css).toContain('stroke: #9e978b;');
-    expect(css).not.toContain('stroke: #9e978b !important');
+    const reactFlowCss = css.split('/* React Flow — warm technical drawing treatment. Inline engineering semantics win. */')[1] || '';
+    expect(reactFlowCss).toContain('background-color: #a69d90;');
+    expect(reactFlowCss).not.toContain('background-color: #a69d90 !important');
+    expect(reactFlowCss).toContain('stroke: #9e978b;');
+    expect(reactFlowCss).not.toContain('stroke: #9e978b !important');
   });
 });
