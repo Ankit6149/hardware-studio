@@ -7,7 +7,7 @@ describe('board DRC identity boundary', () => {
     const results = runBoardDRC({
       activeBoardId: '',
       boards: [{ id: 'board-real', name: 'Controller PCB' }],
-    } as Project);
+    } as unknown as Project);
 
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({
@@ -22,7 +22,7 @@ describe('board DRC identity boundary', () => {
       activeBoardId: 'board-stale',
       boards: [{ id: 'board-real', name: 'Controller PCB' }],
       boardOutlines: [{ id: 'outline-real', boardId: 'board-real', width: 40, height: 30 }],
-    } as Project);
+    } as unknown as Project);
 
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({
@@ -50,7 +50,7 @@ describe('board DRC identity boundary', () => {
       pcbLayers: [],
       pcbRules: [],
       padNetAssignments: [],
-    } as Project);
+    } as unknown as Project);
 
     expect(results.some((result) => result.title === 'Missing board outline' && result.linkedObjectId === 'board-a')).toBe(true);
     expect(results.some((result) => result.linkedObjectId === 'outline-b')).toBe(false);
