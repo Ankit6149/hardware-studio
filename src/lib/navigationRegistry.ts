@@ -126,15 +126,7 @@ export const navigationDomains: readonly NavigationDomain[] = [
       item('requirements', 'Requirements', 'Define measurable product needs and acceptance criteria.', 'requirements', 'product-studio', 'REQ'),
       item('product-architecture', 'Product Architecture', 'Organize functions, interfaces, and system relationships.', 'architecture', 'product-studio', 'ARCH'),
       item('risks-interfaces', 'Risks & Interfaces', 'Track product risks, assumptions, and cross-domain interfaces.', 'risk', 'product-studio', 'RISK'),
-      item(
-        'blueprint-editor',
-        'System Blueprint',
-        'Arrange early product blocks and inspect their connected properties.',
-        'blueprint',
-        'legacy-blueprint',
-        'MAP',
-        { layout: 'canvas', showVisualizer: true },
-      ),
+      item('blueprint-editor', 'System Blueprint', 'Arrange early product blocks and inspect their connected properties.', 'blueprint', 'legacy-blueprint', 'MAP', { layout: 'canvas', showVisualizer: true }),
     ],
   },
   {
@@ -172,12 +164,13 @@ export const navigationDomains: readonly NavigationDomain[] = [
   {
     id: 'firmware',
     label: 'Firmware',
-    purpose: 'Coordinate modules, behavior, hardware mappings, and source.',
+    purpose: 'Coordinate modules, behavior, hardware mappings, source, and real evidence.',
     items: [
       item('firmware-studio', 'Firmware Modules', 'Define firmware responsibilities, dependencies, and tasks.', 'firmware', 'firmware-modules', 'MOD'),
       item('state-machines', 'State Machines', 'Describe product modes, events, transitions, and actions.', 'state-machine', 'firmware-state-machine', 'STATE'),
       item('hardware-mapping', 'Hardware Mapping', 'Link firmware functions to components, buses, and pins.', 'mapping', 'firmware-hardware-map', 'MAP'),
-      item('source-skeleton', 'Source Workspace', 'Inspect the current source-file and generated-code foundation.', 'source', 'firmware-source', 'SRC'),
+      item('source-skeleton', 'Source Workspace', 'Edit project source files and explicitly generated workspace files.', 'source', 'firmware-source', 'SRC'),
+      item('firmware-evidence', 'Build & Device Evidence', 'Record external build results and local-device observations without pretending Hardware Studio ran them.', 'validation', 'firmware-modules', 'EVID'),
     ],
   },
   {
@@ -210,14 +203,8 @@ export const navigationDomains: readonly NavigationDomain[] = [
  * They are deliberately explicit so an unknown ID never falls through to an unrelated canvas.
  */
 export const compatibleNavigationItems: readonly NavigationItem[] = [
-  item('master', 'System Blueprint', 'Legacy default view used by older local projects.', 'blueprint', 'legacy-blueprint', 'MAP', {
-    layout: 'canvas',
-    showVisualizer: true,
-  }),
-  item('dossier', 'System Blueprint', 'Legacy dossier view retained only for safe project loading.', 'blueprint', 'legacy-blueprint', 'MAP', {
-    layout: 'canvas',
-    showVisualizer: true,
-  }),
+  item('master', 'System Blueprint', 'Legacy default view used by older local projects.', 'blueprint', 'legacy-blueprint', 'MAP', { layout: 'canvas', showVisualizer: true }),
+  item('dossier', 'System Blueprint', 'Legacy dossier view retained only for safe project loading.', 'blueprint', 'legacy-blueprint', 'MAP', { layout: 'canvas', showVisualizer: true }),
   item('electronics', 'Product Workspace', 'Legacy product-electronics section retained for safe project loading.', 'product', 'product-studio', 'WORK'),
   item('power-budget', 'Power Tree', 'Legacy power-budget ID retained for safe project loading.', 'power', 'power-budget', 'PWR'),
   item('board-studio', 'Board Settings', 'Legacy board-studio ID retained for safe project loading.', 'layers', 'board-studio', 'SET'),
