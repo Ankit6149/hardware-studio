@@ -6,10 +6,16 @@ function source(relativePath: string): string {
 }
 
 describe('editor-first interaction model', () => {
-  it('does not mutate engineering state merely by opening the schematic', () => {
+  it('does not mutate engineering state merely by opening authoring editors', () => {
     const adapters = source('../components/studio/UnifiedWorkbenchAdapters.tsx');
+    const firmwareSource = source('../components/firmware/FirmwareCodePreview.tsx');
+
     expect(adapters).not.toContain('placeComponentOnSchematic');
     expect(adapters).toContain('Opening an editor must never mutate engineering state');
+
+    expect(firmwareSource).not.toContain('useEffect');
+    expect(firmwareSource).toContain('Opening Source does not generate files');
+    expect(firmwareSource).toContain('onClick={() => void handleRegenerate()}');
   });
 
   it('keeps navigation, selection, and mutation as visibly separate actions', () => {
@@ -26,12 +32,15 @@ describe('editor-first interaction model', () => {
     expect(readiness).toContain('Gate rows show state. Only Review changes the workspace.');
   });
 
-  it('gives authoring canvases the dominant editor area', () => {
+  it('gives authoring canvases and editors the dominant workspace area', () => {
     const product = source('../components/product/ProductStudio.tsx');
     const electronics = source('../components/studio/ElectronicsWorkspace.tsx');
     const schematic = source('../components/schematic/UnifiedSchematicEditor.tsx');
     const pcb = source('../components/board/BoardDesigner.tsx');
     const mechanical = source('../components/mechanical/MechanicalStudio.tsx');
+    const validation = source('../components/validation/ValidationStudio.tsx');
+    const unifiedValidation = source('../components/studio/UnifiedValidationWorkbench.tsx');
+    const firmwareSource = source('../components/firmware/FirmwareCodePreview.tsx');
     const editorLayout = source('../app/editor-layout.css');
 
     expect(product).not.toContain('productViews.map');
@@ -57,6 +66,18 @@ describe('editor-first interaction model', () => {
     expect(mechanical).toContain('objectsOpen');
     expect(mechanical).toContain('inspectorOpen');
     expect(mechanical).not.toContain('grid-cols-[11rem_minmax(0,1fr)_16rem]');
+
+    expect(validation).toContain('testListOpen');
+    expect(validation).toContain('absolute bottom-3 left-3 top-3');
+    expect(validation).not.toContain('width: 280');
+    expect(validation).not.toContain('tabs.map');
+    expect(unifiedValidation).toContain('runPanelOpen');
+    expect(unifiedValidation).toContain('Validation run evidence');
+
+    expect(firmwareSource).toContain('Firmware source editor');
+    expect(firmwareSource).toContain('min-w-0 flex-1 flex-col');
+    expect(editorLayout).toContain('nav[aria-label="Firmware workspace sections"]');
+    expect(editorLayout).toContain('Firmware engineering workspace');
 
     expect(editorLayout).toContain('Product Design Studio');
     expect(editorLayout).toContain('position: absolute');
