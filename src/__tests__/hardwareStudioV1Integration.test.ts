@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { useProjectStore } from '../store/projectStore';
 import { calculateReadinessScore } from '../lib/readinessScore';
-import { runBoardDRC } from '../lib/boardDRC';
 import { checkMechanicalInterference } from '../lib/mechanical/mechanicalGeometry';
 import { runValidationTest } from '../lib/validationRunner';
 import { HardwareStudioMCPServer } from '../../packages/mcp-server/mcpServer';
@@ -29,10 +28,30 @@ describe('Hardware Studio V1 Full Integration & Readiness Suite (20 Acceptance G
     expect(wireRes.wire.sourceAnchor).toBeDefined();
     expect(wireRes.wire.sourceAnchor?.type).toBe('pin');
 
-    // Gate 4 & 5: Active-Board PCB Isolation & Routing Rules
-    expect(useProjectStore.getState().activeBoardId).toBeDefined();
-    store.addVia({ boardId: 'board-main', layerId: 'top', xMm: 20, yMm: 20, padDiameterMm: 0.8, drillDiameterMm: 0.4 });
-    const vias = (useProjectStore.getState().vias || []).filter(v => v.boardId === useProjectStore.getState().activeBoardId);
+    // Gate 4 & 5: Active-Board PCB Isolation & Routing Rules.
+    // Establish a real board explicitly; the product no longer invents board-main.
+    const current = useProjectStore.getState();
+    const existingBoard = (current.boards || []).find(board => board.id === current.activeBoardId)
+      || (current.boards || [])[0];
+    const board = existingBoard || current.addBoard({
+      name: 'Integration PCB',
+      boardType: 'Main PCB',
+      dimensionsMm: '40 x 30',
+      layerCount: 2,
+      substrate: 'FR4',
+    });
+    useProjectStore.getState().setActiveBoard(board.id);
+    useProjectStore.getState().addVia({
+      boardId: board.id,
+      layerId: 'top',
+      xMm: 20,
+      yMm: 20,
+      padDiameterMm: 0.8,
+      drillDiameterMm: 0.4,
+    });
+    const pcbState = useProjectStore.getState();
+    expect(pcbState.activeBoardId).toBe(board.id);
+    const vias = (pcbState.vias || []).filter(via => via.boardId === board.id);
     expect(vias.length).toBeGreaterThan(0);
 
     // Gate 6 & 7: Mechanical 2D & Lightweight Constraints
