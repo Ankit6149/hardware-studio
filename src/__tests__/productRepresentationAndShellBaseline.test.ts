@@ -18,12 +18,16 @@ describe('semantic product representation and calm shell contracts', () => {
     expect(canvas).not.toContain('CATEGORY_COLORS');
   });
 
-  it('creates recognizable system roles instead of anonymous architecture blocks', () => {
+  it('exposes recognizable system roles as visible placement tools instead of anonymous architecture blocks', () => {
     const studio = source('../components/product/ProductStudio.tsx');
-    expect(studio).toContain('Add element');
+    expect(studio).toContain('ArchitectureGlyph');
+    expect(studio).toContain('Place ${preset.name}');
     expect(studio).toContain('Main Controller');
+    expect(studio).toContain("familyId: 'microcontroller'");
     expect(studio).toContain('Environmental Sensor');
+    expect(studio).toContain("familyId: 'sensor'");
     expect(studio).toContain('USB-C Interface');
+    expect(studio).toContain("familyId: 'usb-c'");
     expect(studio).toContain('Enclosure');
     expect(studio).toContain('Safety / Protection');
     expect(studio).not.toContain('Add block');
