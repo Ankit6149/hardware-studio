@@ -2,26 +2,16 @@
 
 import React, { useCallback, useState } from 'react';
 import {
-  Battery,
-  Box,
-  Code2,
-  Cpu,
   ListChecks,
-  Monitor,
   PanelRight,
-  Plus,
-  Radio,
   Redo2,
   ShieldAlert,
-  ShieldCheck,
   Trash2,
   Undo2,
-  Usb,
-  Zap,
-  type LucideIcon,
 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
-import { ProductArchitectureNode } from '../../types';
+import type { ProductArchitectureNode } from '../../types';
+import type { VisualFamilyId } from '../../lib/visual/representationRegistry';
 import { ProductDesignSafetyBoundary } from '../product-design/ProductDesignSafetyBoundary';
 import { ProductDesignDecisionBar } from '../product-design/ProductDesignDecisionBar';
 import { ProductDesignStudio } from '../product-design/ProductDesignStudio';
@@ -30,6 +20,7 @@ import { ProductInspector } from './ProductInspector';
 import { ProductRequirementsPanel } from './ProductRequirementsPanel';
 import { validateArchitectureGraph } from '../../lib/product/productGraph';
 import { EditorDockButton } from '../editor/EditorDockButton';
+import { ArchitectureGlyph } from '../visual/DeviceVisual';
 
 interface ProductStudioProps {
   initialMode?: string;
@@ -37,21 +28,22 @@ interface ProductStudioProps {
 
 type ArchitecturePreset = {
   name: string;
+  shortLabel: string;
   category: ProductArchitectureNode['category'];
   description: string;
-  Icon: LucideIcon;
+  familyId: VisualFamilyId;
 };
 
 const architecturePresets: readonly ArchitecturePreset[] = [
-  { name: 'Main Controller', category: 'Processing', description: 'Microcontroller or compute module coordinating product behavior.', Icon: Cpu },
-  { name: 'Environmental Sensor', category: 'Input', description: 'Physical sensing function with power, measurement, and interrupt interfaces.', Icon: Radio },
-  { name: 'Power Regulation', category: 'Power', description: 'Power conversion and regulated rail generation.', Icon: Zap },
-  { name: 'Battery Pack', category: 'Power', description: 'Stored-energy source and its physical/electrical interface.', Icon: Battery },
-  { name: 'USB-C Interface', category: 'Communication', description: 'External USB-C data and/or power interface.', Icon: Usb },
-  { name: 'User Display', category: 'Feedback', description: 'Visual output and user-feedback function.', Icon: Monitor },
-  { name: 'Enclosure', category: 'Mechanical', description: 'Product housing, access, mounting, and environmental boundary.', Icon: Box },
-  { name: 'Control Firmware', category: 'Firmware', description: 'Firmware responsibility coordinating hardware behavior.', Icon: Code2 },
-  { name: 'Safety / Protection', category: 'Safety', description: 'Protection, interlock, or fault-containment responsibility.', Icon: ShieldCheck },
+  { name: 'Main Controller', shortLabel: 'Controller', category: 'Processing', description: 'Microcontroller or compute module coordinating product behavior.', familyId: 'microcontroller' },
+  { name: 'Environmental Sensor', shortLabel: 'Sensor', category: 'Input', description: 'Physical sensing function with power, measurement, and interrupt interfaces.', familyId: 'sensor' },
+  { name: 'Power Regulation', shortLabel: 'Regulator', category: 'Power', description: 'Power conversion and regulated rail generation.', familyId: 'voltage-regulator' },
+  { name: 'Battery Pack', shortLabel: 'Battery', category: 'Power', description: 'Stored-energy source and its physical/electrical interface.', familyId: 'battery' },
+  { name: 'USB-C Interface', shortLabel: 'USB-C', category: 'Communication', description: 'External USB-C data and/or power interface.', familyId: 'usb-c' },
+  { name: 'User Display', shortLabel: 'Display', category: 'Feedback', description: 'Visual output and user-feedback function.', familyId: 'display' },
+  { name: 'Enclosure', shortLabel: 'Enclosure', category: 'Mechanical', description: 'Product housing, access, mounting, and environmental boundary.', familyId: 'enclosure' },
+  { name: 'Control Firmware', shortLabel: 'Firmware', category: 'Firmware', description: 'Firmware responsibility coordinating hardware behavior.', familyId: 'firmware-state' },
+  { name: 'Safety / Protection', shortLabel: 'Safety', category: 'Safety', description: 'Protection, interlock, or fault-containment responsibility.', familyId: 'protection-device' },
 ];
 
 export const ProductStudio: React.FC<ProductStudioProps> = ({ initialMode = 'product-design' }) => {
@@ -109,9 +101,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({ initialMode = 'pro
       return;
     }
     if (selectedConnectionId) {
-      store.executeProjectCommand('DELETE_CONN', 'Delete architecture connection', () =>
-        store.deleteArchitectureConnection(selectedConnectionId)
-      );
+      store.executeProjectCommand('DELETE_CONN', 'Delete architecture connection', () => store.deleteArchitectureConnection(selectedConnectionId));
       setSelectedConnectionId(null);
     }
   }, [selectedConnectionId, selectedNodeId, store]);
@@ -131,41 +121,43 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({ initialMode = 'pro
 
         {activeMode === 'product-architecture' && (
           <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#fbfaf6]">
-            <div className="flex min-h-11 shrink-0 items-center gap-1.5 border-b border-slate-300 bg-[#fbfaf6] px-3 py-1.5">
-              <details className="relative">
-                <summary className="inline-flex min-h-8 cursor-pointer list-none items-center gap-1.5 bg-slate-950 px-3 text-[11px] font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 [&::-webkit-details-marker]:hidden">
-                  <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Add element
-                </summary>
-                <div className="absolute left-0 top-9 z-50 w-[310px] border border-slate-300 bg-[#fbfaf6] p-1 shadow-[0_14px_36px_rgba(15,23,42,0.16)]">
-                  <div className="border-b border-slate-200 px-2.5 py-2">
-                    <div className="text-[10px] font-semibold text-slate-900">Add a real system role</div>
-                    <p className="mt-0.5 text-[9px] leading-4 text-slate-500">Choose what the product actually contains. Exact symbols, footprints and CAD stay linked in their specialist workbenches.</p>
-                  </div>
-                  <div className="max-h-[360px] overflow-y-auto py-1">
-                    {architecturePresets.map(({ Icon, ...preset }) => (
+            <div className="flex min-h-[58px] shrink-0 items-stretch border-b border-[#cbc7bd] bg-[#f8f6f0]">
+              <div className="flex w-[128px] shrink-0 flex-col justify-center border-r border-[#d8d4ca] px-3">
+                <div className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Product</div>
+                <div className="mt-0.5 text-[12px] font-semibold tracking-[-0.02em] text-slate-950">Architecture</div>
+              </div>
+
+              <div className="min-w-0 flex-1 overflow-x-auto">
+                <div className="flex h-full min-w-max items-stretch">
+                  <div className="flex shrink-0 items-center border-r border-[#d8d4ca] px-2">
+                    <div className="mr-2 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Place</div>
+                    {architecturePresets.map((preset) => (
                       <button
                         key={preset.name}
                         type="button"
-                        onClick={() => handleAddElement({ ...preset, Icon })}
-                        className="flex min-h-11 w-full items-start gap-2.5 px-2.5 py-2 text-left hover:bg-[#eee9df] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-400"
+                        onClick={() => handleAddElement(preset)}
+                        className="group flex h-[48px] w-[64px] flex-col items-center justify-center border-l border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-white hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-400"
+                        title={`${preset.name} — ${preset.description}`}
+                        aria-label={`Place ${preset.name}`}
                       >
-                        <span className="grid h-7 w-7 shrink-0 place-items-center border border-slate-300 bg-white text-slate-700"><Icon className="h-3.5 w-3.5" aria-hidden="true" /></span>
-                        <span className="min-w-0"><span className="block text-[10px] font-semibold text-slate-900">{preset.name}</span><span className="mt-0.5 block text-[8px] leading-3.5 text-slate-500">{preset.description}</span></span>
+                        <ArchitectureGlyph familyId={preset.familyId} className="h-5 w-5" />
+                        <span className="mt-1 max-w-[58px] truncate text-[7px] font-semibold">{preset.shortLabel}</span>
                       </button>
                     ))}
                   </div>
+
+                  <div className="flex shrink-0 items-center gap-px border-r border-[#d8d4ca] px-2">
+                    <button type="button" onClick={handleDeleteSelected} disabled={!selectedNodeId && !selectedConnectionId} className="grid h-8 w-8 place-items-center text-rose-700 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-rose-400 disabled:opacity-25" title="Delete selected" aria-label="Delete selected architecture object"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <button type="button" onClick={() => store.undoProjectCommand()} className="grid h-8 w-8 place-items-center text-slate-600 hover:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-400" title="Undo" aria-label="Undo architecture change"><Undo2 className="h-3.5 w-3.5" /></button>
+                    <button type="button" onClick={() => store.redoProjectCommand()} className="grid h-8 w-8 place-items-center text-slate-600 hover:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-400" title="Redo" aria-label="Redo architecture change"><Redo2 className="h-3.5 w-3.5" /></button>
+                  </div>
                 </div>
-              </details>
+              </div>
 
-              <button type="button" onClick={handleDeleteSelected} disabled={!selectedNodeId && !selectedConnectionId} className="grid h-8 w-8 place-items-center text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-rose-500 disabled:opacity-30" title="Delete selected" aria-label="Delete selected architecture object"><Trash2 className="h-3.5 w-3.5" /></button>
-              <div className="mx-1 h-5 w-px bg-slate-200" />
-              <button type="button" onClick={() => store.undoProjectCommand()} className="grid h-8 w-8 place-items-center text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400" title="Undo" aria-label="Undo architecture change"><Undo2 className="h-3.5 w-3.5" /></button>
-              <button type="button" onClick={() => store.redoProjectCommand()} className="grid h-8 w-8 place-items-center text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400" title="Redo" aria-label="Redo architecture change"><Redo2 className="h-3.5 w-3.5" /></button>
-
-              <div className="ml-auto flex items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-1.5 px-2">
                 <EditorDockButton label="Requirements" icon={ListChecks} active={showRequirementContext} count={requirements.length} onClick={() => setShowRequirementContext((value) => !value)} />
                 <EditorDockButton label="Inspector" icon={PanelRight} active={showInspector} onClick={() => setShowInspector((value) => !value)} />
-                <button type="button" onClick={() => setShowWarnings((visible) => !visible)} aria-expanded={showWarnings} className={`inline-flex min-h-8 items-center gap-1.5 border px-2.5 text-[11px] font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400 ${warnings.length > 0 ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-slate-300 bg-white text-slate-700'}`}><ShieldAlert className="h-3.5 w-3.5" /> {warnings.length} findings</button>
+                <button type="button" onClick={() => setShowWarnings((visible) => !visible)} aria-expanded={showWarnings} className={`inline-flex min-h-8 items-center gap-1.5 border px-2.5 text-[10px] font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400 ${warnings.length > 0 ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-slate-300 bg-white text-slate-700'}`}><ShieldAlert className="h-3.5 w-3.5" /> {warnings.length}</button>
               </div>
             </div>
 
@@ -202,7 +194,9 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({ initialMode = 'pro
               )}
             </div>
 
-            <div className="flex min-h-7 shrink-0 items-center gap-3 border-t border-slate-200 bg-[#fbfaf6] px-3 text-[10px] text-slate-500"><span>{architectureNodes.length} elements</span><span>{architectureConnections.length} interfaces</span><span>{requirements.length} requirements</span><span className="ml-auto hidden lg:inline">Select an element to inspect it. Drag typed ports to describe interfaces.</span></div>
+            <div className="flex min-h-7 shrink-0 items-center gap-3 border-t border-slate-200 bg-[#fbfaf6] px-3 text-[10px] text-slate-500">
+              <span>{architectureNodes.length} elements</span><span>{architectureConnections.length} interfaces</span><span>{requirements.length} requirements</span><span className="ml-auto hidden lg:inline">Place a system role, then drag its typed ports to describe the interface.</span>
+            </div>
           </div>
         )}
       </div>
