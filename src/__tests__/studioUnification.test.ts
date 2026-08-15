@@ -51,15 +51,13 @@ describe('shared engineering context store', () => {
 
 describe('golden-path regression guards', () => {
   it('does not send an empty PCB editor to the removed dashboard generator or manufacture starter geometry', () => {
-    const boardDesigner = source('../components/board/BoardDesigner.tsx');
-    expect(boardDesigner).not.toContain('Generate a Full Product Plan from the Project Dashboard');
-    expect(boardDesigner).not.toContain('Go to Dashboard');
-    expect(boardDesigner).not.toContain('Create starter board');
-    expect(boardDesigner).not.toContain("dimensionsMm: '50 x 30'");
-    expect(boardDesigner).toContain('PCB layout needs an explicit board');
-    expect(boardDesigner).toContain("setActiveView('board-settings')");
-    expect(boardDesigner).toContain("setActiveView('component-library')");
-    expect(boardDesigner).toContain("setActiveView('schematic-editor')");
+    const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
+    expect(pcb).not.toContain('Generate a Full Product Plan from the Project Dashboard');
+    expect(pcb).not.toContain('Create starter board');
+    expect(pcb).not.toContain("dimensionsMm: '50 x 30'");
+    expect(pcb).toContain('Create or select a board before layout');
+    expect(pcb).toContain("setActiveView('board-settings')");
+    expect(pcb).toContain('Define the board outline first');
   });
 
   it('mounts one shared engineering context and one connected electronics workspace instead of duplicate global navigation', () => {
@@ -80,29 +78,32 @@ describe('golden-path regression guards', () => {
 
   it('adapts editors to selected canonical context without mutating the schematic on open', () => {
     const adapters = source('../components/studio/UnifiedWorkbenchAdapters.tsx');
-    const schematic = source('../components/schematic/UnifiedSchematicEditor.tsx');
+    const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
     const contextBar = source('../components/studio/EngineeringContextBar.tsx');
     expect(adapters).not.toContain('placeComponentOnSchematic');
-    expect(adapters).toContain('Opening an editor must never mutate engineering state');
+    expect(adapters).toContain('<EngineeringSchematicWorkbench />');
     expect(adapters).toContain('setActiveComponentDefinition(added.libraryId || null)');
     expect(adapters).toContain('setActiveComponent(added.id)');
-    expect(adapters).toContain('UnifiedBoardDesignerWorkbench');
-    expect(schematic).toContain('placeComponentOnSchematic');
+    expect(adapters).toContain('<EngineeringBoardWorkbench />');
+    expect(schematic).toContain('placingComponentId');
+    expect(schematic).toContain('placeAtPointer');
+    expect(schematic).toContain('placeComponentOnSchematic(componentId, x, y)');
     expect(contextBar).toContain("requestMechanicalMode(viewId === 'mechanical-studio' ? 'webgl-3d' : null)");
     expect(contextBar).toContain("viewId === 'board-designer' && !selectedBoard");
     expect(contextBar).toContain("viewId: 'bom'");
     expect(contextBar).toContain("viewId: 'validation-studio'");
   });
 
-  it('routes the live schematic surface through canonical project actions and in-app confirmation', () => {
+  it('routes the live schematic surface through canonical project actions without creating a parallel component model', () => {
     const adapter = source('../components/studio/UnifiedWorkbenchAdapters.tsx');
-    const schematic = source('../components/schematic/UnifiedSchematicEditor.tsx');
-    expect(adapter).toContain('<UnifiedSchematicEditor');
+    const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
+    const canvas = source('../components/schematic/SchematicCanvas.tsx');
+    expect(adapter).toContain('<EngineeringSchematicWorkbench />');
     expect(schematic).toContain('placeComponentOnSchematic');
-    expect(schematic).toContain("deleteProjectComponent(deleteImpact.componentId, 'entire-product')");
-    expect(schematic).toContain('<Dialog.Root');
-    expect(schematic).not.toContain('window.confirm');
+    expect(schematic).toContain('unplaceComponentFromSchematic');
+    expect(canvas).toContain('connectComponentPins');
     expect(schematic).not.toContain('addProjectComponentFromLibrary');
+    expect(schematic).not.toContain('window.confirm');
   });
 
   it('keeps BOM records linked to the selected canonical component', () => {
