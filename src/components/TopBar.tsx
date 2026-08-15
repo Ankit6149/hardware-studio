@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
-import { AlertCircle, BookOpen, CloudOff, FolderOpen, HardDrive, LayoutTemplate, LoaderCircle, RotateCcw } from 'lucide-react';
+import {
+  AlertCircle,
+  BookOpen,
+  ChevronDown,
+  CloudOff,
+  FolderOpen,
+  HardDrive,
+  LayoutTemplate,
+  LoaderCircle,
+  MoreHorizontal,
+  RotateCcw,
+} from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useStorageHealthStore } from '../store/storageHealthStore';
 import { storageHealthLabel } from '../lib/reliability';
-import { Button } from '../ui/Button';
 import { useFeedback } from './feedback/FeedbackProvider';
 import { useKnowledge } from './knowledge/KnowledgeProvider';
 import { BrandMark } from './BrandMark';
@@ -40,7 +50,7 @@ const ProjectNameEditor: React.FC<ProjectNameEditorProps> = ({ projectName, onCo
           event.currentTarget.blur();
         }
       }}
-      className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-[12px] font-semibold text-slate-900 outline-none transition-colors hover:bg-slate-100 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-300/70"
+      className="min-w-0 max-w-[360px] flex-1 border border-transparent bg-transparent px-1.5 py-1 text-[12px] font-semibold tracking-[-0.015em] text-slate-900 outline-none hover:bg-black/[0.035] focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-300/60"
       placeholder="Unnamed project"
       aria-label="Project name"
     />
@@ -109,56 +119,67 @@ export const TopBar: React.FC = () => {
         ? AlertCircle
         : HardDrive;
 
-  const savedTime = storageHealth.lastSavedAt
-    ? new Date(storageHealth.lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : null;
-
   return (
-    <header className="z-40 flex h-12 shrink-0 items-center border-b border-slate-300 bg-[#f8f5ee] px-3 text-slate-900">
-      <div className="flex w-[190px] shrink-0 items-center gap-2.5">
-        <BrandMark className="h-7 w-7" />
-        <div className="min-w-0">
-          <div className="truncate text-[12px] font-bold leading-none tracking-[-0.02em] text-slate-950">Hardware Studio</div>
-          <div className="mt-1 truncate text-[10px] leading-none text-slate-500">Connected engineering</div>
-        </div>
+    <header className="z-40 flex h-11 shrink-0 items-center border-b border-[#cfc9bd] bg-[#f8f5ee] px-2.5 text-slate-900">
+      <div className="flex shrink-0 items-center gap-2 border-r border-[#d8d2c6] pr-3">
+        <BrandMark className="h-6 w-6" />
+        <span className="hidden text-[11px] font-bold tracking-[-0.02em] text-slate-950 lg:inline">Hardware Studio</span>
       </div>
 
-      <div className="mx-3 flex min-w-0 max-w-[560px] flex-1 items-center gap-2 border-l border-slate-300 pl-3">
+      <div className="ml-2.5 flex min-w-0 flex-1 items-center gap-1.5">
+        <span className="hidden shrink-0 text-[9px] font-medium uppercase tracking-[0.1em] text-slate-400 sm:inline">Project</span>
+        <span className="hidden text-slate-300 sm:inline">/</span>
         <ProjectNameEditor key={projectName} projectName={projectName} onCommit={handleNameCommit} />
-        <button
-          type="button"
-          onClick={showStorageDetail}
-          className="hidden min-h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400/60 sm:inline-flex"
-          title={[storageHealth.message, savedTime ? `Last saved ${savedTime}` : ''].filter(Boolean).join(' ')}
-        >
-          <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} aria-hidden="true" />
-          <StatusIcon className={`h-3.5 w-3.5 ${storageHealth.status === 'saving' ? 'animate-spin' : ''}`} aria-hidden="true" />
-          <span>{storageHealthLabel(storageHealth)}{savedTime && storageHealth.status === 'saved' ? ` · ${savedTime}` : ''}</span>
-        </button>
       </div>
 
-      <div className="ml-auto flex shrink-0 items-center gap-1">
-        <Button onClick={() => openKnowledge()} variant="ghost" size="sm" icon={<BookOpen className="h-3.5 w-3.5" />}>Learn</Button>
-        <Button onClick={() => setIsProjOpen(true)} variant="ghost" size="sm" icon={<FolderOpen className="h-3.5 w-3.5" />}>Workspaces</Button>
-        <Button
-          onClick={() => setIsTplOpen(true)}
-          variant="ghost"
-          size="sm"
-          className="hidden md:inline-flex"
-          icon={<LayoutTemplate className="h-3.5 w-3.5" />}
-          title={`Template: ${templateName || 'Custom'}`}
-        >
-          Templates
-        </Button>
+      <button
+        type="button"
+        onClick={showStorageDetail}
+        className="mr-1.5 hidden h-8 shrink-0 items-center gap-1.5 px-2 text-[10px] font-medium text-slate-500 hover:bg-black/[0.035] hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400/60 sm:inline-flex"
+        title={storageHealth.message}
+      >
+        <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} aria-hidden="true" />
+        <StatusIcon className={`h-3 w-3 ${storageHealth.status === 'saving' ? 'animate-spin' : ''}`} aria-hidden="true" />
+        <span>{storageHealthLabel(storageHealth)}</span>
+      </button>
+
+      <div className="flex shrink-0 items-center gap-0.5 border-l border-[#d8d2c6] pl-1.5">
         <button
           type="button"
-          onClick={() => void handleReset()}
-          className="grid h-9 w-9 place-items-center rounded-md text-slate-500 hover:bg-rose-50 hover:text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
-          aria-label="Reset project"
-          title="Reset project"
+          onClick={() => openKnowledge()}
+          className="inline-flex h-8 items-center gap-1.5 px-2 text-[10px] font-semibold text-slate-600 hover:bg-black/[0.04] hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-400/60"
+          title="Learn how this workspace works"
         >
-          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+          <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="hidden md:inline">Learn</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setIsProjOpen(true)}
+          className="inline-flex h-8 items-center gap-1.5 px-2 text-[10px] font-semibold text-slate-600 hover:bg-black/[0.04] hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-400/60"
+          title="Open or manage projects"
+        >
+          <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="hidden md:inline">Projects</span>
+        </button>
+
+        <details className="relative">
+          <summary className="grid h-8 w-8 cursor-pointer list-none place-items-center text-slate-500 hover:bg-black/[0.04] hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-400/60 [&::-webkit-details-marker]:hidden" aria-label="Project actions" title="Project actions">
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          </summary>
+          <div className="absolute right-0 top-9 z-50 w-52 border border-slate-300 bg-[#fbfaf6] p-1 shadow-[0_12px_30px_rgba(15,23,42,0.14)]">
+            <button type="button" onClick={() => setIsTplOpen(true)} className="flex min-h-9 w-full items-center gap-2 px-2.5 text-left text-[10px] font-medium text-slate-700 hover:bg-[#eee9df] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-400">
+              <LayoutTemplate className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+              <span className="min-w-0 flex-1"><span className="block">Change template</span><span className="block truncate text-[8px] font-normal text-slate-400">{templateName || 'Custom project'}</span></span>
+              <ChevronDown className="h-3 w-3 -rotate-90 text-slate-300" aria-hidden="true" />
+            </button>
+            <div className="my-1 border-t border-slate-200" />
+            <button type="button" onClick={() => void handleReset()} className="flex min-h-9 w-full items-center gap-2 px-2.5 text-left text-[10px] font-medium text-rose-700 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-rose-300">
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Reset project
+            </button>
+          </div>
+        </details>
       </div>
 
       <ProjectManager isOpen={isProjOpen} onClose={() => setIsProjOpen(false)} />
