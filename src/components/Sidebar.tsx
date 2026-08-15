@@ -20,6 +20,8 @@ import {
   Network,
   Package,
   Palette,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Ruler,
   Settings2,
@@ -50,6 +52,8 @@ import { ArchitectureGlyph } from './visual/DeviceVisual';
 
 interface SidebarProps {
   onAddBlock?: (item: BlockLibraryItem) => void;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 const iconByKey: Record<NavigationIconKey, LucideIcon> = {
@@ -85,7 +89,11 @@ const iconByKey: Record<NavigationIconKey, LucideIcon> = {
   releases: Box,
 };
 
-export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  onAddBlock,
+  collapsed = false,
+  onToggleCollapsed,
+}) => {
   const { activeView, setActiveView, addNode } = useProjectStore();
   const {
     enabledDomains,
@@ -143,34 +151,53 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
     event.dataTransfer.effectAllowed = 'move';
   };
 
+  const navigationLabelClass = collapsed ? 'sr-only' : 'sr-only lg:not-sr-only';
+  const navigationBadgeClass = collapsed ? 'hidden' : 'hidden xl:inline-flex';
+
   return (
-    <aside className="z-20 flex h-full w-[240px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white">
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-slate-200 px-3">
-        <div className="min-w-0">
+    <aside
+      className={`z-20 flex h-full shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-[width] duration-200 ${collapsed ? 'w-16' : 'w-16 lg:w-[240px]'}`}
+      aria-label="Primary workspace navigation"
+    >
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 px-2">
+        <div className={collapsed ? 'sr-only' : 'hidden min-w-0 lg:block'}>
           <p className="truncate text-[11px] font-semibold text-slate-900">{profile.name}</p>
           <p className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-slate-400">Workspace</p>
         </div>
-        <div className="flex items-center gap-1">
-          {hiddenDomainCount > 0 && (
+        <div className="flex w-full items-center justify-center gap-1 lg:w-auto">
+          {hiddenDomainCount > 0 && !collapsed && (
             <button
               type="button"
               onClick={() => setShowAllDomains(!showAllDomains)}
-              className="grid h-7 w-7 place-items-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="hidden h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 lg:grid"
               aria-label={showAllDomains ? 'Show focused navigation' : 'Show all modules'}
               title={showAllDomains ? 'Show focused navigation' : `Show ${hiddenDomainCount} hidden modules`}
             >
-              {showAllDomains ? <EyeOff className="h-3.5 w-3.5" aria-hidden="true" /> : <Eye className="h-3.5 w-3.5" aria-hidden="true" />}
+              {showAllDomains ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
             </button>
           )}
-          <button
-            type="button"
-            onClick={openSetup}
-            className="grid h-7 w-7 place-items-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            aria-label="Configure workflow"
-            title="Configure workflow"
-          >
-            <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          {!collapsed && (
+            <button
+              type="button"
+              onClick={openSetup}
+              className="hidden h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 lg:grid"
+              aria-label="Configure workflow"
+              title="Configure workflow"
+            >
+              <Settings2 className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+          {onToggleCollapsed && (
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+              title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            >
+              {collapsed ? <PanelLeftOpen className="h-4 w-4" aria-hidden="true" /> : <PanelLeftClose className="h-4 w-4" aria-hidden="true" />}
+            </button>
+          )}
         </div>
       </div>
 
@@ -183,14 +210,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
 
             return (
               <section key={domain.id} aria-labelledby={`nav-${domain.id}`}>
-                <div className="mb-1 flex items-center justify-between px-2">
+                <div className={`mb-1 items-center justify-between px-2 ${collapsed ? 'hidden' : 'hidden lg:flex'}`}>
                   <h2 id={`nav-${domain.id}`} className="text-[8px] font-bold uppercase tracking-[0.15em] text-slate-400">{domain.label}</h2>
                   {domainIsActiveButHidden && (
                     <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide text-amber-700">Hidden</span>
                   )}
                 </div>
+                <h2 className={navigationLabelClass}>{domain.label}</h2>
 
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   {domain.items.map((item) => {
                     const Icon = iconByKey[item.icon];
                     const isActive = activeView === item.id;
@@ -200,12 +228,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
                         type="button"
                         onClick={() => setActiveView(item.id)}
                         aria-current={isActive ? 'page' : undefined}
-                        title={item.purpose}
-                        className={`group flex h-8 w-full items-center gap-2 rounded-md px-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isActive ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
+                        aria-label={collapsed ? item.label : undefined}
+                        title={`${item.label} — ${item.purpose}`}
+                        className={`group flex h-10 w-full items-center rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 ${collapsed ? 'justify-center px-0' : 'justify-center px-0 lg:justify-start lg:gap-2.5 lg:px-2.5'} ${isActive ? 'bg-slate-950 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
                       >
-                        <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-emerald-300' : 'text-slate-400 group-hover:text-slate-600'}`} aria-hidden="true" />
-                        <span className="min-w-0 flex-1 truncate text-[10px] font-semibold">{item.label}</span>
-                        <span className={`shrink-0 rounded px-1 py-0.5 font-mono text-[6px] font-bold uppercase tracking-[0.08em] ${isActive ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-400 group-hover:bg-white'}`}>{item.badge}</span>
+                        <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-emerald-300' : 'text-slate-400 group-hover:text-slate-700'}`} aria-hidden="true" />
+                        <span className={`${navigationLabelClass} min-w-0 flex-1 truncate text-[11px] font-semibold`}>{item.label}</span>
+                        <span className={`${navigationBadgeClass} shrink-0 rounded px-1.5 py-0.5 font-mono text-[7px] font-bold uppercase tracking-[0.08em] ${isActive ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-400 group-hover:bg-white'}`}>{item.badge}</span>
                       </button>
                     );
                   })}
@@ -215,8 +244,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
           })}
         </nav>
 
-        {isCanvasView && (
-          <section className="mt-4 border-t border-slate-200 pt-3" aria-labelledby="device-library-title">
+        {isCanvasView && !collapsed && (
+          <section className="mt-4 hidden border-t border-slate-200 pt-3 lg:block" aria-labelledby="device-library-title">
             <div className="mb-2 flex items-center justify-between px-1">
               <h2 id="device-library-title" className="text-[8px] font-bold uppercase tracking-[0.15em] text-slate-400">Device library</h2>
               <span className="text-[7px] font-semibold text-slate-400">Drag or click</span>
@@ -230,7 +259,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
                     <button
                       type="button"
                       onClick={() => toggleCategory(category)}
-                      className="flex w-full items-center justify-between bg-slate-50 px-2.5 py-2 text-left hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                      className="flex min-h-10 w-full items-center justify-between bg-slate-50 px-2.5 py-2 text-left hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
                       aria-expanded={isExpanded}
                     >
                       <span className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-600">{category}</span>
@@ -249,7 +278,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
                               draggable
                               onDragStart={(event) => handleDragStart(event, libraryItem)}
                               onClick={() => handleAddBlock(libraryItem)}
-                              className="group flex w-full cursor-grab items-center gap-2 rounded-md p-1.5 text-left text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              className="group flex min-h-10 w-full cursor-grab items-center gap-2 rounded-md p-1.5 text-left text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               title={`${libraryItem.name}: ${libraryItem.description}`}
                             >
                               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: family.accent, color: family.color }}>
@@ -271,6 +300,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock }) => {
             </div>
           </section>
         )}
+      </div>
+
+      <div className="shrink-0 border-t border-slate-200 p-2 lg:hidden">
+        <button
+          type="button"
+          onClick={openSetup}
+          className="grid h-10 w-full place-items-center rounded-lg text-slate-500 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          aria-label="Configure workflow"
+          title="Configure workflow"
+        >
+          <Settings2 className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
     </aside>
   );
