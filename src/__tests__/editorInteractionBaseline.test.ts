@@ -8,10 +8,14 @@ function source(relativePath: string): string {
 describe('editor-first interaction model', () => {
   it('does not mutate engineering state merely by opening authoring editors', () => {
     const adapters = source('../components/studio/UnifiedWorkbenchAdapters.tsx');
+    const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
     const firmwareSource = source('../components/firmware/FirmwareCodePreview.tsx');
 
     expect(adapters).not.toContain('placeComponentOnSchematic');
-    expect(adapters).toContain('Opening an editor must never mutate engineering state');
+    expect(adapters).toContain('<EngineeringSchematicWorkbench />');
+    expect(schematic).toContain("activeTool: 'place-component'");
+    expect(schematic).toContain('placeAtPointer');
+    expect(schematic).not.toContain('140 + column * 180');
 
     expect(firmwareSource).not.toContain('useEffect');
     expect(firmwareSource).toContain('Opening Source does not generate files');
@@ -22,64 +26,53 @@ describe('editor-first interaction model', () => {
     const subnav = source('../components/ContextSubnav.tsx');
     const dashboard = source('../components/ProjectDashboard.tsx');
     const readiness = source('../components/ReadinessDashboard.tsx');
+    const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
+    const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
 
     expect(subnav).toContain('Clicking the row itself does not mutate the project');
     expect(subnav).toContain('aria-label={`Add ${libraryItem.name} to the blueprint`}');
-    expect(subnav).not.toContain('onClick={() => handleAddBlock(libraryItem)}\n                            className="group flex');
-
     expect(dashboard).toContain('Rows are information. Only the Open button changes workspaces.');
     expect(readiness).toContain('Evidence text is inert. Use the explicit Resolve button to change workspaces.');
     expect(readiness).toContain('Gate rows show state. Only Review changes the workspace.');
+
+    expect(schematic).toContain('Place…');
+    expect(schematic).toContain('click sheet · Esc cancels');
+    expect(pcb).toContain('drag to board');
+    expect(pcb).toContain('click a pad/via/trace endpoint to begin');
   });
 
-  it('gives authoring canvases and editors the dominant workspace area', () => {
-    const product = source('../components/product/ProductStudio.tsx');
-    const electronics = source('../components/studio/ElectronicsWorkspace.tsx');
-    const schematic = source('../components/schematic/UnifiedSchematicEditor.tsx');
-    const pcb = source('../components/board/BoardDesigner.tsx');
-    const mechanical = source('../components/mechanical/MechanicalStudio.tsx');
+  it('uses one professional editor grammar for the core engineering workbenches', () => {
+    const shared = source('../components/editor/EngineeringEditorShell.tsx');
+    const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
+    const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
+    const mechanical = source('../components/mechanical/EngineeringMechanicalWorkbench.tsx');
+    const mechanicalCanvas = source('../components/mechanical/EngineeringMechanicalCanvas.tsx');
     const validation = source('../components/validation/ValidationStudio.tsx');
     const unifiedValidation = source('../components/studio/UnifiedValidationWorkbench.tsx');
     const firmwareSource = source('../components/firmware/FirmwareCodePreview.tsx');
-    const editorLayout = source('../app/editor-layout.css');
 
-    expect(product).not.toContain('productViews.map');
-    expect(product).toContain('showRequirementContext');
-    expect(product).toContain('showInspector');
+    expect(shared).toContain('EngineeringEditorBar');
+    expect(shared).toContain('EngineeringDock');
+    expect(shared).toContain('EngineeringStatusBar');
 
-    expect(electronics).not.toContain('role="tablist"');
-    expect(electronics).toContain('{renderStage(activeStage)}');
+    for (const editor of [schematic, pcb, mechanical]) {
+      expect(editor).toContain('<EngineeringEditorBar');
+      expect(editor).toContain('<EngineeringDock');
+      expect(editor).toContain('<EngineeringStatusBar');
+    }
 
-    expect(schematic).toContain('partsOpen');
-    expect(schematic).toContain('inspectorOpen');
-    expect(schematic).toContain('absolute bottom-3 left-3 top-3');
-    expect(schematic).toContain('Opening this editor never places anything automatically.');
-    expect(schematic).not.toContain('flex w-60 shrink-0 flex-col');
-    expect(schematic).not.toContain('flex w-72 shrink-0 flex-col');
+    expect(schematic).toContain('<SchematicCanvas');
+    expect(pcb).toContain('<BoardCanvas');
+    expect(pcb).not.toContain('Auto Place');
+    expect(pcb).not.toContain('Autoroute');
 
-    expect(pcb).toContain('layersOpen');
-    expect(pcb).toContain('componentsOpen');
-    expect(pcb).toContain('rightDockOpen');
-    expect(pcb).toContain('relative min-h-0 flex-1 overflow-hidden bg-white');
-    expect(pcb).not.toContain('flex w-56 shrink-0 flex-col');
-
-    expect(mechanical).toContain('objectsOpen');
-    expect(mechanical).toContain('inspectorOpen');
-    expect(mechanical).not.toContain('grid-cols-[11rem_minmax(0,1fr)_16rem]');
+    expect(mechanical).toContain('New physical feature');
+    expect(mechanical).toContain('Capture dimension & tolerance');
+    expect(mechanical).not.toContain('Rectangle');
+    expect(mechanicalCanvas).toContain('mechanicalDimensions');
 
     expect(validation).toContain('testListOpen');
-    expect(validation).toContain('absolute bottom-3 left-3 top-3');
-    expect(validation).not.toContain('width: 280');
-    expect(validation).not.toContain('tabs.map');
     expect(unifiedValidation).toContain('runPanelOpen');
-    expect(unifiedValidation).toContain('Validation run evidence');
-
     expect(firmwareSource).toContain('Firmware source editor');
-    expect(firmwareSource).toContain('min-w-0 flex-1 flex-col');
-    expect(editorLayout).toContain('nav[aria-label="Firmware workspace sections"]');
-    expect(editorLayout).toContain('Firmware engineering workspace');
-
-    expect(editorLayout).toContain('Product Design Studio');
-    expect(editorLayout).toContain('position: absolute');
   });
 });
