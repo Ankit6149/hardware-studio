@@ -6,7 +6,7 @@ function source(relativePath: string): string {
 }
 
 describe('workspace accessibility and focus baseline', () => {
-  it('provides a skip target, route announcement, and collapsible two-level navigation', () => {
+  it('provides a skip target, route announcement, and collapsible labeled two-level navigation', () => {
     const shell = source('../components/AppShell.tsx');
     const sidebar = source('../components/Sidebar.tsx');
     const subnav = source('../components/ContextSubnav.tsx');
@@ -21,8 +21,12 @@ describe('workspace accessibility and focus baseline', () => {
     expect(sidebar).toContain('aria-label="Engineering domains"');
     expect(sidebar).toContain('Show contextual navigation');
     expect(sidebar).toContain('Hide contextual navigation');
-    expect(sidebar).toContain('h-10');
-    expect(sidebar).toContain('w-14');
+    expect(sidebar).toContain('w-[68px]');
+    expect(sidebar).toContain("product: 'Product'");
+    expect(sidebar).toContain("mechanical: 'Mech'");
+    expect(sidebar).toContain("electronics: 'Elec'");
+    expect(sidebar).toContain("validation: 'Validate'");
+    expect(sidebar).toContain("outputs: 'Release'");
 
     expect(subnav).toContain('contextual navigation');
     expect(subnav).toContain('workbenches');
