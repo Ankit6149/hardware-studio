@@ -250,8 +250,8 @@ const DecisionDialog: React.FC<{
 
 export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(feedbackReducer, initialFeedbackState);
+  const [focusTargets, setFocusTargets] = useState<Record<string, HTMLElement | null>>({});
   const resolvers = useRef(new Map<string, (value: boolean | string | null) => void>());
-  const focusTargets = useRef(new Map<string, HTMLElement | null>());
 
   const dismiss = useCallback((id: string) => {
     dispatch({ type: 'dismiss-toast', id });
@@ -266,7 +266,8 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const confirm = useCallback((options: ConfirmOptions) => {
     const id = createId('confirm');
     const decision: ConfirmDecision = { ...options, id, kind: 'confirm' };
-    focusTargets.current.set(id, getFocusedElement());
+    const focusTarget = getFocusedElement();
+    setFocusTargets((current) => ({ ...current, [id]: focusTarget }));
     dispatch({ type: 'enqueue-decision', decision });
     return new Promise<boolean>((resolve) => {
       resolvers.current.set(id, resolve as (value: boolean | string | null) => void);
@@ -276,7 +277,8 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const prompt = useCallback((options: PromptOptions) => {
     const id = createId('prompt');
     const decision: PromptDecision = { ...options, id, kind: 'prompt' };
-    focusTargets.current.set(id, getFocusedElement());
+    const focusTarget = getFocusedElement();
+    setFocusTargets((current) => ({ ...current, [id]: focusTarget }));
     dispatch({ type: 'enqueue-decision', decision });
     return new Promise<string | null>((resolve) => {
       resolvers.current.set(id, resolve as (value: boolean | string | null) => void);
@@ -287,13 +289,17 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const resolver = resolvers.current.get(decision.id);
     resolver?.(result);
     resolvers.current.delete(decision.id);
-    focusTargets.current.delete(decision.id);
+    setFocusTargets((current) => {
+      const next = { ...current };
+      delete next[decision.id];
+      return next;
+    });
     dispatch({ type: 'complete-decision', id: decision.id });
   }, []);
 
   const api = useMemo<FeedbackApi>(() => ({ notify, confirm, prompt, dismiss }), [confirm, dismiss, notify, prompt]);
   const activeDecision = state.decisions[0];
-  const returnFocusTarget = activeDecision ? focusTargets.current.get(activeDecision.id) || null : null;
+  const returnFocusTarget = activeDecision ? focusTargets[activeDecision.id] || null : null;
 
   return (
     <FeedbackContext.Provider value={api}>
