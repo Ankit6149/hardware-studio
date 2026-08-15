@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { ProductDesignSafetyBoundary } from '../product-design/ProductDesignSafetyBoundary';
+import { ProductDesignDecisionBar } from '../product-design/ProductDesignDecisionBar';
 import { ProductDesignStudio } from '../product-design/ProductDesignStudio';
 import { ProductArchitectureCanvas } from './ProductArchitectureCanvas';
 import { ProductInspector } from './ProductInspector';
@@ -107,6 +108,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({ initialMode = 'pro
         {activeMode === 'product-design' && (
           <div className="flex h-full min-h-0 flex-col overflow-hidden">
             <ProductDesignSafetyBoundary />
+            <ProductDesignDecisionBar />
             <div className="min-h-0 flex-1"><ProductDesignStudio /></div>
           </div>
         )}
