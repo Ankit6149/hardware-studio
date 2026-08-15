@@ -16,34 +16,77 @@ const drcId = (prefix: string = 'gen') => `drc_${prefix}_${++drcCounter}`;
 export const runBoardDRC = (project: Project): ReviewResult[] => {
   drcCounter = 0;
   const results: ReviewResult[] = [];
-  const activeBoardId = project.activeBoardId || 'board-main';
   const boards = project.boards || [];
-  
-  // Filter design elements by activeBoardId
-  const components = (project.boardComponents || []).filter(c => c.boardId === activeBoardId);
-  const outlines = (project.boardOutlines || []).filter(o => o.boardId === activeBoardId);
-  const traces = (project.traces || []).filter(t => t.boardId === activeBoardId);
-  const vias = (project.vias || []).filter(v => v.boardId === activeBoardId);
-  const drillHoles = (project.drillHoles || []).filter(d => d.boardId === activeBoardId);
-  const keepoutZones = (project.keepoutZones || []).filter(k => k.boardId === activeBoardId);
-  
+  const activeBoardId = project.activeBoardId || '';
+
+  if (!activeBoardId) {
+    results.push({
+      id: drcId('board-context'),
+      category: 'Board',
+      severity: 'Blocker',
+      title: boards.length > 0 ? 'No active board selected' : 'No board defined',
+      description: boards.length > 0
+        ? 'DRC needs an explicit board selection. Hardware Studio will not guess which board should be checked.'
+        : 'DRC cannot run until a real PCB board has been defined for the project.',
+      linkedObjectType: 'project',
+      linkedObjectId: '',
+      suggestedFix: boards.length > 0
+        ? 'Select the board you want to check, then run DRC again.'
+        : 'Create a board in Board settings, select it, then run DRC.',
+      status: 'Open',
+    });
+    return results;
+  }
+
+  const activeBoard = boards.find((board) => board.id === activeBoardId);
+  if (!activeBoard) {
+    results.push({
+      id: drcId('board-context'),
+      category: 'Board',
+      severity: 'Blocker',
+      title: 'Active board reference is invalid',
+      description: `The selected board ID “${activeBoardId}” does not exist in the project. DRC stopped instead of checking unrelated PCB data.`,
+      linkedObjectType: 'project',
+      linkedObjectId: '',
+      suggestedFix: 'Select an existing board or repair the stale project board reference.',
+      status: 'Open',
+    });
+    return results;
+  }
+
+  // Every physical entity is scoped to the explicitly selected real board.
+  const components = (project.boardComponents || []).filter((component) => component.boardId === activeBoardId);
+  const outlines = (project.boardOutlines || []).filter((outline) => outline.boardId === activeBoardId);
+  const traces = (project.traces || []).filter((trace) => trace.boardId === activeBoardId);
+  const vias = (project.vias || []).filter((via) => via.boardId === activeBoardId);
+  const drillHoles = (project.drillHoles || []).filter((drill) => drill.boardId === activeBoardId);
+  const keepoutZones = (project.keepoutZones || []).filter((zone) => zone.boardId === activeBoardId);
+
   const nets = project.nets || [];
   const pcbLayers = project.pcbLayers || [];
   const pcbRules = project.pcbRules || [];
+  const primaryOutline = outlines[0];
+  const scopedProject: Project = {
+    ...project,
+    activeBoardId,
+    boardComponents: components,
+    boardOutlines: outlines,
+    traces,
+    vias,
+    drillHoles,
+    keepoutZones,
+  };
 
-  // Get primary board outline
-  const primaryOutline = outlines[0] || (project.boardOutlines || [])[0];
-  const minTraceWidth = pcbRules.find(r => r.ruleType === 'Trace Width')?.value
-    ? parseFloat(pcbRules.find(r => r.ruleType === 'Trace Width')!.value!)
-    : 0.1;
+  const traceWidthRule = pcbRules.find((rule) => rule.ruleType === 'Trace Width')?.value;
+  const minTraceWidth = traceWidthRule ? Number.parseFloat(traceWidthRule) : 0.1;
 
   // ── Board outline checks ─────────────────────────────────
-  if (boards.length > 0 && outlines.length === 0) {
+  if (outlines.length === 0) {
     results.push({
       id: drcId(), category: 'Board', severity: 'Blocker',
       title: 'Missing board outline',
-      description: 'No board outline is defined. Manufacturing files require a board boundary.',
-      linkedObjectType: 'board', linkedObjectId: boards[0]?.id || '',
+      description: `No board outline is defined for ${activeBoard.name}. Manufacturing files require an explicit board boundary.`,
+      linkedObjectType: 'board', linkedObjectId: activeBoard.id,
       suggestedFix: 'Create a board outline in the Board Designer.',
       status: 'Open',
     });
@@ -51,13 +94,13 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
 
   if (primaryOutline) {
     const bounds = getOutlineBounds(primaryOutline);
-    const w = bounds.maxX - bounds.minX;
-    const h = bounds.maxY - bounds.minY;
-    if (w <= 0 || h <= 0) {
+    const width = bounds.maxX - bounds.minX;
+    const height = bounds.maxY - bounds.minY;
+    if (width <= 0 || height <= 0) {
       results.push({
         id: drcId(), category: 'Board', severity: 'Error',
         title: 'Invalid board dimensions',
-        description: `Board outline has zero or negative dimensions (${w.toFixed(1)}×${h.toFixed(1)}mm).`,
+        description: `Board outline has zero or negative dimensions (${width.toFixed(1)}×${height.toFixed(1)}mm).`,
         linkedObjectType: 'outline', linkedObjectId: primaryOutline.id,
         suggestedFix: 'Resize the board outline to valid positive dimensions.',
         status: 'Open',
@@ -66,98 +109,92 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
   }
 
   // ── Layer checks ─────────────────────────────────────────
-  if (boards.length > 0 && pcbLayers.length === 0) {
+  if (pcbLayers.length === 0) {
     results.push({
       id: drcId(), category: 'Layers', severity: 'Warning',
       title: 'No PCB layers defined',
       description: 'Layer stack is empty. At minimum, top and bottom copper layers are needed.',
-      linkedObjectType: 'board', linkedObjectId: boards[0]?.id || '',
-      suggestedFix: 'Generate the product plan to auto-create PCB layers.',
+      linkedObjectType: 'board', linkedObjectId: activeBoard.id,
+      suggestedFix: 'Define the layer stack for this board before manufacturing review.',
       status: 'Open',
     });
   }
 
   // ── Component checks ─────────────────────────────────────
   const refdeses = new Set<string>();
-  for (const comp of components) {
-    // Missing footprint
-    const fp = getFootprint(comp.footprint);
-    if (!comp.footprint || (fp.name === 'CUSTOM_RECT' && comp.footprint !== 'CUSTOM_RECT')) {
+  for (const component of components) {
+    const footprint = getFootprint(component.footprint);
+    if (!component.footprint || (footprint.name === 'CUSTOM_RECT' && component.footprint !== 'CUSTOM_RECT')) {
       results.push({
         id: drcId(), category: 'Component', severity: 'Warning',
-        title: `Missing footprint: ${comp.referenceDesignator}`,
-        description: `Component ${comp.componentName} (${comp.referenceDesignator}) has no valid footprint assigned.`,
-        linkedObjectType: 'component', linkedObjectId: comp.id,
-        suggestedFix: `Assign a footprint from the library to ${comp.referenceDesignator}.`,
+        title: `Missing footprint: ${component.referenceDesignator}`,
+        description: `Component ${component.componentName} (${component.referenceDesignator}) has no valid footprint assigned.`,
+        linkedObjectType: 'component', linkedObjectId: component.id,
+        suggestedFix: `Assign a footprint from the library to ${component.referenceDesignator}.`,
         status: 'Open',
       });
     }
 
-    // Unplaced
-    if (comp.placementX == null || comp.placementY == null) {
+    if (component.placementX == null || component.placementY == null) {
       results.push({
         id: drcId(), category: 'Component', severity: 'Warning',
-        title: `Unplaced component: ${comp.referenceDesignator}`,
-        description: `${comp.componentName} (${comp.referenceDesignator}) has no board placement coordinates.`,
-        linkedObjectType: 'component', linkedObjectId: comp.id,
-        suggestedFix: 'Place the component on the board or use Auto Place.',
+        title: `Unplaced component: ${component.referenceDesignator}`,
+        description: `${component.componentName} (${component.referenceDesignator}) has no board placement coordinates.`,
+        linkedObjectType: 'component', linkedObjectId: component.id,
+        suggestedFix: 'Place the component on the selected board.',
         status: 'Open',
       });
     }
 
-    // Outside board
-    if (comp.placementX != null && comp.placementY != null && primaryOutline) {
-      if (!isPointInsideOutline({ x: comp.placementX, y: comp.placementY }, primaryOutline)) {
+    if (component.placementX != null && component.placementY != null && primaryOutline) {
+      if (!isPointInsideOutline({ x: component.placementX, y: component.placementY }, primaryOutline)) {
         results.push({
           id: drcId(), category: 'Component', severity: 'Error',
-          title: `Component outside board: ${comp.referenceDesignator}`,
-          description: `${comp.referenceDesignator} center (${comp.placementX?.toFixed(1)}, ${comp.placementY?.toFixed(1)}) is outside the board outline.`,
-          linkedObjectType: 'component', linkedObjectId: comp.id,
+          title: `Component outside board: ${component.referenceDesignator}`,
+          description: `${component.referenceDesignator} center (${component.placementX.toFixed(1)}, ${component.placementY.toFixed(1)}) is outside the selected board outline.`,
+          linkedObjectType: 'component', linkedObjectId: component.id,
           suggestedFix: 'Move the component inside the board boundary.',
           status: 'Open',
         });
       }
     }
 
-    // Duplicate refdes
-    if (refdeses.has(comp.referenceDesignator)) {
+    if (refdeses.has(component.referenceDesignator)) {
       results.push({
         id: drcId(), category: 'Component', severity: 'Error',
-        title: `Duplicate reference designator: ${comp.referenceDesignator}`,
-        description: `Multiple components share the reference designator ${comp.referenceDesignator}.`,
-        linkedObjectType: 'component', linkedObjectId: comp.id,
+        title: `Duplicate reference designator: ${component.referenceDesignator}`,
+        description: `Multiple components on this board share the reference designator ${component.referenceDesignator}.`,
+        linkedObjectType: 'component', linkedObjectId: component.id,
         suggestedFix: 'Assign unique reference designators to each component.',
         status: 'Open',
       });
     }
-    refdeses.add(comp.referenceDesignator);
+    refdeses.add(component.referenceDesignator);
 
-    // Unknown side
-    if (comp.side === 'Unknown') {
+    if (component.side === 'Unknown') {
       results.push({
         id: drcId(), category: 'Component', severity: 'Info',
-        title: `Unknown side: ${comp.referenceDesignator}`,
-        description: `${comp.referenceDesignator} does not have a defined board side (Top/Bottom).`,
-        linkedObjectType: 'component', linkedObjectId: comp.id,
+        title: `Unknown side: ${component.referenceDesignator}`,
+        description: `${component.referenceDesignator} does not have a defined board side (Top/Bottom).`,
+        linkedObjectType: 'component', linkedObjectId: component.id,
         suggestedFix: 'Set the component side to Top or Bottom.',
         status: 'Open',
       });
     }
   }
 
-  // Overlapping components (only if on the same side)
-  for (let i = 0; i < components.length; i++) {
-    for (let j = i + 1; j < components.length; j++) {
-      const a = components[i];
-      const b = components[j];
-      if (a.placementX == null || b.placementX == null) continue;
-      if (a.side !== b.side) continue; // Components on opposite sides do not overlap
-      if (componentsOverlap(a, b)) {
+  for (let index = 0; index < components.length; index += 1) {
+    for (let nextIndex = index + 1; nextIndex < components.length; nextIndex += 1) {
+      const first = components[index];
+      const second = components[nextIndex];
+      if (first.placementX == null || second.placementX == null) continue;
+      if (first.side !== second.side) continue;
+      if (componentsOverlap(first, second)) {
         results.push({
           id: drcId('overlap'), category: 'Component', severity: 'Error',
-          title: `Overlapping components: ${a.referenceDesignator} & ${b.referenceDesignator}`,
-          description: `Courtyard areas of ${a.referenceDesignator} and ${b.referenceDesignator} overlap on the ${a.side} side.`,
-          linkedObjectType: 'component', linkedObjectId: a.id,
+          title: `Overlapping components: ${first.referenceDesignator} & ${second.referenceDesignator}`,
+          description: `Courtyard areas of ${first.referenceDesignator} and ${second.referenceDesignator} overlap on the ${first.side} side.`,
+          linkedObjectType: 'component', linkedObjectId: first.id,
           suggestedFix: 'Move one of the components to eliminate overlap.',
           status: 'Open',
         });
@@ -169,7 +206,6 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
   for (const trace of traces) {
     if (!trace.points || trace.points.length < 2) continue;
 
-    // Width below rule
     if (trace.width != null && trace.width < minTraceWidth) {
       results.push({
         id: drcId(), category: 'Trace', severity: 'Warning',
@@ -181,8 +217,8 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
       });
     }
 
-    // Power trace too thin
-    const isPowerNet = trace.netName && ['gnd', 'vbat', '3v3', 'vcc', 'vdd'].some(p => trace.netName!.toLowerCase().includes(p));
+    const isPowerNet = trace.netName
+      && ['gnd', 'vbat', '3v3', 'vcc', 'vdd'].some((pattern) => trace.netName!.toLowerCase().includes(pattern));
     if (isPowerNet && trace.width != null && trace.width < 0.25) {
       results.push({
         id: drcId(), category: 'Trace', severity: 'Warning',
@@ -194,44 +230,42 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
       });
     }
 
-    // Trace outside board
     if (primaryOutline) {
-      for (const pt of trace.points) {
-        if (!isPointInsideOutline(pt, primaryOutline)) {
+      for (const point of trace.points) {
+        if (!isPointInsideOutline(point, primaryOutline)) {
           results.push({
             id: drcId(), category: 'Trace', severity: 'Error',
             title: `Trace outside board: ${trace.netName || trace.id}`,
-            description: `Trace point (${pt.x.toFixed(1)}, ${pt.y.toFixed(1)}) is outside the board outline.`,
+            description: `Trace point (${point.x.toFixed(1)}, ${point.y.toFixed(1)}) is outside the selected board outline.`,
             linkedObjectType: 'trace', linkedObjectId: trace.id,
             suggestedFix: 'Reroute the trace to stay within board boundaries.',
             status: 'Open',
           });
-          break; // one warning per trace
+          break;
         }
       }
     }
   }
 
   // ── Unrouted nets ────────────────────────────────────────
-  const netNames = new Set(nets.map(n => n.netName));
+  const netNames = new Set(nets.map((net) => net.netName));
   for (const netName of netNames) {
-    const pads = getPadsForNet(project, netName);
+    const pads = getPadsForNet(scopedProject, netName);
     if (pads.length < 2) continue;
-    const netTraces = traces.filter(t => t.netName === netName);
+    const netTraces = traces.filter((trace) => trace.netName === netName);
     if (netTraces.length === 0) {
       results.push({
         id: drcId(), category: 'Routing', severity: 'Warning',
         title: `Unrouted net: ${netName}`,
-        description: `Net ${netName} has ${pads.length} pads but no traces.`,
-        linkedObjectType: 'net', linkedObjectId: nets.find(n => n.netName === netName)?.id || '',
-        suggestedFix: `Route ${netName} using the Route Trace tool or Rough Autoroute.`,
+        description: `Net ${netName} has ${pads.length} pads on ${activeBoard.name} but no traces.`,
+        linkedObjectType: 'net', linkedObjectId: nets.find((net) => net.netName === netName)?.id || '',
+        suggestedFix: `Route ${netName} on the selected board.`,
         status: 'Open',
       });
     }
   }
 
-  // Check for missing GND net
-  if (nets.length > 0 && !nets.some(n => n.netName.toLowerCase().includes('gnd'))) {
+  if (nets.length > 0 && !nets.some((net) => net.netName.toLowerCase().includes('gnd'))) {
     results.push({
       id: drcId(), category: 'Routing', severity: 'Warning',
       title: 'Missing GND net',
@@ -244,17 +278,15 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
 
   // ── Via checks ───────────────────────────────────────────
   for (const via of vias) {
-    if (via.x != null && via.y != null && primaryOutline) {
-      if (!isPointInsideOutline({ x: via.x, y: via.y }, primaryOutline)) {
-        results.push({
-          id: drcId(), category: 'Via', severity: 'Error',
-          title: 'Via outside board',
-          description: `Via at (${via.x?.toFixed(1)}, ${via.y?.toFixed(1)}) is outside the board outline.`,
-          linkedObjectType: 'via', linkedObjectId: via.id,
-          suggestedFix: 'Move the via inside the board boundary.',
-          status: 'Open',
-        });
-      }
+    if (via.x != null && via.y != null && primaryOutline && !isPointInsideOutline({ x: via.x, y: via.y }, primaryOutline)) {
+      results.push({
+        id: drcId(), category: 'Via', severity: 'Error',
+        title: 'Via outside board',
+        description: `Via at (${via.x.toFixed(1)}, ${via.y.toFixed(1)}) is outside the selected board outline.`,
+        linkedObjectType: 'via', linkedObjectId: via.id,
+        suggestedFix: 'Move the via inside the board boundary.',
+        status: 'Open',
+      });
     }
     if (via.drillDiameter != null && via.drillDiameter < 0.15) {
       results.push({
@@ -275,72 +307,66 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
         results.push({
           id: drcId(), category: 'Drill', severity: 'Error',
           title: 'Drill hole outside board',
-          description: `Drill at (${drill.x?.toFixed(1)}, ${drill.y?.toFixed(1)}) is outside the board outline.`,
+          description: `Drill at (${drill.x.toFixed(1)}, ${drill.y.toFixed(1)}) is outside the selected board outline.`,
           linkedObjectType: 'drill', linkedObjectId: drill.id,
           suggestedFix: 'Move the drill hole inside the board boundary.',
           status: 'Open',
         });
       }
 
-      // Too close to edge
-      if (primaryOutline) {
-        const bounds = getOutlineBounds(primaryOutline);
-        const edgeDist = Math.min(
-          (drill.x ?? 0) - bounds.minX,
-          bounds.maxX - (drill.x ?? 0),
-          (drill.y ?? 0) - bounds.minY,
-          bounds.maxY - (drill.y ?? 0)
-        );
-        if (edgeDist < 0.5 && edgeDist >= 0) {
-          results.push({
-            id: drcId(), category: 'Drill', severity: 'Warning',
-            title: 'Drill hole too close to board edge',
-            description: `Drill at (${drill.x?.toFixed(1)}, ${drill.y?.toFixed(1)}) is only ${edgeDist.toFixed(2)}mm from board edge.`,
-            linkedObjectType: 'drill', linkedObjectId: drill.id,
-            suggestedFix: 'Move drill hole at least 0.5mm from the board edge.',
-            status: 'Open',
-          });
-        }
+      const bounds = getOutlineBounds(primaryOutline);
+      const edgeDistance = Math.min(
+        drill.x - bounds.minX,
+        bounds.maxX - drill.x,
+        drill.y - bounds.minY,
+        bounds.maxY - drill.y,
+      );
+      if (edgeDistance < 0.5 && edgeDistance >= 0) {
+        results.push({
+          id: drcId(), category: 'Drill', severity: 'Warning',
+          title: 'Drill hole too close to board edge',
+          description: `Drill at (${drill.x.toFixed(1)}, ${drill.y.toFixed(1)}) is only ${edgeDistance.toFixed(2)}mm from board edge.`,
+          linkedObjectType: 'drill', linkedObjectId: drill.id,
+          suggestedFix: 'Move drill hole at least 0.5mm from the board edge.',
+          status: 'Open',
+        });
       }
     }
   }
 
   // ── Keepout zone violations ──────────────────────────────
   for (const zone of keepoutZones) {
-    const zMinX = zone.x;
-    const zMinY = zone.y;
-    const zMaxX = zone.x + zone.width;
-    const zMaxY = zone.y + zone.height;
+    const minX = zone.x;
+    const minY = zone.y;
+    const maxX = zone.x + zone.width;
+    const maxY = zone.y + zone.height;
 
-    // Components inside keepout
-    for (const comp of components) {
-      if (comp.placementX == null || comp.placementY == null) continue;
-      if (comp.placementX >= zMinX && comp.placementX <= zMaxX &&
-          comp.placementY >= zMinY && comp.placementY <= zMaxY) {
+    for (const component of components) {
+      if (component.placementX == null || component.placementY == null) continue;
+      if (component.placementX >= minX && component.placementX <= maxX
+        && component.placementY >= minY && component.placementY <= maxY) {
         results.push({
           id: drcId(), category: 'Keepout', severity: 'Error',
-          title: `Component in keepout: ${comp.referenceDesignator}`,
-          description: `${comp.referenceDesignator} is placed inside keepout zone "${zone.reason}".`,
-          linkedObjectType: 'component', linkedObjectId: comp.id,
-          suggestedFix: `Move ${comp.referenceDesignator} outside the ${zone.reason} keepout zone.`,
+          title: `Component in keepout: ${component.referenceDesignator}`,
+          description: `${component.referenceDesignator} is placed inside keepout zone “${zone.reason}”.`,
+          linkedObjectType: 'component', linkedObjectId: component.id,
+          suggestedFix: `Move ${component.referenceDesignator} outside the ${zone.reason} keepout zone.`,
           status: 'Open',
         });
       }
     }
 
-    // Vias inside keepout
     for (const via of vias) {
-      if (via.x != null && via.y != null) {
-        if (via.x >= zMinX && via.x <= zMaxX && via.y >= zMinY && via.y <= zMaxY) {
-          results.push({
-            id: drcId(), category: 'Keepout', severity: 'Error',
-            title: `Via in keepout zone`,
-            description: `Via at (${via.x.toFixed(1)}, ${via.y.toFixed(1)}) is inside keepout "${zone.reason}".`,
-            linkedObjectType: 'via', linkedObjectId: via.id,
-            suggestedFix: 'Move the via outside the keepout zone.',
-            status: 'Open',
-          });
-        }
+      if (via.x != null && via.y != null
+        && via.x >= minX && via.x <= maxX && via.y >= minY && via.y <= maxY) {
+        results.push({
+          id: drcId(), category: 'Keepout', severity: 'Error',
+          title: 'Via in keepout zone',
+          description: `Via at (${via.x.toFixed(1)}, ${via.y.toFixed(1)}) is inside keepout “${zone.reason}”.`,
+          linkedObjectType: 'via', linkedObjectId: via.id,
+          suggestedFix: 'Move the via outside the keepout zone.',
+          status: 'Open',
+        });
       }
     }
   }
