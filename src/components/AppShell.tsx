@@ -17,7 +17,6 @@ import { ProductVisualizer } from './ProductVisualizer';
 import { PowerBudgetTable } from './PowerBudgetTable';
 import { PinMapTable } from './PinMapTable';
 import { ReadinessDashboard } from './ReadinessDashboard';
-import { BoardStudio } from './BoardStudio';
 import { PCBConstraints } from './PCBConstraints';
 import { ProjectDashboard } from './ProjectDashboard';
 import { BlueprintSheets } from './BlueprintSheets';
@@ -26,18 +25,12 @@ import { RevisionsStudio } from './revisions/RevisionsStudio';
 import { ProductStudio } from './product/ProductStudio';
 import { FirmwareStudio } from './firmware/FirmwareStudio';
 import { EngineeringContextBar } from './studio/EngineeringContextBar';
-import { UnifiedBOMWorkbench } from './studio/UnifiedBOMWorkbench';
-import { UnifiedBoardDRCWorkbench } from './studio/UnifiedBoardDRCWorkbench';
 import { UnifiedValidationWorkbench } from './studio/UnifiedValidationWorkbench';
-import {
-  UnifiedBoardDesignerWorkbench,
-  UnifiedComponentLibraryWorkbench,
-  UnifiedMechanicalWorkbench,
-  UnifiedSchematicWorkbench,
-} from './studio/UnifiedWorkbenchAdapters';
+import { UnifiedMechanicalWorkbench } from './studio/UnifiedWorkbenchAdapters';
+import { ElectronicsWorkspace, ELECTRONICS_WORKSPACE_VIEW_IDS } from './studio/ElectronicsWorkspace';
 
 function renderSurface(surface: NavigationSurface, viewId: string): React.ReactNode {
-  if (viewId === 'pcb-drc') return <UnifiedBoardDRCWorkbench />;
+  if (ELECTRONICS_WORKSPACE_VIEW_IDS.has(viewId)) return <ElectronicsWorkspace />;
 
   switch (surface) {
     case 'dashboard': return <ProjectDashboard />;
@@ -46,13 +39,8 @@ function renderSurface(surface: NavigationSurface, viewId: string): React.ReactN
     case 'readiness': return <ReadinessDashboard />;
     case 'mechanical-canvas': return <UnifiedMechanicalWorkbench defaultMode="canvas" />;
     case 'mechanical-assembly': return <UnifiedMechanicalWorkbench defaultMode="assembly" />;
-    case 'component-library': return <UnifiedComponentLibraryWorkbench />;
-    case 'schematic-editor': return <UnifiedSchematicWorkbench />;
     case 'power-budget': return <PowerBudgetTable />;
     case 'pin-map': return <PinMapTable />;
-    case 'bom': return <UnifiedBOMWorkbench />;
-    case 'board-designer': return <UnifiedBoardDesignerWorkbench />;
-    case 'board-studio': return <BoardStudio />;
     case 'pcb-constraints': return <PCBConstraints />;
     case 'firmware-modules': return <FirmwareStudio initialMode="modules" />;
     case 'firmware-state-machine': return <FirmwareStudio initialMode="state-machine" />;
@@ -65,6 +53,12 @@ function renderSurface(surface: NavigationSurface, viewId: string): React.ReactN
     case 'exports': return <ExportCenter />;
     case 'revisions': return <RevisionsStudio />;
     case 'factory-builder': return <FactoryPackageBuilder />;
+    case 'component-library':
+    case 'schematic-editor':
+    case 'bom':
+    case 'board-designer':
+    case 'board-studio':
+      return <ElectronicsWorkspace />;
   }
 }
 
