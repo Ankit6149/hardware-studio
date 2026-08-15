@@ -64,18 +64,20 @@ describe('golden-path regression guards', () => {
     expect(boardDesigner).toContain("setActiveView('schematic-editor')");
   });
 
-  it('mounts one shared engineering context above the workbench instead of duplicate global navigation', () => {
+  it('mounts one shared engineering context and one connected electronics workspace instead of duplicate global navigation', () => {
     const appShell = source('../components/AppShell.tsx');
+    const electronicsWorkspace = source('../components/studio/ElectronicsWorkspace.tsx');
     expect(appShell).not.toContain('<StudioBuildMap />');
     expect(appShell).toContain('<EngineeringContextBar />');
-    expect(appShell).toContain('UnifiedComponentLibraryWorkbench');
-    expect(appShell).toContain('UnifiedSchematicWorkbench');
-    expect(appShell).toContain('UnifiedBoardDesignerWorkbench');
+    expect(appShell).toContain('<ElectronicsWorkspace />');
+    expect(appShell).toContain('ELECTRONICS_WORKSPACE_VIEW_IDS.has(viewId)');
     expect(appShell).toContain('UnifiedMechanicalWorkbench');
-    expect(appShell).toContain('<UnifiedBOMWorkbench />');
     expect(appShell).toContain('<UnifiedValidationWorkbench initialMode="tests" />');
-    expect(appShell).toContain("viewId === 'pcb-drc'");
-    expect(appShell).toContain('<UnifiedBoardDRCWorkbench />');
+    expect(electronicsWorkspace).toContain('UnifiedComponentLibraryWorkbench');
+    expect(electronicsWorkspace).toContain('UnifiedSchematicWorkbench');
+    expect(electronicsWorkspace).toContain('UnifiedBoardDesignerWorkbench');
+    expect(electronicsWorkspace).toContain('<UnifiedBoardDRCWorkbench />');
+    expect(electronicsWorkspace).toContain('<UnifiedBOMWorkbench />');
   });
 
   it('adapts editors to the selected canonical definition and component instance', () => {

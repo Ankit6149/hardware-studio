@@ -52,9 +52,10 @@ describe('electronics workspace lifecycle evidence', () => {
       componentCount: 1,
       schematicPlacedCount: 0,
       pcbPlacedCount: 0,
-      linkedBomCount: 0,
+      linkedBomCount: 1,
       nextStage: 'schematic-editor',
     });
+    expect(useProjectStore.getState().boardComponents[0].bomItemId).toBeTruthy();
 
     store.placeComponentOnSchematic(component.id, 120, 120);
     snapshot = evaluateElectronicsWorkflow(useProjectStore.getState());
@@ -62,30 +63,13 @@ describe('electronics workspace lifecycle evidence', () => {
 
     store.placeComponentOnBoard(component.id, 12, 10, 'Top');
     snapshot = evaluateElectronicsWorkflow(useProjectStore.getState());
-    expect(snapshot.nextStage).toBe('bom');
-
-    const bomId = `bom_${component.id}`;
-    store.updateProjectState({
-      bom: [{
-        id: bomId,
-        blockName: component.componentName,
-        candidateComponent: component.value || component.componentName,
-        partNumber: component.partNumber,
-        stage: 'Prototype',
-        quantity: 1,
-        packageSize: component.footprint,
-        status: 'Not Started',
-      }],
-    });
-    store.updateProjectComponent(component.id, { bomItemId: bomId });
-
-    snapshot = evaluateElectronicsWorkflow(useProjectStore.getState());
     expect(snapshot).toMatchObject({
       componentCount: 1,
       schematicPlacedCount: 1,
       pcbPlacedCount: 1,
       linkedBomCount: 1,
       hasBoardOutline: true,
+      nextStage: 'pcb-drc',
     });
   });
 });
