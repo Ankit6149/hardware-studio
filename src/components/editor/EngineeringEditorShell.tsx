@@ -20,18 +20,18 @@ export const EngineeringEditorBar: React.FC<EngineeringEditorBarProps> = ({
   docks,
   actions,
 }) => (
-  <header className="flex min-h-12 shrink-0 items-center gap-2 border-b border-[#cbc7bd] bg-[#f8f6f0] px-2.5 py-1.5 shadow-[0_1px_0_rgba(17,17,15,0.03)]" data-editor-chrome="command-bar">
-    <div className="min-w-[10.5rem] max-w-[17rem] border-r border-[#d8d4ca] pr-3">
+  <header className="flex min-h-[52px] shrink-0 items-center gap-2 border-b border-[#c8c3b8] bg-[#f8f6f0] px-2.5 py-1.5" data-editor-chrome="command-bar">
+    <div className="min-w-[11.5rem] max-w-[18rem] border-r border-[#d8d4ca] pr-3">
       <div className="flex min-w-0 items-baseline gap-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-500">{domain}</span>
-        <span className="text-[10px] text-slate-300">/</span>
-        <span className="truncate text-[12px] font-semibold tracking-[-0.01em] text-slate-950">{title}</span>
+        <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">{domain}</span>
+        <span className="text-[9px] text-slate-300">/</span>
+        <span className="truncate text-[13px] font-semibold tracking-[-0.018em] text-slate-950">{title}</span>
       </div>
-      {meta && <div className="mt-0.5 truncate text-[10px] leading-4 text-slate-500">{meta}</div>}
+      {meta && <div className="mt-0.5 truncate text-[9px] leading-4 text-slate-500">{meta}</div>}
     </div>
 
     {tools && (
-      <div className="flex min-w-0 items-center gap-px border border-[#d8d4ca] bg-[#ebe8e0] p-px" aria-label={`${domain} editor tools`}>
+      <div className="flex min-w-0 items-center gap-px overflow-x-auto border border-[#d8d4ca] bg-[#ebe8e0] p-px" aria-label={`${domain} editor tools`}>
         {tools}
       </div>
     )}
@@ -107,10 +107,10 @@ export const EditorToolButton: React.FC<{
       aria-pressed={active}
       aria-label={label}
       title={tooltip}
-      className={`group inline-flex h-8 items-center gap-1.5 px-2.5 text-[10px] font-medium focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-30 ${active ? 'bg-slate-950 text-white' : 'bg-[#f8f6f0] text-slate-650 hover:bg-white hover:text-slate-950'}`}
+      className={`group inline-flex h-9 shrink-0 items-center gap-1.5 px-2.5 text-[10px] font-semibold focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-30 ${active ? 'bg-slate-950 text-white' : 'bg-[#f8f6f0] text-slate-650 hover:bg-white hover:text-slate-950'}`}
     >
-      <span className="grid h-4 w-4 place-items-center" aria-hidden="true">{children}</span>
-      <span className="hidden xl:inline">{label}</span>
+      <span className="grid h-[18px] w-[18px] place-items-center" aria-hidden="true">{children}</span>
+      <span className="hidden lg:inline">{label}</span>
       {shortcut && <span className={`hidden 2xl:inline font-mono text-[8px] ${active ? 'text-white/55' : 'text-slate-400'}`}>{shortcut}</span>}
     </button>
   );
