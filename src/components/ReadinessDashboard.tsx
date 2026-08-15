@@ -1,272 +1,299 @@
+'use client';
+
 import React from 'react';
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  ChevronRight,
+  CircleDot,
+  FileCheck2,
+  LockKeyhole,
+  ShieldAlert,
+} from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { calculateReadinessScore } from '../lib/readinessScore';
-import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
-import { Badge } from '../ui/Badge';
-import { 
-  ShieldAlert, 
-  CheckSquare, 
-  CheckCircle2
-} from 'lucide-react';
+
+interface IssueRoute {
+  viewId: string;
+  label: string;
+}
+
+function routeForIssue(issue: string): IssueRoute {
+  const text = issue.toLowerCase();
+  if (text.includes('architecture')) return { viewId: 'product-architecture', label: 'Open architecture' };
+  if (text.includes('mechanical') || text.includes('shell') || text.includes('casing')) return { viewId: 'mechanical-studio', label: 'Open mechanical' };
+  if (text.includes('assembly')) return { viewId: 'assembly-stack', label: 'Open assembly' };
+  if (text.includes('board') && text.includes('dimension')) return { viewId: 'board-settings', label: 'Open board settings' };
+  if (text.includes('pcb drc') || text.includes('footprint') || text.includes('placement')) return { viewId: 'pcb-drc', label: 'Open board review' };
+  if (text.includes('schematic') || text.includes('erc') || text.includes('circuit')) return { viewId: 'schematic-editor', label: 'Open schematic' };
+  if (text.includes('gnd') || text.includes('net') || text.includes('routing')) return { viewId: 'board-designer', label: 'Open routing' };
+  if (text.includes('battery') || text.includes('power')) return { viewId: 'power-tree', label: 'Open power tree' };
+  if (text.includes('pin')) return { viewId: 'pin-map', label: 'Open pin map' };
+  if (text.includes('firmware') || text.includes('driver')) return { viewId: 'firmware-studio', label: 'Open firmware' };
+  if (text.includes('test') || text.includes('validation')) return { viewId: 'validation-studio', label: 'Open validation' };
+  if (text.includes('factory') || text.includes('handoff') || text.includes('production')) return { viewId: 'factory-builder', label: 'Open factory package' };
+  if (text.includes('export') || text.includes('drawing')) return { viewId: 'exports', label: 'Open outputs' };
+  return { viewId: 'dashboard', label: 'Open project overview' };
+}
 
 export const ReadinessDashboard: React.FC = () => {
   const project = useProjectStore();
+  const { setActiveView } = project;
   const report = calculateReadinessScore(project);
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-emerald-500 stroke-emerald-500';
-    if (score >= 50) return 'text-amber-500 stroke-amber-500';
-    return 'text-rose-500 stroke-rose-500';
-  };
+  const firstBlocker = report.blockers[0];
+  const blockerRoute = firstBlocker ? routeForIssue(firstBlocker) : null;
 
-  const getCategoryProgressColor = (score: number) => {
-    if (score >= 80) return 'bg-emerald-500';
-    if (score >= 50) return 'bg-amber-500';
-    return 'bg-rose-500';
-  };
+  const currentDecision = report.canMoveToFabrication
+    ? {
+        eyebrow: 'Fabrication evidence satisfied',
+        title: 'Review and publish the frozen release candidate',
+        detail: 'Automated lifecycle gates no longer report a blocker. The remaining act is a human release decision against the frozen candidate and its evidence.',
+        consequence: 'Publishing creates a release record. It must not silently change the working design.',
+        action: { viewId: 'releases', label: 'Review release candidate' },
+        tone: 'emerald',
+      }
+    : report.canMoveToFactoryHandoff
+      ? {
+          eyebrow: 'Prototype gate satisfied',
+          title: 'Decide whether the factory package is ready for independent review',
+          detail: 'Prototype evidence is sufficient, but fabrication still depends on the manufacturing package and explicit review evidence.',
+          consequence: 'Moving forward opens factory review; it does not authorize fabrication by itself.',
+          action: { viewId: 'factory-builder', label: 'Review factory package' },
+          tone: 'sky',
+        }
+      : report.canMoveToPrototype
+        ? {
+            eyebrow: 'Planning evidence satisfied',
+            title: 'Decide whether the design is ready for prototype preparation',
+            detail: 'Planning gates are satisfied. Review physical, electrical, firmware, and validation evidence before spending money on a prototype.',
+            consequence: 'Advancing means prototype preparation can begin; unresolved factory requirements remain separate.',
+            action: { viewId: 'validation-studio', label: 'Review validation evidence' },
+            tone: 'sky',
+          }
+        : firstBlocker && blockerRoute
+          ? {
+              eyebrow: `${report.blockers.length} blocking decision${report.blockers.length === 1 ? '' : 's'}`,
+              title: firstBlocker,
+              detail: 'This is the first unresolved condition preventing the next lifecycle decision. Resolve the responsible engineering evidence before advancing.',
+              consequence: 'Until it is resolved, prototype/release readiness must remain blocked regardless of the numerical score.',
+              action: blockerRoute,
+              tone: 'rose',
+            }
+          : {
+              eyebrow: 'Verification work remains',
+              title: report.warnings[0] || 'Review the next incomplete engineering gate',
+              detail: 'There is no hard blocker recorded, but evidence is still incomplete. Close the highest-value verification gap rather than adding more project records.',
+              consequence: 'The lifecycle stays at its current gate until the missing evidence is recorded.',
+              action: routeForIssue(report.warnings[0] || ''),
+              tone: 'amber',
+            };
+
+  const gates = [
+    { label: 'Planning', passed: report.isPlanningReady, viewId: 'dashboard' },
+    { label: 'Blueprint', passed: report.isBlueprintPackReady, viewId: 'blueprint-sheets' },
+    { label: 'Editor geometry', passed: report.isEditorLayoutReady, viewId: 'mechanical-studio' },
+    { label: 'Schematic', passed: report.isSchematicDraftReady, viewId: 'schematic-editor' },
+    { label: 'PCB layout', passed: report.isPcbLayoutDraftReady, viewId: 'board-designer' },
+    { label: 'Routing', passed: report.isRoutingDraftReady, viewId: 'board-designer' },
+    { label: 'Prototype', passed: report.canMoveToPrototype, viewId: 'validation-studio' },
+    { label: 'Factory handoff', passed: report.canMoveToFactoryHandoff, viewId: 'factory-builder' },
+    { label: 'Fabrication', passed: report.canMoveToFabrication, viewId: 'releases' },
+  ];
+
+  const categories = [
+    ['Product architecture', report.categories.architecture],
+    ['Mechanical', report.categories.mechanical],
+    ['Assembly', report.categories.assembly],
+    ['Board preparation', report.categories.boardPrep],
+    ['Component placement', report.categories.components],
+    ['Schematic / electronics', report.categories.electronics],
+    ['Nets / routing', report.categories.nets],
+    ['Pin map', report.categories.pinMap],
+    ['Power', report.categories.power],
+    ['Firmware', report.categories.firmware],
+    ['Validation', report.categories.testing],
+    ['Manufacturing', report.categories.manufacturing],
+    ['Native exports', report.categories.nativeExports],
+    ['Factory files', report.categories.factoryFiles],
+    ['Safety', report.categories.safety],
+  ] as const;
+
+  const decisionTone = currentDecision.tone === 'rose'
+    ? 'border-rose-200 bg-rose-50/70'
+    : currentDecision.tone === 'amber'
+      ? 'border-amber-200 bg-amber-50/70'
+      : currentDecision.tone === 'emerald'
+        ? 'border-emerald-200 bg-emerald-50/70'
+        : 'border-sky-200 bg-sky-50/70';
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative p-6 space-y-6 overflow-y-auto">
-      
-      {/* Header Panel */}
-      <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm">
-        <div className="space-y-1">
-          <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">
-            Prototype Readiness Review
-          </h2>
-          <p className="text-[11px] text-slate-500 leading-normal max-w-xl">
-            This module evaluates your active blueprint against validation heuristics to gauge overall prototype verification readiness before moving to PCB spin or component procurement.
-          </p>
-        </div>
-      </div>
+    <div className="h-full overflow-y-auto bg-slate-50 px-4 py-5 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <header className="flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-indigo-700">Lifecycle decision review</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">What can this project safely do next?</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Scores are supporting evidence only. A lifecycle decision is allowed by explicit gates, blockers, and recorded engineering evidence.</p>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm" aria-label={`Readiness score ${report.overallScore} out of 100`}>
+            <span className="text-2xl font-bold tabular-nums text-slate-950">{report.overallScore}</span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">evidence<br />index / 100</span>
+          </div>
+        </header>
 
-      {/* Main Grid: Circle score and category bars */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        
-        {/* Left Card: Radial Score Indicator */}
-        <Card className="lg:col-span-2 flex flex-col items-center justify-center p-6 bg-white border border-slate-200">
-          <CardHeader className="border-0 bg-transparent pb-0 w-full text-center">
-            <CardTitle className="text-slate-550 font-bold uppercase tracking-widest font-mono text-[10px]">
-              Active Readiness Index
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center space-y-4 pt-6">
-            
-            {/* SVG Radial Progress Circle */}
-            <div className="relative w-36 h-36">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle
-                  className="text-slate-100 stroke-slate-100"
-                  strokeWidth="8"
-                  fill="transparent"
-                  r="40"
-                  cx="50"
-                  cy="50"
-                />
-                <circle
-                  className={`transition-all duration-500 ${getScoreColor(report.overallScore)}`}
-                  strokeWidth="8"
-                  strokeDasharray={251.2}
-                  strokeDashoffset={251.2 - (251.2 * report.overallScore) / 100}
-                  strokeLinecap="round"
-                  fill="transparent"
-                  r="40"
-                  cx="50"
-                  cy="50"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center space-y-0.5">
-                <span className="text-3xl font-extrabold font-mono tracking-tight text-slate-800 leading-none">
-                  {report.overallScore}
+        <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_330px]">
+          <main className="min-w-0 space-y-5">
+            <section className={`rounded-2xl border p-5 shadow-sm sm:p-6 ${decisionTone}`} aria-labelledby="current-decision-title">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/80 shadow-sm">
+                  {currentDecision.tone === 'rose' ? <LockKeyhole className="h-5 w-5 text-rose-700" aria-hidden="true" /> : currentDecision.tone === 'emerald' ? <CheckCircle2 className="h-5 w-5 text-emerald-700" aria-hidden="true" /> : <CircleDot className="h-5 w-5 text-slate-700" aria-hidden="true" />}
                 </span>
-                <span className="text-[9px] font-bold text-slate-400 font-mono uppercase tracking-widest leading-none">
-                  Readiness
-                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-600">{currentDecision.eyebrow}</p>
+                  <h2 id="current-decision-title" className="mt-1 text-xl font-bold tracking-tight text-slate-950">{currentDecision.title}</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-700">{currentDecision.detail}</p>
+                  <div className="mt-4 rounded-xl border border-white/80 bg-white/70 p-3">
+                    <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-slate-500">Consequence</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-700">{currentDecision.consequence}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveView(currentDecision.action.viewId)}
+                    className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  >
+                    {currentDecision.action.label}
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
               </div>
-            </div>
+            </section>
 
-            <div className="text-center space-y-1 max-w-xs">
-              <span className="text-xs font-bold text-slate-800 font-mono">
-                {report.overallScore >= 80 ? '🔥 PROTOTYPE READY' : report.overallScore >= 50 ? '⚠️ VERIFICATION PENDING' : '❌ CONCEPT BLOCK STAGE'}
-              </span>
-              <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
-                {report.overallScore >= 80 
-                  ? "Your hardware planning model meets all basic verification criteria. You are clear to export plans." 
-                  : "Resolve all active blockers and warnings below to push your index towards production ready."}
-              </p>
-            </div>
+            <section aria-labelledby="blocking-evidence-title" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-200 px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className={`h-4 w-4 ${report.blockers.length ? 'text-rose-600' : 'text-emerald-600'}`} aria-hidden="true" />
+                  <h2 id="blocking-evidence-title" className="text-sm font-bold text-slate-950">Blocking evidence</h2>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Each blocker is paired with the workspace where the responsible decision can actually be resolved.</p>
+              </div>
 
-            {/* Verification Gates */}
-            <div className="w-full border-t border-slate-100 pt-3 mt-1 space-y-1.5 text-left">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Gateway Verification Status</span>
-              <div className="grid grid-cols-1 gap-1">
-                {[
-                  { name: "Planning Ready", status: report.isPlanningReady },
-                  { name: "Blueprint Pack Ready", status: report.isBlueprintPackReady },
-                  { name: "Editor Layout Ready", status: report.isEditorLayoutReady },
-                  { name: "Schematic Draft Ready", status: report.isSchematicDraftReady },
-                  { name: "PCB Layout Draft Ready", status: report.isPcbLayoutDraftReady },
-                  { name: "Routing Draft Ready", status: report.isRoutingDraftReady },
-                  { name: "Prototype Prep Ready", status: report.canMoveToPrototype },
-                  { name: "Factory Review Package Ready", status: report.canMoveToFactoryHandoff },
-                  { name: "Direct Fabrication Review Required", status: report.isDirectFabReviewRequired },
-                  { name: "Direct Fabrication Ready", status: report.canMoveToFabrication }
-                ].map((gate, i) => (
-                  <div key={i} className="flex items-center justify-between text-[10px] font-sans font-semibold bg-slate-50 border border-slate-100 rounded px-2.5 py-1">
-                    <span className="text-slate-655">{gate.name}</span>
-                    <span className={`text-[8px] font-bold uppercase tracking-wider ${
-                      gate.status ? 'text-emerald-600' : 'text-slate-400'
-                    }`}>
-                      {gate.status ? '● PASSED' : '○ LOCKED'}
-                    </span>
+              {report.blockers.length > 0 ? (
+                <div className="divide-y divide-slate-100">
+                  {report.blockers.map((blocker, index) => {
+                    const route = routeForIssue(blocker);
+                    return (
+                      <div key={`${blocker}-${index}`} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 gap-3">
+                          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-rose-500" aria-hidden="true" />
+                          <div>
+                            <p className="text-sm font-semibold leading-5 text-slate-900">{blocker}</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-500">Must be resolved before the next lifecycle gate can pass.</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveView(route.viewId)}
+                          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          {route.label}<ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex items-start gap-3 px-5 py-5 text-emerald-900">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-bold">No hard blockers are currently recorded.</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-600">This does not automatically authorize fabrication; the lifecycle gate evidence on the right still controls what may happen next.</p>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {(report.warnings.length > 0 || report.suggestions.length > 0) && (
+              <details className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 [&::-webkit-details-marker]:hidden">
+                  <span className="inline-flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-600" aria-hidden="true" /> Review warnings and improvement evidence</span>
+                  <span className="text-xs font-semibold text-slate-500">{report.warnings.length + report.suggestions.length} items</span>
+                </summary>
+                <div className="border-t border-slate-200 px-5 py-4">
+                  <div className="space-y-2">
+                    {report.warnings.map((warning, index) => {
+                      const route = routeForIssue(warning);
+                      return (
+                        <button key={`${warning}-${index}`} type="button" onClick={() => setActiveView(route.viewId)} className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 text-left hover:border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                          <span className="text-xs leading-5 text-amber-950">{warning}</span>
+                          <ChevronRight className="h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+                        </button>
+                      );
+                    })}
+                    {report.suggestions.map((suggestion, index) => (
+                      <div key={`${suggestion}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">{suggestion}</div>
+                    ))}
+                  </div>
+                </div>
+              </details>
+            )}
+
+            <details className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-5 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 [&::-webkit-details-marker]:hidden">
+                <span>Supporting category scores</span>
+                <span className="text-xs font-medium text-slate-500">Secondary evidence</span>
+              </summary>
+              <div className="grid gap-x-6 gap-y-4 border-t border-slate-200 p-5 md:grid-cols-2">
+                {categories.map(([label, value]) => (
+                  <div key={label}>
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span className="font-semibold text-slate-700">{label}</span>
+                      <span className="tabular-nums text-slate-500">{value}%</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label={`${label} evidence score`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}>
+                      <div className="h-full rounded-full bg-slate-700" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+                    </div>
                   </div>
                 ))}
               </div>
+            </details>
+          </main>
+
+          <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-4" aria-label="Lifecycle gate evidence">
+            <div className="flex items-center gap-2">
+              <FileCheck2 className="h-4 w-4 text-indigo-700" aria-hidden="true" />
+              <h2 className="text-sm font-bold text-slate-950">Gate evidence</h2>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Open a locked gate to work directly on the evidence that controls it.</p>
+
+            <div className="mt-4 space-y-1.5">
+              {gates.map((gate, index) => (
+                <button
+                  key={gate.label}
+                  type="button"
+                  onClick={() => setActiveView(gate.viewId)}
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 ${gate.passed ? 'border-emerald-100 bg-emerald-50/70 hover:border-emerald-200' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
+                >
+                  <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-bold ${gate.passed ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`} aria-hidden="true">{gate.passed ? '✓' : index + 1}</span>
+                  <span className="min-w-0 flex-1 text-xs font-semibold text-slate-800">{gate.label}</span>
+                  <span className={`text-[9px] font-extrabold uppercase tracking-wide ${gate.passed ? 'text-emerald-700' : 'text-slate-400'}`}>{gate.passed ? 'passed' : 'locked'}</span>
+                </button>
+              ))}
             </div>
 
-          </CardContent>
-        </Card>
-
-        {/* Right Card: Categories Scores list */}
-        <Card className="lg:col-span-3 bg-white border border-slate-200">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-            <CardTitle>Heuristics Category breakdown</CardTitle>
-          </CardHeader>
-          <CardContent className="p-5 space-y-3.5 max-h-[480px] overflow-y-auto scrollbar-thin">
-            
-            {/* Category Bars */}
-            {[
-              { label: 'Product Architecture', val: report.categories.architecture },
-              { label: 'Mechanical Layout', val: report.categories.mechanical },
-              { label: 'Assembly Layout', val: report.categories.assembly },
-              { label: 'Board/PCB Prep', val: report.categories.boardPrep },
-              { label: 'Component Placement', val: report.categories.components },
-              { label: 'Circuit/Schematic Prep', val: report.categories.electronics },
-              { label: 'Nets Layout', val: report.categories.nets },
-              { label: 'MCU Pin Map', val: report.categories.pinMap },
-              { label: 'Power Budget Tree', val: report.categories.power },
-              { label: 'Firmware Driver Plans', val: report.categories.firmware },
-              { label: 'Test Protocols & QA', val: report.categories.testing },
-              { label: 'Manufacturing Checklist', val: report.categories.manufacturing },
-              { label: 'Native Export Pack', val: report.categories.nativeExports },
-              { label: 'Factory Files Package', val: report.categories.factoryFiles },
-              { label: 'Safety & Compliance', val: report.categories.safety }
-            ].map((cat, idx) => (
-              <div key={idx} className="space-y-1">
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-650 font-mono uppercase tracking-wider">
-                  <span>{cat.label}</span>
-                  <span>{cat.val}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-300 ${getCategoryProgressColor(cat.val)}`}
-                    style={{ width: `${cat.val}%` }}
-                  />
-                </div>
+            {report.isDirectFabReviewRequired && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-amber-700">Independent review required</p>
+                <p className="mt-1 text-xs leading-5 text-amber-950">A manufacturing package exists, but fabrication evidence is not fully verified. Review it instead of treating file existence as approval.</p>
+                <button type="button" onClick={() => setActiveView('factory-builder')} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-amber-900 px-3 text-xs font-semibold text-white hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600">
+                  Open factory review<ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
               </div>
-            ))}
-
-          </CardContent>
-        </Card>
-
+            )}
+          </aside>
+        </div>
       </div>
-
-      {/* Recommended Actions Checklist */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {/* Left Action Box: Next 5 Actions Checklist */}
-        <Card className="bg-white border border-slate-200">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-150">
-            <div className="flex items-center space-x-2">
-              <CheckSquare className="w-4 h-4 text-emerald-600" />
-              <CardTitle>Next 5 Priority Actions</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="space-y-2.5">
-              {report.nextActions.map((action, idx) => {
-                const isBlocker = action.startsWith('Blocker:');
-                const isWarning = action.startsWith('Warning:');
-                
-                return (
-                  <div key={idx} className="flex items-start space-x-2.5 bg-slate-50/50 p-2.5 rounded border border-slate-100">
-                    <Badge variant={isBlocker ? 'error' : isWarning ? 'warning' : 'neutral'} className="shrink-0 mt-0.5">
-                      {isBlocker ? 'Blocker' : isWarning ? 'Warning' : 'Info'}
-                    </Badge>
-                    <span className="text-[11px] text-slate-700 leading-normal font-sans font-medium">
-                      {action.replace(/^(Blocker|Warning|Suggestion):\s*/, '')}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Right Action Box: Warnings detail review */}
-        <Card className="bg-white border border-slate-200 flex flex-col">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-150">
-            <div className="flex items-center space-x-2">
-              <ShieldAlert className="w-4 h-4 text-rose-500" />
-              <CardTitle>Active Architecture review log</CardTitle>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="p-4 flex-1 overflow-y-auto space-y-4">
-            
-            {/* Blockers lists */}
-            {report.blockers.length > 0 && (
-              <div className="space-y-1.5">
-                <span className="text-[9px] font-bold text-rose-500 uppercase tracking-widest font-mono block">
-                  🔴 Critical Blockers ({report.blockers.length})
-                </span>
-                <ul className="space-y-1 list-disc pl-4 text-[10px] text-rose-700 font-sans leading-relaxed">
-                  {report.blockers.map((b, i) => <li key={i}>{b}</li>)}
-                </ul>
-              </div>
-            )}
-
-            {/* Warnings list */}
-            {report.warnings.length > 0 && (
-              <div className="space-y-1.5">
-                <span className="text-[9px] font-bold text-amber-500 uppercase tracking-widest font-mono block">
-                  ⚠️ Validation Warnings ({report.warnings.length})
-                </span>
-                <ul className="space-y-1 list-disc pl-4 text-[10px] text-amber-700 font-sans leading-relaxed">
-                  {report.warnings.map((w, i) => <li key={i}>{w}</li>)}
-                </ul>
-              </div>
-            )}
-
-            {/* Suggestions list */}
-            {report.suggestions.length > 0 && (
-              <div className="space-y-1.5">
-                <span className="text-[9px] font-bold text-slate-450 uppercase tracking-widest font-mono block">
-                  💡 Suggestions ({report.suggestions.length})
-                </span>
-                <ul className="space-y-1 list-disc pl-4 text-[10px] text-slate-600 font-sans leading-relaxed">
-                  {report.suggestions.map((s, i) => <li key={i}>{s}</li>)}
-                </ul>
-              </div>
-            )}
-
-            {report.blockers.length === 0 && report.warnings.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-8 text-center space-y-2">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider font-mono">
-                  Zero Warnings Detected
-                </span>
-                <p className="text-[10px] text-slate-450 max-w-xs">
-                  Your current hardware planning model matches all automated validation tests perfectly.
-                </p>
-              </div>
-            )}
-
-          </CardContent>
-        </Card>
-
-      </div>
-
     </div>
   );
 };
