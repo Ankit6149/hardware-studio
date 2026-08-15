@@ -28,6 +28,7 @@ import { EngineeringContextBar } from './studio/EngineeringContextBar';
 import { UnifiedValidationWorkbench } from './studio/UnifiedValidationWorkbench';
 import { UnifiedMechanicalWorkbench } from './studio/UnifiedWorkbenchAdapters';
 import { ElectronicsWorkspace, ELECTRONICS_WORKSPACE_VIEW_IDS } from './studio/ElectronicsWorkspace';
+import { WorkspaceCoach } from './editor/WorkspaceCoach';
 
 function renderSurface(surface: NavigationSurface, viewId: string): React.ReactNode {
   if (ELECTRONICS_WORKSPACE_VIEW_IDS.has(viewId)) return <ElectronicsWorkspace />;
@@ -156,6 +157,7 @@ export const AppShell: React.FC = () => {
             {showVisualizer && <ProductVisualizer />}
             <div className="relative flex h-full min-w-0 flex-1 flex-col">
               {activeNavigationItem ? renderSurface(activeNavigationItem.surface, activeView) : <UnavailableWorkspace viewId={activeView} onReturn={() => setActiveView('dashboard')} />}
+              {activeNavigationItem && <WorkspaceCoach viewId={activeView} />}
             </div>
             {isCanvasView && <PropertiesPanel />}
           </div>
