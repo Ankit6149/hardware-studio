@@ -17,23 +17,18 @@ describe('workspace accessibility and focus baseline', () => {
     expect(shell).toContain('sidebarCollapsed');
     expect(shell).toContain('onToggleCollapsed');
 
-    expect(sidebar).toContain('aria-label="Primary product-area navigation"');
-    expect(sidebar).toContain('aria-label="Engineering domains"');
-    expect(sidebar).toContain('Show contextual navigation');
-    expect(sidebar).toContain('Hide contextual navigation');
-    expect(sidebar).toContain('w-[86px]');
-    expect(sidebar).toContain("product: 'Product'");
-    expect(sidebar).toContain("mechanical: 'Mechanical'");
-    expect(sidebar).toContain("electronics: 'Electronics'");
-    expect(sidebar).toContain("validation: 'Validation'");
-    expect(sidebar).toContain("outputs: 'Release'");
+    expect(sidebar).toContain('aria-label="Primary product navigation"');
+    expect(sidebar).toContain('aria-label="Product areas"');
+    expect(sidebar).toContain('Show workbench navigation');
+    expect(sidebar).toContain('Hide workbench navigation');
+    expect(sidebar).toContain('w-[78px]');
+    expect(sidebar).toContain('domain.label');
 
-    expect(subnav).toContain('contextual navigation');
-    expect(subnav).toContain('workbenches');
-    expect(subnav).toContain('min-h-10');
-    expect(subnav).toContain('w-[184px]');
-    expect(subnav).toContain('Start here');
-    expect(subnav).toContain("'schematic-editor': ['Place project components on the sheet.'");
-    expect(subnav).toContain("'board-designer': ['Place footprints inside the real board outline.'");
+    expect(subnav).toContain('workbench navigation');
+    expect(subnav).toContain('activeDomain.items.map');
+    expect(subnav).toContain('min-h-11');
+    expect(subnav).toContain('w-[176px]');
+    expect(subnav).not.toContain('Start here');
+    expect(subnav).not.toContain('quickStartByView');
   });
 });
