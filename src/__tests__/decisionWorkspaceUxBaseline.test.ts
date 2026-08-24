@@ -6,15 +6,16 @@ function source(relativePath: string): string {
 }
 
 describe('decision-first product UX baseline', () => {
-  it('keeps project overview and readiness focused on decisions, consequences, and responsible workspaces', () => {
+  it('keeps project overview and readiness focused on evidence-driven next actions', () => {
     const dashboard = source('../components/ProjectDashboard.tsx');
     const readiness = source('../components/ReadinessDashboard.tsx');
     const engine = source('../lib/readinessScore.ts');
 
-    expect(dashboard).toContain('Next engineering decision');
-    expect(dashboard).toContain('Why this matters / consequence');
-    expect(dashboard).toContain('Counts, not decisions');
-    expect(dashboard).toContain("setActiveView('readiness')");
+    expect(dashboard).toContain('deriveNextAction');
+    expect(dashboard).toContain('The complete product path');
+    expect(dashboard).toContain('One product. One identity. One path forward.');
+    expect(dashboard).toContain('Existing evidence—not a progress percentage—decides what can move forward.');
+    expect(dashboard).toContain("viewId: 'readiness'");
 
     expect(readiness).toContain('What can this project safely do next?');
     expect(readiness).toContain('Blocking evidence');
@@ -46,22 +47,23 @@ describe('decision-first product UX baseline', () => {
     expect(productStudio).toContain('<ProductRequirementsPanel mode="compact" />');
   });
 
-  it('keeps two distinct navigation levels while editor object tools stay inside their workbench', () => {
+  it('keeps two simple navigation levels while editor object tools stay inside their workbench', () => {
     const sidebar = source('../components/Sidebar.tsx');
     const subnav = source('../components/ContextSubnav.tsx');
     const productStudio = source('../components/product/ProductStudio.tsx');
 
-    expect(sidebar).toContain('Primary product-area navigation');
-    expect(sidebar).toContain('Engineering domains');
+    expect(sidebar).toContain('aria-label="Primary product navigation"');
+    expect(sidebar).toContain('aria-label="Product areas"');
     expect(sidebar).toContain('<ContextSubnav collapsed={collapsed} />');
     expect(sidebar).not.toContain('domain.items.map');
+    expect(sidebar).not.toContain('workflowPreferencesStore');
+    expect(sidebar).not.toContain('Scope');
 
     expect(subnav).toContain('data-context-subnav');
-    expect(subnav).toContain('contextual navigation');
-    expect(subnav).toContain('workbenches');
+    expect(subnav).toContain('workbench navigation');
     expect(subnav).toContain('activeDomain.items.map');
-    expect(subnav).toContain('Start here');
-    expect(subnav).toContain('quickStartByView');
+    expect(subnav).not.toContain('Start here');
+    expect(subnav).not.toContain('quickStartByView');
     expect(subnav).not.toContain('showDeviceLibrary');
     expect(subnav).not.toContain('libraryItem');
 
