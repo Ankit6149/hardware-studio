@@ -6,17 +6,15 @@ function source(relativePath: string): string {
 }
 
 describe('commercial-grade workbench UX contracts', () => {
-  it('teaches the product hierarchy and editor workflows inside the application', () => {
-    const coach = source('../components/editor/WorkspaceCoach.tsx');
+  it('keeps product guidance in the owning workspace instead of a permanent global coach', () => {
     const appShell = source('../components/AppShell.tsx');
+    const electronics = source('../components/studio/ElectronicsWorkspace.tsx');
+    const dashboard = source('../components/ProjectDashboard.tsx');
 
-    expect(coach).toContain('Product → assemblies / subsystems → boards + mechanical parts → components → firmware → validation + release evidence');
-    expect(coach).toContain("'schematic-editor'");
-    expect(coach).toContain("'board-designer'");
-    expect(coach).toContain("'mechanical-studio'");
-    expect(coach).toContain("'source-skeleton'");
-    expect(coach).toContain('How this workspace works');
-    expect(appShell).toContain('<WorkspaceCoach viewId={activeView} />');
+    expect(appShell).not.toContain('WorkspaceCoach');
+    expect(electronics).toContain('Continue this decision');
+    expect(electronics).toContain('Recommended next');
+    expect(dashboard).toContain('One product. One identity. One path forward.');
   });
 
   it('uses one desktop-grade editor chrome instead of card-like per-editor shells', () => {
