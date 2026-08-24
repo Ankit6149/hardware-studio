@@ -1,18 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { getNavigationItem } from '../lib/navigationRegistry';
+import { getNavigationItem, visibleNavigationItems } from '../lib/navigationRegistry';
 
 function source(relativePath: string): string {
   return readFileSync(new URL(relativePath, import.meta.url), 'utf8');
 }
 
 describe('Product Design Studio integration contracts', () => {
-  it('registers Product Design as a distinct connected workbench', () => {
+  it('keeps Product Design connected but outside the normal V1 navigation while convergence is unfinished', () => {
     expect(getNavigationItem('product-design')).toMatchObject({
       label: 'Product Design',
       surface: 'product-studio',
-      badge: 'DESIGN',
+      badge: 'EXP',
     });
+    expect(visibleNavigationItems.some((item) => item.id === 'product-design')).toBe(false);
     expect(getNavigationItem('requirements')?.id).toBe('requirements');
     expect(getNavigationItem('product-architecture')?.id).toBe('product-architecture');
   });
