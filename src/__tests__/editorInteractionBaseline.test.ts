@@ -36,7 +36,9 @@ describe('editor-first interaction model', () => {
     expect(product).toContain('onClick={() => handleAddElement(preset)}');
     expect(product).toContain('aria-label={`Place ${preset.name}`}');
 
-    expect(dashboard).toContain('Rows are information. Only the Open button changes workspaces.');
+    expect(dashboard).toContain('onClick={() => setActiveView(nextAction.viewId)}');
+    expect(dashboard).toContain('onClick={() => setActiveView(area.viewId)}');
+    expect(dashboard).toContain('Open an area only when that is the work you need.');
     expect(readiness).toContain('Evidence text is inert. Use the explicit Resolve button to change workspaces.');
     expect(readiness).toContain('Gate rows show state. Only Review changes the workspace.');
 
