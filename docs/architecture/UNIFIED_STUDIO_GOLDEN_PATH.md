@@ -1,10 +1,11 @@
 # Unified Hardware Studio golden path
 
-Status: active P0 integration architecture for issue #64.
+**Status:** active connected-object architecture. The bounded issue #64 implementation is complete; the broader V1 convergence program remains active.  
+**Current shell decision:** PR #69, merged August 25, 2026.
 
 ## Why this exists
 
-Hardware Studio accumulated useful workbenches, but a collection of routes is not a product. A user must be able to carry one engineering object through the complete build process without recreating it, losing context, or returning to a generic dashboard to unlock the next editor.
+Hardware Studio accumulated useful workbenches, but a collection of routes is not a product. A user must be able to carry one engineering object through the complete build process without recreating it, losing context, or returning to unrelated surfaces to unlock the next editor.
 
 The first production golden path is:
 
@@ -30,7 +31,7 @@ A definition is not automatically a project component and is not automatically p
 
 ### Project component instance
 
-Owned by canonical `boardComponents` project state.
+Owned by canonical `boardComponents` project state today, pending migration into the canonical repository/domain packages.
 
 This is the shared identity used by every downstream workbench. It contains:
 
@@ -52,28 +53,30 @@ Component Library creates this instance. Schematic, PCB, BOM, 3D and Validation 
 
 Owned by canonical `boards` plus `boardOutlines`.
 
-Board Designer can recover from an empty project by creating a starter board or opening Board Settings. It must never depend on a removed dashboard generator.
+The PCB workbench can recover from an empty project by creating or configuring the real board context. It must never depend on a removed dashboard generator.
 
 A starter outline is explicitly provisional until the user verifies dimensions. It is not silently treated as manufacturing authority.
 
 ### Schematic
 
-Owned by component `schematic` placement, `schematicWires`, `nets`, component pin net fields and `padNetAssignments`.
+Owned by component `schematic` placement, `schematicWires`, `nets`, component pin net fields and `padNetAssignments` while the canonical electrical graph is being completed.
 
-The live unified Schematic editor:
+The live Schematic editor:
 
 - places existing project instances;
 - connects their real pins;
 - creates or reuses canonical nets;
 - exposes ERC findings linked to responsible objects;
 - does not create a second project component from a library definition;
-- uses an in-app dependency review before whole-product deletion.
+- uses in-app dependency review for destructive whole-product changes.
 
 ### PCB
 
 Owned by component `pcb` placement, board geometry, traces, vias, constraints and pad-net assignments.
 
-The live Board Designer receives the selected board, component and net from shared UI context, while editing canonical project records.
+PCB is part of the **Electronics** product area in the V1 shell. Board setup, routing rules and DRC are contextual PCB tools, not separate product domains.
+
+The live PCB editor receives the selected board, component and net from shared UI context while editing canonical project records.
 
 ### Lightweight 3D
 
@@ -102,7 +105,7 @@ A selected project component can create one linked BOM record. Electrical values
 
 Owned by canonical `validationTests` and `validationRuns`.
 
-A component-linked test stores the same component ID and current canonical net IDs. The validation editor remains capable of generic requirement/factory testing, but selected-object context is preserved above it.
+A component-linked test stores the same component ID and current canonical net IDs. The validation editor remains capable of generic requirement/factory testing, but selected-object context is preserved across handoffs.
 
 ## UI-only Studio context
 
@@ -120,30 +123,45 @@ It may store:
 
 It must not become a second engineering database. Clearing this store must not modify project records.
 
-## Persistent Studio frame
+## V1 Studio frame
 
-Every workbench is mounted under:
+The V1 shell deliberately has one stable product lifecycle:
 
-1. the complete product build map;
-2. the context bar when the workbench participates in shared object flow;
-3. the workbench itself;
-4. the shared findings/status area.
+`Home → Define → Electronics → Mechanical → Firmware → Validate → Release`
 
-Workflow profiles control focus and emphasis. They do not remove discoverability of Product, Mechanical, Electronics, PCB, Firmware, Validation or Outputs from the build map.
+The global shell owns only:
+
+1. product-area navigation;
+2. the active area's compact primary-workbench navigation;
+3. project/storage state and recovery;
+4. the active workbench.
+
+The owning workbench supplies its own toolbar, inspector, findings/status and contextual next action. Supporting tools remain inside that workbench instead of becoming additional global routes the user has to learn.
+
+The following are **not** part of the current V1 shell architecture:
+
+- workflow profiles;
+- custom domain visibility configuration;
+- Scope/show-hidden-domain controls;
+- permanent workspace coaching;
+- permanent “Start here” tutorials beside every workbench.
+
+Those systems were removed in PR #69 because they duplicated navigation and guidance rather than completing the engineering lifecycle.
 
 ## Connected handoff rules
 
 ### Components → Schematic
 
 - preserve board, definition and instance IDs;
-- place the selected instance if unplaced;
-- focus the existing symbol if already placed.
+- place the selected instance if explicitly requested and unplaced;
+- focus the existing symbol if already placed;
+- navigation alone must never create engineering data.
 
 ### Schematic → PCB
 
 - preserve board, instance and net context;
-- open Board Settings when no board exists;
-- otherwise open Board Designer with the same selected object.
+- if no board exists, the PCB workspace must expose the real setup action;
+- otherwise open PCB with the same selected object.
 
 ### PCB → 3D
 
@@ -160,26 +178,29 @@ Workflow profiles control focus and emphasis. They do not remove discoverability
 ### Any engineering workbench → Validation
 
 - preserve selected component and active net;
-- create tests with `linkedComponentIds` and `linkedNetIds`.
+- create tests with `linkedComponentIds` and `linkedNetIds` only through an explicit mutation action.
 
 ## Empty-state rule
 
 Every empty state must do one of the following:
 
-- create the real missing canonical object;
-- route to the workbench that owns it;
+- create the real missing canonical object after an explicit user action;
+- route to the workbench/tool that owns it;
 - explain why progress is blocked.
 
-It must not reference deleted actions, hidden generators or unrelated dashboards.
+It must not reference deleted actions, hidden generators, unrelated dashboards, or create placeholder engineering truth merely by opening a view.
 
-## Completion requirements for issue #64
+## Current completion boundary
 
-The issue remains open until:
+Issue #64 proved a bounded connected Electronics → PCB → 3D path with one component/board/net identity and production verification. It did **not** complete the broader product architecture.
 
-- one canonical component identity completes the full golden path;
-- integration tests verify board, definition, component, pins, wires, nets, PCB placement, BOM and validation links;
-- touched native browser dialogs are removed;
-- CI and production builds pass;
-- a Vercel preview and merged production deployment are verified;
-- the production `/studio` route is healthy;
-- the broader open boundaries are documented without closing unrelated parent issues.
+The remaining convergence work is governed by the product constitution and recovery plan, especially:
+
+- canonical schema and ownership;
+- durable shared repository;
+- typed command/transaction lifecycle;
+- monolith decomposition;
+- browser-level reference-product verification;
+- authoritative electrical/mechanical/firmware/validation/release depth.
+
+A new shell wrapper or another navigation abstraction is not progress unless it replaces an existing path and makes the reference-product lifecycle measurably more complete.
