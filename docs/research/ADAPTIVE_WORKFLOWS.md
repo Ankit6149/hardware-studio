@@ -1,135 +1,87 @@
-# Adaptive workflows and capability-based navigation
+# Adaptive workflow research — superseded implementation
 
-Status: implementation decision for issue #59.
+**Status:** historical research only  
+**Superseded by:** PR #69, merged August 25, 2026  
+**Current navigation authority:** `src/lib/navigationRegistry.ts`  
+**Product scope authority:** `docs/product/V1_PRODUCT_CONSTITUTION.md`
 
-## Product problem
+## Why this document remains
 
-Hardware Studio spans product intent, mechanical design, electronics, PCB, firmware, validation, and release outputs. Showing every workbench to every user makes the product appear comprehensive but makes ordinary tasks harder to understand.
+This research explored how mature engineering tools reduce visible complexity while keeping connected project data. The research observations remain useful, but the workflow-profile implementation that originally came from this document has been removed from Hardware Studio V1.
 
-The product must therefore support both:
+The implementation had introduced another product-structure layer on top of domain navigation, contextual navigation, workbench guidance, and shared engineering context. In practice that created more choices about **how to navigate** without making the underlying engineering workflow more complete.
 
-- **connected work**, where multiple domains share one project graph; and
-- **standalone work**, where a user can focus on one domain without being forced through unrelated upstream or downstream modules.
+The V1 convergence decision is therefore simpler:
 
-Progressive disclosure changes what the shell shows. It does not delete engineering records or create a second project model.
+> **One product lifecycle is always understandable. Supporting tools live inside the workbench that owns the decision.**
 
-## Research patterns
+## Retained research lessons
 
 ### KiCad
 
-KiCad intentionally connects schematic and PCB editors while still allowing standalone editor workflows. The PCB editor can maintain board-local nets in standalone use, while richer synchronization comes from the associated schematic.
+Schematic and PCB can remain distinct specialist editors while sharing authoritative electrical identity. Hardware Studio should preserve this principle without turning every supporting tool into a global destination.
 
 Sources:
 
 - https://docs.kicad.org/9.0/en/eeschema/eeschema.html
 - https://docs.kicad.org/10.0/en/pcbnew/pcbnew.pdf
 
-Hardware Studio decision: Electronics and PCB can be enabled independently. When PCB is shown without Electronics, the product must state that schematic synchronization and component-definition context are unavailable rather than blocking the user.
+### Autodesk Fusion and Blender
 
-### Autodesk Fusion
+Task-oriented workspaces reduce visible commands and panels. The transferable lesson is **contextual tools**, not user-configurable product structure before the core lifecycle is mature.
 
-Fusion groups capabilities into purpose-driven workspaces. The active workspace controls the commands and data most relevant to the current task.
-
-Source:
+Sources:
 
 - https://help.autodesk.com/view/NINVFUS/ENU/?guid=GS-WORKSPACES
-
-Hardware Studio decision: workflow profiles are task-oriented starting points, not permanent product editions. Every non-overview domain remains independently configurable.
-
-### Blender
-
-Blender workspaces are task-oriented arrangements of editors. They reduce visible complexity without creating separate copies of the underlying scene.
-
-Source:
-
 - https://docs.blender.org/manual/en/4.2/interface/window_system/workspaces.html
-
-Hardware Studio decision: workflow preferences affect navigation and guidance only. Canonical project engineering data remains shared and unchanged.
 
 ### Onshape
 
-Onshape documents can hold multiple linked artifact types as tabs, and larger or reusable areas can be split into linked documents for performance and ownership.
+Different artifact types can remain linked without duplicating canonical identity. Hardware Studio should keep that principle while repository and product-graph boundaries converge.
 
 Sources:
 
 - https://cad.onshape.com/help/Content/Document/documents.htm
 - https://cad.onshape.com/help/Content/Document/linking_documents.htm
 
-Hardware Studio decision: keep one connected local project graph now, while preserving the architectural option to split large domain data behind stable references later. The adaptive shell must not require that split.
+## Current V1 shell decision
 
-## Implemented workflow model
+The normal Studio lifecycle is:
 
-The shell supports these profiles:
+`Home → Define → Electronics → Mechanical → Firmware → Validate → Release`
 
-- Complete Product
-- Electronics + PCB
-- Mechanical + Assembly
-- Firmware + Device
-- Validation + Handoff
-- Custom
+Visible primary workbenches are deliberately bounded:
 
-Profiles select initial capabilities. They do not lock the user. Product, Mechanical, Electronics, PCB, Firmware, Validation, and Outputs can each be shown or hidden independently. Overview is always available.
+- **Define:** Requirements, Architecture
+- **Electronics:** Components, Schematic, PCB, BOM
+- **Mechanical:** Design, Assembly
+- **Firmware:** Behavior, Hardware Map, Source
+- **Validate:** Tests & Evidence, Coverage
+- **Release:** Readiness, Outputs, Revisions
 
-## Persistence boundary
+Power, pin mapping, board setup, PCB rules/DRC, factory QA, drawings, factory-package preparation, legacy Blueprint routes, and experimental Product Design remain contextual, compatibility-only, or experimental rather than competing top-level workflows.
 
-Workflow preferences are stored under a dedicated local-storage key:
+## Removed implementation
 
-`hardware-studio:workflow-preferences:v1`
+PR #69 removed:
 
-They are not included in canonical project serialization and do not call project-store mutation actions. Hiding a domain therefore cannot remove its requirements, geometry, components, nets, firmware, tests, revisions, or output records.
+- workflow profiles;
+- custom workflow configuration;
+- workflow preference persistence;
+- Scope/show-hidden-domain controls;
+- the workflow setup dialog;
+- hidden-domain warning behavior;
+- the permanent Workspace Coach;
+- permanent “Start here” instructions in contextual navigation.
 
-Malformed or unknown preference data normalizes to safe values. Unknown domain IDs are discarded. If storage is blocked, preferences remain usable in memory.
+These concepts must not be recreated from this historical research document unless a future product decision explicitly supersedes the current V1 constitution and demonstrates a user need after the reference lifecycle is complete.
 
-## Active-view safety
+## Still-valid boundaries
 
-If a user hides the domain containing the currently open workbench:
+This convergence decision does **not** change engineering truth boundaries:
 
-- the workbench stays open;
-- the domain remains temporarily visible in navigation;
-- a banner explains that it is hidden from the configured workflow;
-- the user can show the domain again or leave the workbench;
-- no silent redirect occurs.
-
-## Guided home
-
-The previous dashboard assumed one universal linear pipeline and exposed generation or repair actions that could mutate the project before the user understood the design.
-
-The guided home instead shows:
-
-- selected workflow;
-- visible and hidden domains;
-- current canonical project-data counts;
-- connected versus standalone limitations;
-- one next action per visible domain;
-- evidence explaining why each action is suggested;
-- a direct route to workflow configuration.
-
-Actions are derived from existing project data. No fake completion percentage is used as primary guidance, and showing a domain does not imply its work is complete.
-
-## Lightweight 3D versus CAD kernel
-
-Workflow configuration and lightweight visualization are separate concerns.
-
-The lightweight Three.js representation introduced by issue #61 is:
-
-- visualization-only;
-- lazy-loaded;
-- event-driven;
-- capped by a quality profile;
-- non-authoritative for dimensions, interference, mass, manufacturing, or release.
-
-The future CAD kernel in issue #17 remains responsible for exact solids, STEP/B-Rep processing, dimensional authority, interference, manufacturing geometry, and qualified exports.
-
-Adaptive workflows can hide or show Mechanical and 3D entry points, but they do not change this trust boundary.
-
-## Non-goals
-
-This implementation does not:
-
-- create separate product editions;
-- delete data for hidden domains;
-- force domain dependencies;
-- claim parity with KiCad, Fusion, Blender, or Onshape;
-- turn Three.js previews into CAD;
-- replace the canonical product graph;
-- complete the broader shell redesign in issue #9.
+- hiding or reorganizing UI must never mutate canonical engineering data;
+- Three.js remains a visualization layer, not CAD authority;
+- missing dimensions, placement, evidence, or qualification remain unresolved;
+- one canonical component identity must survive Electronics, PCB, BOM, Firmware, Validation, and Release handoffs;
+- future customization must operate on the same repository and command system, not introduce a second project model.
