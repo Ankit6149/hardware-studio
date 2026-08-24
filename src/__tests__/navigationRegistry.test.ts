@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   allNavigationItems,
   compatibleNavigationItems,
+  getNavigationDomainForView,
   getNavigationItem,
   isCanvasNavigationItem,
   navigationDomains,
@@ -14,16 +15,35 @@ describe('navigation registry', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('gives every visible destination a complete readable contract', () => {
+  it('exposes one small stable V1 lifecycle', () => {
     expect(navigationDomains.map((domain) => domain.id)).toEqual([
       'overview',
       'product',
-      'mechanical',
       'electronics',
-      'pcb',
+      'mechanical',
       'firmware',
       'validation',
       'outputs',
+    ]);
+
+    expect(visibleNavigationItems.map((item) => item.id)).toEqual([
+      'dashboard',
+      'requirements',
+      'product-architecture',
+      'component-library',
+      'schematic-editor',
+      'board-designer',
+      'bom',
+      'mechanical-studio',
+      'assembly-stack',
+      'firmware-studio',
+      'hardware-mapping',
+      'source-skeleton',
+      'validation-studio',
+      'requirement-coverage',
+      'readiness',
+      'exports',
+      'revisions',
     ]);
 
     for (const item of visibleNavigationItems) {
@@ -35,10 +55,22 @@ describe('navigation registry', () => {
     }
   });
 
-  it('keeps known saved-project ids explicit without exposing them twice', () => {
+  it('keeps supporting and legacy destinations compatibility-only', () => {
     const compatibleIds = compatibleNavigationItems.map((item) => item.id);
     expect(compatibleIds).toEqual(
-      expect.arrayContaining(['master', 'dossier', 'electronics', 'power-budget', 'board-studio', 'board-components']),
+      expect.arrayContaining([
+        'product-design',
+        'master',
+        'dossier',
+        'electronics',
+        'power-tree',
+        'pin-map',
+        'board-settings',
+        'pcb-constraints',
+        'pcb-drc',
+        'factory-qa',
+        'factory-builder',
+      ]),
     );
 
     for (const id of compatibleIds) {
@@ -47,7 +79,15 @@ describe('navigation registry', () => {
     }
   });
 
-  it('classifies only the explicit system blueprint views as canvas layouts', () => {
+  it('maps supporting Electronics and PCB tools back to one Electronics area', () => {
+    expect(getNavigationDomainForView('component-library')?.id).toBe('electronics');
+    expect(getNavigationDomainForView('board-designer')?.id).toBe('electronics');
+    expect(getNavigationDomainForView('board-settings')?.id).toBe('electronics');
+    expect(getNavigationDomainForView('pcb-drc')?.id).toBe('electronics');
+    expect(getNavigationDomainForView('power-tree')?.id).toBe('electronics');
+  });
+
+  it('classifies only the explicit legacy system blueprint views as canvas layouts', () => {
     expect(isCanvasNavigationItem(getNavigationItem('blueprint-editor'))).toBe(true);
     expect(isCanvasNavigationItem(getNavigationItem('master'))).toBe(true);
     expect(isCanvasNavigationItem(getNavigationItem('dashboard'))).toBe(false);
