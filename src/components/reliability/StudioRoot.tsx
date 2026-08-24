@@ -3,10 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { RECOVER_TO_DASHBOARD_KEY } from '../../lib/reliability';
 import { prepareStorageReliability } from '../../store/storageHealthStore';
-import { useWorkflowPreferencesStore } from '../../store/workflowPreferencesStore';
 import { FeedbackProvider } from '../feedback/FeedbackProvider';
 import { KnowledgeProvider } from '../knowledge/KnowledgeProvider';
-import { WorkflowSetupDialog } from '../workflow/WorkflowSetupDialog';
 import { AppErrorBoundary } from './AppErrorBoundary';
 
 type ShellComponent = React.ComponentType;
@@ -14,15 +12,13 @@ type ShellComponent = React.ComponentType;
 const StudioApplicationLoader: React.FC = () => {
   const [Shell, setShell] = useState<ShellComponent | null>(null);
   const [loadError, setLoadError] = useState<Error | null>(null);
-  const hydrateWorkflowPreferences = useWorkflowPreferencesStore((state) => state.hydrate);
 
   useEffect(() => {
     prepareStorageReliability();
-    hydrateWorkflowPreferences();
     import('../AppShell')
       .then((module) => setShell(() => module.AppShell))
       .catch((error: unknown) => setLoadError(error instanceof Error ? error : new Error(String(error))));
-  }, [hydrateWorkflowPreferences]);
+  }, []);
 
   if (loadError) throw loadError;
   if (!Shell) {
@@ -33,12 +29,7 @@ const StudioApplicationLoader: React.FC = () => {
     );
   }
 
-  return (
-    <>
-      <Shell />
-      <WorkflowSetupDialog />
-    </>
-  );
+  return <Shell />;
 };
 
 export const StudioRoot: React.FC = () => (
