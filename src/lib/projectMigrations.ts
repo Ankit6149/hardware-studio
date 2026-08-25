@@ -2,18 +2,46 @@
 import { Project, BoardComponent } from '../types';
 import { defaultComponents } from './components/componentLibrary';
 
-export const CURRENT_SCHEMA_VERSION = 5;
+export const CURRENT_SCHEMA_VERSION = 6;
 
-const LEGACY_BOARD_SENTINELS = new Set(['board_0', 'board-main']);
+const LEGACY_BOARD_SENTINELS = new Set(['board_0', 'board-main', 'board_main']);
 const LEGACY_BLOCK_SENTINELS = new Set(['block_0']);
 
-export function normalizeProjectComponent(bc: Record<string, unknown>): BoardComponent {
-  const compId = (bc.id as string) || `cmp_${Date.now()}_${Math.random()}`;
+function hashStableString(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function deterministicLegacyComponentId(bc: Record<string, unknown>, index = 0): string {
+  const seed = [
+    bc.libraryId,
+    bc.referenceDesignator,
+    bc.componentName,
+    bc.partNumber,
+    bc.packageName,
+    bc.footprint,
+    bc.boardId,
+    bc.circuitBlockId,
+    index,
+  ].map((value) => String(value ?? '')).join('|');
+
+  return `cmp_legacy_${hashStableString(seed)}`;
+}
+
+export function normalizeProjectComponent(
+  bc: Record<string, unknown>,
+  fallbackId?: string,
+): BoardComponent {
+  const compId = (bc.id as string) || fallbackId || deterministicLegacyComponentId(bc);
   const preserved = bc as unknown as Partial<BoardComponent>;
   const libraryId = (bc.libraryId as string) || '';
   const sourceDefinition = defaultComponents.find((definition) => definition.libraryId === libraryId);
 
-  const rawPins = (bc.pins as Record<string, unknown>[]) || [];
+  const rawPins = Array.isArray(bc.pins) ? bc.pins as Record<string, unknown>[] : [];
   const pins = rawPins.map((pin, index) => {
     const pinNumber = String(pin.pinNumber ?? pin.number ?? index + 1);
     const pinName = String(pin.pinName ?? pin.name ?? `PIN${pinNumber}`);
@@ -36,11 +64,15 @@ export function normalizeProjectComponent(bc: Record<string, unknown>): BoardCom
   const bcSchematic = bc.schematic as Record<string, unknown> | undefined;
   const bcPcb = bc.pcb as Record<string, unknown> | undefined;
 
+  const schematicX = typeof bcSchematic?.x === 'number' ? bcSchematic.x : undefined;
+  const schematicY = typeof bcSchematic?.y === 'number' ? bcSchematic.y : undefined;
+  const hasSchematicCoordinates = schematicX !== undefined && schematicY !== undefined;
+  const explicitSchematicPlaced = typeof bcSchematic?.placed === 'boolean' ? bcSchematic.placed : undefined;
   const schematic = {
-    placed: (bcSchematic?.placed as boolean) ?? false,
-    x: (bcSchematic?.x as number) ?? 150,
-    y: (bcSchematic?.y as number) ?? 150,
-    rotation: (bcSchematic?.rotation as number) ?? 0,
+    placed: (explicitSchematicPlaced ?? hasSchematicCoordinates) && hasSchematicCoordinates,
+    x: schematicX,
+    y: schematicY,
+    rotation: typeof bcSchematic?.rotation === 'number' ? bcSchematic.rotation : 0,
     locked: (bcSchematic?.locked as boolean) ?? false,
   };
 
@@ -185,6 +217,7 @@ export function migrateProjectSchema(project: unknown): Project {
   if (!migrated.testing) migrated.testing = [];
   if (!migrated.requirements) migrated.requirements = [];
   if (!migrated.architectureNodes) migrated.architectureNodes = [];
+  if (!migrated.architectureConnections) migrated.architectureConnections = [];
   if (!migrated.mechanicalObjects) migrated.mechanicalObjects = [];
   if (!migrated.firmwareModules) migrated.firmwareModules = [];
   if (!migrated.validationTests) migrated.validationTests = [];
@@ -192,8 +225,12 @@ export function migrateProjectSchema(project: unknown): Project {
   const boardIds = new Set((migrated.boards || []).map((board) => board.id).filter(Boolean));
   const blockIds = new Set((migrated.circuitBlocks || []).map((block) => block.id).filter(Boolean));
 
-  migrated.boardComponents = (migrated.boardComponents as BoardComponent[]).map((component) => {
-    const normalized = normalizeProjectComponent(component as unknown as Record<string, unknown>);
+  migrated.boardComponents = (migrated.boardComponents as BoardComponent[]).map((component, index) => {
+    const rawComponent = component as unknown as Record<string, unknown>;
+    const normalized = normalizeProjectComponent(
+      rawComponent,
+      deterministicLegacyComponentId(rawComponent, index),
+    );
     return {
       ...normalized,
       boardId: resolveLegacyRelation(normalized.boardId, boardIds, LEGACY_BOARD_SENTINELS) || '',
