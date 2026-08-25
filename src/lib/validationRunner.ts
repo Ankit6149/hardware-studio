@@ -73,10 +73,19 @@ export function runValidationTest(
     }
   } else if (category === 'Thermal' || category === 'Mechanical' || testName.toLowerCase().includes('3d') || testName.toLowerCase().includes('clearance')) {
     const interference = checkMechanicalInterference(project);
+    const clearanceLabel = interference.minClearanceMm === null
+      ? 'unresolved'
+      : `${interference.minClearanceMm}mm`;
     measuredValue = options?.measuredValue ?? (interference.hasCollision
       ? `${interference.collisions.length} approximate AABB collisions`
-      : `Approximate AABB clearance ${interference.minClearanceMm}mm`);
-    logs.push(`Approximate AABB collision scan completed: reported minimum separation ${interference.minClearanceMm}mm. This local geometry check is not CAD-kernel or physical clearance verification.`);
+      : `Approximate AABB clearance ${clearanceLabel}`);
+
+    if (interference.minClearanceMm === null) {
+      logs.push('Approximate AABB collision scan completed with insufficient explicit comparable geometry to report a clearance value. Missing geometry was not replaced with defaults.');
+    } else {
+      logs.push(`Approximate AABB collision scan completed: reported minimum separation ${interference.minClearanceMm}mm. This local geometry check is not CAD-kernel or physical clearance verification.`);
+    }
+
     if (interference.hasCollision) {
       status = 'Fail';
       logs.push(`FAILED: ${interference.collisions.length} approximate 3D bounding-box collisions detected. Resolve these before detailed mechanical review.`);
