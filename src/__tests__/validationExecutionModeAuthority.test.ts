@@ -5,6 +5,7 @@ describe('validation execution mode category authority', () => {
   it('never lets a test name override an explicit engineering category', () => {
     expect(getValidationExecutionMode('Thermal', 'Thermal clearance DRC review')).toBe('manual');
     expect(getValidationExecutionMode('Electrical', '3D clearance state DRC')).toBe('manual');
+    expect(getValidationExecutionMode('EMC', '3D clearance DRC screening')).toBe('manual');
     expect(getValidationExecutionMode('Mechanical', 'Board DRC review')).toBe('mechanical-screen');
     expect(getValidationExecutionMode('Firmware', 'Mechanical clearance review')).toBe('manual');
     expect(getValidationExecutionMode('Firmware', 'Firmware state machine reachability')).toBe('firmware-state-auto');
