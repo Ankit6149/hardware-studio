@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { AlertTriangle, ArrowRight, Box, Layers, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore, type MechanicalWorkbenchMode } from '../../store/studioContextStore';
+import type { AssemblyLayer, BoardItem, BoardOutline, MechanicalObject } from '../../types';
 import { useFeedback } from '../feedback/FeedbackProvider';
 import { validateMechanicalLayout } from '../../lib/mechanical/mechanicalValidation';
 import {
@@ -11,22 +12,33 @@ import {
   evaluateMechanicalBoardContext,
 } from '../../lib/mechanical/boardMechanicalContext';
 
+const EMPTY_MECHANICAL_OBJECTS: MechanicalObject[] = [];
+const EMPTY_ASSEMBLY_LAYERS: AssemblyLayer[] = [];
+const EMPTY_BOARDS: BoardItem[] = [];
+const EMPTY_BOARD_OUTLINES: BoardOutline[] = [];
+
 export const MechanicalDecisionBar: React.FC<{ currentMode: MechanicalWorkbenchMode }> = ({ currentMode }) => {
-  const project = useProjectStore();
+  const objects = useProjectStore((state) => state.mechanicalObjects ?? EMPTY_MECHANICAL_OBJECTS);
+  const layers = useProjectStore((state) => state.assemblyLayers ?? EMPTY_ASSEMBLY_LAYERS);
+  const boards = useProjectStore((state) => state.boards ?? EMPTY_BOARDS);
+  const boardOutlines = useProjectStore((state) => state.boardOutlines ?? EMPTY_BOARD_OUTLINES);
+  const projectActiveBoardId = useProjectStore((state) => state.activeBoardId);
+  const setActiveView = useProjectStore((state) => state.setActiveView);
   const contextBoardId = useStudioContextStore((state) => state.activeBoardId);
   const requestMechanicalMode = useStudioContextStore((state) => state.requestMechanicalMode);
   const { notify } = useFeedback();
 
-  const preferredBoardId = contextBoardId || project.activeBoardId || null;
+  const preferredBoardId = contextBoardId || projectActiveBoardId || null;
   const boardContext = useMemo(
-    () => evaluateMechanicalBoardContext(project, preferredBoardId),
-    [preferredBoardId, project],
+    () => evaluateMechanicalBoardContext(useProjectStore.getState(), preferredBoardId),
+    [boardOutlines, boards, objects, preferredBoardId],
   );
-  const objects = project.mechanicalObjects || [];
-  const layers = project.assemblyLayers || [];
   const issues = useMemo(() => validateMechanicalLayout(objects), [objects]);
-  const blockingIssues = issues.filter((issue) => issue.severity === 'Error');
-  const unresolvedLayers = layers.filter((layer) => !layer.material.trim() || !layer.inspectionNote.trim());
+  const blockingIssues = useMemo(() => issues.filter((issue) => issue.severity === 'Error'), [issues]);
+  const unresolvedLayers = useMemo(
+    () => layers.filter((layer) => !layer.material.trim() || !layer.inspectionNote.trim()),
+    [layers],
+  );
 
   const syncEnvelope = () => {
     const currentProject = useProjectStore.getState();
@@ -61,7 +73,7 @@ export const MechanicalDecisionBar: React.FC<{ currentMode: MechanicalWorkbenchM
   let detail = boardContext.blockers[0] || 'Mechanical work needs an explicit board and board outline before spatial decisions can be trusted.';
   let consequence = 'Mechanical remains blocked instead of guessing board size or placement.';
   let actionLabel = 'Open board setup';
-  let action = () => project.setActiveView(boardContext.syncState === 'missing-outline' ? 'board-designer' : 'board-settings');
+  let action = () => setActiveView(boardContext.syncState === 'missing-outline' ? 'board-designer' : 'board-settings');
   let tone = 'border-amber-200 bg-amber-50/80';
   let ActionIcon = ArrowRight;
 
@@ -81,7 +93,7 @@ export const MechanicalDecisionBar: React.FC<{ currentMode: MechanicalWorkbenchM
     actionLabel = currentMode === 'canvas' ? 'Keep editing layout' : 'Open 2D layout';
     action = () => {
       requestMechanicalMode('canvas');
-      project.setActiveView('mechanical-studio');
+      setActiveView('mechanical-studio');
     };
   } else if (boardContext.syncState === 'synced' && issues.length > 0) {
     title = 'Review unresolved mechanical evidence';
@@ -90,14 +102,14 @@ export const MechanicalDecisionBar: React.FC<{ currentMode: MechanicalWorkbenchM
     actionLabel = 'Review 2D layout';
     action = () => {
       requestMechanicalMode('canvas');
-      project.setActiveView('mechanical-studio');
+      setActiveView('mechanical-studio');
     };
   } else if (boardContext.syncState === 'synced' && layers.length === 0) {
     title = 'Define how the physical product is assembled';
     detail = 'The board envelope and current mechanical layout are coherent, but no ordered assembly stack has been recorded.';
     consequence = '3D inspection can show geometry, but manufacturing/validation cannot reason about material and assembly order yet.';
     actionLabel = 'Build assembly stack';
-    action = () => project.setActiveView('assembly-stack');
+    action = () => setActiveView('assembly-stack');
     tone = 'border-indigo-200 bg-indigo-50/70';
     ActionIcon = Layers;
   } else if (boardContext.syncState === 'synced' && unresolvedLayers.length > 0) {
@@ -105,7 +117,7 @@ export const MechanicalDecisionBar: React.FC<{ currentMode: MechanicalWorkbenchM
     detail = `${unresolvedLayers.length} assembly layer${unresolvedLayers.length === 1 ? ' is' : 's are'} missing material or inspection evidence.`;
     consequence = 'Unknown material or inspection facts remain explicit instead of being inferred from the visual stack.';
     actionLabel = 'Complete assembly evidence';
-    action = () => project.setActiveView('assembly-stack');
+    action = () => setActiveView('assembly-stack');
     tone = 'border-indigo-200 bg-indigo-50/70';
     ActionIcon = Layers;
   } else if (boardContext.syncState === 'synced' && currentMode !== 'webgl-3d') {
@@ -115,7 +127,7 @@ export const MechanicalDecisionBar: React.FC<{ currentMode: MechanicalWorkbenchM
     actionLabel = 'Open connected 3D';
     action = () => {
       requestMechanicalMode('webgl-3d');
-      project.setActiveView('mechanical-studio');
+      setActiveView('mechanical-studio');
     };
     tone = 'border-emerald-200 bg-emerald-50/70';
     ActionIcon = Box;
@@ -124,7 +136,7 @@ export const MechanicalDecisionBar: React.FC<{ currentMode: MechanicalWorkbenchM
     detail = 'The connected 3D representation is ready for review. Define tests for dimensions, fit, clearances, assembly, and physical risks rather than treating the view as proof.';
     consequence = 'Validation creates explicit evidence; the 3D view itself never grants a verified state.';
     actionLabel = 'Open Validation';
-    action = () => project.setActiveView('validation-studio');
+    action = () => setActiveView('validation-studio');
     tone = 'border-emerald-200 bg-emerald-50/70';
     ActionIcon = ShieldCheck;
   }
