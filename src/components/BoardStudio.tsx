@@ -4,6 +4,7 @@ import { useStudioContextStore } from '../store/studioContextStore';
 import { BoardItem } from '../types';
 import { Button } from '../ui/Button';
 import { Box, Cpu, Edit2, Layers, Sparkles, Trash2 } from 'lucide-react';
+import { useFeedback } from './feedback/FeedbackProvider';
 
 type BoardTab = 'boards' | 'components';
 
@@ -14,7 +15,7 @@ export const BoardStudio: React.FC = () => {
     addBoard,
     updateBoard,
     deleteBoard,
-    deleteBoardComponent,
+    unplaceComponentFromBoard,
     generateBoardPlanFromProduct,
     generateBoardComponentsFromBOM,
     activeView,
@@ -23,6 +24,7 @@ export const BoardStudio: React.FC = () => {
 
   const { activeBoardId, setActiveBoard } = useStudioContextStore();
   const activeTab: BoardTab = activeView === 'board-components' ? 'components' : 'boards';
+  const feedback = useFeedback();
 
   const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
   const [boardName, setBoardName] = useState('');
@@ -61,12 +63,51 @@ export const BoardStudio: React.FC = () => {
 
     if (editingBoardId) {
       updateBoard(editingBoardId, boardData);
+      feedback.notify({
+        tone: 'success',
+        title: 'Board saved',
+        detail: `Updated “${name}” without changing its project identity.`,
+      });
     } else {
       const board = addBoard(boardData);
       setActiveBoard(board.id);
+      feedback.notify({
+        tone: 'success',
+        title: 'Board created',
+        detail: `Created “${name}” as a canonical project board.`,
+      });
     }
 
     clearBoardForm();
+  };
+
+  const handleDeleteBoard = async (board: BoardItem) => {
+    const componentCount = boardComponents.filter((component) => component.boardId === board.id).length;
+    const approved = await feedback.confirm({
+      title: `Delete “${board.name}”?`,
+      description: componentCount > 0
+        ? `This removes the board record used by ${componentCount} project component${componentCount === 1 ? '' : 's'}. Hardware Studio does not yet provide recoverable board trash, so review those component assignments before continuing.`
+        : 'This removes the board record from the project. Hardware Studio does not yet provide recoverable board trash.',
+      confirmLabel: 'Delete board',
+      variant: 'destructive',
+    });
+    if (!approved) return;
+
+    deleteBoard(board.id);
+    if (activeBoardId === board.id) {
+      const nextBoard = boards.find((candidate) => candidate.id !== board.id);
+      setActiveBoard(nextBoard?.id || null);
+    }
+    feedback.notify({ tone: 'success', title: 'Board deleted', detail: `Removed “${board.name}”.` });
+  };
+
+  const handleRemovePlacement = (componentId: string, referenceDesignator: string) => {
+    unplaceComponentFromBoard(componentId);
+    feedback.notify({
+      tone: 'info',
+      title: 'PCB placement removed',
+      detail: `${referenceDesignator} remains a project component and can be placed again from the PCB workbench.`,
+    });
   };
 
   const handleStartEditBoard = (board: BoardItem) => {
@@ -231,7 +272,7 @@ export const BoardStudio: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => deleteBoard(board.id)}
+                          onClick={() => void handleDeleteBoard(board)}
                           className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50"
                         >
                           <Trash2 className="h-3.5 w-3.5" /> Delete
@@ -317,7 +358,6 @@ export const BoardStudio: React.FC = () => {
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-slate-500"
                   />
                 </label>
-
                 <label className="block">
                   <span className="mb-1 block font-medium text-slate-700">Dimensions (mm)</span>
                   <input
@@ -418,9 +458,9 @@ export const BoardStudio: React.FC = () => {
                     </span>
                     <button
                       type="button"
-                      onClick={() => deleteBoardComponent(component.id)}
+                      onClick={() => handleRemovePlacement(component.id, component.referenceDesignator)}
                       className="grid h-7 w-7 place-items-center rounded text-rose-600 hover:bg-rose-50"
-                      aria-label={`Delete ${component.referenceDesignator}`}
+                      aria-label={`Remove ${component.referenceDesignator} from PCB placement`}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
