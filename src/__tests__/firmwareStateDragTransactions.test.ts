@@ -23,9 +23,10 @@ describe('Firmware state-machine drag transactions', () => {
     expect(source).not.toContain('if (change.type === \'position\' && change.position && !change.dragging)');
   });
 
-  it('cancels an active drag on Escape and ignores a later drag-stop commit', () => {
+  it('cancels an active drag on Escape and ignores later preview/drag-stop work', () => {
     expect(source).toContain("event.key !== 'Escape' || !draggingRef.current");
     expect(source).toContain('cancelCommand();');
     expect(source).toContain('draggingRef.current = false;');
+    expect(source).toContain('if (!draggingRef.current) return;');
   });
 });
