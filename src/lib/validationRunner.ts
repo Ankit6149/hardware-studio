@@ -74,15 +74,15 @@ export function runValidationTest(
   } else if (category === 'Thermal' || category === 'Mechanical' || testName.toLowerCase().includes('3d') || testName.toLowerCase().includes('clearance')) {
     const interference = checkMechanicalInterference(project);
     measuredValue = options?.measuredValue ?? (interference.hasCollision
-      ? `${interference.collisions.length} collisions`
-      : `Clearance ${interference.minClearanceMm}mm`);
-    logs.push(`3D spatial collision scan completed: minimum clearance ${interference.minClearanceMm}mm.`);
+      ? `${interference.collisions.length} approximate AABB collisions`
+      : `Approximate AABB clearance ${interference.minClearanceMm}mm`);
+    logs.push(`Approximate AABB collision scan completed: reported minimum separation ${interference.minClearanceMm}mm. This local geometry check is not CAD-kernel or physical clearance verification.`);
     if (interference.hasCollision) {
       status = 'Fail';
-      logs.push(`FAILED: ${interference.collisions.length} 3D mechanical spatial collisions detected.`);
+      logs.push(`FAILED: ${interference.collisions.length} approximate 3D bounding-box collisions detected. Resolve these before detailed mechanical review.`);
     } else {
-      status = 'Pass';
-      logs.push('PASSED: 3D spatial clearance verified by the local geometry engine.');
+      status = 'Needs Review';
+      logs.push('NEEDS REVIEW: No bounding-box collision was detected, but approximate geometry cannot verify physical clearance. Review exact CAD/package geometry or physical evidence before recording a pass.');
     }
   } else if (category === 'Firmware' || testName.toLowerCase().includes('state')) {
     const warnings = validateStateMachine(project.firmwareStates || [], project.firmwareTransitions || []);
