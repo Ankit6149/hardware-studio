@@ -5,6 +5,9 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { evaluateElectronicsWorkflow, type ElectronicsWorkflowStageId } from '../../lib/electronics/electronicsWorkflow';
 import { BoardStudio } from '../BoardStudio';
+import { PCBConstraints } from '../PCBConstraints';
+import { PinMapTable } from '../PinMapTable';
+import { PowerBudgetTable } from '../PowerBudgetTable';
 import { UnifiedBoardDRCWorkbench } from './UnifiedBoardDRCWorkbench';
 import { UnifiedBOMWorkbench } from './UnifiedBOMWorkbench';
 import {
@@ -13,27 +16,37 @@ import {
   UnifiedSchematicWorkbench,
 } from './UnifiedWorkbenchAdapters';
 
+type ElectronicsWorkspaceViewId = ElectronicsWorkflowStageId | 'power-budget' | 'pin-map' | 'pcb-constraints';
+
 export const ELECTRONICS_WORKSPACE_VIEW_IDS = new Set([
+  'electronics',
   'component-library',
   'schematic-editor',
+  'power-tree',
+  'power-budget',
+  'pin-map',
   'board-settings',
   'board-studio',
   'board-components',
   'board-designer',
+  'pcb-constraints',
   'pcb-drc',
   'bom',
 ]);
 
-const stageLabels: Record<ElectronicsWorkflowStageId, string> = {
+const viewLabels: Record<ElectronicsWorkspaceViewId, string> = {
   'component-library': 'Components',
   'schematic-editor': 'Schematic',
+  'power-budget': 'Power',
+  'pin-map': 'Pin map',
   'board-settings': 'Board setup',
   'board-designer': 'PCB layout',
+  'pcb-constraints': 'PCB rules',
   'pcb-drc': 'DRC',
   'bom': 'BOM',
 };
 
-const decisionCopy: Record<ElectronicsWorkflowStageId, { title: string; consequence: string }> = {
+const decisionCopy: Record<ElectronicsWorkspaceViewId, { title: string; consequence: string }> = {
   'component-library': {
     title: 'Choose authoritative parts before describing connectivity',
     consequence: 'Schematic, PCB, BOM, and validation reuse the same canonical component identity instead of copied records.',
@@ -42,6 +55,14 @@ const decisionCopy: Record<ElectronicsWorkflowStageId, { title: string; conseque
     title: 'Decide how the selected parts are electrically connected',
     consequence: 'Only explicit pin/net relationships move forward; visual proximity never becomes connectivity by accident.',
   },
+  'power-budget': {
+    title: 'Review power assumptions in the context of the electronics design',
+    consequence: 'Power estimates remain supporting evidence; they do not silently create nets, components, or verified electrical behavior.',
+  },
+  'pin-map': {
+    title: 'Review hardware pin intent without creating a second connectivity model',
+    consequence: 'Pin mapping supports Electronics and Firmware while authoritative electrical connectivity remains in canonical components, pins, and nets.',
+  },
   'board-settings': {
     title: 'Establish the real PCB boundary before physical placement',
     consequence: 'PCB layout remains blocked until an explicit board and outline exist; metadata dimensions are not promoted into manufacturing geometry.',
@@ -49,6 +70,10 @@ const decisionCopy: Record<ElectronicsWorkflowStageId, { title: string; conseque
   'board-designer': {
     title: 'Place the canonical components on the selected physical board',
     consequence: 'Placement becomes board-scoped evidence used by DRC, mechanical sync, CPL, and manufacturing checks.',
+  },
+  'pcb-constraints': {
+    title: 'Review board rules as supporting constraints for the active PCB',
+    consequence: 'Rules stay contextual to PCB design and do not become a competing top-level engineering workflow.',
   },
   'pcb-drc': {
     title: 'Review rule and connectivity evidence before electronics handoff',
@@ -60,25 +85,32 @@ const decisionCopy: Record<ElectronicsWorkflowStageId, { title: string; conseque
   },
 };
 
-function resolveStage(viewId: string): ElectronicsWorkflowStageId {
+function resolveView(viewId: string): ElectronicsWorkspaceViewId {
   if (viewId === 'board-studio' || viewId === 'board-components') return 'board-settings';
+  if (viewId === 'power-tree') return 'power-budget';
   if (
     viewId === 'component-library'
     || viewId === 'schematic-editor'
+    || viewId === 'power-budget'
+    || viewId === 'pin-map'
     || viewId === 'board-settings'
     || viewId === 'board-designer'
+    || viewId === 'pcb-constraints'
     || viewId === 'pcb-drc'
     || viewId === 'bom'
   ) return viewId;
   return 'component-library';
 }
 
-function renderStage(stage: ElectronicsWorkflowStageId) {
-  switch (stage) {
+function renderView(view: ElectronicsWorkspaceViewId) {
+  switch (view) {
     case 'component-library': return <UnifiedComponentLibraryWorkbench />;
     case 'schematic-editor': return <UnifiedSchematicWorkbench />;
+    case 'power-budget': return <PowerBudgetTable />;
+    case 'pin-map': return <PinMapTable />;
     case 'board-settings': return <BoardStudio />;
     case 'board-designer': return <UnifiedBoardDesignerWorkbench />;
+    case 'pcb-constraints': return <PCBConstraints />;
     case 'pcb-drc': return <UnifiedBoardDRCWorkbench />;
     case 'bom': return <UnifiedBOMWorkbench />;
   }
@@ -88,10 +120,10 @@ export const ElectronicsWorkspace: React.FC = () => {
   const project = useProjectStore();
   const { activeView, setActiveView } = project;
   const snapshot = useMemo(() => evaluateElectronicsWorkflow(project), [project]);
-  const activeStage = resolveStage(activeView);
+  const activeWorkspaceView = resolveView(activeView);
   const nextDecision = decisionCopy[snapshot.nextStage];
-  const currentDecision = decisionCopy[activeStage];
-  const recommendedElsewhere = !snapshot.readyForValidation && activeStage !== snapshot.nextStage;
+  const currentDecision = decisionCopy[activeWorkspaceView];
+  const recommendedElsewhere = !snapshot.readyForValidation && activeWorkspaceView !== snapshot.nextStage;
 
   return (
     <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 text-slate-900" aria-label="Electronics engineering workspace">
@@ -99,7 +131,7 @@ export const ElectronicsWorkspace: React.FC = () => {
         <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-500">
-              <span className="font-semibold text-slate-800">{stageLabels[activeStage]}</span>
+              <span className="font-semibold text-slate-800">{viewLabels[activeWorkspaceView]}</span>
               <span aria-hidden="true">·</span>
               <span>{snapshot.activeBoardName || 'No board selected'}</span>
               <span aria-hidden="true">·</span>
@@ -114,7 +146,7 @@ export const ElectronicsWorkspace: React.FC = () => {
 
           <div className="flex shrink-0 items-center gap-2">
             {recommendedElsewhere && (
-              <span className="hidden text-[10px] text-slate-500 xl:inline">Recommended next: {stageLabels[snapshot.nextStage]}</span>
+              <span className="hidden text-[10px] text-slate-500 xl:inline">Recommended next: {viewLabels[snapshot.nextStage]}</span>
             )}
             <button
               type="button"
@@ -124,7 +156,7 @@ export const ElectronicsWorkspace: React.FC = () => {
               {snapshot.readyForValidation
                 ? 'Plan validation'
                 : recommendedElsewhere
-                  ? `Go to ${stageLabels[snapshot.nextStage]}`
+                  ? `Go to ${viewLabels[snapshot.nextStage]}`
                   : 'Continue this decision'}
               {snapshot.readyForValidation ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> : <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />}
             </button>
@@ -154,7 +186,7 @@ export const ElectronicsWorkspace: React.FC = () => {
       </header>
 
       <div className="min-h-0 flex-1 overflow-hidden">
-        {renderStage(activeStage)}
+        {renderView(activeWorkspaceView)}
       </div>
     </section>
   );

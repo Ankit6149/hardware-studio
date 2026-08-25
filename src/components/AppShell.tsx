@@ -11,10 +11,7 @@ import { BlueprintCanvas } from './BlueprintCanvas';
 import { ExportCenter } from './ExportCenter';
 import { PropertiesPanel } from './PropertiesPanel';
 import { ProductVisualizer } from './ProductVisualizer';
-import { PowerBudgetTable } from './PowerBudgetTable';
-import { PinMapTable } from './PinMapTable';
 import { ReadinessDashboard } from './ReadinessDashboard';
-import { PCBConstraints } from './PCBConstraints';
 import { ProjectDashboard } from './ProjectDashboard';
 import { BlueprintSheets } from './BlueprintSheets';
 import { FactoryPackageBuilder } from './FactoryPackageBuilder';
@@ -35,9 +32,6 @@ function renderSurface(surface: NavigationSurface, viewId: string): React.ReactN
     case 'readiness': return <ReadinessDashboard />;
     case 'mechanical-canvas': return <UnifiedMechanicalWorkbench defaultMode="canvas" />;
     case 'mechanical-assembly': return <UnifiedMechanicalWorkbench defaultMode="assembly" />;
-    case 'power-budget': return <PowerBudgetTable />;
-    case 'pin-map': return <PinMapTable />;
-    case 'pcb-constraints': return <PCBConstraints />;
     case 'firmware-modules': return <FirmwareStudio key={viewId} initialMode={viewId === 'firmware-evidence' ? 'evidence' : 'modules'} />;
     case 'firmware-state-machine': return <FirmwareStudio key={viewId} initialMode="state-machine" />;
     case 'firmware-hardware-map': return <FirmwareStudio key={viewId} initialMode="hardware-map" />;
@@ -51,9 +45,12 @@ function renderSurface(surface: NavigationSurface, viewId: string): React.ReactN
     case 'factory-builder': return <FactoryPackageBuilder />;
     case 'component-library':
     case 'schematic-editor':
+    case 'power-budget':
+    case 'pin-map':
     case 'bom':
     case 'board-designer':
     case 'board-studio':
+    case 'pcb-constraints':
       return <ElectronicsWorkspace />;
   }
 }
