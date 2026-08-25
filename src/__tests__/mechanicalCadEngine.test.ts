@@ -51,6 +51,9 @@ describe('Mechanical 3D CAD & Enclosure Engine', () => {
       version: '1.0',
       activeView: 'mechanical',
       bom: [],
+      boards: [
+        { id: 'b1', name: 'Explicit Test Board' }
+      ],
       mechanicalObjects: [
         { id: 'enc1', name: 'Enclosure Shell', type: 'Outer Profile', shape: 'rect', layer: 'Enclosure', xMm: 0, yMm: 0, widthMm: 50, heightMm: 50, depthMm: 10, rotationDeg: 0, locked: false, visible: true }
       ],
@@ -65,7 +68,7 @@ describe('Mechanical 3D CAD & Enclosure Engine', () => {
           packageName: 'CAN_8MM',
           footprint: 'C_0805',
           partNumber: 'CAP-100U',
-          placementX: 60, // Outside enclosure!
+          placementX: 60,
           placementY: 25,
           placementStatus: 'Placed',
           placementCriticality: 'High',
