@@ -14,7 +14,11 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
-import { getValidationRunHistory, runValidationTest } from '../../lib/validationRunner';
+import {
+  getValidationExecutionMode,
+  getValidationRunHistory,
+  runValidationTest,
+} from '../../lib/validationRunner';
 import { useFeedback } from '../feedback/FeedbackProvider';
 import { ValidationStudio } from '../validation/ValidationStudio';
 import { EditorDockButton } from '../editor/EditorDockButton';
@@ -27,15 +31,6 @@ function runStatusToTestStatus(status: string): string {
   if (status === 'Pass' || status === 'Passed') return 'Passed';
   if (status === 'Fail' || status === 'Failed') return 'Failed';
   return 'In Progress';
-}
-
-function isAutomatedValidation(category?: string, name?: string): boolean {
-  const normalized = (category || '').toLowerCase();
-  const testName = (name || '').toLowerCase();
-  return ['drc', 'mechanical', 'thermal', 'firmware'].includes(normalized)
-    || testName.includes('drc')
-    || testName.includes('clearance')
-    || testName.includes('state');
 }
 
 export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProps> = ({ initialMode }) => {
@@ -75,7 +70,11 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
     || validationTests[0];
   const runHistory = runTest ? getValidationRunHistory({ ...store, validationRuns }, runTest.id) : [];
   const latestRun = runHistory[0];
-  const automatedRun = isAutomatedValidation(runTest?.category, runTest?.name || runTest?.testName);
+  const executionMode = getValidationExecutionMode(runTest?.category, runTest?.name || runTest?.testName);
+  const automatedRun = executionMode === 'drc-auto' || executionMode === 'firmware-state-auto';
+  const mechanicalScreenRun = executionMode === 'mechanical-screen';
+  const thermalReview = (runTest?.category || '').trim().toLowerCase() === 'thermal';
+  const evidenceBackedReview = mechanicalScreenRun || thermalReview;
 
   const contextualComponentCount = useMemo(
     () => boardComponents.filter((component) => !activeBoardId || component.boardId === activeBoardId).length,
@@ -125,11 +124,23 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
       feedback.notify({ tone: 'warning', title: 'No validation test selected', detail: 'Create or select a validation test before recording evidence.' });
       return;
     }
-    if (!automatedRun && !manualVerdict) {
+
+    if (!automatedRun && !mechanicalScreenRun && !manualVerdict) {
       feedback.notify({
         tone: 'warning',
-        title: 'Manual verdict required',
-        detail: 'Physical/manual validation cannot auto-pass from a measurement alone. Choose Pass, Fail, or Inconclusive after reviewing the procedure and evidence.',
+        title: 'Engineer verdict required',
+        detail: 'This validation type is not fully automated. Choose Pass, Fail, or Inconclusive after reviewing the procedure and evidence.',
+      });
+      return;
+    }
+
+    if (evidenceBackedReview && manualVerdict && (!evidenceLink.trim() || !operator.trim())) {
+      feedback.notify({
+        tone: 'warning',
+        title: 'Evidence and reviewer required',
+        detail: mechanicalScreenRun
+          ? 'A reviewed Mechanical verdict requires an exact CAD/physical evidence reference and reviewer identity. You can run the approximate screen without a verdict first.'
+          : 'A Thermal verdict requires external simulation/lab evidence and reviewer identity because Hardware Studio does not run a thermal solver yet.',
       });
       return;
     }
@@ -154,6 +165,20 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
     setEvidenceLink('');
     setManualVerdict('');
   };
+
+  const measurementPlaceholder = automatedRun
+    ? 'Optional reading or observation'
+    : mechanicalScreenRun
+      ? 'Optional observation; the local screen uses recorded explicit geometry'
+      : thermalReview
+        ? 'Record measured temperature, simulation result, or lab observation'
+        : 'Record the observed result';
+
+  const runActionLabel = mechanicalScreenRun && !manualVerdict
+    ? 'Run approximate screen'
+    : runHistory.length > 0
+      ? 'Record retest'
+      : 'Record run';
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-50" aria-label="Context-aware validation workbench">
@@ -189,23 +214,34 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
         {runPanelOpen && (
           <aside className="absolute bottom-3 right-3 top-3 z-40 flex w-[min(360px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-lg border border-slate-300 bg-white shadow-xl" aria-label="Validation run evidence">
             <div className="flex items-start justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2.5">
-              <div><p className="text-[11px] font-semibold text-slate-900">Record run evidence</p><p className="mt-0.5 text-[9px] leading-4 text-slate-500">Runs are append-only. Manual measurements never imply Pass without an explicit verdict.</p></div>
+              <div><p className="text-[11px] font-semibold text-slate-900">Record run evidence</p><p className="mt-0.5 text-[9px] leading-4 text-slate-500">Runs are append-only. A screen, measurement, or visual review never implies Pass unless that validation mode can actually support the verdict.</p></div>
               <button type="button" onClick={() => setRunPanelOpen(false)} className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-slate-500 hover:bg-slate-200" aria-label="Close run evidence"><X className="h-3.5 w-3.5" /></button>
             </div>
 
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
               <label className="block"><span className="text-[9px] font-semibold text-slate-500">Test</span><select value={runTest?.id || ''} onChange={(event) => setSelectedRunTestId(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-800 outline-none focus:border-slate-500">{validationTests.length === 0 && <option value="">No validation tests</option>}{validationTests.map((test) => <option key={test.id} value={test.id}>{test.name} · {test.category || 'Manual'}</option>)}</select></label>
 
-              <label className="block"><span className="text-[9px] font-semibold text-slate-500">Measurement / observation</span><textarea value={measurement} onChange={(event) => setMeasurement(event.target.value)} placeholder={automatedRun ? 'Optional reading or observation' : 'Record the observed result'} className="mt-1 min-h-20 w-full resize-y rounded-md border border-slate-300 bg-white p-2.5 text-[10px] leading-5 outline-none focus:border-slate-500" /></label>
+              <label className="block"><span className="text-[9px] font-semibold text-slate-500">Measurement / observation</span><textarea value={measurement} onChange={(event) => setMeasurement(event.target.value)} placeholder={measurementPlaceholder} className="mt-1 min-h-20 w-full resize-y rounded-md border border-slate-300 bg-white p-2.5 text-[10px] leading-5 outline-none focus:border-slate-500" /></label>
 
-              {automatedRun ? (
-                <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2.5 text-[10px] font-semibold text-emerald-800">The validation engine derives this verdict from recorded project state.</div>
-              ) : (
-                <label className="block"><span className="text-[9px] font-semibold text-slate-500">Manual verdict</span><select value={manualVerdict} onChange={(event) => setManualVerdict(event.target.value as typeof manualVerdict)} className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] font-semibold outline-none focus:border-slate-500"><option value="">Choose verdict…</option><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="Inconclusive">Inconclusive</option></select></label>
+              {executionMode === 'drc-auto' && (
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2.5 text-[10px] font-semibold leading-4 text-emerald-800">The implemented local DRC rules derive this verdict from recorded PCB state.</div>
+              )}
+              {executionMode === 'firmware-state-auto' && (
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2.5 text-[10px] font-semibold leading-4 text-emerald-800">The local state-machine validator checks structural reachability only. It does not verify compilation, timing, hardware behavior, or runtime correctness.</div>
+              )}
+              {mechanicalScreenRun && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-[10px] font-semibold leading-4 text-amber-900">Mechanical first runs an approximate AABB collision screen. A detected collision can fail the run; a clean screen stays Needs Review unless an engineer records a verdict with exact CAD/physical evidence and reviewer identity.</div>
+              )}
+              {thermalReview && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-[10px] font-semibold leading-4 text-amber-900">No thermal solver is implemented in Hardware Studio yet. Thermal verdicts require external simulation/lab evidence plus reviewer identity.</div>
               )}
 
-              <label className="block"><span className="text-[9px] font-semibold text-slate-500">Evidence reference</span><input value={evidenceLink} onChange={(event) => setEvidenceLink(event.target.value)} placeholder="File, URL, log, image, or lab reference" className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] outline-none focus:border-slate-500" /></label>
-              <label className="block"><span className="text-[9px] font-semibold text-slate-500">Operator / reviewer</span><input value={operator} onChange={(event) => setOperator(event.target.value)} placeholder="Name or role" className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] outline-none focus:border-slate-500" /></label>
+              {!automatedRun && (
+                <label className="block"><span className="text-[9px] font-semibold text-slate-500">Engineer verdict{mechanicalScreenRun ? ' (optional for screen-only run)' : ''}</span><select value={manualVerdict} onChange={(event) => setManualVerdict(event.target.value as typeof manualVerdict)} className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] font-semibold outline-none focus:border-slate-500"><option value="">Choose verdict…</option><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="Inconclusive">Inconclusive</option></select></label>
+              )}
+
+              <label className="block"><span className="text-[9px] font-semibold text-slate-500">Evidence reference{evidenceBackedReview && manualVerdict ? ' · required' : ''}</span><input value={evidenceLink} onChange={(event) => setEvidenceLink(event.target.value)} placeholder="File, URL, log, image, CAD review, simulation, or lab reference" className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] outline-none focus:border-slate-500" /></label>
+              <label className="block"><span className="text-[9px] font-semibold text-slate-500">Operator / reviewer{evidenceBackedReview && manualVerdict ? ' · required' : ''}</span><input value={operator} onChange={(event) => setOperator(event.target.value)} placeholder="Name or role" className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-[10px] outline-none focus:border-slate-500" /></label>
 
               <div className="rounded-md border border-slate-200 bg-slate-50 p-2.5">
                 <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700"><History className="h-3.5 w-3.5" /> Run history</div>
@@ -219,7 +255,7 @@ export const UnifiedValidationWorkbench: React.FC<UnifiedValidationWorkbenchProp
             <div className="border-t border-slate-200 bg-slate-50 p-3">
               <button type="button" onClick={recordRun} disabled={!runTest} className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-md bg-slate-950 px-3 text-[10px] font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">
                 {runHistory.length > 0 ? <RotateCcw className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                {runHistory.length > 0 ? 'Record retest' : 'Record run'}
+                {runActionLabel}
               </button>
             </div>
           </aside>
