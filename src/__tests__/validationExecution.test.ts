@@ -35,6 +35,33 @@ describe('Slice 6 Validation Execution Engine', () => {
     expect(result.run.logs.some(l => l.includes('MANUAL VERDICT RECORDED: Pass'))).toBe(true);
   });
 
+  it('should require review when the lightweight mechanical engine finds no approximate collision', () => {
+    useProjectStore.setState({
+      validationTests: [{
+        id: 'test_mechanical_clearance',
+        name: 'Enclosure clearance review',
+        category: 'Mechanical',
+        linkedRequirementIds: [],
+        steps: [],
+        measurements: [],
+        passCriteria: ['No physical interference at required clearance'],
+        evidence: [],
+      }],
+      mechanicalBodies: [],
+      mechanicalObjects: [],
+      boardComponents: [],
+      boards: [],
+      activeBoardId: '',
+    });
+
+    const result = runValidationTest(useProjectStore.getState(), 'test_mechanical_clearance');
+
+    expect(result.run.status).toBe('Needs Review');
+    expect(String(result.run.measuredValue)).toContain('Approximate AABB clearance');
+    expect(result.run.logs.some((line) => line.includes('not CAD-kernel or physical clearance verification'))).toBe(true);
+    expect(result.run.logs.some((line) => line.includes('approximate geometry cannot verify physical clearance'))).toBe(true);
+  });
+
   it('should maintain immutable run history prepending new runs', () => {
     const store = useProjectStore.getState();
     const initialRunCount = store.validationRuns?.length || 0;
