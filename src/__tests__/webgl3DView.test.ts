@@ -3,6 +3,8 @@ import { useProjectStore } from '../store/projectStore';
 import { checkMechanicalInterference } from '../lib/mechanical/mechanicalGeometry';
 import { MechanicalBody, BoardComponent } from '../types';
 
+const TEST_BOARD_ID = 'board_collision_fixture';
+
 describe('Slice 6 Real Mechanical 3D Synchronization & Collision Engine Tests', () => {
   it('should detect real 3D spatial collisions between bodies/components and clear them on movement', () => {
     const store = useProjectStore.getState();
@@ -23,11 +25,10 @@ describe('Slice 6 Real Mechanical 3D Synchronization & Collision Engine Tests', 
       opacity: 0.5
     };
 
-    // 2. Create PCB component at (10, 10) on active board with 3D package dimensions
+    // 2. Create PCB component at (10, 10) on a real active board with 3D package dimensions.
     const compColliding: BoardComponent = {
       id: 'cmp_3d_colliding',
-      boardId: 'board_main',
-      circuitBlockId: 'block_0',
+      boardId: TEST_BOARD_ID,
       referenceDesignator: 'U301',
       componentName: 'Power Management IC',
       componentType: 'IC',
@@ -37,7 +38,7 @@ describe('Slice 6 Real Mechanical 3D Synchronization & Collision Engine Tests', 
       partNumber: 'PMIC_24',
       placementCriticality: 'Low',
       notes: '',
-      packageDimensions: { widthMm: 30, heightMm: 30, heightZMm: 20 }, // Height overlaps with enclosure top
+      packageDimensions: { widthMm: 30, heightMm: 30, heightZMm: 20 },
       quantity: 1,
       side: 'Top',
       placementX: 10,
@@ -64,7 +65,8 @@ describe('Slice 6 Real Mechanical 3D Synchronization & Collision Engine Tests', 
     store.importProjectJSON({
       id: 'proj_3d_collision_test',
       projectName: '3D Collision Engine System',
-      activeBoardId: 'board_main',
+      activeBoardId: TEST_BOARD_ID,
+      boards: [{ id: TEST_BOARD_ID, name: 'Collision Fixture Board', boardType: 'Main PCB' }],
       mechanicalBodies: [encBody, batteryBody],
       boardComponents: [compColliding]
     });
@@ -79,10 +81,10 @@ describe('Slice 6 Real Mechanical 3D Synchronization & Collision Engine Tests', 
     useProjectStore.setState({
       mechanicalBodies: [
         encBody,
-        { ...batteryBody, xMm: 50, yMm: 20, zMm: 2, widthMm: 30, heightMm: 20, depthMm: 10 } // xMax: 80 < 100, yMax: 40 < 60, zMax: 12 < 25
+        { ...batteryBody, xMm: 50, yMm: 20, zMm: 2, widthMm: 30, heightMm: 20, depthMm: 10 }
       ],
       boardComponents: [
-        { ...compColliding, pcb: { ...compColliding.pcb!, xMm: 10, yMm: 10 }, packageDimensions: { widthMm: 8, heightMm: 8, heightZMm: 2 } } // xMax: 14 < 50
+        { ...compColliding, pcb: { ...compColliding.pcb!, xMm: 10, yMm: 10 }, packageDimensions: { widthMm: 8, heightMm: 8, heightZMm: 2 } }
       ]
     });
 
