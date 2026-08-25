@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Project } from '../types';
+import type { BoardComponent, MechanicalBody, Project } from '../types';
 import { checkMechanicalInterference } from '../lib/mechanical/mechanicalGeometry';
 
 function project(input: Partial<Project>): Project {
@@ -12,7 +12,7 @@ function project(input: Partial<Project>): Project {
   } as Project;
 }
 
-const explicitBatteryBody = {
+const explicitBatteryBody: MechanicalBody = {
   id: 'battery-body',
   name: 'Battery body',
   objectType: 'Battery',
@@ -24,7 +24,7 @@ const explicitBatteryBody = {
   depthMm: 8,
 };
 
-const explicitPlacedComponent = {
+const explicitPlacedComponent: BoardComponent = {
   id: 'component-1',
   boardId: 'board-real',
   referenceDesignator: 'U1',
@@ -34,16 +34,16 @@ const explicitPlacedComponent = {
   packageName: 'QFN',
   footprint: 'QFN',
   partNumber: 'MCU-1',
-  placementCriticality: 'Low' as const,
+  placementCriticality: 'Low',
   notes: '',
   pcb: {
     placed: true,
     xMm: 5,
     yMm: 5,
     rotationDeg: 0,
-    side: 'Top' as const,
+    side: 'Top',
     locked: false,
-    placementStatus: 'Placed' as const,
+    placementStatus: 'Placed',
   },
   packageDimensions: { widthMm: 8, heightMm: 8, heightZMm: 2 },
 };
@@ -82,7 +82,10 @@ describe('mechanical interference input truthfulness', () => {
   });
 
   it('does not fabricate package dimensions for a placed component', () => {
-    const { packageDimensions: _omitted, ...withoutPackageDimensions } = explicitPlacedComponent;
+    const withoutPackageDimensions: BoardComponent = {
+      ...explicitPlacedComponent,
+      packageDimensions: undefined,
+    };
     const result = checkMechanicalInterference(project({
       activeBoardId: 'board-real',
       boards: [{ id: 'board-real', name: 'Real board', boardType: 'Main PCB' }],
