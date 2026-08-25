@@ -214,43 +214,69 @@ export interface CollisionPair {
 export interface CollisionResult {
   hasCollision: boolean;
   collisions: CollisionPair[];
-  minClearanceMm: number;
+  minClearanceMm: number | null;
 }
 
-/** Check 3D Spatial Interference between all internal bodies, components, battery, and enclosure boundaries */
+function finiteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function positiveNumber(value: unknown): value is number {
+  return finiteNumber(value) && value > 0;
+}
+
+/**
+ * Lightweight AABB interference screening.
+ *
+ * This is deliberately not a CAD-kernel clearance check. Only explicit recorded
+ * coordinates and dimensions participate; missing engineering geometry stays
+ * unresolved instead of being replaced with plausible-looking defaults.
+ */
 export function checkMechanicalInterference(project: Project): CollisionResult {
   const enclosures: { id: string; name: string; bbox: BoundingBox3D }[] = [];
   const internalBodies: { id: string; name: string; bbox: BoundingBox3D }[] = [];
 
-  // 1. Separate Enclosure Shells vs Internal Bodies
-  (project.mechanicalBodies || []).forEach((b) => {
-    const w = b.widthMm || 100;
-    const h = b.heightMm || 60;
-    const d = b.depthMm || 20;
+  // 1. Explicit 3D mechanical bodies only. Flat fields and the newer
+  // position/dimensions representation are both accepted when fully specified.
+  (project.mechanicalBodies || []).forEach((body) => {
+    const xMm = finiteNumber(body.xMm) ? body.xMm : body.position?.x;
+    const yMm = finiteNumber(body.yMm) ? body.yMm : body.position?.y;
+    const zMm = finiteNumber(body.zMm) ? body.zMm : body.position?.z;
+    const widthMm = positiveNumber(body.widthMm) ? body.widthMm : body.dimensions?.x;
+    const heightMm = positiveNumber(body.heightMm) ? body.heightMm : body.dimensions?.y;
+    const depthMm = positiveNumber(body.depthMm) ? body.depthMm : body.dimensions?.z;
+
+    if (!finiteNumber(xMm) || !finiteNumber(yMm) || !finiteNumber(zMm)
+      || !positiveNumber(widthMm) || !positiveNumber(heightMm) || !positiveNumber(depthMm)) {
+      return;
+    }
+
     const item = {
-      id: b.id || 'body_enc',
-      name: b.name || 'Enclosure Shell',
+      id: body.id,
+      name: body.name || 'Mechanical Body',
       bbox: {
-        xMin: b.xMm || 0,
-        xMax: (b.xMm || 0) + w,
-        yMin: b.yMm || 0,
-        yMax: (b.yMm || 0) + h,
-        zMin: b.zMm || 0,
-        zMax: (b.zMm || 0) + d
+        xMin: xMm,
+        xMax: xMm + widthMm,
+        yMin: yMm,
+        yMax: yMm + heightMm,
+        zMin: zMm,
+        zMax: zMm + depthMm
       }
     };
-    if (b.objectType === 'Enclosure' || b.name?.toLowerCase().includes('enclosure')) {
+    if (body.objectType === 'Enclosure' || body.name?.toLowerCase().includes('enclosure')) {
       enclosures.push(item);
     } else {
       internalBodies.push(item);
     }
   });
 
-  // 2. Mechanical Objects
+  // 2. A 2D mechanical object participates only when explicit depth exists.
+  // MechanicalObject currently has no Z transform, so the local screening plane is Z=0.
   (project.mechanicalObjects || []).forEach((obj) => {
+    if (!positiveNumber(obj.depthMm)) return;
     const bbox2d = getMechanicalBoundingBox(obj);
-    const zDepth = obj.depthMm || (obj.layer === 'Enclosure' ? 25 : obj.layer === 'Battery' ? 10 : 5);
-    const zBase = obj.layer === 'Battery' ? 2 : 0;
+    if (!positiveNumber(bbox2d.width) || !positiveNumber(bbox2d.height)) return;
+
     const item = {
       id: obj.id,
       name: obj.name || 'Mechanical Component',
@@ -259,8 +285,8 @@ export function checkMechanicalInterference(project: Project): CollisionResult {
         xMax: bbox2d.xMax,
         yMin: bbox2d.yMin,
         yMax: bbox2d.yMax,
-        zMin: zBase,
-        zMax: zBase + zDepth
+        zMin: 0,
+        zMax: obj.depthMm
       }
     };
     if (obj.layer === 'Enclosure' || obj.type === 'Outer Profile') {
@@ -270,35 +296,47 @@ export function checkMechanicalInterference(project: Project): CollisionResult {
     }
   });
 
-  // 3. Placed Board Components with Package Dimensions
-  const activeBoardId = project.activeBoardId || 'board_main';
-  (project.boardComponents || [])
-    .filter((c) => c.boardId === activeBoardId && c.pcb?.placed !== false)
-    .forEach((c) => {
-      const cx = c.pcb?.xMm ?? c.placementX ?? 0;
-      const cy = c.pcb?.yMm ?? c.placementY ?? 0;
-      const packageDim = c.packageDimensions || { widthMm: 8, heightMm: 8, heightZMm: 3 };
-      const compW = packageDim.widthMm || 8;
-      const compH = packageDim.heightMm || 8;
-      const compZ = packageDim.heightZMm || 3;
-      const pcbZBase = 5;
+  // 3. Board components participate only when the selected board is a real project
+  // board and the placement + package dimensions are explicit. There is no
+  // synthetic board fallback and no invented component position/package geometry.
+  const realBoardIds = new Set((project.boards || []).map((board) => board.id));
+  const activeBoardId = project.activeBoardId && realBoardIds.has(project.activeBoardId)
+    ? project.activeBoardId
+    : null;
 
-      internalBodies.push({
-        id: c.id,
-        name: `${c.referenceDesignator || 'U'} (${c.componentName || 'Component'})`,
-        bbox: {
-          xMin: cx - compW / 2,
-          xMax: cx + compW / 2,
-          yMin: cy - compH / 2,
-          yMax: cy + compH / 2,
-          zMin: pcbZBase,
-          zMax: pcbZBase + compZ
+  if (activeBoardId) {
+    (project.boardComponents || [])
+      .filter((component) => component.boardId === activeBoardId && component.pcb?.placed === true)
+      .forEach((component) => {
+        const cx = component.pcb?.xMm;
+        const cy = component.pcb?.yMm;
+        const packageDim = component.packageDimensions;
+        if (!finiteNumber(cx) || !finiteNumber(cy) || !packageDim
+          || !positiveNumber(packageDim.widthMm)
+          || !positiveNumber(packageDim.heightMm)
+          || !positiveNumber(packageDim.heightZMm)) {
+          return;
         }
+
+        // The current lightweight representation uses the board plane as Z=0.
+        // This is an approximate screening convention, not an assembly transform.
+        internalBodies.push({
+          id: component.id,
+          name: `${component.referenceDesignator || 'Component'} (${component.componentName || 'Component'})`,
+          bbox: {
+            xMin: cx - packageDim.widthMm / 2,
+            xMax: cx + packageDim.widthMm / 2,
+            yMin: cy - packageDim.heightMm / 2,
+            yMax: cy + packageDim.heightMm / 2,
+            zMin: 0,
+            zMax: packageDim.heightZMm
+          }
+        });
       });
-    });
+  }
 
   const collisions: CollisionPair[] = [];
-  let minClearanceMm = Infinity;
+  let minClearanceMm: number | null = null;
 
   // A. Internal Object vs Internal Object Collisions (e.g. Component ↔ Battery, Component A ↔ Component B)
   for (let i = 0; i < internalBodies.length; i++) {
@@ -325,7 +363,7 @@ export function checkMechanicalInterference(project: Project): CollisionResult {
         const dy = Math.max(0, Math.max(a.yMin - b.yMax, b.yMin - a.yMax));
         const dz = Math.max(0, Math.max(a.zMin - b.zMax, b.zMin - a.zMax));
         const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (dist < minClearanceMm) minClearanceMm = dist;
+        if (minClearanceMm === null || dist < minClearanceMm) minClearanceMm = dist;
       }
     }
   }
@@ -353,12 +391,10 @@ export function checkMechanicalInterference(project: Project): CollisionResult {
     }
   }
 
-  if (minClearanceMm === Infinity) minClearanceMm = 5.0;
-
   return {
     hasCollision: collisions.length > 0,
     collisions,
-    minClearanceMm: Math.round(minClearanceMm * 100) / 100
+    minClearanceMm: minClearanceMm === null ? null : Math.round(minClearanceMm * 100) / 100
   };
 }
 
@@ -455,4 +491,3 @@ export function computeEnclosureShell(
     innerDepthMm
   };
 }
-
