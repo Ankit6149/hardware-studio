@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ReactFlow, Background, Controls, MiniMap,
   Connection, Node, Edge, NodeChange, BackgroundVariant,
@@ -8,6 +8,10 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useProjectStore } from '../../store/projectStore';
+import type { FirmwareState, FirmwareTransition } from '../../types';
+
+const EMPTY_FIRMWARE_STATES: FirmwareState[] = [];
+const EMPTY_FIRMWARE_TRANSITIONS: FirmwareTransition[] = [];
 
 const STATE_TYPE_COLORS: Record<string, string> = {
   Initial: '#22c55e',
@@ -61,25 +65,32 @@ interface Props {
 }
 
 export const FirmwareStateMachineCanvas: React.FC<Props> = ({ onStateSelect, onTransitionSelect, selectedStateId }) => {
-  const store = useProjectStore();
-  const firmwareStates = store.firmwareStates || [];
-  const firmwareTransitions = store.firmwareTransitions || [];
+  const firmwareStates = useProjectStore((state) => state.firmwareStates ?? EMPTY_FIRMWARE_STATES);
+  const firmwareTransitions = useProjectStore((state) => state.firmwareTransitions ?? EMPTY_FIRMWARE_TRANSITIONS);
+  const beginCommand = useProjectStore((state) => state.beginCommand);
+  const updateTransientPreview = useProjectStore((state) => state.updateTransientPreview);
+  const commitCommand = useProjectStore((state) => state.commitCommand);
+  const cancelCommand = useProjectStore((state) => state.cancelCommand);
+  const executeProjectCommand = useProjectStore((state) => state.executeProjectCommand);
+  const addFirmwareTransition = useProjectStore((state) => state.addFirmwareTransition);
+  const draggingRef = useRef(false);
+  const dragChangedRef = useRef(false);
 
-  const flowNodes: Node[] = useMemo(() => firmwareStates.map(s => ({
-    id: s.id,
+  const flowNodes: Node[] = useMemo(() => firmwareStates.map((state) => ({
+    id: state.id,
     type: 'firmwareState',
-    position: { x: s.x, y: s.y },
-    data: { label: s.name, stateType: s.type, description: s.description || '' },
-    selected: s.id === selectedStateId,
+    position: { x: state.x, y: state.y },
+    data: { label: state.name, stateType: state.type, description: state.description || '' },
+    selected: state.id === selectedStateId,
   })), [firmwareStates, selectedStateId]);
 
-  const flowEdges: Edge[] = useMemo(() => firmwareTransitions.map(t => {
-    const color = STATE_TYPE_COLORS[firmwareStates.find(s => s.id === t.targetStateId)?.type || ''] || '#94a3b8';
+  const flowEdges: Edge[] = useMemo(() => firmwareTransitions.map((transition) => {
+    const color = STATE_TYPE_COLORS[firmwareStates.find((state) => state.id === transition.targetStateId)?.type || ''] || '#94a3b8';
     return {
-      id: t.id,
-      source: t.sourceStateId,
-      target: t.targetStateId,
-      label: `${t.event}${t.condition ? ` [${t.condition}]` : ''}${t.action ? ` / ${t.action}` : ''}`,
+      id: transition.id,
+      source: transition.sourceStateId,
+      target: transition.targetStateId,
+      label: `${transition.event}${transition.condition ? ` [${transition.condition}]` : ''}${transition.action ? ` / ${transition.action}` : ''}`,
       animated: true,
       style: { stroke: color, strokeWidth: 1.5 },
       labelStyle: { fontSize: 9, fill: '#475569' },
@@ -87,33 +98,62 @@ export const FirmwareStateMachineCanvas: React.FC<Props> = ({ onStateSelect, onT
     };
   }), [firmwareTransitions, firmwareStates]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !draggingRef.current) return;
+      cancelCommand();
+      draggingRef.current = false;
+      dragChangedRef.current = false;
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cancelCommand]);
+
   const onNodeDragStart = useCallback(() => {
-    store.beginCommand('MOVE_STATE', 'Move firmware state');
-  }, [store]);
+    draggingRef.current = true;
+    dragChangedRef.current = false;
+    beginCommand('MOVE_STATE', 'Move firmware state');
+  }, [beginCommand]);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
+    if (!draggingRef.current) return;
+
+    let updatedStates = useProjectStore.getState().firmwareStates ?? EMPTY_FIRMWARE_STATES;
+    let changed = false;
+
     for (const change of changes) {
-      if (change.type === 'position' && change.position && !change.dragging) {
-        const updated = (store.firmwareStates || []).map(s =>
-          s.id === change.id ? { ...s, x: change.position!.x, y: change.position!.y } : s
-        );
-        store.updateTransientPreview({ firmwareStates: updated });
-        store.commitCommand();
-      }
+      if (change.type !== 'position' || !change.position) continue;
+      changed = true;
+      updatedStates = updatedStates.map((state) =>
+        state.id === change.id ? { ...state, x: change.position!.x, y: change.position!.y } : state
+      );
     }
-  }, [store]);
+
+    if (!changed) return;
+    dragChangedRef.current = true;
+    updateTransientPreview({ firmwareStates: updatedStates });
+  }, [updateTransientPreview]);
+
+  const onNodeDragStop = useCallback(() => {
+    if (!draggingRef.current) return;
+    if (dragChangedRef.current) commitCommand();
+    else cancelCommand();
+    draggingRef.current = false;
+    dragChangedRef.current = false;
+  }, [cancelCommand, commitCommand]);
 
   const onConnect = useCallback((connection: Connection) => {
     if (connection.source && connection.target) {
-      store.executeProjectCommand('ADD_TRANSITION', 'Add transition', () =>
-        store.addFirmwareTransition({
+      executeProjectCommand('ADD_TRANSITION', 'Add transition', () =>
+        addFirmwareTransition({
           sourceStateId: connection.source!,
           targetStateId: connection.target!,
           event: 'event',
         })
       );
     }
-  }, [store]);
+  }, [addFirmwareTransition, executeProjectCommand]);
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
@@ -121,15 +161,16 @@ export const FirmwareStateMachineCanvas: React.FC<Props> = ({ onStateSelect, onT
         nodes={flowNodes} edges={flowEdges}
         onNodesChange={onNodesChange} onConnect={onConnect}
         onNodeDragStart={onNodeDragStart}
-        onNodeClick={(_, n) => { onStateSelect(n.id); onTransitionSelect(null); }}
-        onEdgeClick={(_, e) => { onTransitionSelect(e.id); onStateSelect(null); }}
+        onNodeDragStop={onNodeDragStop}
+        onNodeClick={(_, node) => { onStateSelect(node.id); onTransitionSelect(null); }}
+        onEdgeClick={(_, edge) => { onTransitionSelect(edge.id); onStateSelect(null); }}
         onPaneClick={() => { onStateSelect(null); onTransitionSelect(null); }}
         nodeTypes={nodeTypes} fitView snapToGrid snapGrid={[10, 10]}
         style={{ background: '#fafbfc' }}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
         <Controls showInteractive={false} />
-        <MiniMap nodeColor={n => STATE_TYPE_COLORS[(n.data as { stateType?: string })?.stateType || ''] || '#6b7280'} />
+        <MiniMap nodeColor={node => STATE_TYPE_COLORS[(node.data as { stateType?: string })?.stateType || ''] || '#6b7280'} />
       </ReactFlow>
     </div>
   );
