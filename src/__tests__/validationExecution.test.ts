@@ -35,7 +35,7 @@ describe('Slice 6 Validation Execution Engine', () => {
     expect(result.run.logs.some(l => l.includes('MANUAL VERDICT RECORDED: Pass'))).toBe(true);
   });
 
-  it('should require review when the lightweight mechanical engine finds no approximate collision', () => {
+  it('should require review and report unresolved clearance when explicit geometry is insufficient', () => {
     useProjectStore.setState({
       validationTests: [{
         id: 'test_mechanical_clearance',
@@ -57,8 +57,9 @@ describe('Slice 6 Validation Execution Engine', () => {
     const result = runValidationTest(useProjectStore.getState(), 'test_mechanical_clearance');
 
     expect(result.run.status).toBe('Needs Review');
-    expect(String(result.run.measuredValue)).toContain('Approximate AABB clearance');
-    expect(result.run.logs.some((line) => line.includes('not CAD-kernel or physical clearance verification'))).toBe(true);
+    expect(result.run.measuredValue).toBe('Approximate AABB clearance unresolved');
+    expect(result.run.logs.some((line) => line.includes('insufficient explicit comparable geometry'))).toBe(true);
+    expect(result.run.logs.some((line) => line.includes('Missing geometry was not replaced with defaults'))).toBe(true);
     expect(result.run.logs.some((line) => line.includes('approximate geometry cannot verify physical clearance'))).toBe(true);
   });
 
