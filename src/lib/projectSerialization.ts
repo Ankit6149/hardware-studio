@@ -1,7 +1,10 @@
 import { Project } from '../types';
-import { migrateProjectSchema as migrateSchemaV4 } from './projectMigrations';
+import {
+  CURRENT_SCHEMA_VERSION,
+  migrateProjectSchema as migrateBaseProjectSchema,
+} from './projectMigrations';
 
-export const CURRENT_SCHEMA_VERSION = 5;
+export { CURRENT_SCHEMA_VERSION } from './projectMigrations';
 
 export interface ProjectIntegrityIssue {
   severity: 'Error' | 'Warning' | 'Info';
@@ -16,6 +19,7 @@ export function serializeProject(project: Project): string {
     ...project,
     updatedAt: new Date().toISOString(),
     version: String(CURRENT_SCHEMA_VERSION),
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     // Ensure all 24 domain collections exist
     nodes: project.nodes || [],
     edges: project.edges || [],
@@ -88,16 +92,14 @@ export function deserializeProject(json: string): Project {
   return migrateProjectSchema(raw);
 }
 
-/** Full schema v5 migration ensuring legacy project structures are updated */
+/** Apply canonical project migration plus defaults required by current domain surfaces. */
 export function migrateProjectSchema(raw: unknown): Project {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Cannot migrate non-object project payload');
   }
 
-  // First apply v4 migrations
-  const project = migrateSchemaV4(raw);
+  const project = migrateBaseProjectSchema(raw);
 
-  // Apply v5 defaults
   const pRecord = project as unknown as Record<string, unknown>;
   if (!pRecord.architectureConnections) pRecord.architectureConnections = [];
   if (!pRecord.mechanicalDimensions) pRecord.mechanicalDimensions = [];
@@ -117,6 +119,7 @@ export function migrateProjectSchema(raw: unknown): Project {
   if (!pRecord.customComponentLibrary) pRecord.customComponentLibrary = [];
 
   project.version = String(CURRENT_SCHEMA_VERSION);
+  project.schemaVersion = CURRENT_SCHEMA_VERSION;
   return project;
 }
 
