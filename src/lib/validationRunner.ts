@@ -17,13 +17,18 @@ export function getValidationExecutionMode(category?: string, name?: string): Va
   const normalizedCategory = (category || '').trim().toLowerCase();
   const normalizedName = (name || '').trim().toLowerCase();
 
-  if (normalizedCategory === 'drc' || normalizedName.includes('drc')) return 'drc-auto';
-  if (normalizedName.includes('state') && (normalizedCategory === 'firmware' || normalizedName.includes('firmware') || normalizedName.includes('state machine') || normalizedName.includes('state-machine'))) {
-    return 'firmware-state-auto';
+  if (normalizedCategory === 'drc') return 'drc-auto';
+  if (normalizedCategory === 'firmware') {
+    return normalizedName.includes('state') ? 'firmware-state-auto' : 'manual';
   }
-  if (normalizedCategory === 'mechanical' || normalizedName.includes('3d') || normalizedName.includes('clearance')) {
-    return 'mechanical-screen';
-  }
+  if (normalizedCategory === 'mechanical') return 'mechanical-screen';
+  if (normalizedCategory && normalizedCategory !== 'manual') return 'manual';
+
+  // Name heuristics are allowed only when no explicit engineering category was supplied.
+  // They must never override a user/domain classification such as Thermal or Electrical.
+  if (normalizedName.includes('drc')) return 'drc-auto';
+  if (normalizedName.includes('firmware') && normalizedName.includes('state')) return 'firmware-state-auto';
+  if (normalizedName.includes('3d') || normalizedName.includes('clearance')) return 'mechanical-screen';
   return 'manual';
 }
 
