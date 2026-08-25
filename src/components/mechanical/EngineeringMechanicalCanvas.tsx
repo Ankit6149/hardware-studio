@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
-import type { MechanicalObject } from '../../types';
+import type { MechanicalDimension, MechanicalObject } from '../../types';
 
 export interface MechanicalCanvasView {
   offsetX: number;
@@ -19,6 +19,9 @@ interface Props {
   view: MechanicalCanvasView;
   onViewChange: (patch: Partial<MechanicalCanvasView>) => void;
 }
+
+const EMPTY_MECHANICAL_OBJECTS: MechanicalObject[] = [];
+const EMPTY_MECHANICAL_DIMENSIONS: MechanicalDimension[] = [];
 
 const FEATURE_STYLE: Record<string, { stroke: string; fill: string }> = {
   'Outer Profile': { stroke: '#11110f', fill: '#f3f0e8' },
@@ -44,9 +47,12 @@ export const EngineeringMechanicalCanvas: React.FC<Props> = ({
   view,
   onViewChange,
 }) => {
-  const store = useProjectStore();
-  const objects = store.mechanicalObjects || [];
-  const dimensions = store.mechanicalDimensions || [];
+  const objects = useProjectStore((state) => state.mechanicalObjects ?? EMPTY_MECHANICAL_OBJECTS);
+  const dimensions = useProjectStore((state) => state.mechanicalDimensions ?? EMPTY_MECHANICAL_DIMENSIONS);
+  const beginCommand = useProjectStore((state) => state.beginCommand);
+  const updateTransientPreview = useProjectStore((state) => state.updateTransientPreview);
+  const commitCommand = useProjectStore((state) => state.commitCommand);
+  const cancelCommand = useProjectStore((state) => state.cancelCommand);
   const svgRef = useRef<SVGSVGElement>(null);
   const [panning, setPanning] = useState<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
   const [dragging, setDragging] = useState<{ id: string; x: number; y: number; objectX: number; objectY: number } | null>(null);
@@ -71,6 +77,21 @@ export const EngineeringMechanicalCanvas: React.FC<Props> = ({
   const visibleObjects = useMemo(() => objects.filter((object) => object.visible), [objects]);
   const gridMm = view.scale >= 12 ? 1 : view.scale >= 5 ? 5 : 10;
   const gridPx = gridMm * view.scale;
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+
+      if (dragging) {
+        cancelCommand();
+        setDragging(null);
+      }
+      if (panning) setPanning(null);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cancelCommand, dragging, panning]);
 
   const onMouseDown = (event: React.MouseEvent) => {
     const point = pointer(event);
@@ -97,14 +118,15 @@ export const EngineeringMechanicalCanvas: React.FC<Props> = ({
       const dy = (event.clientY - dragging.y) / view.scale;
       const nextX = Math.round((dragging.objectX + dx) * 10) / 10;
       const nextY = Math.round((dragging.objectY + dy) * 10) / 10;
-      store.updateTransientPreview({
-        mechanicalObjects: objects.map((object) => object.id === dragging.id ? { ...object, xMm: nextX, yMm: nextY } : object),
+      const currentObjects = useProjectStore.getState().mechanicalObjects ?? EMPTY_MECHANICAL_OBJECTS;
+      updateTransientPreview({
+        mechanicalObjects: currentObjects.map((object) => object.id === dragging.id ? { ...object, xMm: nextX, yMm: nextY } : object),
       });
     }
   };
 
   const endPointerTransaction = () => {
-    if (dragging) store.commitCommand();
+    if (dragging) commitCommand();
     setDragging(null);
     setPanning(null);
   };
@@ -113,7 +135,7 @@ export const EngineeringMechanicalCanvas: React.FC<Props> = ({
     event.stopPropagation();
     onSelectObject(object.id);
     if (panMode || object.locked) return;
-    store.beginCommand('MOVE_MECHANICAL_FEATURE', `Move ${object.name}`);
+    beginCommand('MOVE_MECHANICAL_FEATURE', `Move ${object.name}`);
     setDragging({ id: object.id, x: event.clientX, y: event.clientY, objectX: object.xMm, objectY: object.yMm });
   };
 
