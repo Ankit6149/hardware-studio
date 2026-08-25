@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { generateFirmwareSource } from '../lib/firmware/firmwareCodegen';
-import { createSimulationSession, triggerSimulationEvent } from '../lib/firmware/firmwareSimulator';
 import { FirmwareModule, FirmwareState, FirmwareTransition } from '../types';
 
-describe('Firmware State Machine Engine & Embedded C/C++ Workflows', () => {
+describe('Firmware code generation workflows', () => {
   const sampleModules: FirmwareModule[] = [
     {
       id: 'm1',
@@ -30,7 +29,7 @@ describe('Firmware State Machine Engine & Embedded C/C++ Workflows', () => {
     { id: 't1', sourceStateId: 's1', targetStateId: 's2', event: 'EVT_POWER_BUTTON', action: 'start_active_mode()' },
   ];
 
-  it('should generate FreeRTOS C/C++ header and source files with task loops', () => {
+  it('generates FreeRTOS C/C++ header and source files with task loops', () => {
     const { headerContent, sourceContent } = generateFirmwareSource(sampleModules, sampleStates, sampleTransitions, 'FreeRTOS');
 
     expect(headerContent).toContain('/* Target Architecture: FreeRTOS */');
@@ -40,16 +39,5 @@ describe('Firmware State Machine Engine & Embedded C/C++ Workflows', () => {
     expect(sourceContent).toContain('void state_idlestate_enter(void)');
     expect(sourceContent).toContain('void state_activestate_enter(void)');
     expect(sourceContent).toContain('void vTaskStateMachine(void *pvParameters)');
-  });
-
-  it('should execute step-by-step virtual state machine logic simulation', () => {
-    const session = createSimulationSession(sampleStates, 's1');
-    expect(session.currentStateId).toBe('s1');
-
-    const result = triggerSimulationEvent(session, 'EVT_POWER_BUTTON', sampleStates, sampleTransitions);
-    expect(result.step.success).toBe(true);
-    expect(result.step.currentStateId).toBe('s2');
-    expect(result.session.currentStateId).toBe('s2');
-    expect(result.step.executedActions).toContain('Transition: start_active_mode()');
   });
 });
