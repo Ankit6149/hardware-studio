@@ -112,12 +112,17 @@ export const MechanicalCanvas: React.FC<MechanicalCanvasProps> = ({ selectedObje
       return;
     }
 
+    // Pointer previews must always preserve the latest project objects rather than
+    // replaying an array captured by an earlier render. This prevents a drag/resize
+    // from overwriting another mechanical object that changed during the gesture.
+    const currentMechanicalObjects = useProjectStore.getState().mechanicalObjects || [];
+
     if (dragging) {
       const dx = (pos.x - dragging.startX) / view.scale;
       const dy = (pos.y - dragging.startY) / view.scale;
       const newX = Math.round(dragging.objStartX + dx);
       const newY = Math.round(dragging.objStartY + dy);
-      const updated = mechanicalObjects.map(o =>
+      const updated = currentMechanicalObjects.map(o =>
         o.id === dragging.id ? { ...o, xMm: newX, yMm: newY } : o
       );
       store.updateTransientPreview({ mechanicalObjects: updated });
@@ -138,7 +143,7 @@ export const MechanicalCanvas: React.FC<MechanicalCanvasProps> = ({ selectedObje
           heightMm: Math.max(5, Math.round((obj.heightMm || 10) + dy)),
         };
       }
-      const updated = mechanicalObjects.map(o =>
+      const updated = currentMechanicalObjects.map(o =>
         o.id === resizing.id ? { ...o, ...patch } : o
       );
       store.updateTransientPreview({ mechanicalObjects: updated });
