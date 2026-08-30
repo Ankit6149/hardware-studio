@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { Project } from '../types';
 import { buildProjectHomeModel } from '../lib/projectHome';
 
+type Requirement = NonNullable<Project['requirements']>[number];
+type ArchitectureNode = NonNullable<Project['architectureNodes']>[number];
+type BoardComponent = NonNullable<Project['boardComponents']>[number];
+type Revision = NonNullable<Project['revisions']>[number];
+
 function project(overrides: Partial<Project> = {}): Project {
   return {
     id: 'home-fixture',
@@ -64,7 +69,7 @@ describe('Project Home guidance', () => {
         linkedArchitectureNodeIds: [],
         linkedComponentIds: [],
         linkedTestIds: [],
-      }],
+      } as unknown as Requirement],
       architectureNodes: [{
         id: 'arch-1',
         name: 'Environmental sensing',
@@ -72,7 +77,7 @@ describe('Project Home guidance', () => {
         description: 'Measure ambient environment.',
         x: 0,
         y: 0,
-      }],
+      } as unknown as ArchitectureNode],
     }));
 
     expect(model.nextAction.viewId).toBe('component-library');
@@ -83,8 +88,8 @@ describe('Project Home guidance', () => {
 
   it('surfaces real Electronics blockers instead of treating component count as readiness', () => {
     const model = buildProjectHomeModel(project({
-      requirements: [{ id: 'req-1' } as Project['requirements'][number]],
-      architectureNodes: [{ id: 'arch-1' } as Project['architectureNodes'][number]],
+      requirements: [{ id: 'req-1' } as unknown as Requirement],
+      architectureNodes: [{ id: 'arch-1' } as unknown as ArchitectureNode],
       boardComponents: [{
         id: 'cmp-1',
         referenceDesignator: 'U1',
@@ -96,7 +101,7 @@ describe('Project Home guidance', () => {
         status: 'Draft',
         schematic: { placed: false, rotation: 0, locked: false },
         pcb: { placed: false, rotationDeg: 0, side: 'Top', locked: false, placementStatus: 'Unplaced' },
-      } as Project['boardComponents'][number]],
+      } as unknown as BoardComponent],
     }));
 
     expect(model.nextAction.viewId).toBe('component-library');
@@ -122,7 +127,7 @@ describe('Project Home guidance', () => {
         locked: false,
         visible: true,
       }],
-      revisions: [{ id: 'rev-1' } as Project['revisions'][number]],
+      revisions: [{ id: 'rev-1' } as unknown as Revision],
     }));
 
     expect(model.areas.find((area) => area.id === 'mechanical')?.state).toBe('In progress');
