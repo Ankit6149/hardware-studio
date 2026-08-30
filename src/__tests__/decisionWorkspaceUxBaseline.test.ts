@@ -8,14 +8,19 @@ function source(relativePath: string): string {
 describe('decision-first product UX baseline', () => {
   it('keeps project overview and readiness focused on evidence-driven next actions', () => {
     const dashboard = source('../components/ProjectDashboard.tsx');
+    const homeModel = source('../lib/projectHome.ts');
     const readiness = source('../components/ReadinessDashboard.tsx');
     const engine = source('../lib/readinessScore.ts');
 
-    expect(dashboard).toContain('deriveNextAction');
-    expect(dashboard).toContain('The complete product path');
-    expect(dashboard).toContain('One product. One identity. One path forward.');
-    expect(dashboard).toContain('Existing evidence—not a progress percentage—decides what can move forward.');
-    expect(dashboard).toContain("viewId: 'readiness'");
+    expect(dashboard).toContain('buildProjectHomeModel');
+    expect(dashboard).toContain('Evidence drives state; counts are inventory only.');
+    expect(dashboard).toContain('Needs attention');
+    expect(dashboard).toContain('onClick={() => setActiveView(nextAction.viewId)}');
+    expect(dashboard).not.toContain('One product. One identity. One path forward.');
+    expect(homeModel).toContain('Existing evidence—not a progress percentage—decides what can move forward.');
+    expect(homeModel).toContain("viewId: 'readiness'");
+    expect(homeModel).toContain('evaluateElectronicsWorkflow');
+    expect(homeModel).toContain('evaluateFirmwareEvidence');
 
     expect(readiness).toContain('What can this project safely do next?');
     expect(readiness).toContain('Blocking evidence');
