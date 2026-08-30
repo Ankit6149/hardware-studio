@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
+import { LandingSectionLink } from '../components/landing/LandingSectionLink';
 
 const disciplines = [
   { icon: Network, label: 'Product', detail: 'Requirements + architecture' },
@@ -46,9 +47,9 @@ export default function Home() {
           </Link>
 
           <nav className="hidden items-center gap-7 text-[11px] font-medium text-black/50 lg:flex" aria-label="Landing navigation">
-            <a href="#system" className="transition-colors hover:text-black">System</a>
-            <a href="#workflow" className="transition-colors hover:text-black">Workflow</a>
-            <a href="#truth" className="transition-colors hover:text-black">Engineering truth</a>
+            <LandingSectionLink targetId="system" className="transition-colors hover:text-black">System</LandingSectionLink>
+            <LandingSectionLink targetId="workflow" className="transition-colors hover:text-black">Workflow</LandingSectionLink>
+            <LandingSectionLink targetId="truth" className="transition-colors hover:text-black">Engineering truth</LandingSectionLink>
           </nav>
 
           <div className="flex items-center gap-1.5">
@@ -77,7 +78,7 @@ export default function Home() {
               <Link href="/studio" className="group inline-flex h-11 items-center justify-center gap-2 bg-[#11110f] px-5 text-[11px] font-semibold text-[#f4f1e9] transition hover:bg-black">
                 Enter Studio <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
               </Link>
-              <a href="#system" className="inline-flex h-11 items-center justify-center border border-black/16 bg-white/38 px-5 text-[11px] font-semibold transition hover:bg-white/70">See the connected model</a>
+              <LandingSectionLink targetId="system" className="inline-flex h-11 items-center justify-center border border-black/16 bg-white/38 px-5 text-[11px] font-semibold transition hover:bg-white/70">See the connected model</LandingSectionLink>
             </div>
           </div>
 
@@ -99,7 +100,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="system" className="bg-[#11110f] text-[#f4f1e9]">
+      <section id="system" className="scroll-mt-14 bg-[#11110f] text-[#f4f1e9]">
         <div className="mx-auto grid max-w-[1380px] gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[0.72fr_1.28fr] lg:px-8 lg:py-20">
           <div className="max-w-[500px]">
             <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/34">One canonical engineering object</div>
@@ -118,7 +119,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="workflow" className="mx-auto max-w-[1380px] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+      <section id="workflow" className="scroll-mt-14 mx-auto max-w-[1380px] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
         <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
           <div className="max-w-[540px]">
             <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-black/38">Development workflow</div>
@@ -129,7 +130,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="truth" className="border-y border-black/10 bg-[#ded9cc]">
+      <section id="truth" className="scroll-mt-14 border-y border-black/10 bg-[#ded9cc]">
         <div className="mx-auto grid max-w-[1380px] gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[0.72fr_1.28fr] lg:px-8 lg:py-16">
           <div className="max-w-[520px]">
             <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-black/40"><ShieldCheck size={13} /> Engineering truth</div>
