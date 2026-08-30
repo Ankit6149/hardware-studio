@@ -135,15 +135,19 @@ export const EngineeringBoardWorkbench: React.FC = () => {
       setActiveBoard(patch.activeBoardId || '');
     }
 
+    const latestProject = useProjectStore.getState();
+    const latestContext = useStudioContextStore.getState();
+    const boardIdForSelection = patch.activeBoardId ?? latestContext.activeBoardId ?? latestProject.activeBoardId ?? null;
+
     if (patch.selectedTraceId) {
-      const trace = traces.find((candidate) => candidate.id === patch.selectedTraceId);
+      const trace = (latestProject.traces || []).find((candidate) => candidate.id === patch.selectedTraceId);
       const parentComponentId = trace?.sourceAnchor?.componentId || trace?.targetAnchor?.componentId || undefined;
-      const netName = trace?.netName || (trace?.netId ? nets.find((net) => net.id === trace.netId)?.netName : undefined) || null;
+      const netName = trace?.netName || (trace?.netId ? (latestProject.nets || []).find((net) => net.id === trace.netId)?.netName : undefined) || null;
       select({
         entity: 'trace',
         id: patch.selectedTraceId,
         label: netName || patch.selectedTraceId,
-        boardId: trace?.boardId || viewState.activeBoardId || null,
+        boardId: trace?.boardId || boardIdForSelection,
         componentId: parentComponentId,
         netName,
       });
@@ -153,13 +157,13 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     }
 
     if (patch.selectedViaId) {
-      const via = vias.find((candidate) => candidate.id === patch.selectedViaId);
-      const netName = via?.netId ? nets.find((net) => net.id === via.netId)?.netName || null : null;
+      const via = (latestProject.vias || []).find((candidate) => candidate.id === patch.selectedViaId);
+      const netName = via?.netId ? (latestProject.nets || []).find((net) => net.id === via.netId)?.netName || null : null;
       select({
         entity: 'via',
         id: patch.selectedViaId,
         label: netName ? `Via · ${netName}` : 'Via',
-        boardId: via?.boardId || viewState.activeBoardId || null,
+        boardId: via?.boardId || boardIdForSelection,
         netName,
       });
       setInspectorTab('selection');
@@ -168,12 +172,12 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     }
 
     if (patch.selectedComponentId) {
-      const component = boardComponents.find((candidate) => candidate.id === patch.selectedComponentId);
+      const component = (latestProject.boardComponents || []).find((candidate) => candidate.id === patch.selectedComponentId);
       select({
         entity: 'component-instance',
         id: patch.selectedComponentId,
         label: component?.referenceDesignator || patch.selectedComponentId,
-        boardId: component?.boardId || viewState.activeBoardId || null,
+        boardId: component?.boardId || boardIdForSelection,
         componentId: patch.selectedComponentId,
         netName: patch.selectedNetName !== undefined ? patch.selectedNetName : undefined,
       });
@@ -187,7 +191,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
         entity: 'net',
         id: patch.selectedNetName,
         label: patch.selectedNetName,
-        boardId: viewState.activeBoardId || null,
+        boardId: boardIdForSelection,
         netName: patch.selectedNetName,
       });
       return;
@@ -201,7 +205,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     ) {
       select(null);
     }
-  }, [boardComponents, nets, select, setActiveBoard, setContextBoard, traces, vias, viewState.activeBoardId]);
+  }, [select, setActiveBoard, setContextBoard]);
 
   const selectComponent = useCallback((componentId: string) => {
     updateView({
