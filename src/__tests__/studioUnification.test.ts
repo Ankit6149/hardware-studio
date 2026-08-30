@@ -80,14 +80,20 @@ describe('golden-path regression guards', () => {
 
   it('adapts editors to selected canonical context without mutating the schematic on open', () => {
     const adapters = source('../components/studio/UnifiedWorkbenchAdapters.tsx');
+    const library = source('../components/component-library/ComponentLibraryWorkbench.tsx');
     const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
     const appShell = source('../components/AppShell.tsx');
     expect(adapters).not.toContain('placeComponentOnSchematic');
     expect(appShell).not.toContain('placeComponentOnSchematic');
     expect(adapters).toContain('<EngineeringSchematicWorkbench />');
-    expect(adapters).toContain('setActiveComponentDefinition(added.libraryId || null)');
-    expect(adapters).toContain('setActiveComponent(added.id)');
     expect(adapters).toContain('<EngineeringBoardWorkbench />');
+    expect(adapters).not.toContain('useEffect');
+    expect(adapters).not.toContain('previousIds');
+    expect(adapters).not.toContain('useProjectStore');
+    expect(library).toContain('setActiveComponentDefinition(selectedComponent.libraryId)');
+    expect(library).toContain('setContextBoard(effectiveBoard.id)');
+    expect(library).toContain('setActiveComponent(component.id)');
+    expect(library).toContain('focusProjectInstance');
     expect(schematic).toContain('placingComponentId');
     expect(schematic).toContain('placeAtPointer');
     expect(schematic).toContain('placeComponentOnSchematic(componentId, x, y)');
@@ -108,8 +114,11 @@ describe('golden-path regression guards', () => {
   it('keeps BOM records linked to the selected canonical component', () => {
     const bom = source('../components/studio/UnifiedBOMWorkbench.tsx');
     expect(bom).toContain('activeComponentId');
-    expect(bom).toContain('selectedComponent?.bomItemId');
+    expect(bom).toContain('item.id === selectedComponent.bomItemId');
+    expect(bom).toContain('item.componentId === selectedComponent.id');
+    expect(bom).toContain('componentId: selectedComponent.id');
     expect(bom).toContain('updateBoardComponent(selectedComponent.id, { bomItemId: id })');
+    expect(bom).not.toContain('|| contextualComponents[0]');
   });
 
   it('links validation to the selected component and its actual net IDs', () => {
