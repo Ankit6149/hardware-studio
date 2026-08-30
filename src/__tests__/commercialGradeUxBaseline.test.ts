@@ -6,15 +6,22 @@ function source(relativePath: string): string {
 }
 
 describe('commercial-grade workbench UX contracts', () => {
-  it('keeps product guidance in the owning workspace instead of a permanent global coach', () => {
+  it('keeps product guidance contextual and makes Project Home evidence-driven', () => {
     const appShell = source('../components/AppShell.tsx');
     const electronics = source('../components/studio/ElectronicsWorkspace.tsx');
     const dashboard = source('../components/ProjectDashboard.tsx');
+    const homeModel = source('../lib/projectHome.ts');
 
     expect(appShell).not.toContain('WorkspaceCoach');
     expect(electronics).toContain('Continue this decision');
     expect(electronics).toContain('Recommended next');
-    expect(dashboard).toContain('One product. One identity. One path forward.');
+
+    expect(dashboard).toContain('buildProjectHomeModel(project)');
+    expect(dashboard).toContain('Evidence drives state; counts are inventory only.');
+    expect(dashboard).toContain('Needs attention');
+    expect(dashboard).not.toContain('completedAreas');
+    expect(homeModel).toContain('evaluateElectronicsWorkflow(project)');
+    expect(homeModel).toContain('evaluateFirmwareEvidence(project)');
   });
 
   it('uses one desktop-grade editor chrome instead of card-like per-editor shells', () => {

@@ -39,7 +39,9 @@ describe('editor-first interaction model', () => {
 
     expect(dashboard).toContain('onClick={() => setActiveView(nextAction.viewId)}');
     expect(dashboard).toContain('onClick={() => setActiveView(area.viewId)}');
-    expect(dashboard).toContain('Open an area only when that is the work you need.');
+    expect(dashboard).toContain('onClick={() => setActiveView(item.viewId)}');
+    expect(dashboard).toContain('Needs attention');
+    expect(dashboard).toContain('Evidence drives state; counts are inventory only.');
     expect(readiness).toContain('Evidence text is inert. Use the explicit Resolve button to change workspaces.');
     expect(readiness).toContain('Gate rows show state. Only Review changes the workspace.');
 
