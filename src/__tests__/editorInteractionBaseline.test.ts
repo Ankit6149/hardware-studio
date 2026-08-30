@@ -23,16 +23,17 @@ describe('editor-first interaction model', () => {
   });
 
   it('keeps navigation, selection, and mutation as visibly separate actions', () => {
-    const subnav = source('../components/ContextSubnav.tsx');
+    const navigation = source('../components/StudioWorkbenchNavigation.tsx');
     const product = source('../components/product/ProductStudio.tsx');
     const dashboard = source('../components/ProjectDashboard.tsx');
     const readiness = source('../components/ReadinessDashboard.tsx');
     const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
     const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
 
-    expect(subnav).toContain('onClick={() => setActiveView(item.id)}');
-    expect(subnav).not.toContain('addBlockLibraryItemToProject');
-    expect(subnav).not.toContain('libraryItem');
+    expect(navigation).toContain('onClick={() => setActiveView(workbench.defaultView)}');
+    expect(navigation).toContain('onClick={() => setActiveView(item.id)}');
+    expect(navigation).not.toContain('addBlockLibraryItemToProject');
+    expect(navigation).not.toContain('libraryItem');
     expect(product).toContain('onClick={() => handleAddElement(preset)}');
     expect(product).toContain('aria-label={`Place ${preset.name}`}');
 

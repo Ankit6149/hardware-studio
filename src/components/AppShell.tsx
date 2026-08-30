@@ -3,10 +3,16 @@ import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useStorageHealthStore } from '../store/storageHealthStore';
 import { getNavigationItem, isCanvasNavigationItem, NavigationSurface } from '../lib/navigationRegistry';
+import {
+  getStudioPathForView,
+  getStudioViewForLegacyHash,
+  getStudioViewForPath,
+  isStudioPath,
+} from '../lib/studioRoutes';
 import { useFeedback } from './feedback/FeedbackProvider';
 import { RECOVER_TO_DASHBOARD_KEY } from '../lib/reliability';
 import { TopBar } from './TopBar';
-import { Sidebar } from './Sidebar';
+import { StudioProjectDrawer, StudioWorkbenchTabs } from './StudioWorkbenchNavigation';
 import { BlueprintCanvas } from './BlueprintCanvas';
 import { ExportCenter } from './ExportCenter';
 import { PropertiesPanel } from './PropertiesPanel';
@@ -74,29 +80,65 @@ const UnavailableWorkspace: React.FC<{ viewId: string; onReturn: () => void }> =
 );
 
 export const AppShell: React.FC = () => {
-  const { activeView, loadProjectFromLocalStorage, setActiveView } = useProjectStore();
+  const activeView = useProjectStore((state) => state.activeView);
+  const loadProjectFromLocalStorage = useProjectStore((state) => state.loadProjectFromLocalStorage);
+  const setActiveView = useProjectStore((state) => state.setActiveView);
   const storageHealth = useStorageHealthStore((state) => state.health);
   const retrySave = useCallback(() => {
     useProjectStore.getState().saveActiveProject();
   }, []);
   const { notify } = useFeedback();
   const [mounted, setMounted] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [projectDrawerOpen, setProjectDrawerOpen] = useState(true);
   const notifiedStorageState = useRef('');
 
   useEffect(() => {
     loadProjectFromLocalStorage();
+
+    let targetView = getStudioViewForPath(window.location.pathname);
+    const legacyHashView = getStudioViewForLegacyHash(window.location.hash);
+    if (legacyHashView) {
+      targetView = legacyHashView;
+      const cleanPath = getStudioPathForView(legacyHashView);
+      if (cleanPath) window.history.replaceState({ studioView: legacyHashView }, '', cleanPath);
+    } else if (isStudioPath(window.location.pathname) && !targetView) {
+      targetView = '__unknown-studio-route__';
+    }
+
     try {
       if (window.sessionStorage.getItem(RECOVER_TO_DASHBOARD_KEY) === '1') {
         window.sessionStorage.removeItem(RECOVER_TO_DASHBOARD_KEY);
-        setActiveView('dashboard');
+        targetView = 'dashboard';
+        window.history.replaceState({ studioView: 'dashboard' }, '', '/studio');
       }
     } catch {
       // The workspace can still load when session storage is blocked.
     }
+
+    if (targetView) setActiveView(targetView);
+
     const timer = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(timer);
   }, [loadProjectFromLocalStorage, setActiveView]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const routeView = getStudioViewForPath(window.location.pathname);
+      if (routeView) setActiveView(routeView);
+      else if (isStudioPath(window.location.pathname)) setActiveView('__unknown-studio-route__');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [setActiveView]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const cleanPath = getStudioPathForView(activeView);
+    if (!cleanPath) return;
+    if (window.location.pathname === cleanPath && !window.location.hash) return;
+    window.history.pushState({ studioView: activeView }, '', cleanPath);
+  }, [activeView, mounted]);
 
   useEffect(() => {
     if (!['failed', 'unavailable', 'memory-fallback'].includes(storageHealth.status)) return;
@@ -125,10 +167,17 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="hs-app flex h-screen w-screen flex-col overflow-hidden font-sans text-slate-900" data-ui="hardware-studio">
-      <a href="#workspace-main" className="sr-only z-[100] bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to workspace</a>
+      <button
+        type="button"
+        onClick={() => document.getElementById('workspace-main')?.focus()}
+        className="sr-only z-[100] bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+      >
+        Skip to workspace
+      </button>
       <TopBar />
+      <StudioWorkbenchTabs drawerOpen={projectDrawerOpen} onToggleDrawer={() => setProjectDrawerOpen((value) => !value)} />
       <div className="relative flex min-h-0 flex-1 bg-[#ebe7dc]">
-        <Sidebar collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((value) => !value)} />
+        <StudioProjectDrawer open={projectDrawerOpen} />
         <main id="workspace-main" tabIndex={-1} className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[#f7f5ef] outline-none" aria-label={`${activeViewLabel} workspace`}>
           <p className="sr-only" aria-live="polite" aria-atomic="true">Opened {activeViewLabel} workspace</p>
           <div className="relative flex min-h-0 flex-1">

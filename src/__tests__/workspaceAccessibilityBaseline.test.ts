@@ -6,29 +6,29 @@ function source(relativePath: string): string {
 }
 
 describe('workspace accessibility and focus baseline', () => {
-  it('provides a skip target, route announcement, and collapsible labeled two-level navigation', () => {
+  it('provides a fragment-free skip action, route announcement, keyboard-focusable tabs, and a collapsible contextual drawer', () => {
     const shell = source('../components/AppShell.tsx');
-    const sidebar = source('../components/Sidebar.tsx');
-    const subnav = source('../components/ContextSubnav.tsx');
+    const navigation = source('../components/StudioWorkbenchNavigation.tsx');
 
-    expect(shell).toContain('href="#workspace-main"');
+    expect(shell).toContain("document.getElementById('workspace-main')?.focus()");
+    expect(shell).not.toContain('href="#workspace-main"');
     expect(shell).toContain('id="workspace-main"');
     expect(shell).toContain('aria-live="polite"');
-    expect(shell).toContain('sidebarCollapsed');
-    expect(shell).toContain('onToggleCollapsed');
+    expect(shell).toContain('projectDrawerOpen');
+    expect(shell).toContain('<StudioWorkbenchTabs');
+    expect(shell).toContain('<StudioProjectDrawer');
 
-    expect(sidebar).toContain('aria-label="Primary product navigation"');
-    expect(sidebar).toContain('aria-label="Product areas"');
-    expect(sidebar).toContain('Show workbench navigation');
-    expect(sidebar).toContain('Hide workbench navigation');
-    expect(sidebar).toContain('w-[78px]');
-    expect(sidebar).toContain('domain.label');
-
-    expect(subnav).toContain('workbench navigation');
-    expect(subnav).toContain('activeDomain.items.map');
-    expect(subnav).toContain('min-h-11');
-    expect(subnav).toContain('w-[176px]');
-    expect(subnav).not.toContain('Start here');
-    expect(subnav).not.toContain('quickStartByView');
+    expect(navigation).toContain('role="tablist"');
+    expect(navigation).toContain('role="tab"');
+    expect(navigation).toContain('aria-selected={active}');
+    expect(navigation).toContain('aria-controls="workspace-main"');
+    expect(navigation).toContain('Hide project drawer');
+    expect(navigation).toContain('Show project drawer');
+    expect(navigation).toContain('aria-expanded={drawerOpen}');
+    expect(navigation).toContain('contextual tools');
+    expect(navigation).toContain('min-h-10');
+    expect(navigation).toContain('w-[192px]');
+    expect(navigation).not.toContain('Start here');
+    expect(navigation).not.toContain('quickStartByView');
   });
 });
