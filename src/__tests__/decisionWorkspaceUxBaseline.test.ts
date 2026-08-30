@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 function source(relativePath: string): string {
   return readFileSync(new URL(relativePath, import.meta.url), 'utf8');
@@ -47,25 +47,25 @@ describe('decision-first product UX baseline', () => {
     expect(productStudio).toContain('<ProductRequirementsPanel mode="compact" />');
   });
 
-  it('keeps two simple navigation levels while editor object tools stay inside their workbench', () => {
-    const sidebar = source('../components/Sidebar.tsx');
-    const subnav = source('../components/ContextSubnav.tsx');
+  it('uses connected workbench tabs and one contextual project drawer instead of a permanent domain rail', () => {
+    const navigation = source('../components/StudioWorkbenchNavigation.tsx');
+    const registry = source('../lib/navigationRegistry.ts');
     const productStudio = source('../components/product/ProductStudio.tsx');
 
-    expect(sidebar).toContain('aria-label="Primary product navigation"');
-    expect(sidebar).toContain('aria-label="Product areas"');
-    expect(sidebar).toContain('<ContextSubnav collapsed={collapsed} />');
-    expect(sidebar).not.toContain('domain.items.map');
-    expect(sidebar).not.toContain('workflowPreferencesStore');
-    expect(sidebar).not.toContain('Scope');
+    expect(navigation).toContain('data-studio-shell="workbench-tabs"');
+    expect(navigation).toContain('aria-label="Open product workbenches"');
+    expect(navigation).toContain('role="tablist"');
+    expect(navigation).toContain('data-studio-shell="project-drawer"');
+    expect(navigation).toContain('Project tools');
+    expect(navigation).toContain('getContextualNavigationItemsForView');
+    expect(navigation).toContain('Hide project drawer');
+    expect(navigation).toContain('Show project drawer');
 
-    expect(subnav).toContain('data-context-subnav');
-    expect(subnav).toContain('workbench navigation');
-    expect(subnav).toContain('activeDomain.items.map');
-    expect(subnav).not.toContain('Start here');
-    expect(subnav).not.toContain('quickStartByView');
-    expect(subnav).not.toContain('showDeviceLibrary');
-    expect(subnav).not.toContain('libraryItem');
+    expect(registry).toContain('export const workbenchTabs');
+    expect(registry).toContain('contextualItemsByWorkbench');
+    expect(registry).not.toContain('export const navigationDomains');
+    expect(existsSync(new URL('../components/Sidebar.tsx', import.meta.url))).toBe(false);
+    expect(existsSync(new URL('../components/ContextSubnav.tsx', import.meta.url))).toBe(false);
 
     expect(productStudio).toContain('ArchitectureGlyph');
     expect(productStudio).toContain('onClick={() => handleAddElement(preset)}');
