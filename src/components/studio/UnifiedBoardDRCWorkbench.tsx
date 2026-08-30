@@ -41,21 +41,21 @@ export const UnifiedBoardDRCWorkbench: React.FC = () => {
     setActiveNet,
     beginHandoff,
   } = useStudioContextStore();
-  const [results, setResults] = useState<ReviewResult[]>(() => runBoardDRC(useProjectStore.getState()));
+  const [results, setResults] = useState<ReviewResult[]>(() => runBoardDRC({ ...useProjectStore.getState(), activeBoardId: activeBoardId || '' }));
 
-  const board = boards.find((candidate) => candidate.id === activeBoardId) || boards[0];
-  const boardId = board?.id || activeBoardId || '';
+  const board = boards.find((candidate) => candidate.id === activeBoardId);
+  const boardId = board?.id || '';
   const boardComponentIds = useMemo(
-    () => new Set(boardComponents.filter((component) => !boardId || component.boardId === boardId).map((component) => component.id)),
+    () => new Set(boardComponents.filter((component) => component.boardId === boardId).map((component) => component.id)),
     [boardComponents, boardId],
   );
   const boardTraceIds = useMemo(
-    () => new Set(traces.filter((trace) => !boardId || trace.boardId === boardId).map((trace) => trace.id)),
+    () => new Set(traces.filter((trace) => trace.boardId === boardId).map((trace) => trace.id)),
     [boardId, traces],
   );
 
   const boardResults = useMemo(() => results.filter((result) => {
-    if (!boardId) return true;
+    if (!boardId) return false;
     if (result.linkedObjectType === 'board') return result.linkedObjectId === boardId;
     if (result.linkedObjectType === 'component') return boardComponentIds.has(result.linkedObjectId);
     if (result.linkedObjectType === 'trace') return boardTraceIds.has(result.linkedObjectId);
@@ -73,12 +73,16 @@ export const UnifiedBoardDRCWorkbench: React.FC = () => {
     info: boardResults.filter((result) => result.severity === 'Info').length,
   }), [boardResults]);
 
+  const runChecks = () => {
+    if (!boardId) return;
+    setResults(runBoardDRC({ ...useProjectStore.getState(), activeBoardId: boardId }));
+  };
+
   const openFinding = (result: ReviewResult) => {
+    if (!boardId) return;
     beginHandoff('pcb-drc', 'pcb-drc');
-    if (boardId) {
-      setContextBoard(boardId);
-      setActiveBoard(boardId);
-    }
+    setContextBoard(boardId);
+    setActiveBoard(boardId);
 
     if (result.linkedObjectType === 'component') {
       setActiveComponent(result.linkedObjectId);
@@ -86,7 +90,7 @@ export const UnifiedBoardDRCWorkbench: React.FC = () => {
       const net = nets.find((candidate) => candidate.id === result.linkedObjectId || candidate.netName === result.linkedObjectId);
       setActiveNet(net?.netName || result.linkedObjectId);
     } else if (result.linkedObjectType === 'trace') {
-      const trace = traces.find((candidate) => candidate.id === result.linkedObjectId);
+      const trace = traces.find((candidate) => candidate.id === result.linkedObjectId && candidate.boardId === boardId);
       if (trace?.netName) setActiveNet(trace.netName);
     }
 
@@ -98,8 +102,8 @@ export const UnifiedBoardDRCWorkbench: React.FC = () => {
       <section className="grid h-full place-items-center overflow-y-auto bg-slate-50 p-6 text-center">
         <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <CircuitBoard className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
-          <h1 className="mt-3 text-xl font-bold text-slate-950">Create a board before running PCB checks</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">DRC evaluates canonical board geometry, component placement, traces, nets, and constraints. There is no board context to inspect yet.</p>
+          <h1 className="mt-3 text-xl font-bold text-slate-950">Select a real board before running PCB checks</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-600">DRC needs explicit shared board context. Hardware Studio will not substitute the first board in the project or run checks against an ambiguous physical target.</p>
           <button type="button" onClick={() => setActiveView('board-settings')} className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">Open board settings <ArrowRight className="h-4 w-4" /></button>
         </div>
       </section>
@@ -114,10 +118,10 @@ export const UnifiedBoardDRCWorkbench: React.FC = () => {
             <div>
               <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-indigo-600" aria-hidden="true" /><p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-indigo-700">PCB checks in shared context</p></div>
               <h1 id="unified-drc-title" className="mt-2 text-2xl font-bold tracking-tight text-slate-950">{board.name} design-rule findings</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Findings reference the same board components, nets, and traces used by Schematic and PCB. Open a finding to carry its responsible object back into Board Designer.</p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Findings reference the same explicit board components, nets, and traces used by Schematic and PCB. Open a finding to carry its responsible object back into Board Designer.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setResults(runBoardDRC(useProjectStore.getState()))} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100"><RefreshCw className="h-4 w-4" /> Run checks again</button>
+              <button type="button" onClick={runChecks} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100"><RefreshCw className="h-4 w-4" /> Run checks again</button>
               <button type="button" onClick={() => setActiveView('board-designer')} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800"><CircuitBoard className="h-4 w-4" /> Open PCB <ArrowRight className="h-4 w-4" /></button>
             </div>
           </div>
@@ -138,7 +142,7 @@ export const UnifiedBoardDRCWorkbench: React.FC = () => {
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center text-emerald-950 shadow-sm">
             <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
             <h2 className="mt-3 text-lg font-bold">No current board-rule findings</h2>
-            <p className="mt-1 text-sm text-emerald-800">This means the implemented DRC checks passed for the current project state. It is not a substitute for manufacturer review or a qualified external CAD tool.</p>
+            <p className="mt-1 text-sm text-emerald-800">This means the implemented DRC checks passed for the explicit current board state. It is not a substitute for manufacturer review or a qualified external CAD tool.</p>
           </div>
         ) : (
           <div className="space-y-2">

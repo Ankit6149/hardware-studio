@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
+import { useStudioContextStore } from '../../store/studioContextStore';
 import {
   ComponentPinDefinition,
   defaultComponents,
@@ -182,9 +183,16 @@ export const ComponentLibraryWorkbench: React.FC = () => {
     addCustomComponentDefinition,
     updateCustomComponentDefinition,
     duplicateComponentDefinition,
-    setActiveBoard,
+    setActiveBoard: setProjectActiveBoard,
     setActiveView,
   } = useProjectStore();
+  const {
+    activeBoardId: contextBoardId,
+    activeComponentId,
+    setActiveBoard: setContextBoard,
+    setActiveComponentDefinition,
+    setActiveComponent,
+  } = useStudioContextStore();
   const { notify } = useFeedback();
   const { openKnowledgeForComponent } = useKnowledge();
 
@@ -227,12 +235,33 @@ export const ComponentLibraryWorkbench: React.FC = () => {
     ?? fullLibrary[0];
   const selectedIsCustom = Boolean(selectedComponent && customComponents.some((component) => component.libraryId === selectedComponent.libraryId));
   const selectedKnowledgeId = selectedComponent ? resolveKnowledgeIdForComponent(selectedComponent) : undefined;
+  const projectInstances = useMemo(
+    () => selectedComponent
+      ? boardComponents.filter((component) => component.libraryId === selectedComponent.libraryId)
+      : [],
+    [boardComponents, selectedComponent],
+  );
 
-  const effectiveBoard = boards.find((board) => board.id === selectedBoardId) ?? boards[0];
+  const effectiveBoard = boards.find((board) => board.id === selectedBoardId);
   const blocksForBoard = effectiveBoard
     ? circuitBlocks.filter((block) => block.boardId === effectiveBoard.id)
     : [];
   const effectiveCircuitBlock = blocksForBoard.find((block) => block.id === selectedCircuitBlockId);
+
+  const selectDefinition = (libraryId: string) => {
+    setSelectedId(libraryId);
+    setActiveComponentDefinition(libraryId);
+  };
+
+  const focusProjectInstance = (componentId: string, targetView?: string) => {
+    const component = boardComponents.find((candidate) => candidate.id === componentId);
+    if (!component) return;
+    setProjectActiveBoard(component.boardId);
+    setContextBoard(component.boardId);
+    setActiveComponentDefinition(component.libraryId || null);
+    setActiveComponent(component.id);
+    if (targetView) setActiveView(targetView);
+  };
 
   const openCreate = () => {
     setEditingId(null);
@@ -248,7 +277,10 @@ export const ComponentLibraryWorkbench: React.FC = () => {
   };
 
   const openAdd = () => {
-    setSelectedBoardId(boards[0]?.id ?? '');
+    const explicitBoardId = contextBoardId && boards.some((board) => board.id === contextBoardId)
+      ? contextBoardId
+      : '';
+    setSelectedBoardId(explicitBoardId);
     setSelectedCircuitBlockId('');
     setIsAddOpen(true);
   };
@@ -286,7 +318,7 @@ export const ComponentLibraryWorkbench: React.FC = () => {
       addCustomComponentDefinition(definition);
       notify({ tone: 'success', title: 'Custom component created', detail: `${definition.name} is available in this project library.` });
     }
-    setSelectedId(definition.libraryId);
+    selectDefinition(definition.libraryId);
     setIsEditorOpen(false);
   };
 
@@ -306,7 +338,7 @@ export const ComponentLibraryWorkbench: React.FC = () => {
       tags: [...selectedComponent.tags, 'custom-copy'],
     };
     addCustomComponentDefinition(copy);
-    setSelectedId(copy.libraryId);
+    selectDefinition(copy.libraryId);
     notify({ tone: 'success', title: 'Built-in definition copied', detail: 'The copy is now project-owned and can be edited without changing the built-in library.' });
   };
 
@@ -315,7 +347,7 @@ export const ComponentLibraryWorkbench: React.FC = () => {
     if (!effectiveBoard) {
       notify({
         tone: 'warning',
-        title: 'Create a real board first',
+        title: 'Select a real board first',
         detail: 'A project component must have an explicit board identity before it can enter PCB placement.',
       });
       return;
@@ -326,7 +358,10 @@ export const ComponentLibraryWorkbench: React.FC = () => {
       effectiveBoard.id,
       effectiveCircuitBlock?.id,
     );
-    setActiveBoard(effectiveBoard.id);
+    setProjectActiveBoard(effectiveBoard.id);
+    setContextBoard(effectiveBoard.id);
+    setActiveComponentDefinition(selectedComponent.libraryId);
+    setActiveComponent(component.id);
 
     if (component.bomItemId) {
       updateBOMItem(component.bomItemId, {
@@ -359,7 +394,7 @@ export const ComponentLibraryWorkbench: React.FC = () => {
                 {fullLibrary.length} definitions
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-slate-500">Choose reviewed device metadata, then create one canonical project component shared by schematic, PCB, BOM, and validation.</p>
+            <p className="mt-0.5 text-xs text-slate-500">Choose reviewed device metadata, then create or focus one canonical project component shared by schematic, PCB, BOM, and validation.</p>
           </div>
         </div>
         <button type="button" onClick={openCreate} className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
@@ -400,7 +435,7 @@ export const ComponentLibraryWorkbench: React.FC = () => {
                 <button
                   key={component.libraryId}
                   type="button"
-                  onClick={() => setSelectedId(component.libraryId)}
+                  onClick={() => selectDefinition(component.libraryId)}
                   className={`mb-1 w-full border px-3 py-2.5 text-left transition ${isSelected ? 'border-indigo-300 bg-indigo-50' : 'border-transparent hover:border-slate-200 hover:bg-slate-50'}`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -514,9 +549,30 @@ export const ComponentLibraryWorkbench: React.FC = () => {
                   <section className="border border-slate-200 bg-white p-4">
                     <div className="flex items-start gap-2">
                       <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <div className="text-xs font-semibold text-slate-700">Project usage</div>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">{boardComponents.filter((component) => component.libraryId === selectedComponent.libraryId).length} canonical project instance(s) currently use this definition.</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">{projectInstances.length} canonical project instance(s) currently use this definition.</p>
+                        {projectInstances.length > 0 && (
+                          <div className="mt-3 space-y-1.5">
+                            {projectInstances.map((instance) => {
+                              const instanceBoard = boards.find((board) => board.id === instance.boardId);
+                              const active = instance.id === activeComponentId;
+                              return (
+                                <div key={instance.id} className={`border p-2 ${active ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-slate-50'}`}>
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0"><p className="text-[10px] font-semibold text-slate-900">{instance.referenceDesignator} · {instance.componentName}</p><p className="mt-0.5 truncate font-mono text-[9px] text-slate-500">{instanceBoard?.name || instance.boardId} · {instance.id}</p></div>
+                                    <button type="button" onClick={() => focusProjectInstance(instance.id)} className="h-7 shrink-0 border border-slate-300 bg-white px-2 text-[9px] font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-700">{active ? 'Focused' : 'Focus'}</button>
+                                  </div>
+                                  <div className="mt-2 grid grid-cols-3 gap-1">
+                                    <button type="button" onClick={() => focusProjectInstance(instance.id, 'schematic-editor')} className="h-7 border border-slate-200 bg-white text-[9px] font-semibold text-slate-600 hover:bg-slate-100">Schematic</button>
+                                    <button type="button" onClick={() => focusProjectInstance(instance.id, 'board-designer')} className="h-7 border border-slate-200 bg-white text-[9px] font-semibold text-slate-600 hover:bg-slate-100">PCB</button>
+                                    <button type="button" onClick={() => focusProjectInstance(instance.id, 'bom')} className="h-7 border border-slate-200 bg-white text-[9px] font-semibold text-slate-600 hover:bg-slate-100">BOM</button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </section>
@@ -566,18 +622,19 @@ export const ComponentLibraryWorkbench: React.FC = () => {
                     }}
                     className={inputClass}
                   >
+                    <option value="">Select a board…</option>
                     {boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
                   </select>
                 </Field>
 
                 <Field label="Circuit block (optional)" htmlFor="component-target-block">
-                  <select id="component-target-block" value={effectiveCircuitBlock?.id || ''} onChange={(event) => setSelectedCircuitBlockId(event.target.value)} className={inputClass}>
+                  <select id="component-target-block" value={effectiveCircuitBlock?.id || ''} onChange={(event) => setSelectedCircuitBlockId(event.target.value)} className={inputClass} disabled={!effectiveBoard}>
                     <option value="">Unassigned</option>
                     {blocksForBoard.map((block) => <option key={block.id} value={block.id}>{block.name}</option>)}
                   </select>
                 </Field>
 
-                {blocksForBoard.length === 0 && (
+                {effectiveBoard && blocksForBoard.length === 0 && (
                   <p className="text-xs leading-5 text-slate-500">This board has no circuit blocks yet. That is valid—the component will remain explicitly unassigned at the block level.</p>
                 )}
               </div>
