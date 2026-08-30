@@ -29,7 +29,6 @@ import {
 } from 'lucide-react';
 import {
   getContextualNavigationItemsForView,
-  getNavigationItem,
   getWorkbenchForView,
   workbenchTabs,
   type NavigationIconKey,
@@ -76,6 +75,14 @@ const iconByKey: Record<NavigationIconKey, LucideIcon> = {
   revisions: FileText,
   branches: ListTree,
   releases: Package,
+};
+
+const contextualAliasByViewId: Readonly<Record<string, string>> = {
+  'power-tree': 'power-budget',
+  'board-studio': 'board-settings',
+  'board-components': 'board-settings',
+  branches: 'revisions',
+  releases: 'revisions',
 };
 
 export const StudioWorkbenchTabs: React.FC<StudioWorkbenchTabsProps> = ({ drawerOpen, onToggleDrawer }) => {
@@ -142,8 +149,8 @@ export const StudioProjectDrawer: React.FC<StudioProjectDrawerProps> = ({ open }
   const activeView = useProjectStore((state) => state.activeView);
   const setActiveView = useProjectStore((state) => state.setActiveView);
   const activeWorkbench = getWorkbenchForView(activeView);
-  const activeItem = getNavigationItem(activeView);
   const contextualItems = getContextualNavigationItemsForView(activeView);
+  const activeContextId = contextualAliasByViewId[activeView] || activeView;
 
   if (!open || !activeWorkbench || contextualItems.length === 0) return null;
 
@@ -162,7 +169,7 @@ export const StudioProjectDrawer: React.FC<StudioProjectDrawerProps> = ({ open }
       <nav className="min-h-0 flex-1 overflow-y-auto p-1.5" aria-label={`${activeWorkbench.label} contextual tools`}>
         {contextualItems.map((item) => {
           const Icon = iconByKey[item.icon];
-          const active = activeView === item.id || activeItem?.surface === item.surface;
+          const active = activeContextId === item.id;
           return (
             <button
               key={item.id}
