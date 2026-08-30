@@ -6,7 +6,7 @@ import { getNavigationItem, isCanvasNavigationItem, NavigationSurface } from '..
 import { useFeedback } from './feedback/FeedbackProvider';
 import { RECOVER_TO_DASHBOARD_KEY } from '../lib/reliability';
 import { TopBar } from './TopBar';
-import { Sidebar } from './Sidebar';
+import { StudioProjectDrawer, StudioWorkbenchTabs } from './StudioWorkbenchNavigation';
 import { BlueprintCanvas } from './BlueprintCanvas';
 import { ExportCenter } from './ExportCenter';
 import { PropertiesPanel } from './PropertiesPanel';
@@ -74,14 +74,16 @@ const UnavailableWorkspace: React.FC<{ viewId: string; onReturn: () => void }> =
 );
 
 export const AppShell: React.FC = () => {
-  const { activeView, loadProjectFromLocalStorage, setActiveView } = useProjectStore();
+  const activeView = useProjectStore((state) => state.activeView);
+  const loadProjectFromLocalStorage = useProjectStore((state) => state.loadProjectFromLocalStorage);
+  const setActiveView = useProjectStore((state) => state.setActiveView);
   const storageHealth = useStorageHealthStore((state) => state.health);
   const retrySave = useCallback(() => {
     useProjectStore.getState().saveActiveProject();
   }, []);
   const { notify } = useFeedback();
   const [mounted, setMounted] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [projectDrawerOpen, setProjectDrawerOpen] = useState(true);
   const notifiedStorageState = useRef('');
 
   useEffect(() => {
@@ -127,8 +129,9 @@ export const AppShell: React.FC = () => {
     <div className="hs-app flex h-screen w-screen flex-col overflow-hidden font-sans text-slate-900" data-ui="hardware-studio">
       <a href="#workspace-main" className="sr-only z-[100] bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to workspace</a>
       <TopBar />
+      <StudioWorkbenchTabs drawerOpen={projectDrawerOpen} onToggleDrawer={() => setProjectDrawerOpen((value) => !value)} />
       <div className="relative flex min-h-0 flex-1 bg-[#ebe7dc]">
-        <Sidebar collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((value) => !value)} />
+        <StudioProjectDrawer open={projectDrawerOpen} />
         <main id="workspace-main" tabIndex={-1} className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[#f7f5ef] outline-none" aria-label={`${activeViewLabel} workspace`}>
           <p className="sr-only" aria-live="polite" aria-atomic="true">Opened {activeViewLabel} workspace</p>
           <div className="relative flex min-h-0 flex-1">
