@@ -18,7 +18,7 @@ describe('Electronics canonical identity and representation truth', () => {
     expect(state.activeBoardId).toBe('board-main');
     expect(state.activeComponentId).toBe('component-u1');
     expect(state.activeNetName).toBe('VDD_3V3');
-    expect(state.selected).toEqual({ entity: 'net', id: 'VDD_3V3', label: 'VDD_3V3' });
+    expect(state.selected).toEqual({ entity: 'net', id: 'VDD_3V3', label: 'VDD_3V3', netName: 'VDD_3V3' });
 
     state.clearContext();
   });
