@@ -34,31 +34,29 @@ describe('semantic product representation and calm shell contracts', () => {
     expect(studio).not.toContain('Math.random()');
   });
 
-  it('keeps duplicate and supporting destinations compatibility-only rather than visible navigation', () => {
+  it('keeps supporting destinations contextual or compatibility-only rather than primary workbench tabs', () => {
     const navigation = source('../lib/navigationRegistry.ts');
-    const [visible, compatibility] = navigation.split('export const compatibleNavigationItems');
-    expect(visible).not.toContain("item('product-design'");
-    expect(visible).not.toContain("item('blueprint-editor'");
-    expect(visible).not.toContain("item('pcb-drc'");
-    expect(visible).not.toContain("item('power-tree'");
-    expect(visible).not.toContain("item('pin-map'");
-    expect(visible).not.toContain("item('factory-builder'");
-    expect(compatibility).toContain("item('product-design'");
-    expect(compatibility).toContain("item('blueprint-editor'");
-    expect(compatibility).toContain("item('pcb-drc'");
-    expect(compatibility).toContain("item('power-tree'");
-    expect(compatibility).toContain("item('pin-map'");
-    expect(compatibility).toContain("item('factory-builder'");
+    const [primary, contextualAndCompatibility] = navigation.split('const contextualItems =');
+    expect(primary).not.toContain("item('pcb-drc'");
+    expect(primary).not.toContain("item('power-budget'");
+    expect(primary).not.toContain("item('pin-map'");
+    expect(primary).not.toContain("item('factory-builder'");
+    expect(contextualAndCompatibility).toContain("item('pcb-drc'");
+    expect(contextualAndCompatibility).toContain("item('power-budget'");
+    expect(contextualAndCompatibility).toContain("item('pin-map'");
+    expect(contextualAndCompatibility).toContain("item('factory-builder'");
   });
 
-  it('does not wrap every workbench in global context, review, or coaching strips', () => {
+  it('uses shared workbench tabs and drawer without bringing global coaching strips back', () => {
     const shell = source('../components/AppShell.tsx');
     expect(shell).not.toContain('EngineeringContextBar');
     expect(shell).not.toContain('ReviewWarnings');
     expect(shell).not.toContain('WorkspaceCoach');
     expect(shell).not.toContain('workflowPreferencesStore');
+    expect(shell).not.toContain('<Sidebar');
     expect(shell).toContain('<TopBar />');
-    expect(shell).toContain('<Sidebar');
+    expect(shell).toContain('<StudioWorkbenchTabs');
+    expect(shell).toContain('<StudioProjectDrawer');
   });
 
   it('lets typed port and edge colors survive the global React Flow skin', () => {
