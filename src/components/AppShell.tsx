@@ -167,7 +167,13 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="hs-app flex h-screen w-screen flex-col overflow-hidden font-sans text-slate-900" data-ui="hardware-studio">
-      <a href="#workspace-main" className="sr-only z-[100] bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to workspace</a>
+      <button
+        type="button"
+        onClick={() => document.getElementById('workspace-main')?.focus()}
+        className="sr-only z-[100] bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+      >
+        Skip to workspace
+      </button>
       <TopBar />
       <StudioWorkbenchTabs drawerOpen={projectDrawerOpen} onToggleDrawer={() => setProjectDrawerOpen((value) => !value)} />
       <div className="relative flex min-h-0 flex-1 bg-[#ebe7dc]">
