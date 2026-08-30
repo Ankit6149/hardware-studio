@@ -53,12 +53,12 @@ export const EngineeringSchematicWorkbench: React.FC = () => {
     activeBoardId,
     activeComponentId,
     activeNetName,
-    setActiveComponent,
-    setActiveNet,
+    selected: sharedSelection,
+    select,
     beginHandoff,
   } = useStudioContextStore();
 
-  const boardId = activeBoardId || store.activeBoardId || boards[0]?.id || '';
+  const boardId = activeBoardId || store.activeBoardId || '';
   const board = boards.find((candidate) => candidate.id === boardId);
   const contextualComponents = useMemo(
     () => boardComponents.filter((component) => !boardId || component.boardId === boardId),
@@ -88,12 +88,76 @@ export const EngineeringSchematicWorkbench: React.FC = () => {
 
   const selectedComponent = boardComponents.find((component) => component.id === viewState.selectedComponentId) || null;
   const selectedWire = schematicWires.find((wire) => wire.id === viewState.selectedWireId) || null;
+  const selectedPin = sharedSelection?.entity === 'component-pin' && selectedComponent
+    ? (selectedComponent.pins || []).find((pin) => pin.id === sharedSelection.id) || null
+    : null;
 
   const updateView = useCallback((patch: Partial<SchematicUIState>) => {
     setViewState((previous) => ({ ...previous, ...patch }));
-    if (patch.selectedComponentId !== undefined) setActiveComponent(patch.selectedComponentId);
-    if (patch.selectedNetName !== undefined) setActiveNet(patch.selectedNetName);
-  }, [setActiveComponent, setActiveNet]);
+
+    if (patch.selectedWireId) {
+      const wire = schematicWires.find((candidate) => candidate.id === patch.selectedWireId);
+      select({
+        entity: 'wire',
+        id: patch.selectedWireId,
+        label: wire?.netName || patch.selectedWireId,
+        boardId: boardId || null,
+        netName: wire?.netName || null,
+      });
+      setInspectorOpen(true);
+      return;
+    }
+
+    if (patch.selectedComponentId) {
+      const component = boardComponents.find((candidate) => candidate.id === patch.selectedComponentId);
+      select({
+        entity: 'component-instance',
+        id: patch.selectedComponentId,
+        label: component?.referenceDesignator || patch.selectedComponentId,
+        boardId: component?.boardId || boardId || null,
+        componentId: patch.selectedComponentId,
+        netName: patch.selectedNetName !== undefined ? patch.selectedNetName : undefined,
+      });
+      setInspectorOpen(true);
+      return;
+    }
+
+    if (patch.selectedNetName) {
+      select({
+        entity: 'net',
+        id: patch.selectedNetName,
+        label: patch.selectedNetName,
+        boardId: boardId || null,
+        netName: patch.selectedNetName,
+      });
+      return;
+    }
+
+    if (patch.selectedComponentId === null || patch.selectedWireId === null || patch.selectedNetName === null) {
+      select(null);
+    }
+  }, [boardComponents, boardId, schematicWires, select]);
+
+  const selectPin = useCallback((componentId: string, pinId: string) => {
+    const component = boardComponents.find((candidate) => candidate.id === componentId);
+    const pin = component?.pins?.find((candidate) => candidate.id === pinId);
+    if (!component || !pin) return;
+    setViewState((previous) => ({
+      ...previous,
+      selectedComponentId: component.id,
+      selectedWireId: null,
+      selectedNetName: pin.netName || null,
+    }));
+    select({
+      entity: 'component-pin',
+      id: pin.id,
+      label: `${component.referenceDesignator}.${pin.pinNumber} ${pin.pinName}`,
+      boardId: component.boardId,
+      componentId: component.id,
+      netName: pin.netName || null,
+    });
+    setInspectorOpen(true);
+  }, [boardComponents, select]);
 
   const armPlacement = useCallback((componentId: string) => {
     updateView({
@@ -263,7 +327,7 @@ export const EngineeringSchematicWorkbench: React.FC = () => {
 
         <EngineeringInspector
           open={inspectorOpen}
-          subtitle={selectedComponent ? selectedComponent.referenceDesignator : selectedWire ? selectedWire.netName : 'Select a symbol or wire'}
+          subtitle={selectedPin ? `${selectedComponent?.referenceDesignator}.${selectedPin.pinNumber}` : selectedComponent ? selectedComponent.referenceDesignator : selectedWire ? selectedWire.netName : 'Select a symbol or wire'}
           onClose={() => setInspectorOpen(false)}
           widthClassName="w-[300px]"
         >
@@ -286,17 +350,36 @@ export const EngineeringSchematicWorkbench: React.FC = () => {
                   ].map(([label, value]) => <div key={label} className="bg-white p-2"><p className="text-slate-400">{label}</p><p className="mt-0.5 truncate font-semibold text-slate-800">{value}</p></div>)}
                 </div>
                 <div>
-                  <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Pins</p>
+                  <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Pins · select to cross-probe</p>
                   <div className="max-h-48 overflow-y-auto border-y border-slate-200">
-                    {(selectedComponent.pins || []).map((pin) => <div key={pin.id} className="grid grid-cols-[2.5rem_minmax(0,1fr)_5rem] gap-2 border-b border-slate-100 px-1 py-1.5 text-[9px] last:border-b-0"><span className="font-mono text-slate-500">{pin.pinNumber}</span><span className="truncate font-semibold text-slate-800">{pin.pinName}</span><span className="truncate text-right text-slate-400">{pin.netName || 'unconnected'}</span></div>)}
+                    {(selectedComponent.pins || []).map((pin) => {
+                      const active = selectedPin?.id === pin.id;
+                      return (
+                        <button
+                          key={pin.id}
+                          type="button"
+                          onClick={() => selectPin(selectedComponent.id, pin.id)}
+                          className={`grid w-full grid-cols-[2.5rem_minmax(0,1fr)_5rem] gap-2 border-b border-slate-100 px-1 py-1.5 text-left text-[9px] last:border-b-0 ${active ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}
+                        >
+                          <span className={`font-mono ${active ? 'font-bold text-indigo-700' : 'text-slate-500'}`}>{pin.pinNumber}</span>
+                          <span className="truncate font-semibold text-slate-800">{pin.pinName}</span>
+                          <span className={`truncate text-right ${pin.netName ? 'text-slate-600' : 'text-slate-400'}`}>{pin.netName || 'unconnected'}</span>
+                        </button>
+                      );
+                    })}
                   </div>
+                  {selectedPin && (
+                    <div className="mt-2 border-l-2 border-indigo-500 bg-indigo-50 px-2 py-1.5 text-[9px] leading-4 text-indigo-900">
+                      <strong>{selectedPin.pinName}</strong> · pin {selectedPin.pinNumber} · {selectedPin.netName ? `net ${selectedPin.netName}` : 'no net assigned'}
+                    </div>
+                  )}
                 </div>
                 <button type="button" onClick={() => unplaceComponentFromSchematic(selectedComponent.id)} className="h-8 w-full border border-slate-300 bg-white text-[10px] font-semibold text-slate-700 hover:bg-slate-100">Remove symbol from sheet</button>
               </div>
             ) : selectedWire ? (
-              <div><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Net</p><p className="mt-1 text-[12px] font-semibold text-slate-950">{selectedWire.netName}</p><p className="mt-2 text-[10px] leading-5 text-slate-500">{selectedWire.status || 'Connected'} · {selectedWire.points.length} route points</p></div>
+              <div><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Wire / net</p><p className="mt-1 text-[12px] font-semibold text-slate-950">{selectedWire.netName}</p><p className="mt-2 text-[10px] leading-5 text-slate-500">{selectedWire.status || 'Connected'} · {selectedWire.points.length} route points · shared wire {selectedWire.id}</p></div>
             ) : (
-              <p className="text-[10px] leading-5 text-slate-500">Select a symbol or wire. The Inspector describes engineering data; it does not navigate away from the sheet.</p>
+              <p className="text-[10px] leading-5 text-slate-500">Select a symbol or wire. Pins are visible inside a selected component so you can cross-probe without hunting for tiny canvas targets.</p>
             )}
           </div>
         </EngineeringInspector>
@@ -321,7 +404,7 @@ export const EngineeringSchematicWorkbench: React.FC = () => {
 
       <EngineeringStatusBar
         left={placementOverlay ? 'Placement: click a grid point to place the armed symbol · Esc cancels' : viewState.activeTool === 'wire' ? 'Wire: click a real pin to start · click corners · finish on another pin · Esc cancels' : viewState.activeTool === 'pan' ? 'Pan: drag the sheet · switch back to Select when finished' : 'Select: click or drag symbols · W wire · R rotate · Delete removes from this sheet'}
-        center={viewState.selectedNetName ? `Net ${viewState.selectedNetName}` : selectedComponent ? `${selectedComponent.referenceDesignator} selected` : 'No selection'}
+        center={selectedPin ? `${selectedComponent?.referenceDesignator}.${selectedPin.pinNumber} · ${selectedPin.netName || 'unconnected'}` : viewState.selectedNetName ? `Net ${viewState.selectedNetName}` : selectedComponent ? `${selectedComponent.referenceDesignator} selected` : selectedWire ? `Wire ${selectedWire.netName}` : 'No selection'}
         right={`${Math.round(viewState.zoom * 100)}%`}
       />
     </section>
