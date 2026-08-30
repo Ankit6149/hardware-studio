@@ -10,8 +10,7 @@ describe('brand-aligned visual system baseline', () => {
     const css = source('../app/globals.css');
     const button = source('../ui/Button.tsx');
     const topBar = source('../components/TopBar.tsx');
-    const sidebar = source('../components/Sidebar.tsx');
-    const subnav = source('../components/ContextSubnav.tsx');
+    const navigation = source('../components/StudioWorkbenchNavigation.tsx');
     const landing = source('../app/page.tsx');
 
     expect(css).toContain('--background: #f3f0e8');
@@ -28,8 +27,9 @@ describe('brand-aligned visual system baseline', () => {
     expect(button).not.toContain('active:scale-95');
 
     expect(topBar).toContain('bg-[#f8f5ee]');
-    expect(sidebar).toContain('bg-[#11110f]');
-    expect(subnav).toContain('bg-[#f6f2e9]');
+    expect(navigation).toContain('bg-[#f4f0e7]');
+    expect(navigation).toContain('bg-[#f7f3eb]');
+    expect(navigation).toContain('bg-slate-950 text-white');
 
     expect(landing).toContain('fixed inset-x-0 top-0 z-50');
     expect(landing).toContain('One physical product.');
@@ -40,7 +40,7 @@ describe('brand-aligned visual system baseline', () => {
     expect(landing).not.toContain('Build the hardware.');
 
     expect(topBar).not.toContain('text-indigo-');
-    expect(sidebar).not.toContain('ring-indigo-');
-    expect(subnav).not.toContain('text-indigo-');
+    expect(navigation).not.toContain('ring-indigo-');
+    expect(navigation).not.toContain('text-indigo-');
   });
 });
