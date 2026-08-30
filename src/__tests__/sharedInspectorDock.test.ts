@@ -10,7 +10,8 @@ describe('shared Inspector and diagnostics dock contracts', () => {
     const shell = source('../components/editor/EngineeringEditorShell.tsx');
 
     expect(shell).toContain('export const EngineeringInspector');
-    expect(shell).toContain('data-editor-chrome="inspector"');
+    expect(shell).toContain('chromeId="inspector"');
+    expect(shell).toContain('data-editor-chrome={chromeId');
     expect(shell).toContain('export const EngineeringBottomDock');
     expect(shell).toContain('data-editor-chrome="bottom-dock"');
     expect(shell).toContain('closed docks cost no canvas space');
