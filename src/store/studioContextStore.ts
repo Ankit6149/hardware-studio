@@ -4,9 +4,12 @@ export type StudioContextEntity =
   | 'board'
   | 'component-definition'
   | 'component-instance'
+  | 'component-pin'
+  | 'pcb-pad'
   | 'net'
   | 'wire'
   | 'trace'
+  | 'via'
   | 'mechanical-object'
   | 'validation-item';
 
@@ -16,6 +19,10 @@ export interface StudioSelection {
   entity: StudioContextEntity;
   id: string;
   label?: string;
+  /** Parent context only. These IDs continue to point at existing project truth. */
+  boardId?: string | null;
+  componentId?: string | null;
+  netName?: string | null;
 }
 
 interface StudioContextState {
@@ -49,7 +56,7 @@ export const useStudioContextStore = create<StudioContextState>((set) => ({
 
   setActiveBoard: (activeBoardId) => set({
     activeBoardId,
-    selected: activeBoardId ? { entity: 'board', id: activeBoardId } : null,
+    selected: activeBoardId ? { entity: 'board', id: activeBoardId, boardId: activeBoardId } : null,
   }),
   setActiveComponentDefinition: (activeComponentDefinitionId) => set({
     activeComponentDefinitionId,
@@ -60,14 +67,19 @@ export const useStudioContextStore = create<StudioContextState>((set) => ({
   setActiveComponent: (activeComponentId) => set({
     activeComponentId,
     selected: activeComponentId
-      ? { entity: 'component-instance', id: activeComponentId }
+      ? { entity: 'component-instance', id: activeComponentId, componentId: activeComponentId }
       : null,
   }),
   setActiveNet: (activeNetName) => set({
     activeNetName,
-    selected: activeNetName ? { entity: 'net', id: activeNetName, label: activeNetName } : null,
+    selected: activeNetName ? { entity: 'net', id: activeNetName, label: activeNetName, netName: activeNetName } : null,
   }),
-  select: (selected) => set({ selected }),
+  select: (selected) => set((state) => ({
+    selected,
+    activeBoardId: selected?.boardId !== undefined ? selected.boardId : state.activeBoardId,
+    activeComponentId: selected?.componentId !== undefined ? selected.componentId : state.activeComponentId,
+    activeNetName: selected?.netName !== undefined ? selected.netName : state.activeNetName,
+  })),
   beginHandoff: (originView, returnView = originView) => set({ originView, returnView }),
   requestMechanicalMode: (requestedMechanicalMode) => set({ requestedMechanicalMode }),
   clearContext: () => set({

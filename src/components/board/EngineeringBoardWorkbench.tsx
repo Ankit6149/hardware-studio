@@ -73,13 +73,13 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     activeBoardId: contextBoardId,
     activeComponentId,
     activeNetName,
+    selected: sharedSelection,
     setActiveBoard: setContextBoard,
-    setActiveComponent,
-    setActiveNet,
+    select,
     beginHandoff,
   } = useStudioContextStore();
 
-  const initialBoardId = [contextBoardId, store.activeBoardId, boards[0]?.id]
+  const initialBoardId = [contextBoardId, store.activeBoardId]
     .find((candidate): candidate is string => Boolean(candidate && boards.some((board) => board.id === candidate))) || null;
 
   const [viewState, setViewState] = useState<BoardDesignerUIState>({
@@ -108,6 +108,16 @@ export const EngineeringBoardWorkbench: React.FC = () => {
   const selectedComponent = boardComponents.find((component) => component.id === viewState.selectedComponentId) || null;
   const selectedTrace = traces.find((trace) => trace.id === viewState.selectedTraceId) || null;
   const selectedVia = vias.find((via) => via.id === viewState.selectedViaId) || null;
+  const selectedFootprint = selectedComponent ? getFootprint(selectedComponent.footprint) : null;
+  const selectedPad = sharedSelection?.entity === 'pcb-pad' && selectedComponent && selectedFootprint
+    ? selectedFootprint.pads.find((pad) => `${selectedComponent.id}:${pad.name}` === sharedSelection.id) || null
+    : null;
+  const selectedPadAssignment = selectedPad && selectedComponent
+    ? padNetAssignments.find((assignment) => (
+      (assignment.componentId === selectedComponent.id || assignment.referenceDesignator === selectedComponent.referenceDesignator)
+      && assignment.padName === selectedPad.name
+    )) || null
+    : null;
   const netRows = nets.map((net) => {
     const assignments = padNetAssignments.filter(
       (assignment) => assignment.netName === net.netName
@@ -119,15 +129,85 @@ export const EngineeringBoardWorkbench: React.FC = () => {
 
   const updateView = useCallback((patch: Partial<BoardDesignerUIState>) => {
     setViewState((previous) => ({ ...previous, ...patch }));
+
     if (patch.activeBoardId !== undefined) {
       setContextBoard(patch.activeBoardId);
       setActiveBoard(patch.activeBoardId || '');
     }
-    if (patch.selectedComponentId !== undefined) setActiveComponent(patch.selectedComponentId);
-    if (patch.selectedNetName !== undefined) setActiveNet(patch.selectedNetName);
-  }, [setActiveBoard, setActiveComponent, setActiveNet, setContextBoard]);
 
-  const selectComponent = (componentId: string) => {
+    const latestProject = useProjectStore.getState();
+    const latestContext = useStudioContextStore.getState();
+    const boardIdForSelection = patch.activeBoardId ?? latestContext.activeBoardId ?? latestProject.activeBoardId ?? null;
+
+    if (patch.selectedTraceId) {
+      const trace = (latestProject.traces || []).find((candidate) => candidate.id === patch.selectedTraceId);
+      const parentComponentId = trace?.sourceAnchor?.componentId || trace?.targetAnchor?.componentId || undefined;
+      const netName = trace?.netName || (trace?.netId ? (latestProject.nets || []).find((net) => net.id === trace.netId)?.netName : undefined) || null;
+      select({
+        entity: 'trace',
+        id: patch.selectedTraceId,
+        label: netName || patch.selectedTraceId,
+        boardId: trace?.boardId || boardIdForSelection,
+        componentId: parentComponentId,
+        netName,
+      });
+      setInspectorTab('selection');
+      setInspectorOpen(true);
+      return;
+    }
+
+    if (patch.selectedViaId) {
+      const via = (latestProject.vias || []).find((candidate) => candidate.id === patch.selectedViaId);
+      const netName = via?.netId ? (latestProject.nets || []).find((net) => net.id === via.netId)?.netName || null : null;
+      select({
+        entity: 'via',
+        id: patch.selectedViaId,
+        label: netName ? `Via · ${netName}` : 'Via',
+        boardId: via?.boardId || boardIdForSelection,
+        netName,
+      });
+      setInspectorTab('selection');
+      setInspectorOpen(true);
+      return;
+    }
+
+    if (patch.selectedComponentId) {
+      const component = (latestProject.boardComponents || []).find((candidate) => candidate.id === patch.selectedComponentId);
+      select({
+        entity: 'component-instance',
+        id: patch.selectedComponentId,
+        label: component?.referenceDesignator || patch.selectedComponentId,
+        boardId: component?.boardId || boardIdForSelection,
+        componentId: patch.selectedComponentId,
+        netName: patch.selectedNetName !== undefined ? patch.selectedNetName : undefined,
+      });
+      setInspectorTab('selection');
+      setInspectorOpen(true);
+      return;
+    }
+
+    if (patch.selectedNetName) {
+      select({
+        entity: 'net',
+        id: patch.selectedNetName,
+        label: patch.selectedNetName,
+        boardId: boardIdForSelection,
+        netName: patch.selectedNetName,
+      });
+      return;
+    }
+
+    if (
+      patch.selectedComponentId === null
+      || patch.selectedTraceId === null
+      || patch.selectedViaId === null
+      || patch.selectedNetName === null
+    ) {
+      select(null);
+    }
+  }, [select, setActiveBoard, setContextBoard]);
+
+  const selectComponent = useCallback((componentId: string) => {
     updateView({
       selectedComponentId: componentId,
       selectedTraceId: null,
@@ -138,7 +218,33 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     });
     setInspectorTab('selection');
     setInspectorOpen(true);
-  };
+  }, [updateView]);
+
+  const selectPad = useCallback((componentId: string, padName: string) => {
+    const component = boardComponents.find((candidate) => candidate.id === componentId);
+    if (!component) return;
+    const assignment = padNetAssignments.find((candidate) => (
+      (candidate.componentId === component.id || candidate.referenceDesignator === component.referenceDesignator)
+      && candidate.padName === padName
+    ));
+    setViewState((previous) => ({
+      ...previous,
+      selectedComponentId: component.id,
+      selectedTraceId: null,
+      selectedViaId: null,
+      selectedNetName: assignment?.netName || null,
+    }));
+    select({
+      entity: 'pcb-pad',
+      id: `${component.id}:${padName}`,
+      label: `${component.referenceDesignator}.${padName}`,
+      boardId: component.boardId,
+      componentId: component.id,
+      netName: assignment?.netName || null,
+    });
+    setInspectorTab('selection');
+    setInspectorOpen(true);
+  }, [boardComponents, padNetAssignments, select]);
 
   const runDrc = () => {
     const results = runBoardDRC({ ...useProjectStore.getState(), activeBoardId: viewState.activeBoardId || '' });
@@ -303,7 +409,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
           </EngineeringDock>
         )}
 
-        <EngineeringInspector open={inspectorOpen} subtitle="Selection and nets" onClose={() => setInspectorOpen(false)} widthClassName="w-[320px]">
+        <EngineeringInspector open={inspectorOpen} subtitle={selectedPad ? `${selectedComponent?.referenceDesignator}.${selectedPad.name}` : selectedTrace ? `Trace · ${selectedTrace.netName || 'unassigned'}` : selectedVia ? 'Via' : selectedComponent ? selectedComponent.referenceDesignator : 'Selection and nets'} onClose={() => setInspectorOpen(false)} widthClassName="w-[320px]">
           <div className="flex border-b border-slate-200 bg-white p-1">
             {([['selection', 'Selection', PanelRight], ['nets', 'Nets', Network]] as const).map(([id, label, Icon]) => (
               <button key={id} type="button" onClick={() => setInspectorTab(id)} className={`h-7 flex-1 text-[9px] font-semibold ${inspectorTab === id ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100'}`}><Icon className="mr-1 inline h-3 w-3" />{label}</button>
@@ -327,11 +433,37 @@ export const EngineeringBoardWorkbench: React.FC = () => {
                   <div className="grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 text-[9px]">
                     {[
                       ['Side', selectedComponent.side || 'Top'],
-                      ['Pads', String(getFootprint(selectedComponent.footprint).pads.length)],
+                      ['Pads', String(selectedFootprint?.pads.length || 0)],
                       ['Criticality', selectedComponent.placementCriticality],
                       ['Status', selectedComponent.placementStatus || 'Placed'],
                     ].map(([label, value]) => <div key={label} className="bg-white p-2"><p className="text-slate-400">{label}</p><p className="mt-0.5 truncate font-semibold text-slate-800">{value}</p></div>)}
                   </div>
+                  {selectedFootprint && selectedFootprint.pads.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Pads · select to cross-probe</p>
+                      <div className="max-h-44 overflow-y-auto border-y border-slate-200">
+                        {selectedFootprint.pads.map((pad) => {
+                          const assignment = padNetAssignments.find((candidate) => (
+                            (candidate.componentId === selectedComponent.id || candidate.referenceDesignator === selectedComponent.referenceDesignator)
+                            && candidate.padName === pad.name
+                          ));
+                          const active = selectedPad?.name === pad.name;
+                          return (
+                            <button key={pad.name} type="button" onClick={() => selectPad(selectedComponent.id, pad.name)} className={`grid w-full grid-cols-[3rem_minmax(0,1fr)_5.5rem] gap-2 border-b border-slate-100 px-1 py-1.5 text-left text-[9px] last:border-b-0 ${active ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                              <span className={`font-mono ${active ? 'font-bold text-indigo-700' : 'text-slate-500'}`}>{pad.name}</span>
+                              <span className="truncate text-slate-600">{pad.widthMm.toFixed(2)} × {pad.heightMm.toFixed(2)} mm</span>
+                              <span className={`truncate text-right ${assignment?.netName ? 'text-slate-600' : 'text-slate-400'}`}>{assignment?.netName || 'unassigned'}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedPad && (
+                        <div className="mt-2 border-l-2 border-indigo-500 bg-indigo-50 px-2 py-1.5 text-[9px] leading-4 text-indigo-900">
+                          <strong>Pad {selectedPad.name}</strong> · {selectedPadAssignment?.netName ? `net ${selectedPadAssignment.netName}` : 'no project net assignment'}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="flex gap-1">
                     <button type="button" onClick={rotateSelected} className="h-8 flex-1 border border-slate-300 bg-white text-[9px] font-semibold text-slate-700">Rotate 90°</button>
                     <button type="button" onClick={() => updateBoardComponent(selectedComponent.id, { side: selectedComponent.side === 'Bottom' ? 'Top' : 'Bottom' })} className="h-8 flex-1 border border-slate-300 bg-white text-[9px] font-semibold text-slate-700">Flip side</button>
@@ -342,16 +474,16 @@ export const EngineeringBoardWorkbench: React.FC = () => {
                   <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Trace</p>
                   <p className="text-[12px] font-semibold text-slate-950">{selectedTrace.netName || 'Unnamed net'}</p>
                   <label className="block text-[9px] text-slate-500">Width mm<input type="number" step="0.05" value={selectedTrace.width || 0.25} onChange={(event) => updateTrace(selectedTrace.id, { width: Number.parseFloat(event.target.value) || 0.25 })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
-                  <p className="text-[9px] text-slate-500">{selectedTrace.layerId || 'top-copper'} · {selectedTrace.points?.length || 0} vertices · {selectedTrace.status || 'Draft'}</p>
+                  <p className="text-[9px] text-slate-500">{selectedTrace.layerId || 'top-copper'} · {selectedTrace.points?.length || 0} vertices · {selectedTrace.status || 'Draft'} · shared trace {selectedTrace.id}</p>
                 </div>
               ) : selectedVia ? (
                 <div>
                   <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Via</p>
                   <p className="mt-1 font-mono text-[10px] text-slate-700">{selectedVia.x?.toFixed(2)}, {selectedVia.y?.toFixed(2)} mm</p>
-                  <p className="mt-2 text-[9px] text-slate-500">Ø {selectedVia.outerDiameter || 0.6} / drill {selectedVia.drillDiameter || 0.3} mm</p>
+                  <p className="mt-2 text-[9px] text-slate-500">Ø {selectedVia.outerDiameter || 0.6} / drill {selectedVia.drillDiameter || 0.3} mm · {sharedSelection?.entity === 'via' && sharedSelection.netName ? `net ${sharedSelection.netName}` : 'net unresolved'}</p>
                 </div>
               ) : (
-                <p className="text-[10px] leading-5 text-slate-500">Select a footprint, trace, or via. The Inspector edits that object without changing workspaces.</p>
+                <p className="text-[10px] leading-5 text-slate-500">Select a footprint, trace, or via. Pads are visible inside a selected footprint so you can cross-probe without guessing tiny canvas targets.</p>
               )}
             </div>
           ) : (
@@ -384,7 +516,10 @@ export const EngineeringBoardWorkbench: React.FC = () => {
                 type="button"
                 onClick={() => {
                   if (result.linkedObjectType === 'component') selectComponent(result.linkedObjectId);
-                  if (result.linkedObjectType === 'net') setActiveNet(result.linkedObjectId);
+                  if (result.linkedObjectType === 'net') {
+                    select({ entity: 'net', id: result.linkedObjectId, label: result.linkedObjectId, boardId: activeBoard.id, netName: result.linkedObjectId });
+                    setViewState((previous) => ({ ...previous, selectedNetName: result.linkedObjectId }));
+                  }
                 }}
                 className="border-l-2 border-amber-500 bg-amber-50 px-2 py-1.5 text-left"
               >
@@ -399,7 +534,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
 
       <EngineeringStatusBar
         left={viewState.isRouting ? `Routing ${viewState.selectedNetName || 'net'} · click to fix segments · finish on matching anchor · Esc cancels` : viewState.activeTool === 'route' ? 'Route: click a pad/via/trace endpoint to begin. Empty-space starts are rejected.' : 'Select and move footprints directly. Drag unplaced components from the browser.'}
-        center={`${viewState.activeLayerId} · ${configuredRouteWidth ? `configured width ${routeWidthMm.toFixed(2)} mm` : 'no explicit trace-width rule; new routes remain draft evidence'}`}
+        center={selectedPad ? `${selectedComponent?.referenceDesignator}.${selectedPad.name} · ${selectedPadAssignment?.netName || 'unassigned'}` : selectedTrace ? `Trace · ${selectedTrace.netName || 'unassigned'}` : selectedVia ? `Via · ${sharedSelection?.netName || 'net unresolved'}` : `${viewState.activeLayerId} · ${configuredRouteWidth ? `configured width ${routeWidthMm.toFixed(2)} mm` : 'no explicit trace-width rule; new routes remain draft evidence'}`}
         right={`${viewState.mouseXMm.toFixed(2)}, ${viewState.mouseYMm.toFixed(2)} mm`}
       />
     </section>
