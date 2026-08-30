@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   allNavigationItems,
   compatibleNavigationItems,
-  getNavigationDomainForView,
+  getContextualNavigationItemsForView,
   getNavigationItem,
+  getWorkbenchForView,
   isCanvasNavigationItem,
-  navigationDomains,
-  visibleNavigationItems,
+  primaryNavigationItems,
+  workbenchTabs,
 } from '../lib/navigationRegistry';
 
 describe('navigation registry', () => {
@@ -15,86 +16,110 @@ describe('navigation registry', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('exposes one small stable V1 lifecycle', () => {
-    expect(navigationDomains.map((domain) => domain.id)).toEqual([
-      'overview',
-      'product',
-      'electronics',
+  it('exposes connected product work surfaces instead of a permanent domain taxonomy', () => {
+    expect(workbenchTabs.map((workbench) => workbench.id)).toEqual([
+      'home',
+      'requirements',
+      'architecture',
+      'components',
+      'schematic',
+      'pcb',
       'mechanical',
       'firmware',
       'validation',
-      'outputs',
+      'release',
     ]);
 
-    expect(visibleNavigationItems.map((item) => item.id)).toEqual([
+    expect(primaryNavigationItems.map((item) => item.id)).toEqual([
       'dashboard',
       'requirements',
       'product-architecture',
       'component-library',
       'schematic-editor',
       'board-designer',
-      'bom',
       'mechanical-studio',
-      'assembly-stack',
       'firmware-studio',
-      'hardware-mapping',
-      'source-skeleton',
       'validation-studio',
-      'requirement-coverage',
       'readiness',
-      'exports',
-      'revisions',
     ]);
 
-    for (const item of visibleNavigationItems) {
-      expect(getNavigationItem(item.id)).toBe(item);
-      expect(item.label.trim().length).toBeGreaterThan(0);
-      expect(item.purpose.trim().length).toBeGreaterThan(20);
-      expect(item.surface.trim().length).toBeGreaterThan(0);
-      expect(['workspace', 'canvas']).toContain(item.layout);
+    for (const workbench of workbenchTabs) {
+      expect(getNavigationItem(workbench.defaultView)).toBeDefined();
+      expect(workbench.label.trim().length).toBeGreaterThan(0);
+      expect(workbench.purpose.trim().length).toBeGreaterThan(15);
     }
   });
 
-  it('keeps supporting and legacy destinations compatibility-only', () => {
+  it('keeps supporting PCB, Firmware, Validation, and Release tools contextual', () => {
+    expect(getContextualNavigationItemsForView('board-designer').map((item) => item.id)).toEqual([
+      'board-settings',
+      'pcb-constraints',
+      'pcb-drc',
+      'bom',
+    ]);
+    expect(getContextualNavigationItemsForView('firmware-studio').map((item) => item.id)).toEqual([
+      'state-machines',
+      'hardware-mapping',
+      'source-skeleton',
+      'firmware-evidence',
+    ]);
+    expect(getContextualNavigationItemsForView('validation-studio').map((item) => item.id)).toEqual([
+      'requirement-coverage',
+      'factory-qa',
+    ]);
+    expect(getContextualNavigationItemsForView('readiness').map((item) => item.id)).toEqual([
+      'exports',
+      'revisions',
+      'blueprint-sheets',
+      'factory-builder',
+    ]);
+
+    const primaryIds = new Set(primaryNavigationItems.map((item) => item.id));
+    for (const viewId of ['board-settings', 'pcb-constraints', 'pcb-drc', 'bom', 'firmware-evidence', 'factory-qa']) {
+      expect(primaryIds.has(viewId)).toBe(false);
+      expect(getNavigationItem(viewId)).toBeDefined();
+    }
+  });
+
+  it('maps historical and contextual view ids back to one owning workbench', () => {
+    expect(getWorkbenchForView('power-tree')?.id).toBe('schematic');
+    expect(getWorkbenchForView('pin-map')?.id).toBe('schematic');
+    expect(getWorkbenchForView('board-studio')?.id).toBe('pcb');
+    expect(getWorkbenchForView('pcb-drc')?.id).toBe('pcb');
+    expect(getWorkbenchForView('state-machines')?.id).toBe('firmware');
+    expect(getWorkbenchForView('factory-qa')?.id).toBe('validation');
+    expect(getWorkbenchForView('factory-builder')?.id).toBe('release');
+    expect(getWorkbenchForView('master')?.id).toBe('architecture');
+  });
+
+  it('keeps obsolete project-era destinations compatibility-only', () => {
     const compatibleIds = compatibleNavigationItems.map((item) => item.id);
-    expect(compatibleIds).toEqual(
-      expect.arrayContaining([
-        'product-design',
-        'master',
-        'dossier',
-        'electronics',
-        'power-tree',
-        'pin-map',
-        'board-settings',
-        'pcb-constraints',
-        'pcb-drc',
-        'factory-qa',
-        'factory-builder',
-      ]),
-    );
+    expect(compatibleIds).toEqual(expect.arrayContaining([
+      'product-design',
+      'master',
+      'dossier',
+      'electronics',
+      'power-tree',
+      'board-studio',
+      'branches',
+      'releases',
+    ]));
 
     for (const id of compatibleIds) {
       expect(getNavigationItem(id)).toBeDefined();
-      expect(visibleNavigationItems.some((item) => item.id === id)).toBe(false);
+      expect(primaryNavigationItems.some((item) => item.id === id)).toBe(false);
     }
   });
 
-  it('maps supporting Electronics and PCB tools back to one Electronics area', () => {
-    expect(getNavigationDomainForView('component-library')?.id).toBe('electronics');
-    expect(getNavigationDomainForView('board-designer')?.id).toBe('electronics');
-    expect(getNavigationDomainForView('board-settings')?.id).toBe('electronics');
-    expect(getNavigationDomainForView('pcb-drc')?.id).toBe('electronics');
-    expect(getNavigationDomainForView('power-tree')?.id).toBe('electronics');
-  });
-
-  it('classifies only the explicit legacy system blueprint views as canvas layouts', () => {
+  it('classifies only explicit legacy system blueprint views as canvas layouts', () => {
     expect(isCanvasNavigationItem(getNavigationItem('blueprint-editor'))).toBe(true);
     expect(isCanvasNavigationItem(getNavigationItem('master'))).toBe(true);
     expect(isCanvasNavigationItem(getNavigationItem('dashboard'))).toBe(false);
   });
 
-  it('returns no surface for an unknown view id', () => {
+  it('returns no workbench or surface for an unknown view id', () => {
     expect(getNavigationItem('missing-workbench')).toBeUndefined();
-    expect(isCanvasNavigationItem(getNavigationItem('missing-workbench'))).toBe(false);
+    expect(getWorkbenchForView('missing-workbench')).toBeUndefined();
+    expect(getContextualNavigationItemsForView('missing-workbench')).toEqual([]);
   });
 });
