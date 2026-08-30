@@ -71,9 +71,10 @@ describe('Electronics representation cross-probing', () => {
     const projectStore = source('../store/projectStore.ts');
     const contextStore = source('../store/studioContextStore.ts');
 
-    expect(contextStore).toContain("entity: 'component-pin'");
-    expect(contextStore).toContain("entity: 'pcb-pad'");
-    expect(contextStore).toContain("entity: 'via'");
+    expect(contextStore).toContain("| 'component-pin'");
+    expect(contextStore).toContain("| 'pcb-pad'");
+    expect(contextStore).toContain("| 'via'");
+    expect(contextStore).toContain('selected: StudioSelection | null');
     expect(projectStore).not.toContain('StudioSelection');
     expect(projectStore).not.toContain('activeComponentDefinitionId');
   });
