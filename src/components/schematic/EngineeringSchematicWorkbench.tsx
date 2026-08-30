@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowRight,
   Boxes,
   CircuitBoard,
@@ -13,7 +14,6 @@ import {
   RotateCw,
   Route,
   Trash2,
-  X,
 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
@@ -23,8 +23,10 @@ import { initialSchematicUIState, type SchematicUIState } from './schematicInter
 import { EditorDockButton } from '../editor/EditorDockButton';
 import {
   EditorToolButton,
+  EngineeringBottomDock,
   EngineeringDock,
   EngineeringEditorBar,
+  EngineeringInspector,
   EngineeringStatusBar,
 } from '../editor/EngineeringEditorShell';
 
@@ -80,6 +82,7 @@ export const EngineeringSchematicWorkbench: React.FC = () => {
   });
   const [browserOpen, setBrowserOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [problemsOpen, setProblemsOpen] = useState(false);
   const [panDrag, setPanDrag] = useState<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
 
@@ -192,7 +195,8 @@ export const EngineeringSchematicWorkbench: React.FC = () => {
         docks={(
           <>
             <EditorDockButton label="Browser" icon={Boxes} active={browserOpen} count={unplacedComponents.length} onClick={() => setBrowserOpen((value) => !value)} />
-            <EditorDockButton label="Inspector" icon={PanelRight} active={inspectorOpen} count={ercResults.length} onClick={() => setInspectorOpen((value) => !value)} />
+            <EditorDockButton label="Inspector" icon={PanelRight} active={inspectorOpen} onClick={() => setInspectorOpen((value) => !value)} />
+            <EditorDockButton label="Problems" icon={AlertTriangle} active={problemsOpen} count={ercResults.length} onClick={() => setProblemsOpen((value) => !value)} />
           </>
         )}
         actions={<button type="button" onClick={openPcb} className="inline-flex h-8 items-center gap-1.5 bg-slate-950 px-2.5 text-[10px] font-semibold text-white hover:bg-slate-800"><CircuitBoard className="h-3.5 w-3.5" /> PCB <ArrowRight className="h-3 w-3" /></button>}
@@ -257,50 +261,62 @@ export const EngineeringSchematicWorkbench: React.FC = () => {
           </EngineeringDock>
         )}
 
-        {inspectorOpen && (
-          <EngineeringDock side="right" title="Inspector" subtitle={selectedComponent ? selectedComponent.referenceDesignator : selectedWire ? selectedWire.netName : 'Selection & ERC'} onClose={() => setInspectorOpen(false)} widthClassName="w-[300px]">
-            <div className="p-3">
-              {selectedComponent ? (
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Component</p>
-                    <p className="mt-1 text-[12px] font-semibold text-slate-950">{selectedComponent.referenceDesignator} · {selectedComponent.componentName}</p>
-                    <p className="mt-0.5 font-mono text-[9px] text-slate-500">{selectedComponent.partNumber || selectedComponent.libraryId || selectedComponent.id}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-px overflow-hidden border border-slate-200 bg-slate-200 text-[9px]">
-                    {[
-                      ['Value', selectedComponent.value || '—'],
-                      ['Footprint', selectedComponent.footprint || 'Unresolved'],
-                      ['X', selectedComponent.schematic?.x != null ? `${selectedComponent.schematic.x}` : '—'],
-                      ['Y', selectedComponent.schematic?.y != null ? `${selectedComponent.schematic.y}` : '—'],
-                      ['Rotation', `${selectedComponent.schematic?.rotation || 0}°`],
-                      ['Pins', `${selectedComponent.pins?.length || 0}`],
-                    ].map(([label, value]) => <div key={label} className="bg-white p-2"><p className="text-slate-400">{label}</p><p className="mt-0.5 truncate font-semibold text-slate-800">{value}</p></div>)}
-                  </div>
-                  <div>
-                    <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Pins</p>
-                    <div className="max-h-48 overflow-y-auto border-y border-slate-200">
-                      {(selectedComponent.pins || []).map((pin) => <div key={pin.id} className="grid grid-cols-[2.5rem_minmax(0,1fr)_5rem] gap-2 border-b border-slate-100 px-1 py-1.5 text-[9px] last:border-b-0"><span className="font-mono text-slate-500">{pin.pinNumber}</span><span className="truncate font-semibold text-slate-800">{pin.pinName}</span><span className="truncate text-right text-slate-400">{pin.netName || 'unconnected'}</span></div>)}
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => unplaceComponentFromSchematic(selectedComponent.id)} className="h-8 w-full border border-slate-300 bg-white text-[10px] font-semibold text-slate-700 hover:bg-slate-100">Remove symbol from sheet</button>
+        <EngineeringInspector
+          open={inspectorOpen}
+          subtitle={selectedComponent ? selectedComponent.referenceDesignator : selectedWire ? selectedWire.netName : 'Select a symbol or wire'}
+          onClose={() => setInspectorOpen(false)}
+          widthClassName="w-[300px]"
+        >
+          <div className="p-3">
+            {selectedComponent ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Component</p>
+                  <p className="mt-1 text-[12px] font-semibold text-slate-950">{selectedComponent.referenceDesignator} · {selectedComponent.componentName}</p>
+                  <p className="mt-0.5 font-mono text-[9px] text-slate-500">{selectedComponent.partNumber || selectedComponent.libraryId || selectedComponent.id}</p>
                 </div>
-              ) : selectedWire ? (
-                <div><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Net</p><p className="mt-1 text-[12px] font-semibold text-slate-950">{selectedWire.netName}</p><p className="mt-2 text-[10px] leading-5 text-slate-500">{selectedWire.status || 'Connected'} · {selectedWire.points.length} route points</p></div>
-              ) : (
-                <p className="text-[10px] leading-5 text-slate-500">Select a symbol or wire. The inspector describes engineering data; it does not navigate away from the sheet.</p>
-              )}
-
-              <div className="mt-4 border-t border-slate-200 pt-3">
-                <div className="flex items-center justify-between"><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">ERC</p><span className="font-mono text-[9px] text-slate-500">{ercResults.length}</span></div>
-                <div className="mt-1.5 space-y-1">
-                  {ercResults.slice(0, 8).map((result) => <div key={result.id} className="border-l-2 border-amber-500 bg-amber-50 px-2 py-1.5"><p className="text-[9px] font-semibold text-amber-950">{result.title}</p><p className="mt-0.5 text-[9px] leading-4 text-amber-800">{result.description}</p></div>)}
-                  {ercResults.length === 0 && <p className="text-[9px] text-emerald-700">No current ERC findings.</p>}
+                <div className="grid grid-cols-2 gap-px overflow-hidden border border-slate-200 bg-slate-200 text-[9px]">
+                  {[
+                    ['Value', selectedComponent.value || '—'],
+                    ['Footprint', selectedComponent.footprint || 'Unresolved'],
+                    ['X', selectedComponent.schematic?.x != null ? `${selectedComponent.schematic.x}` : '—'],
+                    ['Y', selectedComponent.schematic?.y != null ? `${selectedComponent.schematic.y}` : '—'],
+                    ['Rotation', `${selectedComponent.schematic?.rotation || 0}°`],
+                    ['Pins', `${selectedComponent.pins?.length || 0}`],
+                  ].map(([label, value]) => <div key={label} className="bg-white p-2"><p className="text-slate-400">{label}</p><p className="mt-0.5 truncate font-semibold text-slate-800">{value}</p></div>)}
                 </div>
+                <div>
+                  <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Pins</p>
+                  <div className="max-h-48 overflow-y-auto border-y border-slate-200">
+                    {(selectedComponent.pins || []).map((pin) => <div key={pin.id} className="grid grid-cols-[2.5rem_minmax(0,1fr)_5rem] gap-2 border-b border-slate-100 px-1 py-1.5 text-[9px] last:border-b-0"><span className="font-mono text-slate-500">{pin.pinNumber}</span><span className="truncate font-semibold text-slate-800">{pin.pinName}</span><span className="truncate text-right text-slate-400">{pin.netName || 'unconnected'}</span></div>)}
+                  </div>
+                </div>
+                <button type="button" onClick={() => unplaceComponentFromSchematic(selectedComponent.id)} className="h-8 w-full border border-slate-300 bg-white text-[10px] font-semibold text-slate-700 hover:bg-slate-100">Remove symbol from sheet</button>
               </div>
-            </div>
-          </EngineeringDock>
-        )}
+            ) : selectedWire ? (
+              <div><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Net</p><p className="mt-1 text-[12px] font-semibold text-slate-950">{selectedWire.netName}</p><p className="mt-2 text-[10px] leading-5 text-slate-500">{selectedWire.status || 'Connected'} · {selectedWire.points.length} route points</p></div>
+            ) : (
+              <p className="text-[10px] leading-5 text-slate-500">Select a symbol or wire. The Inspector describes engineering data; it does not navigate away from the sheet.</p>
+            )}
+          </div>
+        </EngineeringInspector>
+
+        <EngineeringBottomDock
+          open={problemsOpen}
+          title="ERC findings"
+          subtitle={`${ercResults.length} current schematic finding${ercResults.length === 1 ? '' : 's'}`}
+          onClose={() => setProblemsOpen(false)}
+        >
+          <div className="grid gap-1 p-2 sm:grid-cols-2 xl:grid-cols-3">
+            {ercResults.slice(0, 12).map((result) => (
+              <div key={result.id} className="border-l-2 border-amber-500 bg-amber-50 px-2 py-1.5">
+                <p className="text-[9px] font-semibold text-amber-950">{result.title}</p>
+                <p className="mt-0.5 text-[9px] leading-4 text-amber-800">{result.description}</p>
+              </div>
+            ))}
+            {ercResults.length === 0 && <p className="p-3 text-[9px] text-emerald-700">No current ERC findings.</p>}
+          </div>
+        </EngineeringBottomDock>
       </div>
 
       <EngineeringStatusBar
