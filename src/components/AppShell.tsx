@@ -3,6 +3,12 @@ import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useStorageHealthStore } from '../store/storageHealthStore';
 import { getNavigationItem, isCanvasNavigationItem, NavigationSurface } from '../lib/navigationRegistry';
+import {
+  getStudioPathForView,
+  getStudioViewForLegacyHash,
+  getStudioViewForPath,
+  isStudioPath,
+} from '../lib/studioRoutes';
 import { useFeedback } from './feedback/FeedbackProvider';
 import { RECOVER_TO_DASHBOARD_KEY } from '../lib/reliability';
 import { TopBar } from './TopBar';
@@ -88,17 +94,51 @@ export const AppShell: React.FC = () => {
 
   useEffect(() => {
     loadProjectFromLocalStorage();
+
+    let targetView = getStudioViewForPath(window.location.pathname);
+    const legacyHashView = getStudioViewForLegacyHash(window.location.hash);
+    if (legacyHashView) {
+      targetView = legacyHashView;
+      const cleanPath = getStudioPathForView(legacyHashView);
+      if (cleanPath) window.history.replaceState({ studioView: legacyHashView }, '', cleanPath);
+    } else if (isStudioPath(window.location.pathname) && !targetView) {
+      targetView = '__unknown-studio-route__';
+    }
+
     try {
       if (window.sessionStorage.getItem(RECOVER_TO_DASHBOARD_KEY) === '1') {
         window.sessionStorage.removeItem(RECOVER_TO_DASHBOARD_KEY);
-        setActiveView('dashboard');
+        targetView = 'dashboard';
+        window.history.replaceState({ studioView: 'dashboard' }, '', '/studio');
       }
     } catch {
       // The workspace can still load when session storage is blocked.
     }
+
+    if (targetView) setActiveView(targetView);
+
     const timer = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(timer);
   }, [loadProjectFromLocalStorage, setActiveView]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const routeView = getStudioViewForPath(window.location.pathname);
+      if (routeView) setActiveView(routeView);
+      else if (isStudioPath(window.location.pathname)) setActiveView('__unknown-studio-route__');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [setActiveView]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const cleanPath = getStudioPathForView(activeView);
+    if (!cleanPath) return;
+    if (window.location.pathname === cleanPath && !window.location.hash) return;
+    window.history.pushState({ studioView: activeView }, '', cleanPath);
+  }, [activeView, mounted]);
 
   useEffect(() => {
     if (!['failed', 'unavailable', 'memory-fallback'].includes(storageHealth.status)) return;
