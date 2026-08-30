@@ -6,11 +6,12 @@ function source(relativePath: string): string {
 }
 
 describe('workspace accessibility and focus baseline', () => {
-  it('provides a skip target, route announcement, keyboard-focusable tabs, and a collapsible contextual drawer', () => {
+  it('provides a fragment-free skip action, route announcement, keyboard-focusable tabs, and a collapsible contextual drawer', () => {
     const shell = source('../components/AppShell.tsx');
     const navigation = source('../components/StudioWorkbenchNavigation.tsx');
 
-    expect(shell).toContain('href="#workspace-main"');
+    expect(shell).toContain("document.getElementById('workspace-main')?.focus()");
+    expect(shell).not.toContain('href="#workspace-main"');
     expect(shell).toContain('id="workspace-main"');
     expect(shell).toContain('aria-live="polite"');
     expect(shell).toContain('projectDrawerOpen');
