@@ -2,6 +2,12 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
+import { useProjectStore } from '../../store/projectStore';
+import { useStudioContextStore } from '../../store/studioContextStore';
+import {
+  ElectronicsRepresentationStrip,
+  type ElectronicsRepresentation,
+} from '../electronics/ElectronicsRepresentationStrip';
 
 interface EngineeringEditorBarProps {
   domain: string;
@@ -99,9 +105,16 @@ interface EngineeringInspectorProps {
   children: React.ReactNode;
 }
 
+const inspectorRepresentationByView: Readonly<Record<string, ElectronicsRepresentation | undefined>> = {
+  'schematic-editor': 'schematic',
+  'board-designer': 'pcb',
+};
+
 /**
  * Shared right-side selection surface. The workbench owns whether it is open and
- * what the current canonical selection means; the Inspector owns only framing.
+ * what the current canonical selection means; the Inspector owns framing plus a
+ * compact cross-representation header when the immediate Electronics selection
+ * is attached to a canonical component.
  */
 export const EngineeringInspector: React.FC<EngineeringInspectorProps> = ({
   open,
@@ -110,6 +123,12 @@ export const EngineeringInspector: React.FC<EngineeringInspectorProps> = ({
   widthClassName = 'w-[320px]',
   children,
 }) => {
+  const activeView = useProjectStore((state) => state.activeView);
+  const sharedSelection = useStudioContextStore((state) => state.selected);
+  const currentRepresentation = inspectorRepresentationByView[activeView];
+  const contextualComponentId = sharedSelection?.componentId
+    ?? (sharedSelection?.entity === 'component-instance' ? sharedSelection.id : null);
+
   if (!open) return null;
   return (
     <EngineeringDock
@@ -120,6 +139,12 @@ export const EngineeringInspector: React.FC<EngineeringInspectorProps> = ({
       widthClassName={widthClassName}
       chromeId="inspector"
     >
+      {currentRepresentation && contextualComponentId && (
+        <ElectronicsRepresentationStrip
+          componentId={contextualComponentId}
+          current={currentRepresentation}
+        />
+      )}
       {children}
     </EngineeringDock>
   );
