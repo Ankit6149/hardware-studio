@@ -62,6 +62,7 @@ interface EngineeringDockProps {
   onClose: () => void;
   widthClassName?: string;
   children: React.ReactNode;
+  chromeId?: string;
 }
 
 export const EngineeringDock: React.FC<EngineeringDockProps> = ({
@@ -71,10 +72,11 @@ export const EngineeringDock: React.FC<EngineeringDockProps> = ({
   onClose,
   widthClassName = 'w-[292px]',
   children,
+  chromeId,
 }) => (
   <aside
     className={`absolute bottom-0 top-0 z-30 flex ${widthClassName} flex-col overflow-hidden bg-[#fbfaf6] shadow-[0_12px_32px_rgba(17,17,15,0.10)] ${side === 'left' ? 'left-0 border-r border-[#c9c5bb]' : 'right-0 border-l border-[#c9c5bb]'}`}
-    data-editor-chrome={`${side}-dock`}
+    data-editor-chrome={chromeId || `${side}-dock`}
   >
     <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 border-b border-[#d8d4ca] bg-[#f0eee7] px-3">
       <div className="min-w-0">
@@ -88,6 +90,85 @@ export const EngineeringDock: React.FC<EngineeringDockProps> = ({
     <div className="min-h-0 flex-1 overflow-auto">{children}</div>
   </aside>
 );
+
+interface EngineeringInspectorProps {
+  open: boolean;
+  subtitle?: string;
+  onClose: () => void;
+  widthClassName?: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Shared right-side selection surface. The workbench owns whether it is open and
+ * what the current canonical selection means; the Inspector owns only framing.
+ */
+export const EngineeringInspector: React.FC<EngineeringInspectorProps> = ({
+  open,
+  subtitle,
+  onClose,
+  widthClassName = 'w-[320px]',
+  children,
+}) => {
+  if (!open) return null;
+  return (
+    <EngineeringDock
+      side="right"
+      title="Inspector"
+      subtitle={subtitle}
+      onClose={onClose}
+      widthClassName={widthClassName}
+      chromeId="inspector"
+    >
+      {children}
+    </EngineeringDock>
+  );
+};
+
+interface EngineeringBottomDockProps {
+  open: boolean;
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  actions?: React.ReactNode;
+  heightClassName?: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Shared diagnostics/execution surface. It intentionally overlays the lower editor
+ * region so closed docks cost no canvas space and no empty global panel is shown.
+ */
+export const EngineeringBottomDock: React.FC<EngineeringBottomDockProps> = ({
+  open,
+  title,
+  subtitle,
+  onClose,
+  actions,
+  heightClassName = 'h-[184px]',
+  children,
+}) => {
+  if (!open) return null;
+  return (
+    <section
+      className={`absolute inset-x-0 bottom-0 z-40 flex ${heightClassName} flex-col overflow-hidden border-t border-[#c9c5bb] bg-[#fbfaf6] shadow-[0_-12px_28px_rgba(17,17,15,0.08)]`}
+      data-editor-chrome="bottom-dock"
+      aria-label={title}
+    >
+      <div className="flex min-h-10 shrink-0 items-center gap-3 border-b border-[#d8d4ca] bg-[#f0eee7] px-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[10px] font-semibold tracking-[-0.01em] text-slate-950">{title}</p>
+          {subtitle && <p className="mt-0.5 truncate text-[8px] leading-3 text-slate-500">{subtitle}</p>}
+        </div>
+        {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
+        <button type="button" onClick={onClose} className="grid h-7 w-7 shrink-0 place-items-center text-slate-500 hover:bg-[#dedbd2] hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-400" aria-label={`Close ${title}`}>
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+    </section>
+  );
+};
 
 export const EditorToolButton: React.FC<{
   label: string;
