@@ -35,6 +35,7 @@ import {
 } from '../lib/navigationRegistry';
 import { useProjectStore } from '../store/projectStore';
 import { PcbProjectDrawer } from './board/PcbProjectDrawer';
+import { MechanicalProjectDrawer } from './mechanical/MechanicalProjectDrawer';
 
 interface StudioWorkbenchTabsProps {
   drawerOpen: boolean;
@@ -155,6 +156,7 @@ export const StudioProjectDrawer: React.FC<StudioProjectDrawerProps> = ({ open }
 
   if (!open || !activeWorkbench) return null;
   if (activeWorkbench.id === 'pcb') return <PcbProjectDrawer />;
+  if (activeWorkbench.id === 'mechanical') return <MechanicalProjectDrawer />;
   if (contextualItems.length === 0) return null;
 
   return (
