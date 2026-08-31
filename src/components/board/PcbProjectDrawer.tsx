@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Boxes,
   CircuitBoard,
@@ -53,6 +53,7 @@ export const PcbProjectDrawer: React.FC = () => {
   const setActiveSection = usePcbWorkspaceUiStore((state) => state.setActiveSection);
   const setActiveLayer = usePcbWorkspaceUiStore((state) => state.setActiveLayer);
   const toggleLayerVisibility = usePcbWorkspaceUiStore((state) => state.toggleLayerVisibility);
+  const setInspectorOpen = usePcbWorkspaceUiStore((state) => state.setInspectorOpen);
 
   const [newRuleType, setNewRuleType] = useState('');
   const [newRuleValue, setNewRuleValue] = useState('');
@@ -74,12 +75,10 @@ export const PcbProjectDrawer: React.FC = () => {
     ? pcbLayers.filter((layer) => layer.boardId === activeBoardId).slice().sort((a, b) => a.order - b.order)
     : [];
 
-  const netRows = useMemo(() => {
-    if (!activeBoardId) return [];
-    const componentIds = new Set(boardObjects.map((component) => component.id));
-    const referenceDesignators = new Set(boardObjects.map((component) => component.referenceDesignator));
-
-    return nets
+  const componentIds = new Set(boardObjects.map((component) => component.id));
+  const referenceDesignators = new Set(boardObjects.map((component) => component.referenceDesignator));
+  const netRows = activeBoardId
+    ? nets
       .map((net) => {
         const padCount = padNetAssignments.filter((assignment) => (
           assignment.netName === net.netName
@@ -88,8 +87,8 @@ export const PcbProjectDrawer: React.FC = () => {
         const traceCount = boardTraces.filter((trace) => trace.netName === net.netName || trace.netId === net.id).length;
         return { ...net, padCount, traceCount };
       })
-      .filter((net) => net.padCount > 0 || net.traceCount > 0);
-  }, [activeBoardId, boardObjects, boardTraces, nets, padNetAssignments]);
+      .filter((net) => net.padCount > 0 || net.traceCount > 0)
+    : [];
 
   const selectComponent = (componentId: string) => {
     const component = boardObjects.find((candidate) => candidate.id === componentId);
@@ -101,6 +100,7 @@ export const PcbProjectDrawer: React.FC = () => {
       boardId: activeBoardId,
       componentId: component.id,
     });
+    setInspectorOpen(true);
   };
 
   const selectNet = (netName: string) => {
@@ -112,6 +112,7 @@ export const PcbProjectDrawer: React.FC = () => {
       boardId: activeBoardId,
       netName,
     });
+    setInspectorOpen(false);
   };
 
   const createRule = (event: React.FormEvent) => {
