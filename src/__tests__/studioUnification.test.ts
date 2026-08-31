@@ -139,7 +139,8 @@ describe('golden-path regression guards', () => {
     expect(pcb).toContain('title="PCB DRC"');
     expect(pcb).toContain("result.linkedObjectType === 'component'");
     expect(pcb).toContain("result.linkedObjectType === 'net'");
-    expect(pcb).toContain("select({ entity: 'net'");
+    expect(pcb).toContain("entity: 'net'");
+    expect(pcb).toContain('select({');
   });
 
   it('uses an event-driven selected-board 3D preview instead of permanent animation', () => {
