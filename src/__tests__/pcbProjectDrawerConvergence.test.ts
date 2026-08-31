@@ -17,12 +17,14 @@ describe('PCB Project Drawer convergence', () => {
     ui.setActiveSection('layers');
     ui.setActiveLayer('bottom-copper');
     ui.toggleLayerVisibility('silkscreen');
-    ui.requestProblems();
+    ui.setInspectorOpen(true);
+    ui.setProblemsOpen(true);
 
     expect(usePcbWorkspaceUiStore.getState()).toMatchObject({
       activeSection: 'layers',
       activeLayerId: 'bottom-copper',
-      problemsRequestId: 1,
+      inspectorOpen: true,
+      problemsOpen: true,
     });
     expect(usePcbWorkspaceUiStore.getState().layerVisibility.silkscreen).toBe(false);
     expect(source('../store/pcbWorkspaceUiStore.ts')).not.toContain('useProjectStore');
@@ -39,20 +41,24 @@ describe('PCB Project Drawer convergence', () => {
     expect(electronics).toContain("return 'board-designer'");
     expect(electronics).toContain("activeView === 'pcb-constraints'");
     expect(electronics).toContain("activeView === 'pcb-drc'");
+    expect(electronics).toContain('setPcbProblemsOpen(true)');
     expect(electronics).not.toContain('PCBConstraints');
     expect(electronics).not.toContain('UnifiedBoardDRCWorkbench');
     expect(routes).toContain("'pcb-constraints': '/studio/pcb/rules'");
     expect(routes).toContain("'pcb-drc': '/studio/pcb/drc'");
   });
 
-  it('gives PCB one shell-owned Project Drawer and removes the nested browser/nets inspector', () => {
+  it('gives PCB one shell-owned Project Drawer and removes nested state mirrors/browser/nets inspector', () => {
     const shell = source('../components/StudioWorkbenchNavigation.tsx');
     const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
 
     expect(shell).toContain("activeWorkbench.id === 'pcb'");
     expect(shell).toContain('<PcbProjectDrawer />');
     expect(pcb).toContain('usePcbWorkspaceUiStore');
+    expect(pcb).toContain('effectiveViewState');
     expect(pcb).toContain('aria-label="Active PCB routing layer"');
+    expect(pcb).not.toContain('useEffect');
+    expect(pcb).not.toContain('problemsRequestId');
     expect(pcb).not.toContain('browserOpen');
     expect(pcb).not.toContain('browserTab');
     expect(pcb).not.toContain('Design browser');
