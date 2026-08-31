@@ -34,6 +34,7 @@ import {
   type NavigationIconKey,
 } from '../lib/navigationRegistry';
 import { useProjectStore } from '../store/projectStore';
+import { PcbProjectDrawer } from './board/PcbProjectDrawer';
 
 interface StudioWorkbenchTabsProps {
   drawerOpen: boolean;
@@ -152,7 +153,9 @@ export const StudioProjectDrawer: React.FC<StudioProjectDrawerProps> = ({ open }
   const contextualItems = getContextualNavigationItemsForView(activeView);
   const activeContextId = contextualAliasByViewId[activeView] || activeView;
 
-  if (!open || !activeWorkbench || contextualItems.length === 0) return null;
+  if (!open || !activeWorkbench) return null;
+  if (activeWorkbench.id === 'pcb') return <PcbProjectDrawer />;
+  if (contextualItems.length === 0) return null;
 
   return (
     <aside
