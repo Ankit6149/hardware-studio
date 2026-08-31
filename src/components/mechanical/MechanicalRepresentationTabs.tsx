@@ -20,7 +20,15 @@ const representations: Array<{
 
 export const MechanicalRepresentationTabs: React.FC = () => {
   const representation = useMechanicalWorkspaceUiStore((state) => state.representation);
+  const drawerSection = useMechanicalWorkspaceUiStore((state) => state.drawerSection);
   const setRepresentation = useMechanicalWorkspaceUiStore((state) => state.setRepresentation);
+  const setDrawerSection = useMechanicalWorkspaceUiStore((state) => state.setDrawerSection);
+
+  const openRepresentation = (next: MechanicalRepresentation) => {
+    setRepresentation(next);
+    if (next === 'assembly') setDrawerSection('assembly');
+    else if (next === 'layout' && drawerSection === 'assembly') setDrawerSection('features');
+  };
 
   return (
     <div
@@ -40,7 +48,7 @@ export const MechanicalRepresentationTabs: React.FC = () => {
             type="button"
             role="tab"
             aria-selected={active}
-            onClick={() => setRepresentation(id)}
+            onClick={() => openRepresentation(id)}
             className={`relative flex min-w-[118px] items-center gap-2 border-r border-[#d7d0c4] px-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-400/70 ${active ? 'bg-[#fbfaf6] text-slate-950' : 'text-slate-500 hover:bg-[#e7e1d7] hover:text-slate-900'}`}
           >
             <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
