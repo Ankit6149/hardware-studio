@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { useStudioContextStore } from '../store/studioContextStore';
 
 function source(relativePath: string): string {
@@ -51,14 +51,18 @@ describe('Electronics canonical identity and representation truth', () => {
     expect(bom).toContain('No canonical component is selected');
   });
 
-  it('requires explicit board ownership for standalone DRC', () => {
-    const drc = source('../components/studio/UnifiedBoardDRCWorkbench.tsx');
+  it('requires explicit board ownership for integrated PCB checks and drawer context', () => {
+    const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
+    const drawer = source('../components/board/PcbProjectDrawer.tsx');
 
-    expect(drc).toContain('const board = boards.find((candidate) => candidate.id === activeBoardId);');
-    expect(drc).not.toContain('|| boards[0]');
-    expect(drc).toContain('if (!boardId) return;');
-    expect(drc).toContain('activeBoardId: boardId');
-    expect(drc).toContain('Select a real board before running PCB checks');
+    expect(pcb).toContain('const activeBoard = boards.find((board) => board.id === viewState.activeBoardId) || null;');
+    expect(pcb).not.toContain('|| boards[0]');
+    expect(pcb).toContain('Create or select a board before layout');
+    expect(pcb).toContain('runBoardDRC({ ...useProjectStore.getState(), activeBoardId: effectiveViewState.activeBoardId || \'\' })');
+    expect(drawer).toContain('boards.some((board) => board.id === candidate)');
+    expect(drawer).not.toContain('boards[0]');
+    expect(drawer).toContain('No explicit board selected');
+    expect(existsSync(new URL('../components/studio/UnifiedBoardDRCWorkbench.tsx', import.meta.url))).toBe(false);
   });
 
   it('does not fabricate board, placement, package, or mechanical geometry in 3D', () => {

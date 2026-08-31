@@ -29,16 +29,21 @@ describe('shared Inspector and diagnostics dock contracts', () => {
     expect(schematic).not.toContain('Selection & ERC');
   });
 
-  it('keeps PCB selection/nets in Inspector and DRC in the Problems dock', () => {
+  it('keeps PCB object properties in Inspector, nets in the Project Drawer, and DRC in the Problems dock', () => {
     const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
+    const drawer = source('../components/board/PcbProjectDrawer.tsx');
 
     expect(pcb).toContain('<EngineeringInspector');
     expect(pcb).toContain('<EngineeringBottomDock');
     expect(pcb).toContain('title="PCB DRC"');
     expect(pcb).toContain('label="Problems"');
-    expect(pcb).toContain("type InspectorTab = 'selection' | 'nets';");
+    expect(pcb).toContain('Nets and board structure stay in the Project Drawer');
+    expect(pcb).not.toContain("type InspectorTab = 'selection' | 'nets';");
+    expect(pcb).not.toContain("['nets', 'Nets'");
     expect(pcb).not.toContain("'drc', 'DRC'");
     expect(pcb).toContain('setProblemsOpen(true)');
+    expect(drawer).toContain("activeSection === 'nets'");
+    expect(drawer).toContain("entity: 'net'");
   });
 
   it('keeps Mechanical feature editing in Inspector and checks in the Problems dock', () => {

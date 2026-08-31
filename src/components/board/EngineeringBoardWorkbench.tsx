@@ -4,22 +4,18 @@ import React, { useCallback, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
-  Boxes,
   CircuitBoard,
   Circle,
-  Eye,
-  EyeOff,
-  Layers,
   Magnet,
   MousePointer2,
   Move,
-  Network,
   PanelRight,
   RotateCw,
   Route,
 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
+import { PCB_EDITOR_LAYERS, usePcbWorkspaceUiStore } from '../../store/pcbWorkspaceUiStore';
 import { BoardCanvas } from './BoardCanvas';
 import { DEFAULT_VIEW_STATE, GRID_PRESETS, type BoardDesignerUIState } from './boardInteraction';
 import { runBoardDRC } from '../../lib/boardDRC';
@@ -28,23 +24,10 @@ import { EditorDockButton } from '../editor/EditorDockButton';
 import {
   EditorToolButton,
   EngineeringBottomDock,
-  EngineeringDock,
   EngineeringEditorBar,
   EngineeringInspector,
   EngineeringStatusBar,
 } from '../editor/EngineeringEditorShell';
-
-type BrowserTab = 'components' | 'layers';
-type InspectorTab = 'selection' | 'nets';
-
-const ROUTING_LAYERS = [
-  { id: 'top-copper', label: 'Top copper', routable: true },
-  { id: 'bottom-copper', label: 'Bottom copper', routable: true },
-  { id: 'silkscreen', label: 'Silkscreen', routable: false },
-  { id: 'drill', label: 'Drill / vias', routable: false },
-  { id: 'keepouts', label: 'Keepouts', routable: false },
-  { id: 'ratsnest', label: 'Ratsnest', routable: false },
-] as const;
 
 function numericRuleValue(value?: string): number | null {
   if (!value) return null;
@@ -60,7 +43,6 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     boardComponents = [],
     traces = [],
     vias = [],
-    nets = [],
     padNetAssignments = [],
     pcbRules = [],
     setActiveBoard,
@@ -78,6 +60,14 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     select,
     beginHandoff,
   } = useStudioContextStore();
+  const uiActiveLayerId = usePcbWorkspaceUiStore((state) => state.activeLayerId);
+  const uiLayerVisibility = usePcbWorkspaceUiStore((state) => state.layerVisibility);
+  const inspectorOpen = usePcbWorkspaceUiStore((state) => state.inspectorOpen);
+  const problemsOpen = usePcbWorkspaceUiStore((state) => state.problemsOpen);
+  const setUiActiveLayer = usePcbWorkspaceUiStore((state) => state.setActiveLayer);
+  const setUiLayerVisibility = usePcbWorkspaceUiStore((state) => state.setLayerVisibility);
+  const setInspectorOpen = usePcbWorkspaceUiStore((state) => state.setInspectorOpen);
+  const setProblemsOpen = usePcbWorkspaceUiStore((state) => state.setProblemsOpen);
 
   const initialBoardId = [contextBoardId, store.activeBoardId]
     .find((candidate): candidate is string => Boolean(candidate && boards.some((board) => board.id === candidate))) || null;
@@ -88,26 +78,41 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     selectedComponentId: activeComponentId,
     selectedNetName: activeNetName,
   });
-  const [browserOpen, setBrowserOpen] = useState(true);
-  const [browserTab, setBrowserTab] = useState<BrowserTab>('components');
-  const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>('selection');
-  const [problemsOpen, setProblemsOpen] = useState(false);
   const [drcResults, setDrcResults] = useState(() => runBoardDRC({ ...store, activeBoardId: initialBoardId || '' }));
 
   const activeBoard = boards.find((board) => board.id === viewState.activeBoardId) || null;
+  const sharedSelectionApplies = Boolean(
+    sharedSelection
+    && (!sharedSelection.boardId || !activeBoard?.id || sharedSelection.boardId === activeBoard.id),
+  );
+  const sharedComponentId = sharedSelectionApplies && sharedSelection?.entity === 'component-instance'
+    ? sharedSelection.componentId || sharedSelection.id
+    : null;
+  const sharedNetName = sharedSelectionApplies && sharedSelection?.entity === 'net'
+    ? sharedSelection.netName || sharedSelection.id
+    : null;
+  const effectiveViewState: BoardDesignerUIState = {
+    ...viewState,
+    activeLayerId: uiActiveLayerId,
+    layerVisibility: { ...uiLayerVisibility },
+    showRatsnest: uiLayerVisibility.ratsnest !== false,
+    selectedComponentId: sharedComponentId ?? (sharedNetName ? null : viewState.selectedComponentId),
+    selectedTraceId: sharedComponentId || sharedNetName ? null : viewState.selectedTraceId,
+    selectedViaId: sharedComponentId || sharedNetName ? null : viewState.selectedViaId,
+    selectedNetName: sharedNetName || viewState.selectedNetName,
+  };
+
   const outline = boardOutlines.find((candidate) => candidate.boardId === activeBoard?.id) || null;
   const components = activeBoard ? boardComponents.filter((component) => component.boardId === activeBoard.id) : [];
   const placed = components.filter((component) => component.placementX != null && component.placementY != null);
-  const unplaced = components.filter((component) => component.placementX == null || component.placementY == null);
   const boardTraces = activeBoard ? traces.filter((trace) => trace.boardId === activeBoard.id) : [];
   const widthRule = pcbRules.find((rule) => rule.boardId === activeBoard?.id && /(?:track|trace).*width/i.test(rule.ruleType));
   const configuredRouteWidth = numericRuleValue(widthRule?.value);
   const routeWidthMm = configuredRouteWidth || 0.25;
 
-  const selectedComponent = boardComponents.find((component) => component.id === viewState.selectedComponentId) || null;
-  const selectedTrace = traces.find((trace) => trace.id === viewState.selectedTraceId) || null;
-  const selectedVia = vias.find((via) => via.id === viewState.selectedViaId) || null;
+  const selectedComponent = boardComponents.find((component) => component.id === effectiveViewState.selectedComponentId) || null;
+  const selectedTrace = traces.find((trace) => trace.id === effectiveViewState.selectedTraceId) || null;
+  const selectedVia = vias.find((via) => via.id === effectiveViewState.selectedViaId) || null;
   const selectedFootprint = selectedComponent ? getFootprint(selectedComponent.footprint) : null;
   const selectedPad = sharedSelection?.entity === 'pcb-pad' && selectedComponent && selectedFootprint
     ? selectedFootprint.pads.find((pad) => `${selectedComponent.id}:${pad.name}` === sharedSelection.id) || null
@@ -118,17 +123,13 @@ export const EngineeringBoardWorkbench: React.FC = () => {
       && assignment.padName === selectedPad.name
     )) || null
     : null;
-  const netRows = nets.map((net) => {
-    const assignments = padNetAssignments.filter(
-      (assignment) => assignment.netName === net.netName
-        && components.some((component) => component.id === assignment.componentId || component.referenceDesignator === assignment.componentId),
-    );
-    const routed = boardTraces.filter((trace) => trace.netName === net.netName || trace.netId === net.id);
-    return { ...net, padCount: assignments.length, traceCount: routed.length };
-  });
 
   const updateView = useCallback((patch: Partial<BoardDesignerUIState>) => {
-    setViewState((previous) => ({ ...previous, ...patch }));
+    const { activeLayerId, layerVisibility, ...localPatch } = patch;
+    setViewState((previous) => ({ ...previous, ...localPatch }));
+
+    if (activeLayerId !== undefined) setUiActiveLayer(activeLayerId);
+    if (layerVisibility !== undefined) setUiLayerVisibility(layerVisibility);
 
     if (patch.activeBoardId !== undefined) {
       setContextBoard(patch.activeBoardId);
@@ -151,14 +152,13 @@ export const EngineeringBoardWorkbench: React.FC = () => {
         componentId: parentComponentId,
         netName,
       });
-      setInspectorTab('selection');
       setInspectorOpen(true);
       return;
     }
 
     if (patch.selectedViaId) {
       const via = (latestProject.vias || []).find((candidate) => candidate.id === patch.selectedViaId);
-      const netName = via?.netId ? (latestProject.nets || []).find((net) => net.id === via.netId)?.netName || null : null;
+      const netName = via?.netName || (via?.netId ? (latestProject.nets || []).find((net) => net.id === via.netId)?.netName : undefined) || null;
       select({
         entity: 'via',
         id: patch.selectedViaId,
@@ -166,7 +166,6 @@ export const EngineeringBoardWorkbench: React.FC = () => {
         boardId: via?.boardId || boardIdForSelection,
         netName,
       });
-      setInspectorTab('selection');
       setInspectorOpen(true);
       return;
     }
@@ -181,7 +180,6 @@ export const EngineeringBoardWorkbench: React.FC = () => {
         componentId: patch.selectedComponentId,
         netName: patch.selectedNetName !== undefined ? patch.selectedNetName : undefined,
       });
-      setInspectorTab('selection');
       setInspectorOpen(true);
       return;
     }
@@ -194,6 +192,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
         boardId: boardIdForSelection,
         netName: patch.selectedNetName,
       });
+      setInspectorOpen(false);
       return;
     }
 
@@ -205,7 +204,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     ) {
       select(null);
     }
-  }, [select, setActiveBoard, setContextBoard]);
+  }, [select, setActiveBoard, setContextBoard, setInspectorOpen, setUiActiveLayer, setUiLayerVisibility]);
 
   const selectComponent = useCallback((componentId: string) => {
     updateView({
@@ -216,9 +215,8 @@ export const EngineeringBoardWorkbench: React.FC = () => {
       selectedKeepoutId: null,
       activeTool: 'select',
     });
-    setInspectorTab('selection');
     setInspectorOpen(true);
-  }, [updateView]);
+  }, [setInspectorOpen, updateView]);
 
   const selectPad = useCallback((componentId: string, padName: string) => {
     const component = boardComponents.find((candidate) => candidate.id === componentId);
@@ -242,12 +240,11 @@ export const EngineeringBoardWorkbench: React.FC = () => {
       componentId: component.id,
       netName: assignment?.netName || null,
     });
-    setInspectorTab('selection');
     setInspectorOpen(true);
-  }, [boardComponents, padNetAssignments, select]);
+  }, [boardComponents, padNetAssignments, select, setInspectorOpen]);
 
   const runDrc = () => {
-    const results = runBoardDRC({ ...useProjectStore.getState(), activeBoardId: viewState.activeBoardId || '' });
+    const results = runBoardDRC({ ...useProjectStore.getState(), activeBoardId: effectiveViewState.activeBoardId || '' });
     setDrcResults(results);
     setProblemsOpen(true);
   };
@@ -303,6 +300,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
   }
 
   const hardDrcCount = drcResults.filter((result) => result.severity === 'Blocker' || result.severity === 'Error').length;
+  const routableLayers = PCB_EDITOR_LAYERS.filter((layer) => layer.routable);
 
   return (
     <section className="hs-engineering-pcb flex h-full min-h-0 flex-col overflow-hidden bg-[#f7f5ef] text-slate-900" aria-label="PCB engineering workbench">
@@ -312,23 +310,25 @@ export const EngineeringBoardWorkbench: React.FC = () => {
         meta={`${activeBoard.name} · ${placed.length}/${components.length} placed · ${boardTraces.length} traces · ${hardDrcCount} DRC errors`}
         tools={(
           <>
-            <EditorToolButton label="Select" active={viewState.activeTool === 'select'} onClick={() => updateView({ activeTool: 'select', isRouting: false, routePreviewPoints: [] })}><MousePointer2 className="h-3.5 w-3.5" /></EditorToolButton>
-            <EditorToolButton label="Pan" active={viewState.activeTool === 'pan'} onClick={() => updateView({ activeTool: 'pan', isRouting: false, routePreviewPoints: [] })}><Move className="h-3.5 w-3.5" /></EditorToolButton>
-            <EditorToolButton label="Route" active={viewState.activeTool === 'route'} onClick={() => updateView({ activeTool: 'route' })}><Route className="h-3.5 w-3.5" /></EditorToolButton>
-            <EditorToolButton label="Via" active={viewState.activeTool === 'via'} disabled={!viewState.selectedNetName} onClick={() => updateView({ activeTool: 'via' })}><Circle className="h-3.5 w-3.5" /></EditorToolButton>
+            <EditorToolButton label="Select" active={effectiveViewState.activeTool === 'select'} onClick={() => updateView({ activeTool: 'select', isRouting: false, routePreviewPoints: [] })}><MousePointer2 className="h-3.5 w-3.5" /></EditorToolButton>
+            <EditorToolButton label="Pan" active={effectiveViewState.activeTool === 'pan'} onClick={() => updateView({ activeTool: 'pan', isRouting: false, routePreviewPoints: [] })}><Move className="h-3.5 w-3.5" /></EditorToolButton>
+            <EditorToolButton label="Route" active={effectiveViewState.activeTool === 'route'} onClick={() => updateView({ activeTool: 'route' })}><Route className="h-3.5 w-3.5" /></EditorToolButton>
+            <EditorToolButton label="Via" active={effectiveViewState.activeTool === 'via'} disabled={!effectiveViewState.selectedNetName} onClick={() => updateView({ activeTool: 'via' })}><Circle className="h-3.5 w-3.5" /></EditorToolButton>
             <EditorToolButton label="Rotate" disabled={!selectedComponent} onClick={rotateSelected}><RotateCw className="h-3.5 w-3.5" /></EditorToolButton>
             <span className="mx-1 h-5 w-px bg-slate-200" />
-            <select value={viewState.gridSizeMm} onChange={(event) => updateView({ gridSizeMm: Number.parseFloat(event.target.value) })} className="h-7 border border-slate-300 bg-white px-1.5 font-mono text-[9px] text-slate-700" aria-label="PCB grid size">
+            <select value={effectiveViewState.activeLayerId} onChange={(event) => updateView({ activeLayerId: event.target.value })} className="h-7 border border-slate-300 bg-white px-1.5 font-mono text-[9px] text-slate-700" aria-label="Active PCB routing layer">
+              {routableLayers.map((layer) => <option key={layer.id} value={layer.id}>{layer.label}</option>)}
+            </select>
+            <select value={effectiveViewState.gridSizeMm} onChange={(event) => updateView({ gridSizeMm: Number.parseFloat(event.target.value) })} className="h-7 border border-slate-300 bg-white px-1.5 font-mono text-[9px] text-slate-700" aria-label="PCB grid size">
               {GRID_PRESETS.map((grid) => <option key={grid} value={grid}>{grid} mm</option>)}
             </select>
-            <button type="button" onClick={() => updateView({ snapToGrid: !viewState.snapToGrid })} aria-pressed={viewState.snapToGrid} className={`inline-flex h-7 items-center gap-1 px-2 text-[9px] font-semibold ${viewState.snapToGrid ? 'bg-slate-950 text-white' : 'border border-slate-300 bg-white text-slate-600'}`}><Magnet className="h-3 w-3" /> Snap</button>
+            <button type="button" onClick={() => updateView({ snapToGrid: !effectiveViewState.snapToGrid })} aria-pressed={effectiveViewState.snapToGrid} className={`inline-flex h-7 items-center gap-1 px-2 text-[9px] font-semibold ${effectiveViewState.snapToGrid ? 'bg-slate-950 text-white' : 'border border-slate-300 bg-white text-slate-600'}`}><Magnet className="h-3 w-3" /> Snap</button>
           </>
         )}
         docks={(
           <>
-            <EditorDockButton label="Browser" icon={Boxes} active={browserOpen} count={unplaced.length} onClick={() => setBrowserOpen((value) => !value)} />
-            <EditorDockButton label="Inspector" icon={PanelRight} active={inspectorOpen} onClick={() => setInspectorOpen((value) => !value)} />
-            <EditorDockButton label="Problems" icon={AlertTriangle} active={problemsOpen} count={hardDrcCount} onClick={() => setProblemsOpen((value) => !value)} />
+            <EditorDockButton label="Inspector" icon={PanelRight} active={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)} />
+            <EditorDockButton label="Problems" icon={AlertTriangle} active={problemsOpen} count={hardDrcCount} onClick={() => setProblemsOpen(!problemsOpen)} />
           </>
         )}
         actions={(
@@ -340,165 +340,78 @@ export const EngineeringBoardWorkbench: React.FC = () => {
       />
 
       <div className="relative min-h-0 flex-1 overflow-hidden bg-white">
-        <BoardCanvas viewState={viewState} onViewStateChange={updateView} drcResults={drcResults} />
+        <BoardCanvas viewState={effectiveViewState} onViewStateChange={updateView} drcResults={drcResults} />
 
-        {browserOpen && (
-          <EngineeringDock side="left" title="Design browser" subtitle="Components and routing layers" onClose={() => setBrowserOpen(false)} widthClassName="w-[300px]">
-            <div className="flex border-b border-slate-200 bg-white p-1">
-              <button type="button" onClick={() => setBrowserTab('components')} className={`h-7 flex-1 text-[9px] font-semibold ${browserTab === 'components' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100'}`}><Boxes className="mr-1 inline h-3 w-3" /> Components</button>
-              <button type="button" onClick={() => setBrowserTab('layers')} className={`h-7 flex-1 text-[9px] font-semibold ${browserTab === 'layers' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100'}`}><Layers className="mr-1 inline h-3 w-3" /> Layers</button>
-            </div>
-
-            {browserTab === 'components' ? (
-              <div className="p-2">
-                <p className="px-1 pb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Unplaced · {unplaced.length}</p>
-                <div className="space-y-1">
-                  {unplaced.map((component) => (
-                    <div
-                      key={component.id}
-                      draggable
-                      onDragStart={(event) => {
-                        event.dataTransfer.setData('application/hardware-studio-component', component.id);
-                        selectComponent(component.id);
-                      }}
-                      className="flex cursor-grab items-center gap-2 border border-slate-200 bg-white px-2 py-1.5"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[10px] font-semibold text-slate-900">{component.referenceDesignator} · {component.componentName}</p>
-                        <p className="truncate font-mono text-[8px] text-slate-400">{component.footprint || 'footprint unresolved'}</p>
-                      </div>
-                      <span className="text-[8px] text-slate-400">drag to board</span>
+        <EngineeringInspector open={inspectorOpen} subtitle={selectedPad ? `${selectedComponent?.referenceDesignator}.${selectedPad.name}` : selectedTrace ? `Trace · ${selectedTrace.netName || 'unassigned'}` : selectedVia ? 'Via' : selectedComponent ? selectedComponent.referenceDesignator : 'Selection'} onClose={() => setInspectorOpen(false)} widthClassName="w-[320px]">
+          <div className="p-3">
+            {selectedComponent ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Footprint</p>
+                  <p className="mt-1 text-[12px] font-semibold text-slate-950">{selectedComponent.referenceDesignator} · {selectedComponent.componentName}</p>
+                  <p className="mt-0.5 font-mono text-[9px] text-slate-500">{selectedComponent.footprint || 'footprint unresolved'}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-[9px] text-slate-500">X mm<input type="number" step={effectiveViewState.gridSizeMm} value={selectedComponent.placementX ?? ''} onChange={(event) => updatePCBPlacement(selectedComponent.id, { placementX: Number.parseFloat(event.target.value) })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
+                  <label className="text-[9px] text-slate-500">Y mm<input type="number" step={effectiveViewState.gridSizeMm} value={selectedComponent.placementY ?? ''} onChange={(event) => updatePCBPlacement(selectedComponent.id, { placementY: Number.parseFloat(event.target.value) })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
+                </div>
+                <label className="block text-[9px] text-slate-500">Rotation<input type="number" value={selectedComponent.rotationDeg || 0} onChange={(event) => updatePCBPlacement(selectedComponent.id, { rotationDeg: Number.parseFloat(event.target.value) || 0 })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
+                <div className="grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 text-[9px]">
+                  {[
+                    ['Side', selectedComponent.pcb?.side || selectedComponent.side || 'Unresolved'],
+                    ['Pads', String(selectedFootprint?.pads.length || 0)],
+                    ['Criticality', selectedComponent.placementCriticality],
+                    ['Status', selectedComponent.placementStatus || (selectedComponent.pcb?.placed ? 'Placed' : 'Unplaced')],
+                  ].map(([label, value]) => <div key={label} className="bg-white p-2"><p className="text-slate-400">{label}</p><p className="mt-0.5 truncate font-semibold text-slate-800">{value}</p></div>)}
+                </div>
+                {selectedFootprint && selectedFootprint.pads.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Pads · select to cross-probe</p>
+                    <div className="max-h-44 overflow-y-auto border-y border-slate-200">
+                      {selectedFootprint.pads.map((pad) => {
+                        const assignment = padNetAssignments.find((candidate) => (
+                          (candidate.componentId === selectedComponent.id || candidate.referenceDesignator === selectedComponent.referenceDesignator)
+                          && candidate.padName === pad.name
+                        ));
+                        const active = selectedPad?.name === pad.name;
+                        return (
+                          <button key={pad.name} type="button" onClick={() => selectPad(selectedComponent.id, pad.name)} className={`grid w-full grid-cols-[3rem_minmax(0,1fr)_5.5rem] gap-2 border-b border-slate-100 px-1 py-1.5 text-left text-[9px] last:border-b-0 ${active ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                            <span className={`font-mono ${active ? 'font-bold text-indigo-700' : 'text-slate-500'}`}>{pad.name}</span>
+                            <span className="truncate text-slate-600">{pad.widthMm.toFixed(2)} × {pad.heightMm.toFixed(2)} mm</span>
+                            <span className={`truncate text-right ${assignment?.netName ? 'text-slate-600' : 'text-slate-400'}`}>{assignment?.netName || 'unassigned'}</span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  ))}
-                  {unplaced.length === 0 && <p className="p-3 text-[10px] text-slate-400">All board components are placed.</p>}
+                    {selectedPad && (
+                      <div className="mt-2 border-l-2 border-indigo-500 bg-indigo-50 px-2 py-1.5 text-[9px] leading-4 text-indigo-900">
+                        <strong>Pad {selectedPad.name}</strong> · {selectedPadAssignment?.netName ? `net ${selectedPadAssignment.netName}` : 'no project net assignment'}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="flex gap-1">
+                  <button type="button" onClick={rotateSelected} className="h-8 flex-1 border border-slate-300 bg-white text-[9px] font-semibold text-slate-700">Rotate 90°</button>
+                  <button type="button" onClick={() => updateBoardComponent(selectedComponent.id, { side: selectedComponent.side === 'Bottom' ? 'Top' : 'Bottom' })} className="h-8 flex-1 border border-slate-300 bg-white text-[9px] font-semibold text-slate-700">Flip side</button>
                 </div>
-                <p className="px-1 pb-1.5 pt-4 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Placed · {placed.length}</p>
-                <div className="space-y-0.5">
-                  {placed.map((component) => (
-                    <button key={component.id} type="button" onClick={() => selectComponent(component.id)} className={`flex w-full items-center gap-2 px-2 py-1.5 text-left ${viewState.selectedComponentId === component.id ? 'bg-slate-950 text-white' : 'hover:bg-slate-100'}`}>
-                      <span className="min-w-0 flex-1 truncate text-[10px] font-semibold">{component.referenceDesignator} · {component.componentName}</span>
-                      <span className={`font-mono text-[8px] ${viewState.selectedComponentId === component.id ? 'text-white/60' : 'text-slate-400'}`}>{component.placementX?.toFixed(2)}, {component.placementY?.toFixed(2)}</span>
-                    </button>
-                  ))}
-                </div>
+              </div>
+            ) : selectedTrace ? (
+              <div className="space-y-3">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Trace</p>
+                <p className="text-[12px] font-semibold text-slate-950">{selectedTrace.netName || 'Unnamed net'}</p>
+                <label className="block text-[9px] text-slate-500">Width mm<input type="number" step="0.05" value={selectedTrace.width || 0.25} onChange={(event) => updateTrace(selectedTrace.id, { width: Number.parseFloat(event.target.value) || 0.25 })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
+                <p className="text-[9px] text-slate-500">{selectedTrace.layerId || 'top-copper'} · {selectedTrace.points?.length || 0} vertices · {selectedTrace.status || 'Draft'} · shared trace {selectedTrace.id}</p>
+              </div>
+            ) : selectedVia ? (
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Via</p>
+                <p className="mt-1 font-mono text-[10px] text-slate-700">{selectedVia.x?.toFixed(2)}, {selectedVia.y?.toFixed(2)} mm</p>
+                <p className="mt-2 text-[9px] text-slate-500">Ø {selectedVia.outerDiameter || 0.6} / drill {selectedVia.drillDiameter || 0.3} mm · {sharedSelection?.entity === 'via' && sharedSelection.netName ? `net ${sharedSelection.netName}` : 'net unresolved'}</p>
               </div>
             ) : (
-              <div className="p-2">
-                {ROUTING_LAYERS.map((layer) => {
-                  const visible = viewState.layerVisibility[layer.id] !== false;
-                  const active = viewState.activeLayerId === layer.id;
-                  return (
-                    <div key={layer.id} className={`flex min-h-9 items-center gap-2 px-1.5 ${active ? 'bg-slate-100' : ''}`}>
-                      <button
-                        type="button"
-                        onClick={() => updateView({
-                          layerVisibility: { ...viewState.layerVisibility, [layer.id]: !visible },
-                          showRatsnest: layer.id === 'ratsnest' ? !visible : viewState.showRatsnest,
-                        })}
-                        className="grid h-7 w-7 place-items-center text-slate-400 hover:text-slate-900"
-                      >
-                        {visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                      </button>
-                      <button type="button" disabled={!layer.routable} onClick={() => updateView({ activeLayerId: layer.id })} className={`min-w-0 flex-1 truncate text-left text-[10px] ${active ? 'font-semibold text-slate-950' : layer.routable ? 'text-slate-600' : 'text-slate-400'}`}>{layer.label}</button>
-                    </div>
-                  );
-                })}
-                <div className="mt-3 border-t border-slate-200 pt-3 text-[9px] leading-4 text-slate-500">Only copper layers can become the active routing layer. Other entries control visibility only.</div>
-              </div>
+              <p className="text-[10px] leading-5 text-slate-500">Select a footprint, pad, trace, or via. Nets and board structure stay in the Project Drawer; this Inspector is only for the immediate object.</p>
             )}
-          </EngineeringDock>
-        )}
-
-        <EngineeringInspector open={inspectorOpen} subtitle={selectedPad ? `${selectedComponent?.referenceDesignator}.${selectedPad.name}` : selectedTrace ? `Trace · ${selectedTrace.netName || 'unassigned'}` : selectedVia ? 'Via' : selectedComponent ? selectedComponent.referenceDesignator : 'Selection and nets'} onClose={() => setInspectorOpen(false)} widthClassName="w-[320px]">
-          <div className="flex border-b border-slate-200 bg-white p-1">
-            {([['selection', 'Selection', PanelRight], ['nets', 'Nets', Network]] as const).map(([id, label, Icon]) => (
-              <button key={id} type="button" onClick={() => setInspectorTab(id)} className={`h-7 flex-1 text-[9px] font-semibold ${inspectorTab === id ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100'}`}><Icon className="mr-1 inline h-3 w-3" />{label}</button>
-            ))}
           </div>
-
-          {inspectorTab === 'selection' ? (
-            <div className="p-3">
-              {selectedComponent ? (
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Footprint</p>
-                    <p className="mt-1 text-[12px] font-semibold text-slate-950">{selectedComponent.referenceDesignator} · {selectedComponent.componentName}</p>
-                    <p className="mt-0.5 font-mono text-[9px] text-slate-500">{selectedComponent.footprint}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="text-[9px] text-slate-500">X mm<input type="number" step={viewState.gridSizeMm} value={selectedComponent.placementX ?? ''} onChange={(event) => updatePCBPlacement(selectedComponent.id, { placementX: Number.parseFloat(event.target.value) })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
-                    <label className="text-[9px] text-slate-500">Y mm<input type="number" step={viewState.gridSizeMm} value={selectedComponent.placementY ?? ''} onChange={(event) => updatePCBPlacement(selectedComponent.id, { placementY: Number.parseFloat(event.target.value) })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
-                  </div>
-                  <label className="block text-[9px] text-slate-500">Rotation<input type="number" value={selectedComponent.rotationDeg || 0} onChange={(event) => updatePCBPlacement(selectedComponent.id, { rotationDeg: Number.parseFloat(event.target.value) || 0 })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
-                  <div className="grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 text-[9px]">
-                    {[
-                      ['Side', selectedComponent.side || 'Top'],
-                      ['Pads', String(selectedFootprint?.pads.length || 0)],
-                      ['Criticality', selectedComponent.placementCriticality],
-                      ['Status', selectedComponent.placementStatus || 'Placed'],
-                    ].map(([label, value]) => <div key={label} className="bg-white p-2"><p className="text-slate-400">{label}</p><p className="mt-0.5 truncate font-semibold text-slate-800">{value}</p></div>)}
-                  </div>
-                  {selectedFootprint && selectedFootprint.pads.length > 0 && (
-                    <div>
-                      <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Pads · select to cross-probe</p>
-                      <div className="max-h-44 overflow-y-auto border-y border-slate-200">
-                        {selectedFootprint.pads.map((pad) => {
-                          const assignment = padNetAssignments.find((candidate) => (
-                            (candidate.componentId === selectedComponent.id || candidate.referenceDesignator === selectedComponent.referenceDesignator)
-                            && candidate.padName === pad.name
-                          ));
-                          const active = selectedPad?.name === pad.name;
-                          return (
-                            <button key={pad.name} type="button" onClick={() => selectPad(selectedComponent.id, pad.name)} className={`grid w-full grid-cols-[3rem_minmax(0,1fr)_5.5rem] gap-2 border-b border-slate-100 px-1 py-1.5 text-left text-[9px] last:border-b-0 ${active ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
-                              <span className={`font-mono ${active ? 'font-bold text-indigo-700' : 'text-slate-500'}`}>{pad.name}</span>
-                              <span className="truncate text-slate-600">{pad.widthMm.toFixed(2)} × {pad.heightMm.toFixed(2)} mm</span>
-                              <span className={`truncate text-right ${assignment?.netName ? 'text-slate-600' : 'text-slate-400'}`}>{assignment?.netName || 'unassigned'}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {selectedPad && (
-                        <div className="mt-2 border-l-2 border-indigo-500 bg-indigo-50 px-2 py-1.5 text-[9px] leading-4 text-indigo-900">
-                          <strong>Pad {selectedPad.name}</strong> · {selectedPadAssignment?.netName ? `net ${selectedPadAssignment.netName}` : 'no project net assignment'}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex gap-1">
-                    <button type="button" onClick={rotateSelected} className="h-8 flex-1 border border-slate-300 bg-white text-[9px] font-semibold text-slate-700">Rotate 90°</button>
-                    <button type="button" onClick={() => updateBoardComponent(selectedComponent.id, { side: selectedComponent.side === 'Bottom' ? 'Top' : 'Bottom' })} className="h-8 flex-1 border border-slate-300 bg-white text-[9px] font-semibold text-slate-700">Flip side</button>
-                  </div>
-                </div>
-              ) : selectedTrace ? (
-                <div className="space-y-3">
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Trace</p>
-                  <p className="text-[12px] font-semibold text-slate-950">{selectedTrace.netName || 'Unnamed net'}</p>
-                  <label className="block text-[9px] text-slate-500">Width mm<input type="number" step="0.05" value={selectedTrace.width || 0.25} onChange={(event) => updateTrace(selectedTrace.id, { width: Number.parseFloat(event.target.value) || 0.25 })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
-                  <p className="text-[9px] text-slate-500">{selectedTrace.layerId || 'top-copper'} · {selectedTrace.points?.length || 0} vertices · {selectedTrace.status || 'Draft'} · shared trace {selectedTrace.id}</p>
-                </div>
-              ) : selectedVia ? (
-                <div>
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Via</p>
-                  <p className="mt-1 font-mono text-[10px] text-slate-700">{selectedVia.x?.toFixed(2)}, {selectedVia.y?.toFixed(2)} mm</p>
-                  <p className="mt-2 text-[9px] text-slate-500">Ø {selectedVia.outerDiameter || 0.6} / drill {selectedVia.drillDiameter || 0.3} mm · {sharedSelection?.entity === 'via' && sharedSelection.netName ? `net ${sharedSelection.netName}` : 'net unresolved'}</p>
-                </div>
-              ) : (
-                <p className="text-[10px] leading-5 text-slate-500">Select a footprint, trace, or via. Pads are visible inside a selected footprint so you can cross-probe without guessing tiny canvas targets.</p>
-              )}
-            </div>
-          ) : (
-            <div className="p-2">
-              <p className="px-1 pb-1.5 text-[9px] text-slate-500">Choose a net to arm routing. A route still starts from a real pad, via, or trace endpoint.</p>
-              <div className="space-y-0.5">
-                {netRows.map((net) => (
-                  <button key={net.id} type="button" onClick={() => { updateView({ selectedNetName: net.netName, activeTool: 'route' }); setInspectorOpen(false); }} className={`flex w-full items-center gap-2 px-2 py-1.5 text-left ${viewState.selectedNetName === net.netName ? 'bg-slate-950 text-white' : 'hover:bg-slate-100'}`}>
-                    <span className="min-w-0 flex-1 truncate text-[10px] font-semibold">{net.netName}</span>
-                    <span className={`font-mono text-[8px] ${viewState.selectedNetName === net.netName ? 'text-white/60' : 'text-slate-400'}`}>{net.padCount} pads · {net.traceCount} traces</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </EngineeringInspector>
 
         <EngineeringBottomDock
@@ -518,7 +431,8 @@ export const EngineeringBoardWorkbench: React.FC = () => {
                   if (result.linkedObjectType === 'component') selectComponent(result.linkedObjectId);
                   if (result.linkedObjectType === 'net') {
                     select({ entity: 'net', id: result.linkedObjectId, label: result.linkedObjectId, boardId: activeBoard.id, netName: result.linkedObjectId });
-                    setViewState((previous) => ({ ...previous, selectedNetName: result.linkedObjectId }));
+                    setViewState((previous) => ({ ...previous, selectedComponentId: null, selectedTraceId: null, selectedViaId: null, selectedNetName: result.linkedObjectId }));
+                    setInspectorOpen(false);
                   }
                 }}
                 className="border-l-2 border-amber-500 bg-amber-50 px-2 py-1.5 text-left"
@@ -533,9 +447,9 @@ export const EngineeringBoardWorkbench: React.FC = () => {
       </div>
 
       <EngineeringStatusBar
-        left={viewState.isRouting ? `Routing ${viewState.selectedNetName || 'net'} · click to fix segments · finish on matching anchor · Esc cancels` : viewState.activeTool === 'route' ? 'Route: click a pad/via/trace endpoint to begin. Empty-space starts are rejected.' : 'Select and move footprints directly. Drag unplaced components from the browser.'}
-        center={selectedPad ? `${selectedComponent?.referenceDesignator}.${selectedPad.name} · ${selectedPadAssignment?.netName || 'unassigned'}` : selectedTrace ? `Trace · ${selectedTrace.netName || 'unassigned'}` : selectedVia ? `Via · ${sharedSelection?.netName || 'net unresolved'}` : `${viewState.activeLayerId} · ${configuredRouteWidth ? `configured width ${routeWidthMm.toFixed(2)} mm` : 'no explicit trace-width rule; new routes remain draft evidence'}`}
-        right={`${viewState.mouseXMm.toFixed(2)}, ${viewState.mouseYMm.toFixed(2)} mm`}
+        left={effectiveViewState.isRouting ? `Routing ${effectiveViewState.selectedNetName || 'net'} · click to fix segments · finish on matching anchor · Esc cancels` : effectiveViewState.activeTool === 'route' ? 'Route: choose a net in the Project Drawer, then start from a matching pad/via/trace endpoint.' : 'Select and move footprints directly. Drag unplaced components from the Project Drawer.'}
+        center={selectedPad ? `${selectedComponent?.referenceDesignator}.${selectedPad.name} · ${selectedPadAssignment?.netName || 'unassigned'}` : selectedTrace ? `Trace · ${selectedTrace.netName || 'unassigned'}` : selectedVia ? `Via · ${sharedSelection?.netName || 'net unresolved'}` : `${effectiveViewState.activeLayerId} · ${configuredRouteWidth ? `configured width ${routeWidthMm.toFixed(2)} mm` : 'no explicit trace-width rule; new routes remain draft evidence'}`}
+        right={`${effectiveViewState.mouseXMm.toFixed(2)}, ${effectiveViewState.mouseYMm.toFixed(2)} mm`}
       />
     </section>
   );

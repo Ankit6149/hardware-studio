@@ -60,7 +60,7 @@ describe('golden-path regression guards', () => {
     expect(pcb).toContain('Define the board outline first');
   });
 
-  it('mounts one connected workspace without duplicate global strips around every editor', () => {
+  it('mounts one connected workspace without duplicate global strips or standalone PCB rule/DRC apps', () => {
     const appShell = source('../components/AppShell.tsx');
     const electronicsWorkspace = source('../components/studio/ElectronicsWorkspace.tsx');
     expect(appShell).not.toContain('<StudioBuildMap />');
@@ -73,9 +73,13 @@ describe('golden-path regression guards', () => {
     expect(electronicsWorkspace).toContain('UnifiedComponentLibraryWorkbench');
     expect(electronicsWorkspace).toContain('UnifiedSchematicWorkbench');
     expect(electronicsWorkspace).toContain('UnifiedBoardDesignerWorkbench');
-    expect(electronicsWorkspace).toContain('<UnifiedBoardDRCWorkbench />');
+    expect(electronicsWorkspace).toContain("viewId === 'pcb-constraints' || viewId === 'pcb-drc'");
+    expect(electronicsWorkspace).not.toContain('UnifiedBoardDRCWorkbench');
+    expect(electronicsWorkspace).not.toContain('PCBConstraints');
     expect(electronicsWorkspace).toContain('<UnifiedBOMWorkbench />');
     expect(existsSync(new URL('../components/studio/EngineeringContextBar.tsx', import.meta.url))).toBe(false);
+    expect(existsSync(new URL('../components/studio/UnifiedBoardDRCWorkbench.tsx', import.meta.url))).toBe(false);
+    expect(existsSync(new URL('../components/PCBConstraints.tsx', import.meta.url))).toBe(false);
   });
 
   it('adapts editors to selected canonical context without mutating the schematic on open', () => {
@@ -128,11 +132,15 @@ describe('golden-path regression guards', () => {
     expect(validation).toContain('linkedNetIds');
   });
 
-  it('routes board checks back to the responsible shared object', () => {
-    const drc = source('../components/studio/UnifiedBoardDRCWorkbench.tsx');
-    expect(drc).toContain('setActiveComponent');
-    expect(drc).toContain('setActiveNet');
-    expect(drc).toContain("setActiveView('board-designer')");
+  it('keeps board checks in the PCB bottom dock and routes findings to shared object context', () => {
+    const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
+    expect(pcb).toContain('runBoardDRC');
+    expect(pcb).toContain('<EngineeringBottomDock');
+    expect(pcb).toContain('title="PCB DRC"');
+    expect(pcb).toContain("result.linkedObjectType === 'component'");
+    expect(pcb).toContain("result.linkedObjectType === 'net'");
+    expect(pcb).toContain("entity: 'net'");
+    expect(pcb).toContain('select({');
   });
 
   it('uses an event-driven selected-board 3D preview instead of permanent animation', () => {

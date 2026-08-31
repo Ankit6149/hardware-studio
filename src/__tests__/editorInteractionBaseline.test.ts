@@ -29,6 +29,7 @@ describe('editor-first interaction model', () => {
     const readiness = source('../components/ReadinessDashboard.tsx');
     const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
     const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
+    const pcbDrawer = source('../components/board/PcbProjectDrawer.tsx');
 
     expect(navigation).toContain('onClick={() => setActiveView(workbench.defaultView)}');
     expect(navigation).toContain('onClick={() => setActiveView(item.id)}');
@@ -47,12 +48,15 @@ describe('editor-first interaction model', () => {
 
     expect(schematic).toContain('Place…');
     expect(schematic).toContain('click sheet · Esc cancels');
-    expect(pcb).toContain('drag to board');
-    expect(pcb).toContain('click a pad/via/trace endpoint to begin');
+    expect(pcbDrawer).toContain('draggable={!placed}');
+    expect(pcbDrawer).toContain('drag to board');
+    expect(pcbDrawer).not.toContain('updatePCBPlacement');
+    expect(pcb).toContain('Route: choose a net in the Project Drawer, then start from a matching pad/via/trace endpoint.');
   });
 
   it('uses one professional editor grammar for the core engineering workbenches', () => {
     const shared = source('../components/editor/EngineeringEditorShell.tsx');
+    const shellNavigation = source('../components/StudioWorkbenchNavigation.tsx');
     const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
     const pcb = source('../components/board/EngineeringBoardWorkbench.tsx');
     const mechanical = source('../components/mechanical/EngineeringMechanicalWorkbench.tsx');
@@ -63,13 +67,22 @@ describe('editor-first interaction model', () => {
 
     expect(shared).toContain('EngineeringEditorBar');
     expect(shared).toContain('EngineeringDock');
+    expect(shared).toContain('EngineeringInspector');
+    expect(shared).toContain('EngineeringBottomDock');
     expect(shared).toContain('EngineeringStatusBar');
 
-    for (const editor of [schematic, pcb, mechanical]) {
+    for (const editor of [schematic, mechanical]) {
       expect(editor).toContain('<EngineeringEditorBar');
       expect(editor).toContain('<EngineeringDock');
       expect(editor).toContain('<EngineeringStatusBar');
     }
+
+    expect(pcb).toContain('<EngineeringEditorBar');
+    expect(pcb).toContain('<EngineeringInspector');
+    expect(pcb).toContain('<EngineeringBottomDock');
+    expect(pcb).toContain('<EngineeringStatusBar');
+    expect(pcb).not.toContain('EngineeringDock side="left"');
+    expect(shellNavigation).toContain('<PcbProjectDrawer />');
 
     expect(schematic).toContain('<SchematicCanvas');
     expect(pcb).toContain('<BoardCanvas');
