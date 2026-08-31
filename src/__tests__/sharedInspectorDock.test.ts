@@ -46,14 +46,19 @@ describe('shared Inspector and diagnostics dock contracts', () => {
     expect(drawer).toContain("entity: 'net'");
   });
 
-  it('keeps Mechanical feature editing in Inspector and checks in the Problems dock', () => {
+  it('keeps Mechanical feature editing in Inspector, structure in the Project Drawer, and checks in Problems', () => {
     const mechanical = source('../components/mechanical/EngineeringMechanicalWorkbench.tsx');
+    const drawer = source('../components/mechanical/MechanicalProjectDrawer.tsx');
 
     expect(mechanical).toContain('<EngineeringInspector');
     expect(mechanical).toContain('<EngineeringBottomDock');
     expect(mechanical).toContain('title="Mechanical checks"');
     expect(mechanical).toContain('label="Problems"');
-    expect(mechanical).toContain('Capture dimension & tolerance');
+    expect(mechanical).toContain('Capture dimension');
+    expect(mechanical).toContain('tolerance unresolved');
+    expect(mechanical).not.toContain('<EngineeringDock side="left"');
+    expect(drawer).toContain("entity: 'mechanical-object'");
+    expect(drawer).toContain("'dimensions'");
   });
 
   it('keeps panel visibility local to workbenches rather than canonical project state', () => {
