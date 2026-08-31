@@ -71,27 +71,30 @@ describe('editor-first interaction model', () => {
     expect(shared).toContain('EngineeringBottomDock');
     expect(shared).toContain('EngineeringStatusBar');
 
-    for (const editor of [schematic, mechanical]) {
-      expect(editor).toContain('<EngineeringEditorBar');
-      expect(editor).toContain('<EngineeringDock');
-      expect(editor).toContain('<EngineeringStatusBar');
-    }
+    expect(schematic).toContain('<EngineeringEditorBar');
+    expect(schematic).toContain('<EngineeringDock');
+    expect(schematic).toContain('<EngineeringStatusBar');
 
-    expect(pcb).toContain('<EngineeringEditorBar');
-    expect(pcb).toContain('<EngineeringInspector');
-    expect(pcb).toContain('<EngineeringBottomDock');
-    expect(pcb).toContain('<EngineeringStatusBar');
-    expect(pcb).not.toContain('EngineeringDock side="left"');
+    for (const editor of [pcb, mechanical]) {
+      expect(editor).toContain('<EngineeringEditorBar');
+      expect(editor).toContain('<EngineeringInspector');
+      expect(editor).toContain('<EngineeringBottomDock');
+      expect(editor).toContain('<EngineeringStatusBar');
+      expect(editor).not.toContain('EngineeringDock side="left"');
+    }
     expect(shellNavigation).toContain('<PcbProjectDrawer />');
+    expect(shellNavigation).toContain('<MechanicalProjectDrawer />');
 
     expect(schematic).toContain('<SchematicCanvas');
     expect(pcb).toContain('<BoardCanvas');
     expect(pcb).not.toContain('Auto Place');
     expect(pcb).not.toContain('Autoroute');
 
-    expect(mechanical).toContain('New physical feature');
-    expect(mechanical).toContain('Capture dimension & tolerance');
-    expect(mechanical).not.toContain('Rectangle');
+    expect(mechanical).toContain('Create explicit feature');
+    expect(mechanical).toContain('Capture dimension');
+    expect(mechanical).toContain('tolerance unresolved');
+    expect(mechanical).not.toContain('New physical feature');
+    expect(mechanical).not.toContain('Design browser');
     expect(mechanicalCanvas).toContain('mechanicalDimensions');
 
     expect(validation).toContain('testListOpen');
