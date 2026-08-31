@@ -10,8 +10,8 @@ import { ComponentLibraryWorkbench } from '../component-library/ComponentLibrary
 import { EngineeringBoardWorkbench } from '../board/EngineeringBoardWorkbench';
 import { EngineeringSchematicWorkbench } from '../schematic/EngineeringSchematicWorkbench';
 import { EngineeringMechanicalWorkbench } from '../mechanical/EngineeringMechanicalWorkbench';
+import { Mechanical3DReview } from '../mechanical/Mechanical3DReview';
 import { MechanicalRepresentationTabs } from '../mechanical/MechanicalRepresentationTabs';
-import { UnifiedBoard3DView } from '../mechanical/UnifiedBoard3DView';
 
 export const UnifiedComponentLibraryWorkbench: React.FC = () => <ComponentLibraryWorkbench />;
 
@@ -41,7 +41,7 @@ export const UnifiedMechanicalWorkbench: React.FC<{ defaultMode: MechanicalWorkb
     <section className="flex h-full min-h-0 flex-col overflow-hidden" data-workbench="mechanical" data-mechanical-representation={representation}>
       <MechanicalRepresentationTabs />
       <div className="min-h-0 flex-1 overflow-hidden">
-        {representation === 'review-3d' && <UnifiedBoard3DView />}
+        {representation === 'review-3d' && <Mechanical3DReview />}
         {representation === 'assembly' && <EngineeringMechanicalWorkbench initialMode="assembly" />}
         {representation === 'layout' && <EngineeringMechanicalWorkbench initialMode="canvas" />}
       </div>
