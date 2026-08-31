@@ -73,56 +73,54 @@ export function resolvePCBAnchor(
 
   const activeVias = (vias || []).filter((via) => via.boardId === activeBoardId);
   for (const via of activeVias) {
-    if (via.x != null && via.y != null) {
-      const dist = Math.hypot(point.x - via.x, point.y - via.y);
-      if (dist <= (via.outerDiameter || 0.6) / 2 + toleranceMm) {
-        return {
-          type: 'via',
-          viaId: via.id,
-          xMm: via.x,
-          yMm: via.y,
-          netName: via.netName || via.netId || '',
-          layer: layerId,
-        };
-      }
+    if (via.x == null || via.y == null || via.outerDiameter == null || via.outerDiameter <= 0) continue;
+    const dist = Math.hypot(point.x - via.x, point.y - via.y);
+    if (dist <= via.outerDiameter / 2 + toleranceMm) {
+      return {
+        type: 'via',
+        viaId: via.id,
+        xMm: via.x,
+        yMm: via.y,
+        netName: via.netName || via.netId || '',
+        layer: layerId,
+      };
     }
   }
 
   const activeTraces = (traces || []).filter(
-    (trace) => trace.boardId === activeBoardId && (trace.layerId || 'top-copper') === layerId
+    (trace) => trace.boardId === activeBoardId && trace.layerId === layerId
   );
   for (const trace of activeTraces) {
     const points = trace.points || [];
-    if (points.length >= 2) {
-      const startPoint = points[0];
-      const endPoint = points[points.length - 1];
-      const canonicalNetName = trace.netName || trace.netId || '';
+    if (points.length < 2 || trace.width == null || trace.width <= 0) continue;
 
-      const startDist = Math.hypot(point.x - startPoint.x, point.y - startPoint.y);
-      if (startDist <= (trace.width || 0.25) / 2 + toleranceMm) {
-        return {
-          type: 'trace-end',
-          traceId: trace.id,
-          endpoint: 'start',
-          xMm: startPoint.x,
-          yMm: startPoint.y,
-          netName: canonicalNetName,
-          layer: trace.layerId || 'top-copper',
-        };
-      }
+    const startPoint = points[0];
+    const endPoint = points[points.length - 1];
+    const canonicalNetName = trace.netName || trace.netId || '';
+    const startDist = Math.hypot(point.x - startPoint.x, point.y - startPoint.y);
+    if (startDist <= trace.width / 2 + toleranceMm) {
+      return {
+        type: 'trace-end',
+        traceId: trace.id,
+        endpoint: 'start',
+        xMm: startPoint.x,
+        yMm: startPoint.y,
+        netName: canonicalNetName,
+        layer: trace.layerId,
+      };
+    }
 
-      const endDist = Math.hypot(point.x - endPoint.x, point.y - endPoint.y);
-      if (endDist <= (trace.width || 0.25) / 2 + toleranceMm) {
-        return {
-          type: 'trace-end',
-          traceId: trace.id,
-          endpoint: 'end',
-          xMm: endPoint.x,
-          yMm: endPoint.y,
-          netName: canonicalNetName,
-          layer: trace.layerId || 'top-copper',
-        };
-      }
+    const endDist = Math.hypot(point.x - endPoint.x, point.y - endPoint.y);
+    if (endDist <= trace.width / 2 + toleranceMm) {
+      return {
+        type: 'trace-end',
+        traceId: trace.id,
+        endpoint: 'end',
+        xMm: endPoint.x,
+        yMm: endPoint.y,
+        netName: canonicalNetName,
+        layer: trace.layerId,
+      };
     }
   }
 

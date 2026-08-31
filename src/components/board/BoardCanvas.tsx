@@ -7,7 +7,6 @@ import {
   snapToGrid as snapCoordinateToGrid,
   getOutlineBounds,
   getNetRatsnestLines,
-  generateGroundPourPolygon,
 } from './boardGeometry';
 import { getFootprint } from '../../lib/footprints';
 import { ReviewResult, Project } from '../../types';
@@ -22,9 +21,19 @@ interface BoardCanvasProps {
   viewState: BoardDesignerUIState;
   onViewStateChange: (patch: Partial<BoardDesignerUIState>) => void;
   drcResults: ReviewResult[];
+  routeWidthMm: number | null;
+  viaOuterDiameterMm: number | null;
+  viaDrillDiameterMm: number | null;
 }
 
-export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewStateChange, drcResults }) => {
+export const BoardCanvas: React.FC<BoardCanvasProps> = ({
+  viewState,
+  onViewStateChange,
+  drcResults,
+  routeWidthMm,
+  viaOuterDiameterMm,
+  viaDrillDiameterMm,
+}) => {
   const store = useProjectStore();
   const { notify } = useFeedback();
   const {
@@ -40,8 +49,6 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     updatePCBPlacement,
     addTrace,
     addVia,
-    addDrillHole,
-    addKeepoutZone,
   } = store;
   const [domainError, setDomainError] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -116,10 +123,12 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
   );
 
   const outline = filteredOutlines[0];
-  const bounds = useMemo(
-    () => outline ? getOutlineBounds(outline) : { minX: 0, minY: 0, maxX: 50, maxY: 30 },
-    [outline],
-  );
+  const bounds = useMemo(() => {
+    if (!outline) {
+      throw new Error('PCB canvas requires an explicit board outline.');
+    }
+    return getOutlineBounds(outline);
+  }, [outline]);
   const pad = 10;
 
   const requireActiveBoard = useCallback((): string | null => {
@@ -211,6 +220,10 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     );
 
     if (activeTool === 'route') {
+      if (routeWidthMm == null || routeWidthMm <= 0) {
+        setDomainError('Routing is blocked until this board has an explicit positive Trace Width or Track Width rule with a supported physical unit.');
+        return;
+      }
       if (!isRouting) {
         const validation = validateRouteStartAnchor(anchor, selectedNetName || undefined);
         if (!validation.valid) {
@@ -235,12 +248,22 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     }
 
     if (activeTool === 'via' && selectedNetName) {
+      if (
+        viaOuterDiameterMm == null
+        || viaDrillDiameterMm == null
+        || viaOuterDiameterMm <= 0
+        || viaDrillDiameterMm <= 0
+        || viaOuterDiameterMm <= viaDrillDiameterMm
+      ) {
+        setDomainError('Via insertion is blocked until explicit Via Diameter and Via Drill rules define a physically valid board-scoped size.');
+        return;
+      }
       addVia({
         boardId,
         x: point.x,
         y: point.y,
-        drillDiameter: 0.3,
-        outerDiameter: 0.6,
+        drillDiameter: viaDrillDiameterMm,
+        outerDiameter: viaOuterDiameterMm,
         netId: (nets || []).find((net) => net.netName === selectedNetName)?.id,
         fromLayer: 'top-copper',
         toLayer: 'bottom-copper',
@@ -249,28 +272,12 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     }
 
     if (activeTool === 'drill') {
-      addDrillHole({
-        boardId,
-        x: point.x,
-        y: point.y,
-        diameter: 1.0,
-        plated: false,
-        purpose: 'Mounting Hole',
-      });
+      setDomainError('Quick drill creation is disabled until an explicit drill diameter is supplied by a qualified tool or rule.');
       return;
     }
 
     if (activeTool === 'keepout') {
-      addKeepoutZone({
-        boardId,
-        x: point.x - 3,
-        y: point.y - 2,
-        width: 6,
-        height: 4,
-        shape: 'rect',
-        layerScope: 'All',
-        reason: 'User Keepout',
-      });
+      setDomainError('Quick keepout creation is disabled until explicit keepout geometry is supplied.');
       return;
     }
 
@@ -294,8 +301,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       }
 
       for (const via of filteredVias) {
-        if (via.x != null && via.y != null
-          && Math.hypot(point.x - via.x, point.y - via.y) < (via.outerDiameter || 0.6) / 2 + 0.3) {
+        if (
+          via.x != null
+          && via.y != null
+          && via.outerDiameter != null
+          && via.outerDiameter > 0
+          && Math.hypot(point.x - via.x, point.y - via.y) < via.outerDiameter / 2 + 0.3
+        ) {
           onViewStateChange({
             selectedViaId: via.id,
             selectedComponentId: null,
@@ -308,8 +320,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       }
 
       for (const drill of filteredDrills) {
-        if (drill.x != null && drill.y != null
-          && Math.hypot(point.x - drill.x, point.y - drill.y) < (drill.diameter || 1.0) / 2 + 0.3) {
+        if (
+          drill.x != null
+          && drill.y != null
+          && drill.diameter != null
+          && drill.diameter > 0
+          && Math.hypot(point.x - drill.x, point.y - drill.y) < drill.diameter / 2 + 0.3
+        ) {
           onViewStateChange({
             selectedDrillHoleId: drill.id,
             selectedComponentId: null,
@@ -334,6 +351,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     selectedNetName,
     isRouting,
     routePreviewPoints,
+    routeWidthMm,
+    viaOuterDiameterMm,
+    viaDrillDiameterMm,
     screenToBoard,
     panX,
     panY,
@@ -344,8 +364,6 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     traces,
     nets,
     addVia,
-    addDrillHole,
-    addKeepoutZone,
     filteredComponents,
     filteredVias,
     filteredDrills,
@@ -382,7 +400,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
   }, []);
 
   const handleFinishDangling = useCallback(() => {
-    if (!isRouting || !routePreviewPoints?.length || !selectedNetName) return;
+    if (!isRouting || !routePreviewPoints?.length || !selectedNetName || routeWidthMm == null || routeWidthMm <= 0) return;
     const boardId = requireActiveBoard();
     if (!boardId) return;
     const lastPoint = routePreviewPoints[routePreviewPoints.length - 1];
@@ -393,7 +411,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       netId: (nets || []).find((net) => net.netName === selectedNetName)?.id,
       netName: selectedNetName,
       points: routePreviewPoints,
-      width: selectedNetName.toLowerCase().includes('gnd') || selectedNetName.toLowerCase().includes('vbat') ? 0.3 : 0.15,
+      width: routeWidthMm,
       status: 'Draft',
       targetAnchor: {
         type: 'dangling',
@@ -407,6 +425,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     isRouting,
     routePreviewPoints,
     selectedNetName,
+    routeWidthMm,
     viewState.activeLayerId,
     addTrace,
     nets,
@@ -415,7 +434,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
   ]);
 
   const handleDoubleClick = useCallback((event: React.MouseEvent) => {
-    if (!isRouting || !routePreviewPoints?.length || !selectedNetName) return;
+    if (!isRouting || !routePreviewPoints?.length || !selectedNetName || routeWidthMm == null || routeWidthMm <= 0) return;
     const boardId = requireActiveBoard();
     if (!boardId) return;
     const point = screenToBoard(event.clientX, event.clientY);
@@ -444,7 +463,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
       netId: (nets || []).find((net) => net.netName === selectedNetName)?.id,
       netName: selectedNetName,
       points: allPoints,
-      width: selectedNetName.toLowerCase().includes('gnd') || selectedNetName.toLowerCase().includes('vbat') ? 0.3 : 0.15,
+      width: routeWidthMm,
       status: 'Routed',
       targetAnchor: finishAnchor,
     });
@@ -454,6 +473,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
     isRouting,
     routePreviewPoints,
     selectedNetName,
+    routeWidthMm,
     screenToBoard,
     boardComponents,
     padNetAssignments,
@@ -680,17 +700,6 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
           />
         )}
 
-        {outline && (
-          <polygon
-            points={generateGroundPourPolygon(outline, 0.6).map((point) => `${bx(point.x)},${by(point.y)}`).join(' ')}
-            fill="#d1fae5"
-            stroke="#10b981"
-            strokeWidth={1}
-            strokeDasharray="2,2"
-            opacity={0.6}
-          />
-        )}
-
         <line x1={bx(0) - 8} y1={by(0)} x2={bx(0) + 8} y2={by(0)} stroke="#ef4444" strokeWidth={1} opacity={0.6} />
         <line x1={bx(0)} y1={by(0) - 8} x2={bx(0)} y2={by(0) + 8} stroke="#ef4444" strokeWidth={1} opacity={0.6} />
 
@@ -731,12 +740,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
 
         {filteredTraces.map((trace) => {
           if (!trace.points || trace.points.length < 2) return null;
-          const layerId = trace.layerId || 'top-copper';
-          if (layerVisibility[layerId] === false) return null;
-          const isActive = viewState.activeLayerId === layerId;
+          const layerId = trace.layerId;
+          if (layerId && layerVisibility[layerId] === false) return null;
+          const isActive = layerId != null && viewState.activeLayerId === layerId;
           const isHighlighted = selectedNetName && trace.netName === selectedNetName;
           const isSelected = selectedObjectId === trace.id;
-          let strokeColor = layerId === 'bottom-copper' ? '#3b82f6' : '#ef4444';
+          const hasPhysicalWidth = trace.width != null && trace.width > 0;
+          let strokeColor = layerId === 'bottom-copper' ? '#3b82f6' : layerId === 'top-copper' ? '#ef4444' : '#64748b';
           if (isHighlighted) strokeColor = '#22d3ee';
           else if (isSelected) strokeColor = '#f59e0b';
           const opacity = isSelected || isHighlighted ? 1 : isActive ? 0.9 : 0.4;
@@ -747,10 +757,12 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
               points={trace.points.map((point) => `${bx(point.x)},${by(point.y)}`).join(' ')}
               fill="none"
               stroke={strokeColor}
-              strokeWidth={bs(trace.width || 0.25)}
+              strokeWidth={hasPhysicalWidth ? bs(trace.width!) : 1}
+              strokeDasharray={hasPhysicalWidth ? undefined : '2,2'}
               strokeLinecap="round"
               strokeLinejoin="round"
               opacity={opacity}
+              data-engineering-width={hasPhysicalWidth ? `${trace.width}mm` : 'unresolved'}
               onClick={(event) => {
                 event.stopPropagation();
                 onViewStateChange({
@@ -766,13 +778,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
           );
         })}
 
-        {isRouting && routePreviewPoints?.length > 0 && (
+        {isRouting && routePreviewPoints?.length > 0 && routeWidthMm != null && routeWidthMm > 0 && (
           <polyline
             points={[...routePreviewPoints, { x: viewState.mouseXMm, y: viewState.mouseYMm }]
               .map((point) => `${bx(point.x)},${by(point.y)}`).join(' ')}
             fill="none"
             stroke="#fbbf24"
-            strokeWidth={bs(0.25)}
+            strokeWidth={bs(routeWidthMm)}
             strokeDasharray="3,2"
             strokeLinecap="round"
             opacity={0.9}
@@ -782,6 +794,8 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
         {layerVisibility.drill && filteredVias.map((via) => {
           if (via.x == null || via.y == null) return null;
           const isSelected = selectedObjectId === via.id;
+          const hasOuterDiameter = via.outerDiameter != null && via.outerDiameter > 0;
+          const hasDrillDiameter = via.drillDiameter != null && via.drillDiameter > 0;
           return (
             <g
               key={via.id}
@@ -796,9 +810,21 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
                 });
               }}
               className="cursor-pointer"
+              data-engineering-geometry={hasOuterDiameter && hasDrillDiameter ? 'explicit' : 'unresolved'}
             >
-              <circle cx={bx(via.x)} cy={by(via.y)} r={bs((via.outerDiameter || 0.6) / 2)} fill="#f59e0b" stroke={isSelected ? '#10b981' : '#d97706'} strokeWidth={1} />
-              <circle cx={bx(via.x)} cy={by(via.y)} r={bs((via.drillDiameter || 0.3) / 2)} fill="#0f172a" />
+              {hasOuterDiameter ? (
+                <circle cx={bx(via.x)} cy={by(via.y)} r={bs(via.outerDiameter! / 2)} fill="#f59e0b" stroke={isSelected ? '#10b981' : '#d97706'} strokeWidth={1} />
+              ) : (
+                <circle cx={bx(via.x)} cy={by(via.y)} r={4} fill="none" stroke={isSelected ? '#10b981' : '#d97706'} strokeWidth={1} strokeDasharray="2,2" />
+              )}
+              {hasDrillDiameter ? (
+                <circle cx={bx(via.x)} cy={by(via.y)} r={bs(via.drillDiameter! / 2)} fill="#0f172a" />
+              ) : (
+                <>
+                  <line x1={bx(via.x) - 3} y1={by(via.y)} x2={bx(via.x) + 3} y2={by(via.y)} stroke="#0f172a" strokeWidth={1} />
+                  <line x1={bx(via.x)} y1={by(via.y) - 3} x2={bx(via.x)} y2={by(via.y) + 3} stroke="#0f172a" strokeWidth={1} />
+                </>
+              )}
             </g>
           );
         })}
@@ -806,6 +832,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
         {layerVisibility.drill && filteredDrills.map((drill) => {
           if (drill.x == null || drill.y == null) return null;
           const isSelected = selectedObjectId === drill.id;
+          const hasDiameter = drill.diameter != null && drill.diameter > 0;
           return (
             <g
               key={drill.id}
@@ -820,8 +847,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({ viewState, onViewState
                 });
               }}
               className="cursor-pointer"
+              data-engineering-geometry={hasDiameter ? 'explicit' : 'unresolved'}
             >
-              <circle cx={bx(drill.x)} cy={by(drill.y)} r={bs((drill.diameter || 1.0) / 2)} fill="none" stroke={isSelected ? '#f59e0b' : '#cbd5e1'} strokeWidth={1.5} strokeDasharray="3,2" />
+              <circle cx={bx(drill.x)} cy={by(drill.y)} r={hasDiameter ? bs(drill.diameter! / 2) : 4} fill="none" stroke={isSelected ? '#f59e0b' : '#cbd5e1'} strokeWidth={1.5} strokeDasharray="3,2" />
               <line x1={bx(drill.x) - 4} y1={by(drill.y)} x2={bx(drill.x) + 4} y2={by(drill.y)} stroke="#cbd5e1" strokeWidth={0.5} />
               <line x1={bx(drill.x)} y1={by(drill.y) - 4} x2={bx(drill.x)} y2={by(drill.y) + 4} stroke="#cbd5e1" strokeWidth={0.5} />
             </g>

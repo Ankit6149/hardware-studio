@@ -20,6 +20,7 @@ import { BoardCanvas } from './BoardCanvas';
 import { DEFAULT_VIEW_STATE, GRID_PRESETS, type BoardDesignerUIState } from './boardInteraction';
 import { runBoardDRC } from '../../lib/boardDRC';
 import { getFootprint } from '../../lib/footprints';
+import { resolvePcbRoutingRules } from '../../lib/pcb/pcbRuleResolution';
 import { EditorDockButton } from '../editor/EditorDockButton';
 import {
   EditorToolButton,
@@ -28,12 +29,6 @@ import {
   EngineeringInspector,
   EngineeringStatusBar,
 } from '../editor/EngineeringEditorShell';
-
-function numericRuleValue(value?: string): number | null {
-  if (!value) return null;
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
 
 export const EngineeringBoardWorkbench: React.FC = () => {
   const store = useProjectStore();
@@ -66,6 +61,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
   const problemsOpen = usePcbWorkspaceUiStore((state) => state.problemsOpen);
   const setUiActiveLayer = usePcbWorkspaceUiStore((state) => state.setActiveLayer);
   const setUiLayerVisibility = usePcbWorkspaceUiStore((state) => state.setLayerVisibility);
+  const setPcbSection = usePcbWorkspaceUiStore((state) => state.setActiveSection);
   const setInspectorOpen = usePcbWorkspaceUiStore((state) => state.setInspectorOpen);
   const setProblemsOpen = usePcbWorkspaceUiStore((state) => state.setProblemsOpen);
 
@@ -103,12 +99,15 @@ export const EngineeringBoardWorkbench: React.FC = () => {
   };
 
   const outline = boardOutlines.find((candidate) => candidate.boardId === activeBoard?.id) || null;
+  const outlineReady = Boolean(
+    outline
+    && ((outline.points?.length || 0) >= 3 || ((outline.width || 0) > 0 && (outline.height || 0) > 0)),
+  );
   const components = activeBoard ? boardComponents.filter((component) => component.boardId === activeBoard.id) : [];
   const placed = components.filter((component) => component.placementX != null && component.placementY != null);
   const boardTraces = activeBoard ? traces.filter((trace) => trace.boardId === activeBoard.id) : [];
-  const widthRule = pcbRules.find((rule) => rule.boardId === activeBoard?.id && /(?:track|trace).*width/i.test(rule.ruleType));
-  const configuredRouteWidth = numericRuleValue(widthRule?.value);
-  const routeWidthMm = configuredRouteWidth || 0.25;
+  const routingRules = resolvePcbRoutingRules(pcbRules, activeBoard?.id);
+  const routeWidthMm = routingRules.routeWidthMm;
 
   const selectedComponent = boardComponents.find((component) => component.id === effectiveViewState.selectedComponentId) || null;
   const selectedTrace = traces.find((trace) => trace.id === effectiveViewState.selectedTraceId) || null;
@@ -259,6 +258,11 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     setActiveView('schematic-editor');
   };
 
+  const openPcbRules = () => {
+    setPcbSection('rules');
+    setActiveView('board-designer');
+  };
+
   if (!activeBoard) {
     return (
       <section className="flex h-full min-h-0 flex-col bg-[#f7f5ef]">
@@ -279,7 +283,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     );
   }
 
-  if (!outline) {
+  if (!outlineReady) {
     return (
       <section className="flex h-full min-h-0 flex-col bg-[#f7f5ef]">
         <EngineeringEditorBar
@@ -301,6 +305,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
 
   const hardDrcCount = drcResults.filter((result) => result.severity === 'Blocker' || result.severity === 'Error').length;
   const routableLayers = PCB_EDITOR_LAYERS.filter((layer) => layer.routable);
+  const routingRulesIncomplete = routeWidthMm == null || !routingRules.viaReady;
 
   return (
     <section className="hs-engineering-pcb flex h-full min-h-0 flex-col overflow-hidden bg-[#f7f5ef] text-slate-900" aria-label="PCB engineering workbench">
@@ -312,8 +317,8 @@ export const EngineeringBoardWorkbench: React.FC = () => {
           <>
             <EditorToolButton label="Select" active={effectiveViewState.activeTool === 'select'} onClick={() => updateView({ activeTool: 'select', isRouting: false, routePreviewPoints: [] })}><MousePointer2 className="h-3.5 w-3.5" /></EditorToolButton>
             <EditorToolButton label="Pan" active={effectiveViewState.activeTool === 'pan'} onClick={() => updateView({ activeTool: 'pan', isRouting: false, routePreviewPoints: [] })}><Move className="h-3.5 w-3.5" /></EditorToolButton>
-            <EditorToolButton label="Route" active={effectiveViewState.activeTool === 'route'} onClick={() => updateView({ activeTool: 'route' })}><Route className="h-3.5 w-3.5" /></EditorToolButton>
-            <EditorToolButton label="Via" active={effectiveViewState.activeTool === 'via'} disabled={!effectiveViewState.selectedNetName} onClick={() => updateView({ activeTool: 'via' })}><Circle className="h-3.5 w-3.5" /></EditorToolButton>
+            <EditorToolButton label="Route" active={effectiveViewState.activeTool === 'route'} disabled={routeWidthMm == null} onClick={() => updateView({ activeTool: 'route' })}><Route className="h-3.5 w-3.5" /></EditorToolButton>
+            <EditorToolButton label="Via" active={effectiveViewState.activeTool === 'via'} disabled={!effectiveViewState.selectedNetName || !routingRules.viaReady} onClick={() => updateView({ activeTool: 'via' })}><Circle className="h-3.5 w-3.5" /></EditorToolButton>
             <EditorToolButton label="Rotate" disabled={!selectedComponent} onClick={rotateSelected}><RotateCw className="h-3.5 w-3.5" /></EditorToolButton>
             <span className="mx-1 h-5 w-px bg-slate-200" />
             <select value={effectiveViewState.activeLayerId} onChange={(event) => updateView({ activeLayerId: event.target.value })} className="h-7 border border-slate-300 bg-white px-1.5 font-mono text-[9px] text-slate-700" aria-label="Active PCB routing layer">
@@ -333,6 +338,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
         )}
         actions={(
           <>
+            {routingRulesIncomplete && <button type="button" onClick={openPcbRules} className="inline-flex h-8 items-center gap-1.5 border border-amber-300 bg-amber-50 px-2.5 text-[10px] font-semibold text-amber-900 hover:bg-amber-100">Set PCB rules</button>}
             <button type="button" onClick={runDrc} className="inline-flex h-8 items-center gap-1.5 border border-slate-300 bg-white px-2.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-100"><AlertTriangle className="h-3.5 w-3.5" /> DRC</button>
             <button type="button" onClick={openSchematic} className="inline-flex h-8 items-center gap-1.5 bg-slate-950 px-2.5 text-[10px] font-semibold text-white hover:bg-slate-800">Schematic <ArrowRight className="h-3 w-3" /></button>
           </>
@@ -340,7 +346,14 @@ export const EngineeringBoardWorkbench: React.FC = () => {
       />
 
       <div className="relative min-h-0 flex-1 overflow-hidden bg-white">
-        <BoardCanvas viewState={effectiveViewState} onViewStateChange={updateView} drcResults={drcResults} />
+        <BoardCanvas
+          viewState={effectiveViewState}
+          onViewStateChange={updateView}
+          drcResults={drcResults}
+          routeWidthMm={routingRules.routeWidthMm}
+          viaOuterDiameterMm={routingRules.viaOuterDiameterMm}
+          viaDrillDiameterMm={routingRules.viaDrillDiameterMm}
+        />
 
         <EngineeringInspector open={inspectorOpen} subtitle={selectedPad ? `${selectedComponent?.referenceDesignator}.${selectedPad.name}` : selectedTrace ? `Trace · ${selectedTrace.netName || 'unassigned'}` : selectedVia ? 'Via' : selectedComponent ? selectedComponent.referenceDesignator : 'Selection'} onClose={() => setInspectorOpen(false)} widthClassName="w-[320px]">
           <div className="p-3">
@@ -399,14 +412,14 @@ export const EngineeringBoardWorkbench: React.FC = () => {
               <div className="space-y-3">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Trace</p>
                 <p className="text-[12px] font-semibold text-slate-950">{selectedTrace.netName || 'Unnamed net'}</p>
-                <label className="block text-[9px] text-slate-500">Width mm<input type="number" step="0.05" value={selectedTrace.width || 0.25} onChange={(event) => updateTrace(selectedTrace.id, { width: Number.parseFloat(event.target.value) || 0.25 })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
-                <p className="text-[9px] text-slate-500">{selectedTrace.layerId || 'top-copper'} · {selectedTrace.points?.length || 0} vertices · {selectedTrace.status || 'Draft'} · shared trace {selectedTrace.id}</p>
+                <label className="block text-[9px] text-slate-500">Width mm<input type="number" step="0.05" min="0" placeholder="Unresolved" value={selectedTrace.width ?? ''} onChange={(event) => { const parsed = Number.parseFloat(event.target.value); updateTrace(selectedTrace.id, { width: Number.isFinite(parsed) && parsed > 0 ? parsed : undefined }); }} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
+                <p className="text-[9px] text-slate-500">{selectedTrace.layerId || 'layer unresolved'} · {selectedTrace.points?.length || 0} vertices · {selectedTrace.status || 'Draft'} · shared trace {selectedTrace.id}</p>
               </div>
             ) : selectedVia ? (
               <div>
                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Via</p>
                 <p className="mt-1 font-mono text-[10px] text-slate-700">{selectedVia.x?.toFixed(2)}, {selectedVia.y?.toFixed(2)} mm</p>
-                <p className="mt-2 text-[9px] text-slate-500">Ø {selectedVia.outerDiameter || 0.6} / drill {selectedVia.drillDiameter || 0.3} mm · {sharedSelection?.entity === 'via' && sharedSelection.netName ? `net ${sharedSelection.netName}` : 'net unresolved'}</p>
+                <p className="mt-2 text-[9px] text-slate-500">{selectedVia.outerDiameter != null && selectedVia.outerDiameter > 0 ? `Ø ${selectedVia.outerDiameter} mm` : 'outer diameter unresolved'} · {selectedVia.drillDiameter != null && selectedVia.drillDiameter > 0 ? `drill ${selectedVia.drillDiameter} mm` : 'drill unresolved'} · {sharedSelection?.entity === 'via' && sharedSelection.netName ? `net ${sharedSelection.netName}` : 'net unresolved'}</p>
               </div>
             ) : (
               <p className="text-[10px] leading-5 text-slate-500">Select a footprint, pad, trace, or via. Nets and board structure stay in the Project Drawer; this Inspector is only for the immediate object.</p>
@@ -448,7 +461,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
 
       <EngineeringStatusBar
         left={effectiveViewState.isRouting ? `Routing ${effectiveViewState.selectedNetName || 'net'} · click to fix segments · finish on matching anchor · Esc cancels` : effectiveViewState.activeTool === 'route' ? 'Route: choose a net in the Project Drawer, then start from a matching pad/via/trace endpoint.' : 'Select and move footprints directly. Drag unplaced components from the Project Drawer.'}
-        center={selectedPad ? `${selectedComponent?.referenceDesignator}.${selectedPad.name} · ${selectedPadAssignment?.netName || 'unassigned'}` : selectedTrace ? `Trace · ${selectedTrace.netName || 'unassigned'}` : selectedVia ? `Via · ${sharedSelection?.netName || 'net unresolved'}` : `${effectiveViewState.activeLayerId} · ${configuredRouteWidth ? `configured width ${routeWidthMm.toFixed(2)} mm` : 'no explicit trace-width rule; new routes remain draft evidence'}`}
+        center={selectedPad ? `${selectedComponent?.referenceDesignator}.${selectedPad.name} · ${selectedPadAssignment?.netName || 'unassigned'}` : selectedTrace ? `Trace · ${selectedTrace.netName || 'unassigned'} · ${selectedTrace.width != null && selectedTrace.width > 0 ? `${selectedTrace.width.toFixed(2)} mm` : 'width unresolved'}` : selectedVia ? `Via · ${sharedSelection?.netName || 'net unresolved'}` : `${effectiveViewState.activeLayerId} · ${routeWidthMm != null ? `route width ${routeWidthMm.toFixed(3)} mm` : 'route width unresolved'} · ${routingRules.viaReady ? `via ${routingRules.viaOuterDiameterMm?.toFixed(3)}/${routingRules.viaDrillDiameterMm?.toFixed(3)} mm` : 'via size unresolved'}`}
         right={`${effectiveViewState.mouseXMm.toFixed(2)}, ${effectiveViewState.mouseYMm.toFixed(2)} mm`}
       />
     </section>
