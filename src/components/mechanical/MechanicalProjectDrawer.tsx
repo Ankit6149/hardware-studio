@@ -20,12 +20,20 @@ export const MechanicalProjectDrawer: React.FC = () => {
   const selected = useStudioContextStore((state) => state.selected);
   const select = useStudioContextStore((state) => state.select);
   const drawerSection = useMechanicalWorkspaceUiStore((state) => state.drawerSection);
+  const representation = useMechanicalWorkspaceUiStore((state) => state.representation);
   const setDrawerSection = useMechanicalWorkspaceUiStore((state) => state.setDrawerSection);
+  const setRepresentation = useMechanicalWorkspaceUiStore((state) => state.setRepresentation);
   const setInspectorOpen = useMechanicalWorkspaceUiStore((state) => state.setInspectorOpen);
 
   const selectObject = (id: string, label: string, boardId?: string) => {
     select({ entity: 'mechanical-object', id, label, boardId: boardId || null });
     setInspectorOpen(true);
+  };
+
+  const openSection = (section: MechanicalDrawerSection) => {
+    setDrawerSection(section);
+    if (section === 'assembly') setRepresentation('assembly');
+    else if (representation === 'assembly') setRepresentation('layout');
   };
 
   return (
@@ -45,7 +53,7 @@ export const MechanicalProjectDrawer: React.FC = () => {
           <button
             key={id}
             type="button"
-            onClick={() => setDrawerSection(id)}
+            onClick={() => openSection(id)}
             aria-pressed={drawerSection === id}
             className={`flex min-h-11 flex-col items-center justify-center gap-1 border-r border-[#d8d1c5] text-[8px] font-semibold last:border-r-0 ${drawerSection === id ? 'bg-[#fbfaf6] text-slate-950' : 'text-slate-500 hover:bg-[#ece6dc]'}`}
           >
