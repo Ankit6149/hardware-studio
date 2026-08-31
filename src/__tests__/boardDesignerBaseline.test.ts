@@ -7,23 +7,15 @@ const boardDesignerSource = readFileSync(
   'utf8',
 );
 
-describe('Board Designer baseline', () => {
-  it('does not synthesize board identity or starter dimensions', () => {
-    expect(boardDesignerSource).not.toContain('board-main');
-    expect(boardDesignerSource).not.toContain('createStarterBoard');
-    expect(boardDesignerSource).not.toContain("dimensionsMm: '50 x 30'");
-    expect(boardDesignerSource).toContain("setActiveView('board-settings')");
-  });
-
-  it('requires the selected board outline before auto placement', () => {
-    expect(boardDesignerSource).toContain("boardOutlines.find((candidate) => candidate.boardId === boardId)");
-    expect(boardDesignerSource).toContain('Board outline required');
-    expect(boardDesignerSource).toContain('will not place components inside a hidden fallback');
-  });
-
-  it('scopes DRC and rough autoroute to the explicit active board', () => {
-    expect(boardDesignerSource).toContain("activeBoardId: viewState.activeBoardId || ''");
-    expect(boardDesignerSource).toContain('roughAutorouteNet(scopedProject, net.netName, layerId, boardId)');
-    expect(boardDesignerSource).toContain('component.boardId === boardId');
+describe('Board Designer compatibility baseline', () => {
+  it('does not keep a second PCB implementation alive behind the historical export', () => {
+    expect(boardDesignerSource).toContain("import { EngineeringBoardWorkbench } from './EngineeringBoardWorkbench';");
+    expect(boardDesignerSource).toContain('export const BoardDesigner: React.FC = () => <EngineeringBoardWorkbench />;');
+    expect(boardDesignerSource).not.toContain('roughAutorouteNet');
+    expect(boardDesignerSource).not.toContain('autoPlaceComponents');
+    expect(boardDesignerSource).not.toContain('boards[0]');
+    expect(boardDesignerSource).not.toContain('<BoardCanvas');
+    expect(boardDesignerSource).not.toContain('<BoardInspector');
+    expect(boardDesignerSource).not.toContain('<BoardDRCPanel');
   });
 });
