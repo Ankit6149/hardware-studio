@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
+import { usePcbWorkspaceUiStore } from '../../store/pcbWorkspaceUiStore';
 import { evaluateElectronicsWorkflow, type ElectronicsWorkflowStageId } from '../../lib/electronics/electronicsWorkflow';
 import { BoardStudio } from '../BoardStudio';
-import { PCBConstraints } from '../PCBConstraints';
 import { PinMapTable } from '../PinMapTable';
 import { PowerBudgetTable } from '../PowerBudgetTable';
-import { UnifiedBoardDRCWorkbench } from './UnifiedBoardDRCWorkbench';
 import { UnifiedBOMWorkbench } from './UnifiedBOMWorkbench';
 import {
   UnifiedBoardDesignerWorkbench,
@@ -88,6 +87,7 @@ const decisionCopy: Record<ElectronicsWorkspaceViewId, { title: string; conseque
 function resolveView(viewId: string): ElectronicsWorkspaceViewId {
   if (viewId === 'board-studio' || viewId === 'board-components') return 'board-settings';
   if (viewId === 'power-tree') return 'power-budget';
+  if (viewId === 'pcb-constraints' || viewId === 'pcb-drc') return 'board-designer';
   if (
     viewId === 'component-library'
     || viewId === 'schematic-editor'
@@ -95,8 +95,6 @@ function resolveView(viewId: string): ElectronicsWorkspaceViewId {
     || viewId === 'pin-map'
     || viewId === 'board-settings'
     || viewId === 'board-designer'
-    || viewId === 'pcb-constraints'
-    || viewId === 'pcb-drc'
     || viewId === 'bom'
   ) return viewId;
   return 'component-library';
@@ -110,8 +108,8 @@ function renderView(view: ElectronicsWorkspaceViewId) {
     case 'pin-map': return <PinMapTable />;
     case 'board-settings': return <BoardStudio />;
     case 'board-designer': return <UnifiedBoardDesignerWorkbench />;
-    case 'pcb-constraints': return <PCBConstraints />;
-    case 'pcb-drc': return <UnifiedBoardDRCWorkbench />;
+    case 'pcb-constraints': return <UnifiedBoardDesignerWorkbench />;
+    case 'pcb-drc': return <UnifiedBoardDesignerWorkbench />;
     case 'bom': return <UnifiedBOMWorkbench />;
   }
 }
@@ -119,11 +117,18 @@ function renderView(view: ElectronicsWorkspaceViewId) {
 export const ElectronicsWorkspace: React.FC = () => {
   const project = useProjectStore();
   const { activeView, setActiveView } = project;
+  const setPcbSection = usePcbWorkspaceUiStore((state) => state.setActiveSection);
+  const requestPcbProblems = usePcbWorkspaceUiStore((state) => state.requestProblems);
   const snapshot = useMemo(() => evaluateElectronicsWorkflow(project), [project]);
   const activeWorkspaceView = resolveView(activeView);
   const nextDecision = decisionCopy[snapshot.nextStage];
   const currentDecision = decisionCopy[activeWorkspaceView];
   const recommendedElsewhere = !snapshot.readyForValidation && activeWorkspaceView !== snapshot.nextStage;
+
+  useEffect(() => {
+    if (activeView === 'pcb-constraints') setPcbSection('rules');
+    if (activeView === 'pcb-drc') requestPcbProblems();
+  }, [activeView, requestPcbProblems, setPcbSection]);
 
   return (
     <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 text-slate-900" aria-label="Electronics engineering workspace">
