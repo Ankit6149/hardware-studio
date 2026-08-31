@@ -58,7 +58,7 @@ describe('Electronics canonical identity and representation truth', () => {
     expect(pcb).toContain('const activeBoard = boards.find((board) => board.id === viewState.activeBoardId) || null;');
     expect(pcb).not.toContain('|| boards[0]');
     expect(pcb).toContain('Create or select a board before layout');
-    expect(pcb).toContain('runBoardDRC({ ...useProjectStore.getState(), activeBoardId: viewState.activeBoardId || \'\' })');
+    expect(pcb).toContain('runBoardDRC({ ...useProjectStore.getState(), activeBoardId: effectiveViewState.activeBoardId || \'\' })');
     expect(drawer).toContain('boards.some((board) => board.id === candidate)');
     expect(drawer).not.toContain('boards[0]');
     expect(drawer).toContain('No explicit board selected');
