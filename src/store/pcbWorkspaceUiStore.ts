@@ -33,12 +33,14 @@ interface PcbWorkspaceUiState {
   activeSection: PcbDrawerSection;
   activeLayerId: string;
   layerVisibility: Record<string, boolean>;
-  problemsRequestId: number;
+  inspectorOpen: boolean;
+  problemsOpen: boolean;
   setActiveSection: (section: PcbDrawerSection) => void;
   setActiveLayer: (layerId: string) => void;
   setLayerVisibility: (visibility: Record<string, boolean>) => void;
   toggleLayerVisibility: (layerId: string) => void;
-  requestProblems: () => void;
+  setInspectorOpen: (open: boolean) => void;
+  setProblemsOpen: (open: boolean) => void;
   reset: () => void;
 }
 
@@ -46,7 +48,8 @@ const initialState = {
   activeSection: 'objects' as PcbDrawerSection,
   activeLayerId: 'top-copper',
   layerVisibility: { ...DEFAULT_PCB_LAYER_VISIBILITY },
-  problemsRequestId: 0,
+  inspectorOpen: false,
+  problemsOpen: false,
 };
 
 export const usePcbWorkspaceUiStore = create<PcbWorkspaceUiState>((set) => ({
@@ -60,12 +63,14 @@ export const usePcbWorkspaceUiStore = create<PcbWorkspaceUiState>((set) => ({
       [layerId]: state.layerVisibility[layerId] === false,
     },
   })),
-  requestProblems: () => set((state) => ({ problemsRequestId: state.problemsRequestId + 1 })),
+  setInspectorOpen: (inspectorOpen) => set({ inspectorOpen }),
+  setProblemsOpen: (problemsOpen) => set({ problemsOpen }),
   reset: () => set({
     activeSection: initialState.activeSection,
     activeLayerId: initialState.activeLayerId,
     layerVisibility: { ...DEFAULT_PCB_LAYER_VISIBILITY },
-    problemsRequestId: 0,
+    inspectorOpen: initialState.inspectorOpen,
+    problemsOpen: initialState.problemsOpen,
   }),
 }));
 
