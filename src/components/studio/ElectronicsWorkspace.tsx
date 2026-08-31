@@ -118,7 +118,7 @@ export const ElectronicsWorkspace: React.FC = () => {
   const project = useProjectStore();
   const { activeView, setActiveView } = project;
   const setPcbSection = usePcbWorkspaceUiStore((state) => state.setActiveSection);
-  const requestPcbProblems = usePcbWorkspaceUiStore((state) => state.requestProblems);
+  const setPcbProblemsOpen = usePcbWorkspaceUiStore((state) => state.setProblemsOpen);
   const snapshot = useMemo(() => evaluateElectronicsWorkflow(project), [project]);
   const activeWorkspaceView = resolveView(activeView);
   const nextDecision = decisionCopy[snapshot.nextStage];
@@ -127,8 +127,8 @@ export const ElectronicsWorkspace: React.FC = () => {
 
   useEffect(() => {
     if (activeView === 'pcb-constraints') setPcbSection('rules');
-    if (activeView === 'pcb-drc') requestPcbProblems();
-  }, [activeView, requestPcbProblems, setPcbSection]);
+    if (activeView === 'pcb-drc') setPcbProblemsOpen(true);
+  }, [activeView, setPcbProblemsOpen, setPcbSection]);
 
   return (
     <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 text-slate-900" aria-label="Electronics engineering workspace">
