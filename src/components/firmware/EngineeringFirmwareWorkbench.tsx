@@ -6,7 +6,6 @@ import {
   Code2,
   Cpu,
   FileCheck2,
-  GitBranch,
   Link2,
   PanelRight,
   Plus,
@@ -19,7 +18,7 @@ import {
   useFirmwareWorkspaceUiStore,
   type FirmwareRepresentation,
 } from '../../store/firmwareWorkspaceUiStore';
-import type { FirmwareModule } from '../../types';
+import type { FirmwareModule, FirmwareState, FirmwareTransition } from '../../types';
 import { useFeedback } from '../feedback/FeedbackProvider';
 import { EditorDockButton } from '../editor/EditorDockButton';
 import {
@@ -46,6 +45,8 @@ interface EngineeringFirmwareWorkbenchProps {
 }
 
 const EMPTY_MODULES: FirmwareModule[] = [];
+const EMPTY_STATES: FirmwareState[] = [];
+const EMPTY_TRANSITIONS: FirmwareTransition[] = [];
 
 function representationForInitialMode(initialMode?: string): FirmwareRepresentation {
   if (initialMode === 'state-machine') return 'behavior';
@@ -61,13 +62,18 @@ const representationTitle: Record<FirmwareRepresentation, string> = {
   source: 'Source',
 };
 
+function timestampIdentity(prefix: string): { id: string; createdAt: string } {
+  const createdAt = new Date().toISOString();
+  return { id: `${prefix}_${createdAt.replace(/[^0-9]/g, '')}`, createdAt };
+}
+
 export const EngineeringFirmwareWorkbench: React.FC<EngineeringFirmwareWorkbenchProps> = ({ initialMode }) => {
   const store = useProjectStore();
   const feedback = useFeedback();
 
   const firmwareModules = store.firmwareModules ?? EMPTY_MODULES;
-  const firmwareStates = store.firmwareStates ?? [];
-  const firmwareTransitions = store.firmwareTransitions ?? [];
+  const firmwareStates = store.firmwareStates ?? EMPTY_STATES;
+  const firmwareTransitions = store.firmwareTransitions ?? EMPTY_TRANSITIONS;
   const sourceFiles = store.firmwareSourceFiles ?? [];
   const boardComponents = store.boardComponents ?? [];
   const nets = store.nets ?? [];
@@ -283,9 +289,10 @@ export const EngineeringFirmwareWorkbench: React.FC<EngineeringFirmwareWorkbench
       feedback.notify({ tone: 'warning', title: 'Link real source first', detail: 'Generated scaffolding alone cannot support a firmware build record.' });
       return;
     }
+    const identity = timestampIdentity('fw_build');
     const record = createBuildEvidenceRecord({
-      id: `fw_build_${Date.now().toString(36)}`,
-      createdAt: new Date().toISOString(),
+      id: identity.id,
+      createdAt: identity.createdAt,
       environmentName: buildEnvironment.trim(),
       outcome: buildOutcome,
       moduleIds: [selectedModule.id],
@@ -311,9 +318,10 @@ export const EngineeringFirmwareWorkbench: React.FC<EngineeringFirmwareWorkbench
     }
     try {
       const current = useProjectStore.getState();
+      const identity = timestampIdentity('fw_device');
       const { test, run } = createDeviceEvidenceRecords(current, {
-        id: Date.now().toString(36),
-        createdAt: new Date().toISOString(),
+        id: identity.id,
+        createdAt: identity.createdAt,
         moduleId: selectedModule.id,
         buildRecordId: deviceBuildId,
         deviceLabel,
@@ -477,7 +485,7 @@ export const EngineeringFirmwareWorkbench: React.FC<EngineeringFirmwareWorkbench
           {dockTab === 'problems' && (
             <div className="h-full overflow-y-auto p-3">
               <div className="grid gap-4 lg:grid-cols-2">
-                <section><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Behavior</p><div className="mt-2 space-y-1">{warnings.map((warning, index) => <div key={`${warning}-${index}`} className="flex gap-2 border-b border-slate-100 py-1.5 text-[10px] leading-4 text-slate-600"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" /><span>{warning}</span></div>)}{warnings.length === 0 && <p className="text-[10px] text-slate-400">No state-machine findings.</p>}</div></section>
+                <section><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Behavior</p><div className="mt-2 space-y-1">{warnings.map((warning, index) => <div key={`${warning.severity}-${warning.stateId || warning.transitionId || index}-${warning.message}`} className="flex gap-2 border-b border-slate-100 py-1.5 text-[10px] leading-4 text-slate-600"><AlertTriangle className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${warning.severity === 'Error' ? 'text-rose-600' : warning.severity === 'Warning' ? 'text-amber-600' : 'text-slate-400'}`} /><span><strong className="mr-1 text-slate-700">{warning.severity}</strong>{warning.message}</span></div>)}{warnings.length === 0 && <p className="text-[10px] text-slate-400">No state-machine findings.</p>}</div></section>
                 <section><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Selected module evidence</p><div className="mt-2 space-y-1">{verificationBlockers.map((blocker) => <div key={blocker} className="flex gap-2 border-b border-slate-100 py-1.5 text-[10px] leading-4 text-slate-600"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" /><span>{blocker}</span></div>)}{!selectedModule && <p className="text-[10px] text-slate-400">Select a module for evidence blockers.</p>}{selectedModule && verificationBlockers.length === 0 && <p className="text-[10px] text-emerald-700">Current evidence chain has no blockers.</p>}</div></section>
               </div>
             </div>
