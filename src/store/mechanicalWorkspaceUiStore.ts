@@ -1,13 +1,16 @@
 import { create } from 'zustand';
 
 export type MechanicalDrawerSection = 'features' | 'dimensions' | 'assembly';
+export type MechanicalRepresentation = 'layout' | 'review-3d' | 'assembly';
 
 interface MechanicalWorkspaceUiState {
   drawerSection: MechanicalDrawerSection;
+  representation: MechanicalRepresentation;
   inspectorOpen: boolean;
   problemsOpen: boolean;
   panMode: boolean;
   setDrawerSection: (drawerSection: MechanicalDrawerSection) => void;
+  setRepresentation: (representation: MechanicalRepresentation) => void;
   setInspectorOpen: (inspectorOpen: boolean) => void;
   setProblemsOpen: (problemsOpen: boolean) => void;
   setPanMode: (panMode: boolean) => void;
@@ -15,10 +18,12 @@ interface MechanicalWorkspaceUiState {
 
 export const useMechanicalWorkspaceUiStore = create<MechanicalWorkspaceUiState>((set) => ({
   drawerSection: 'features',
+  representation: 'layout',
   inspectorOpen: false,
   problemsOpen: false,
   panMode: false,
   setDrawerSection: (drawerSection) => set({ drawerSection }),
+  setRepresentation: (representation) => set({ representation }),
   setInspectorOpen: (inspectorOpen) => set({ inspectorOpen }),
   setProblemsOpen: (problemsOpen) => set({ problemsOpen }),
   setPanMode: (panMode) => set({ panMode }),
