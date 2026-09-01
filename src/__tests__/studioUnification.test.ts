@@ -82,7 +82,7 @@ describe('golden-path regression guards', () => {
     expect(existsSync(new URL('../components/PCBConstraints.tsx', import.meta.url))).toBe(false);
   });
 
-  it('adapts editors to selected canonical context without mutating the schematic on open', () => {
+  it('adapts editors to selected canonical context without mutating Electronics on open', () => {
     const adapters = source('../components/studio/UnifiedWorkbenchAdapters.tsx');
     const library = source('../components/component-library/ComponentLibraryWorkbench.tsx');
     const schematic = source('../components/schematic/EngineeringSchematicWorkbench.tsx');
@@ -91,9 +91,9 @@ describe('golden-path regression guards', () => {
     expect(appShell).not.toContain('placeComponentOnSchematic');
     expect(adapters).toContain('<EngineeringSchematicWorkbench />');
     expect(adapters).toContain('<EngineeringBoardWorkbench />');
-    expect(adapters).not.toContain('useEffect');
     expect(adapters).not.toContain('previousIds');
     expect(adapters).not.toContain('useProjectStore');
+    expect(adapters).toContain('if (requestedMode) requestMechanicalMode(null);');
     expect(library).toContain('setActiveComponentDefinition(selectedComponent.libraryId)');
     expect(library).toContain('setContextBoard(effectiveBoard.id)');
     expect(library).toContain('setActiveComponent(component.id)');
