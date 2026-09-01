@@ -44,9 +44,11 @@ describe('commercial-grade workbench UX contracts', () => {
     expect(drawer).toContain("id: 'files', label: 'Files'");
     expect(drawer).toContain("setSelectedFileId(file.id)");
     expect(firmware).toContain('lineNumbers');
-    expect(firmware).toContain('Ctrl/Cmd+S');
+    expect(firmware).toContain('event.ctrlKey || event.metaKey');
+    expect(firmware).toContain("event.key.toLowerCase() === 's'");
+    expect(firmware).toContain('handleSaveFile()');
     expect(firmware).toContain('Ln {cursor.line}, Col {cursor.column}');
-    expect(firmware).toContain("if (event.key === 'Tab')");
+    expect(firmware).toContain("if (event.key !== 'Tab' || !activeFile) return;");
     expect(firmware).toContain('Generated · not verification');
   });
 });
