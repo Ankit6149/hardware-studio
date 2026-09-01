@@ -45,9 +45,7 @@ export const FirmwareProjectDrawer: React.FC = () => {
   };
 
   const addModule = () => {
-    const id = `fw_module_${Date.now().toString(36)}`;
     addFirmwareModule({
-      id,
       name: `Module_${modules.length + 1}`,
       type: 'Driver',
       description: '',
@@ -60,9 +58,7 @@ export const FirmwareProjectDrawer: React.FC = () => {
       sourceFiles: [],
       status: 'Draft',
     });
-    setSelectedModuleId(id);
     setRepresentation('modules');
-    setInspectorOpen(true);
   };
 
   return (
