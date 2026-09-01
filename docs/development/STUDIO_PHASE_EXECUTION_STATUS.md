@@ -27,96 +27,144 @@ Open-issue count is not the completion metric. The product gates and verified us
 | **U2 — Project Home** | Truthful Home model landed; not a substitute for durable history | Next action/blocker/lifecycle logic uses real domain evidence. Do not fabricate “recent changes” from timestamps/counts. | Add durable recent engineering change history only when command/repository history supports it. |
 | **U3 — Electronics reference workbench** | Substantially converged; engineering depth still open | Shared identity, Schematic/PCB/BOM/contextual tools and common editor grammar are established. | Preserve canonical identity while #13–#15 deepen engineering capability. |
 | **U4 — PCB editor depth** | Structural convergence landed; real PCB engine remains open | PCB owns one Project Drawer, one Inspector, one Problems dock, explicit board identity/rules and no fake auto-place/autoroute claims. | Continue #15 for real PCB depth; do not confuse UX convergence with ECAD completion. |
-| **U5 — Mechanical** | **Structural UX convergence complete** | PR #107 / #106: one drawer + explicit physical input. PR #110 / #109: one Mechanical workbench with 2D Layout / 3D Review / Assembly representations. #16/#17 remain open for real sketch/CAD engineering. | Continue #16/#17 in the parallel engineering track; do not fake solver/CAD depth in UX phases. |
-| **U6 — Firmware** | **Active** | Existing Firmware has useful modules/state/source/evidence foundations, but still duplicates shell navigation internally, auto-selects the first module/file in places, and mixes manual evidence capture into authoring. | U6.1: one Firmware Project Drawer + one center work surface + one Inspector + bottom Build/Device/Problems dock; remove duplicate mode navigation and implicit selection. |
-| **U7 — Validation** | Pending dedicated phase pass | Existing test/run/evidence foundations exist; phase completion requires clear Define / Execute / Review separation. | Run dedicated U7 convergence against #19. |
-| **U8 — Release** | Pending dedicated phase pass | Version/output/release foundations exist but remain governed by #20/#21 and release truth gates. | Run dedicated U8 control-surface convergence. |
-| **U9 — Final polish** | Not started by design | Structural work must stabilize first. | Only after U6–U8 convergence: final visual system, accessibility, responsive layouts, motion and performance. |
+| **U5 — Mechanical** | **Structural UX convergence complete** | PR #107/#106 established one drawer + explicit physical input. PR #110/#109 converged 2D Layout / 3D Review / Assembly. #16/#17 remain open for real sketch/CAD engineering. | Continue #16/#17 in parallel; do not fake solver/CAD depth in UX phases. |
+| **U6 — Firmware** | **Structural UX convergence complete** | PR #113/#112: one Firmware drawer/workbench/Inspector/dock, explicit module/file/build selection, duplicate `FirmwareStudio` removed. #18 remains open for real filesystem/PlatformIO/device/serial engineering. | Continue #18 in parallel through the shared Firmware grammar. |
+| **U7 — Validation** | **Active — U7.1 scoped in #114** | Existing runner/history foundations are useful but current UI has two implicit first-test fallbacks and blends Define/Execute/Review. #19 remains the durable-validation authority. | U7.1: explicit test/run selection, one drawer, Define → Execute → Review, bottom execution/evidence dock. |
+| **U8 — Release** | Pending dedicated phase pass | Version/output/release foundations exist but remain governed by #20/#21 and release truth gates. | Run dedicated U8 control-surface convergence after U7 handoff. |
+| **U9 — Final polish** | Not started by design | Structural work must stabilize first. | After U7–U8: final visual hierarchy, functional visuals, accessibility, responsive layouts, motion/performance and interaction predictability. |
 
-## Latest completed Mechanical slice — U5.2
+## Latest completed slice — U6.1 Firmware convergence
 
-**PR:** #110 — `U5.2: Converge Mechanical representations inside one workbench`  
-**Issue:** #109 — completed  
-**Merged master:** `f83b2e51b99c259b8e885f241d903b0f116ac7ae`
+**PR:** #113 — `U6.1: Converge Firmware on one drawer and explicit evidence grammar`  
+**Issue:** #112 — completed  
+**Merged master:** `ab4312f0f929103fc7baf3f2b52a80610639e72f`  
+**Verified exact PR head:** `646e70a581dc524ac8a8bfcd2899fe488a6dfdae`
 
-Verified exact-head gate before merge:
+Exact-head verification before merge:
 
 - lint: pass;
 - typecheck: pass;
-- tests: 326/326 pass;
+- tests: 332/332 pass;
 - production build: pass;
-- Vercel deployment status: pass.
+- Vercel: inspected external Hobby-plan build-rate-limit status; not an application build failure.
 
-Landed behavior:
+### U6.1 landed behavior
 
-- one contextual Mechanical representation switch: **2D Layout / 3D Review / Assembly**;
-- representation choice is UI/session state, not engineering project state;
-- legacy Mechanical mode requests are translated for compatibility and then cleared;
-- shared Mechanical selection/context is preserved across representations;
-- 3D review is mounted inside the shared editor grammar instead of behaving like a second application;
-- 3D is explicitly classified as visualization/review only and never as CAD or validation authority;
-- unresolved board/package/placement/mechanical geometry stays unresolved.
+- one shell-owned Firmware Project Drawer: **Modules / Files / Map / Environment**;
+- one `EngineeringFirmwareWorkbench` authority for all live Firmware routes;
+- the retired 676-line `FirmwareStudio.tsx` duplicate mini-app is physically deleted;
+- module responsibility, Behavior/state-machine, Hardware Map and Source are representations of one Firmware workbench;
+- right Inspector is selection-aware;
+- bottom dock owns **Problems / Build Evidence / Device Evidence**;
+- `firmwareWorkspaceUiStore` contains only UI/session state;
+- canonical firmware modules, states, transitions, mappings, source records and evidence remain in project state;
+- opening Firmware does not auto-select the first module;
+- opening Source does not auto-select the first file;
+- generated scaffolding does not silently become the selected/authoritative implementation;
+- device evidence requires an explicitly chosen successful build record;
+- source-editor tree ownership moved to the shared Firmware drawer;
+- source editor retains line numbers, cursor position, keyboard save and explicit generated-file truth labels.
 
-U5 structural UX convergence is therefore complete enough to hand off to U6. This does **not** mean Mechanical engineering is complete.
+### U6.1 truth boundary
 
-## Mechanical engineering boundary after U5
+U6.1 deliberately did **not** claim real firmware execution capability.
 
-Issue #16 remains the authority for:
+Current Build Evidence:
+- records externally produced build metadata/logs;
+- does not claim Hardware Studio ran a compiler.
 
-- canonical sketch topology;
-- persistent geometric/dimensional constraints;
-- solver state/conflict explanation;
-- profile detection;
-- typed parameters/expressions;
-- drawing foundations.
+Current Device Evidence:
+- records an externally observed device result;
+- does not claim Hardware Studio flashed, queried or monitored the device.
 
-Issue #17 remains the authority for:
+Generated source:
+- remains scaffolding;
+- remains `Generated · not verification`.
 
-- reviewed CAD-kernel adapter;
-- exact B-Rep solids/topology;
-- parametric feature history/regeneration;
-- assemblies/mates;
-- exact interference/clearance;
-- qualified STEP/STL exchange.
+State-machine diagnostics:
+- validate structural reachability/transition integrity only;
+- do not prove compilation, timing, hardware behavior or runtime correctness.
 
-Do not close either issue because the Mechanical workbench now looks coherent.
+## Firmware engineering boundary after U6
 
-## Active bounded slice — U6.1 Firmware shell convergence
+Issue #18 remains the authority for:
 
-### Current structural defects
+- filesystem-backed project tree and conflict/recovery semantics;
+- Monaco/equivalent source editor and language services;
+- authoritative PlatformIO environments and dependency/toolchain configuration;
+- real build/clean/upload/erase/device-list operations;
+- hardened exact-payload approval flow;
+- durable queued/running/completed/failed/cancelled operation records;
+- streaming stdout/stderr, timeout, retry and cancellation;
+- real serial monitor and evidence capture;
+- atomic file writes/backups plus path/origin/symlink hardening;
+- content-addressed artifacts tied to source snapshot, tools and product version;
+- richer typed hardware maps/conflict detection;
+- a reference-device edit → build → approved flash → serial → Validation workflow.
 
-The current Firmware experience still exposes overlapping structures:
+Do not close #18 because U6 is structurally coherent.
 
-- shell Project Drawer destinations for State Machine / Hardware Map / Source / Evidence;
-- a second internal Firmware mode strip for Modules / Behavior / Hardware Map / Source / Evidence;
-- source editor owns another internal Explorer panel;
-- `FirmwareStudio` can fall back to the first firmware module when nothing was explicitly selected;
-- `FirmwareCodePreview` can fall back to the first source file;
-- build/device evidence entry is mixed into the same large authoring component;
-- real filesystem/PlatformIO/device execution remains governed by #18 and must not be simulated.
+## Active bounded slice — U7.1 Validation convergence
 
-### U6.1 target grammar
+**Issue:** #114 — `[U7.1][Validation] Converge Define / Execute / Review with explicit test selection`
 
-- **Left Project Drawer:** Files | Modules | Hardware Map | Tasks/Environment | Evidence context as supported by real project state;
-- **Center:** Source / Behavior / module authoring surface;
-- **Right Inspector:** selected module/file/hardware mapping only;
-- **Bottom dock:** Problems | Build | Device | Serial/Logs when real operations exist;
-- **Top:** contextual edit/build commands, not another navigation row.
+### Current structural defects confirmed by audit
 
-### Truth constraints
+Validation currently has two independent implicit-selection paths:
 
-- opening Firmware must not auto-select the first module or file as canonical context;
-- build/upload/device controls must not claim execution unless the local bridge actually ran them;
-- recorded manual evidence remains visibly recorded metadata, not executed build/device proof;
-- generated source remains scaffolding, not a hidden second source of truth;
-- #18 stays open until real filesystem, hardened PlatformIO/device operations, durable evidence and serial workflow satisfy its acceptance criteria.
+1. `ValidationStudio` resolves its selected test as explicit ID **or `visibleTests[0]`**;
+2. `UnifiedValidationWorkbench` resolves execution target as explicit ID **or `linkedTests[0]` or `validationTests[0]`**.
+
+That means authoring and execution can silently point at a test the user never selected, and the two surfaces can reason about different implicit tests.
+
+Other confirmed problems:
+
+- run/evidence interaction is a floating right-side panel instead of the shared bottom-dock grammar;
+- definition fields, mutable test evidence, execution, and historical review are visually blended;
+- Coverage and Factory QA are route modes rather than clearly contextual jobs inside one Validation workbench;
+- current append-only run records are useful but are not the durable hashed/reviewed evidence model required by #19.
+
+### U7.1 target grammar
+
+- **Left Project Drawer:** explicit Tests / Coverage / Factory QA / Runs context backed by existing project data;
+- **Center:** explicit **Define / Execute / Review** job surface;
+- **Right Inspector:** explicitly selected test/run context only;
+- **Bottom dock:** execution output, Problems and evidence/history context rather than a floating side mini-app;
+- **Top:** contextual actions only.
+
+### Execution truth to preserve
+
+The current runner has bounded useful authority and U7 must preserve it:
+
+- DRC automation derives only from implemented local DRC rules;
+- firmware-state automation validates structural state-machine consistency only;
+- Mechanical automation is an approximate AABB collision screen and cannot auto-pass exact physical clearance;
+- Thermal has no internal solver and requires external evidence + reviewer for a verdict;
+- manual/physical validation cannot Pass from arbitrary text or a measurement alone;
+- retests append a new run while prior runs remain present.
+
+## Validation engineering boundary during U7
+
+Issue #19 remains open for the real durable validation system, including:
+
+- version/procedure/DUT/equipment/calibration binding;
+- durable hashed evidence storage and provenance;
+- typed measurement uncertainty/statistical analysis;
+- pause/resume/cancel/incomplete execution recovery;
+- immutable reviewed/sign-off records;
+- waivers/deviations;
+- retest lineage and dependency-change comparison;
+- deterministic stale propagation;
+- release-grade validation policy.
+
+U7 structural convergence must not hide those gaps or close #19.
 
 ## Phase handoff discipline
 
-After every U6 slice:
+For U7 and U8:
 
-1. merge only after exact-head lint/typecheck/tests/build/deployment inspection;
-2. update this ledger and Firmware-specific notes;
-3. state exactly which #18 requirements remain;
-4. move to U7 only after Firmware’s shell/interaction grammar is structurally coherent;
-5. continue #18 separately until its engineering completion guard is genuinely satisfied.
+1. implement one bounded structural/truth slice at a time;
+2. merge only after exact-head lint/typecheck/tests/build/deployment inspection;
+3. update this ledger plus domain-specific notes immediately after merge;
+4. keep #19/#20/#21 open until their engineering completion guards are genuinely satisfied;
+5. do not start U9 polish until U7/U8 structure is stable enough that polish will not be thrown away.
