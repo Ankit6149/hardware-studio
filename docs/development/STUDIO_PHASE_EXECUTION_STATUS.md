@@ -1,6 +1,6 @@
 # Hardware Studio — Studio phase execution status
 
-**Status date:** 2026-08-31  
+**Status date:** 2026-09-01  
 **Primary direction:** `STUDIO_UX_CONVERGENCE_EXECUTION_PLAN.md`  
 **Engineering authority:** `PRODUCT_RECOVERY_EXECUTION_PLAN.md`
 
@@ -27,79 +27,96 @@ Open-issue count is not the completion metric. The product gates and verified us
 | **U2 — Project Home** | Truthful Home model landed; not a substitute for durable history | Next action/blocker/lifecycle logic uses real domain evidence. Do not fabricate “recent changes” from timestamps/counts. | Add durable recent engineering change history only when command/repository history supports it. |
 | **U3 — Electronics reference workbench** | Substantially converged; engineering depth still open | Shared identity, Schematic/PCB/BOM/contextual tools and common editor grammar are established. | Preserve canonical identity while #13–#15 deepen engineering capability. |
 | **U4 — PCB editor depth** | Structural convergence landed; real PCB engine remains open | PCB owns one Project Drawer, one Inspector, one Problems dock, explicit board identity/rules and no fake auto-place/autoroute claims. | Continue #15 for real PCB depth; do not confuse UX convergence with ECAD completion. |
-| **U5 — Mechanical** | **U5.1 merged; U5.2 next** | PR #107 / issue #106: one Mechanical Project Drawer, shared selection, explicit dimensions/tolerances/material/assembly evidence, no auto-first-object selection. #16/#17 remain open. | Converge 2D / 3D / Assembly as representations inside one Mechanical workbench. |
-| **U6 — Firmware** | Pending dedicated phase pass | Existing firmware surfaces already contain useful state/source/evidence foundations, but the phase-level shell convergence has not been declared complete. | After U5 representation convergence, converge files/modules/hardware map/editor/build-upload-serial Problems grammar. |
+| **U5 — Mechanical** | **Structural UX convergence complete** | PR #107 / #106: one drawer + explicit physical input. PR #110 / #109: one Mechanical workbench with 2D Layout / 3D Review / Assembly representations. #16/#17 remain open for real sketch/CAD engineering. | Continue #16/#17 in the parallel engineering track; do not fake solver/CAD depth in UX phases. |
+| **U6 — Firmware** | **Active** | Existing Firmware has useful modules/state/source/evidence foundations, but still duplicates shell navigation internally, auto-selects the first module/file in places, and mixes manual evidence capture into authoring. | U6.1: one Firmware Project Drawer + one center work surface + one Inspector + bottom Build/Device/Problems dock; remove duplicate mode navigation and implicit selection. |
 | **U7 — Validation** | Pending dedicated phase pass | Existing test/run/evidence foundations exist; phase completion requires clear Define / Execute / Review separation. | Run dedicated U7 convergence against #19. |
 | **U8 — Release** | Pending dedicated phase pass | Version/output/release foundations exist but remain governed by #20/#21 and release truth gates. | Run dedicated U8 control-surface convergence. |
-| **U9 — Final polish** | Not started by design | Structural work must stabilize first. | Only after U5–U8 convergence: final visual system, accessibility, responsive layouts, motion and performance. |
+| **U9 — Final polish** | Not started by design | Structural work must stabilize first. | Only after U6–U8 convergence: final visual system, accessibility, responsive layouts, motion and performance. |
 
-## Latest completed slice — U5.1
+## Latest completed Mechanical slice — U5.2
 
-**PR:** #107 — `U5.1: Converge Mechanical on one Project Drawer and explicit physical input`  
-**Issue:** #106 — completed  
-**Merged master:** `e1bc7f457329c2c0837b425ca4b862f916e566fe`
+**PR:** #110 — `U5.2: Converge Mechanical representations inside one workbench`  
+**Issue:** #109 — completed  
+**Merged master:** `f83b2e51b99c259b8e885f241d903b0f116ac7ae`
 
 Verified exact-head gate before merge:
 
 - lint: pass;
 - typecheck: pass;
-- tests: 321/321 pass;
+- tests: 326/326 pass;
 - production build: pass;
-- Vercel: external Hobby-plan build-rate-limit status, not a code failure.
+- Vercel deployment status: pass.
 
-Replaced:
+Landed behavior:
 
-- internal 300px Mechanical `Design Browser`;
-- automatic first-object selection;
-- fabricated starter physical dimensions;
-- fabricated `0.10 mm` tolerance defaults;
-- default assembly `Screw Thread` evidence.
+- one contextual Mechanical representation switch: **2D Layout / 3D Review / Assembly**;
+- representation choice is UI/session state, not engineering project state;
+- legacy Mechanical mode requests are translated for compatibility and then cleared;
+- shared Mechanical selection/context is preserved across representations;
+- 3D review is mounted inside the shared editor grammar instead of behaving like a second application;
+- 3D is explicitly classified as visualization/review only and never as CAD or validation authority;
+- unresolved board/package/placement/mechanical geometry stays unresolved.
 
-Preserved:
+U5 structural UX convergence is therefore complete enough to hand off to U6. This does **not** mean Mechanical engineering is complete.
 
-- canonical Mechanical project objects/dimensions/assembly layers;
-- explicit PCB outline/envelope synchronization;
-- pointer transaction behavior;
-- validation/findings;
-- shared shell Inspector and Problems grammar.
+## Mechanical engineering boundary after U5
 
-## Next bounded slice — U5.2
+Issue #16 remains the authority for:
 
-### Goal
-
-Make Mechanical feel like **one product workbench with connected 2D, 3D and Assembly representations**.
-
-### Required outcomes
-
-- representation switching lives inside Mechanical context rather than creating another global navigation model;
-- the same Mechanical Project Drawer remains the structural authority;
-- 2D and 3D preserve explicit product/board/selection context wherever the underlying canonical identity supports it;
-- the 3D view is visually and semantically classified as evidence-backed visualization, not “real CAD”;
-- unresolved package/board/mechanical geometry remains unresolved;
-- Assembly is presented as the same product's physical structure, not a disconnected mini-app;
-- legacy `requestedMechanicalMode` handling is reduced to a compatibility responsibility, not the permanent information architecture.
-
-### Explicit non-goals
-
-U5.2 does **not** satisfy #16 or #17. It does not claim:
-
-- constraint solver;
 - canonical sketch topology;
-- B-Rep CAD kernel;
-- parametric feature tree;
-- assembly mate solver;
-- exact interference;
-- qualified STEP exchange.
+- persistent geometric/dimensional constraints;
+- solver state/conflict explanation;
+- profile detection;
+- typed parameters/expressions;
+- drawing foundations.
 
-Those remain deeper Mechanical engineering work after the workbench representations are structurally converged.
+Issue #17 remains the authority for:
+
+- reviewed CAD-kernel adapter;
+- exact B-Rep solids/topology;
+- parametric feature history/regeneration;
+- assemblies/mates;
+- exact interference/clearance;
+- qualified STEP/STL exchange.
+
+Do not close either issue because the Mechanical workbench now looks coherent.
+
+## Active bounded slice — U6.1 Firmware shell convergence
+
+### Current structural defects
+
+The current Firmware experience still exposes overlapping structures:
+
+- shell Project Drawer destinations for State Machine / Hardware Map / Source / Evidence;
+- a second internal Firmware mode strip for Modules / Behavior / Hardware Map / Source / Evidence;
+- source editor owns another internal Explorer panel;
+- `FirmwareStudio` can fall back to the first firmware module when nothing was explicitly selected;
+- `FirmwareCodePreview` can fall back to the first source file;
+- build/device evidence entry is mixed into the same large authoring component;
+- real filesystem/PlatformIO/device execution remains governed by #18 and must not be simulated.
+
+### U6.1 target grammar
+
+- **Left Project Drawer:** Files | Modules | Hardware Map | Tasks/Environment | Evidence context as supported by real project state;
+- **Center:** Source / Behavior / module authoring surface;
+- **Right Inspector:** selected module/file/hardware mapping only;
+- **Bottom dock:** Problems | Build | Device | Serial/Logs when real operations exist;
+- **Top:** contextual edit/build commands, not another navigation row.
+
+### Truth constraints
+
+- opening Firmware must not auto-select the first module or file as canonical context;
+- build/upload/device controls must not claim execution unless the local bridge actually ran them;
+- recorded manual evidence remains visibly recorded metadata, not executed build/device proof;
+- generated source remains scaffolding, not a hidden second source of truth;
+- #18 stays open until real filesystem, hardened PlatformIO/device operations, durable evidence and serial workflow satisfy its acceptance criteria.
 
 ## Phase handoff discipline
 
-When U5 is structurally converged enough to hand off:
+After every U6 slice:
 
-1. update this ledger and `U5_MECHANICAL_CONVERGENCE_NOTES.md`;
-2. record which #16/#17 requirements remain;
-3. move to U6 without pretending Mechanical engineering is complete;
-4. continue #16/#17 in the parallel engineering track.
-
-The same pattern applies to U6, U7 and U8.
+1. merge only after exact-head lint/typecheck/tests/build/deployment inspection;
+2. update this ledger and Firmware-specific notes;
+3. state exactly which #18 requirements remain;
+4. move to U7 only after Firmware’s shell/interaction grammar is structurally coherent;
+5. continue #18 separately until its engineering completion guard is genuinely satisfied.
