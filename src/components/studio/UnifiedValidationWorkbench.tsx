@@ -2,17 +2,13 @@
 
 import React, { useState } from 'react';
 import {
-  AlertTriangle,
-  CheckCircle2,
   ClipboardList,
   FileCheck2,
   History,
-  Link2,
   PanelRight,
   Play,
   Plus,
   TestTube2,
-  XCircle,
 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
@@ -41,7 +37,24 @@ interface UnifiedValidationWorkbenchProps {
   initialMode: 'tests' | 'coverage' | 'factory-qa';
 }
 
+interface ValidationRunStepSnapshot {
+  stepNumber?: number;
+  instruction: string;
+  expectedResult: string;
+  completed?: boolean;
+}
+
 const EMPTY_RUNS: ValidationRun[] = [];
+
+function isValidationRunStepSnapshot(value: unknown): value is ValidationRunStepSnapshot {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.instruction === 'string' && typeof candidate.expectedResult === 'string';
+}
+
+function getValidationRunStepSnapshots(run: ValidationRun): ValidationRunStepSnapshot[] {
+  return (run.stepResults || []).filter(isValidationRunStepSnapshot);
+}
 
 function runStatusToTestStatus(status: string): string {
   if (status === 'Pass' || status === 'Passed') return 'Passed';
@@ -202,6 +215,8 @@ const ValidationReviewSurface: React.FC<{
 
   const history = getValidationRunHistory(project, test.id);
   const selectedRun = selectedRunId ? history.find((run) => run.id === selectedRunId) ?? null : null;
+  const stepSnapshots = selectedRun ? getValidationRunStepSnapshots(selectedRun) : [];
+  const unresolvedStepSnapshots = selectedRun ? (selectedRun.stepResults || []).length - stepSnapshots.length : 0;
 
   return (
     <main className="flex h-full min-h-0 overflow-hidden bg-white" aria-label={`Review ${test.name}`}>
@@ -221,8 +236,8 @@ const ValidationReviewSurface: React.FC<{
           <div className="mx-auto max-w-3xl">
             <div className="flex items-start justify-between gap-3 border-b border-slate-300 pb-4"><div><div className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Frozen run snapshot</div><h3 className="mt-1 text-lg font-semibold text-slate-950">Run #{selectedRun.runNumber || 1}</h3><p className="mt-1 text-[10px] text-slate-500">{selectedRun.timestamp || 'Timestamp unresolved'} · {selectedRun.runBy || 'Actor unresolved'}</p></div><span className={`text-sm font-semibold ${statusTone(selectedRun.status)}`}>{selectedRun.status}</span></div>
             <dl className="grid gap-3 border-b border-slate-200 py-4 sm:grid-cols-2"><div><dt className="text-[8px] uppercase tracking-[0.1em] text-slate-400">Observed value</dt><dd className="mt-1 text-xs text-slate-800">{selectedRun.measuredValue == null ? 'Not recorded' : String(selectedRun.measuredValue)}</dd></div><div><dt className="text-[8px] uppercase tracking-[0.1em] text-slate-400">Environment</dt><dd className="mt-1 text-xs text-slate-800">{selectedRun.environment || 'Not recorded'}</dd></div><div><dt className="text-[8px] uppercase tracking-[0.1em] text-slate-400">Pass criteria snapshot</dt><dd className="mt-1 text-xs leading-5 text-slate-800">{selectedRun.passCriteria || 'Not recorded'}</dd></div><div><dt className="text-[8px] uppercase tracking-[0.1em] text-slate-400">Evidence reference</dt><dd className="mt-1 break-all text-xs text-slate-800">{selectedRun.evidenceLink || 'Not recorded'}</dd></div></dl>
-            <section className="py-4"><h4 className="text-xs font-semibold text-slate-900">Captured procedure snapshot</h4><div className="mt-2 divide-y divide-slate-100 border-y border-slate-200">{(selectedRun.stepResults || []).map((step, index) => <div key={`${step.stepNumber}-${index}`} className="grid gap-2 px-2 py-2 text-[10px] sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)]"><span className="font-mono text-slate-400">{index + 1}</span><span>{step.instruction}</span><span className="text-slate-500">{step.expectedResult}</span></div>)}{(selectedRun.stepResults || []).length === 0 && <p className="py-4 text-center text-[10px] text-slate-400">No procedure snapshot recorded.</p>}</div></section>
-            <section className="border-t border-slate-200 py-4"><h4 className="text-xs font-semibold text-slate-900">Evidence snapshot</h4><div className="mt-2 space-y-1">{(selectedRun.evidence || []).map((item, index) => <div key={`${String((item as { id?: string }).id || 'evidence')}-${index}`} className="border border-slate-200 px-2.5 py-2 text-[10px] text-slate-600">{typeof item === 'object' && item ? String((item as { value?: unknown }).value ?? JSON.stringify(item)) : String(item)}</div>)}{(selectedRun.evidence || []).length === 0 && <p className="text-[10px] text-slate-400">No frozen evidence items recorded.</p>}</div></section>
+            <section className="py-4"><h4 className="text-xs font-semibold text-slate-900">Captured procedure snapshot</h4><div className="mt-2 divide-y divide-slate-100 border-y border-slate-200">{stepSnapshots.map((step, index) => <div key={`${step.stepNumber ?? index + 1}-${index}`} className="grid gap-2 px-2 py-2 text-[10px] sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)]"><span className="font-mono text-slate-400">{index + 1}</span><span>{step.instruction}</span><span className="text-slate-500">{step.expectedResult}</span></div>)}{stepSnapshots.length === 0 && <p className="py-4 text-center text-[10px] text-slate-400">No readable procedure snapshot recorded.</p>}{unresolvedStepSnapshots > 0 && <p className="border-t border-amber-200 bg-amber-50 px-2 py-2 text-[9px] leading-4 text-amber-900">{unresolvedStepSnapshots} legacy step snapshot{unresolvedStepSnapshots === 1 ? '' : 's'} could not be interpreted as the current procedure shape and remain unresolved.</p>}</div></section>
+            <section className="border-t border-slate-200 py-4"><h4 className="text-xs font-semibold text-slate-900">Evidence snapshot</h4><div className="mt-2 space-y-1">{(selectedRun.evidence || []).map((item, index) => <div key={`${typeof item === 'object' && item && 'id' in item ? String((item as { id?: unknown }).id) : 'evidence'}-${index}`} className="border border-slate-200 px-2.5 py-2 text-[10px] text-slate-600">{typeof item === 'object' && item ? String('value' in item ? (item as { value?: unknown }).value ?? JSON.stringify(item) : JSON.stringify(item)) : String(item)}</div>)}{(selectedRun.evidence || []).length === 0 && <p className="text-[10px] text-slate-400">No frozen evidence items recorded.</p>}</div></section>
           </div>
         ) : <EmptySelection title="Select a run" detail="Run history is visible at left, but Review does not silently select the latest run. Choose the exact snapshot you want to inspect." />}
       </section>
