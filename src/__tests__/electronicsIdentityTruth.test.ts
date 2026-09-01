@@ -37,8 +37,9 @@ describe('Electronics canonical identity and representation truth', () => {
     expect(library).not.toContain("setSelectedBoardId(boards[0]?.id ?? '')");
 
     expect(adapters).not.toContain('previousIds');
-    expect(adapters).not.toContain('useEffect');
     expect(adapters).not.toContain('useProjectStore');
+    expect(adapters).not.toContain('placeComponentOnSchematic');
+    expect(adapters).toContain('if (requestedMode) requestMechanicalMode(null);');
   });
 
   it('never invents a selected BOM component and stores canonical BOM linkage', () => {
