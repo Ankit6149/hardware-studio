@@ -36,10 +36,13 @@ describe('commercial-grade workbench UX contracts', () => {
 
   it('provides an IDE-like firmware source workspace without mutating files on open', () => {
     const firmware = source('../components/firmware/FirmwareCodePreview.tsx');
+    const drawer = source('../components/firmware/FirmwareProjectDrawer.tsx');
 
     expect(firmware).not.toContain('useEffect');
     expect(firmware).toContain('Opening Source does not generate files');
-    expect(firmware).toContain('Explorer');
+    expect(firmware).not.toContain('aria-label="Firmware source files"');
+    expect(drawer).toContain("id: 'files', label: 'Files'");
+    expect(drawer).toContain("setSelectedFileId(file.id)");
     expect(firmware).toContain('lineNumbers');
     expect(firmware).toContain('Ctrl/Cmd+S');
     expect(firmware).toContain('Ln {cursor.line}, Col {cursor.column}');
