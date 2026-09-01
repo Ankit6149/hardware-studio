@@ -4,80 +4,106 @@ This file records the bounded Mechanical UX/convergence decisions while the broa
 
 ## Current status
 
-**U5.1 is complete and merged via PR #107.**  
-Merged commit: `e1bc7f457329c2c0837b425ca4b862f916e566fe`  
-Completed issue: #106  
-Engineering parents that intentionally remain open: #16 and #17.
+**U5 structural UX convergence is complete enough to hand off to U6.**
 
-The exact U5.1 PR head passed:
+Completed slices:
 
-- lint;
-- TypeScript typecheck;
-- 321/321 tests;
-- production build.
+- **U5.1 — PR #107 / issue #106**  
+  Merge: `e1bc7f457329c2c0837b425ca4b862f916e566fe`
+- **U5.2 — PR #110 / issue #109**  
+  Merge: `f83b2e51b99c259b8e885f241d903b0f116ac7ae`
 
-The Vercel status on the PR head was still the known Hobby-plan build-rate-limit status and was recorded separately from code correctness.
+Engineering parents that intentionally remain open: **#16 and #17**.
 
-## U5.1 shell contract now implemented
+## U5.1 — one Mechanical shell and explicit physical input
 
-- Mechanical uses the shared Studio shell and one Project Drawer.
-- The old internal Mechanical `Design Browser` is removed rather than hidden.
-- Drawer owns canonical **Features**, **Dimensions**, and **Assembly** context.
-- Center remains the authoritative Mechanical viewport/work surface.
-- Right Inspector edits the selected canonical `mechanical-object` only.
-- Bottom dock owns Mechanical findings.
-- Panel state remains UI/session state in `mechanicalWorkspaceUiStore`, outside the canonical project model.
-- Drawer, viewport, and Inspector share selection through `studioContextStore`.
+U5.1 established:
 
-## U5.1 truthfulness rules now protected
+- one shell-owned Mechanical Project Drawer;
+- canonical Features / Dimensions / Assembly context;
+- shared `mechanical-object` selection between drawer, viewport and Inspector;
+- UI-only Mechanical panel state;
+- no automatic first-object selection;
+- no fabricated starter geometry;
+- no default tolerance values;
+- no invented material/fastening evidence;
+- explicit PCB-envelope synchronization only from real board/outline context.
 
-- Opening Mechanical never auto-selects the first object.
-- New geometry never receives fabricated starter dimensions.
-- Feature creation requires explicit valid position and shape dimensions before project mutation.
-- Tolerances are unresolved until explicitly entered.
-- Assembly rows do not invent material or fastening method.
-- PCB envelopes are synchronized only from explicit board/outline context.
-- The current Three.js representation is treated as a visualization/coordination renderer over explicit evidence, not as a CAD kernel.
-- U5.1 does not claim parametric constraints, exact B-Rep solids, qualified interference, or manufacturing-grade STEP/STL output.
+Exact-head verification before merge:
 
-## Current Mechanical representation boundary
+- lint: pass;
+- TypeScript: pass;
+- tests: 321/321 pass;
+- production build: pass.
 
-The repository currently has two different levels of Mechanical capability and they must not be conflated:
+## U5.2 — one Mechanical workbench, three explicit representations
 
-1. **Authoring/layout evidence** — canonical `mechanicalObjects`, dimensions, assembly layers, explicit board references, pointer transactions, and validation findings.
-2. **3D visualization/coordination** — `UnifiedBoard3DView` renders explicit board/package/mechanical dimensions when available and leaves missing geometry unresolved.
+U5.2 converged **2D Layout / 3D Review / Assembly** into one Mechanical workbench.
 
-This 3D view is useful and should be integrated into the Mechanical workbench, but it is **not** the modeling source of truth. Issue #17 remains the authority for a real CAD kernel, exact topology, feature history, assemblies/mates, exact interference, and STEP exchange.
+Implemented:
 
-## U5.2 next slice
+- contextual Mechanical representation tabs rather than another global navigation layer;
+- representation choice stored in `mechanicalWorkspaceUiStore`, not project engineering state;
+- legacy `canvas`, `assembly`, `3d-preview`, and `webgl-3d` requests translated as compatibility handoffs and cleared;
+- same shared Mechanical Project Drawer remains the structural owner around representations;
+- canonical shared selection is preserved while representations change;
+- 3D review now sits inside the shared editor grammar instead of presenting itself as a separate application;
+- 3D review explicitly states **Visualization only — not CAD / not validation authority**;
+- no guessed board, outline, package, placement or mechanical dimensions are introduced for rendering.
 
-U5.2 should converge **2D / 3D / Assembly as representations inside one Mechanical workbench** rather than separate application-like destinations.
+Exact-head verification before merge:
 
-Target behavior:
+- lint: pass;
+- TypeScript: pass;
+- tests: 326/326 pass;
+- production build: pass;
+- Vercel deployment: pass.
 
-- one Mechanical Project Drawer remains visible/authoritative across representations where relevant;
-- representation switching is contextual inside Mechanical, not another global navigation layer;
-- selected Mechanical/PCB/package identity is preserved when switching 2D ↔ 3D where the canonical identity supports it;
-- the 3D surface clearly labels itself as evidence-backed visualization until #17 lands;
-- no guessed board/package/mechanical geometry is introduced for visual convenience;
-- Assembly stays connected to the same physical product context;
-- old `requestedMechanicalMode` compatibility remains only as long as required for legacy/deep-link migration.
+## Mechanical representation boundary
 
-## Deeper U5 work after representation convergence
+The repository now has a coherent Mechanical UX, but two engineering layers must remain clearly separated:
 
-U5.3+ must continue through #16/#17 and related Mechanical issues for:
+1. **Current authoritative project evidence** — canonical mechanical objects, dimensions, assembly layers, explicit board references, command-backed pointer edits and validation findings.
+2. **Current 3D visualization** — Three.js renders only explicit board/package/mechanical dimensions when available and leaves missing geometry unresolved.
 
-- canonical sketch documents and stable topology;
-- persistent geometric/dimensional constraints;
-- solver status and conflict explanation;
-- closed-profile detection;
-- real feature history;
-- reviewed CAD-kernel adapter architecture;
-- exact solids/B-Rep topology and deterministic tessellation;
-- assembly instances/mates and exact interference/clearance;
-- ECAD/MCAD change review;
-- qualified STEP/STL/drawing outputs.
+The 3D renderer is useful for coordination/review, but it is **not** the modeling source of truth.
 
-## Non-negotiable rule
+## #16 remains open — real sketch/drawing foundation
 
-Do not close #16 after adding more shape/dimension UI, and do not close #17 after improving Three.js. Those issues close only when their stated engineering acceptance criteria are genuinely satisfied.
+Do not interpret U5 completion as #16 completion.
+
+Still required by #16:
+
+- exact sketch documents/primitives/topology;
+- persistent geometric constraints;
+- persistent dimensional constraints;
+- real constraint solving with under/fully/over-constrained state;
+- conflict and degrees-of-freedom explanation;
+- deterministic profile/region detection;
+- typed parameters, units and expressions;
+- stable topology references;
+- drawing document/view foundations;
+- qualified DXF/SVG round-trip and the required solver/E2E fixtures.
+
+## #17 remains open — real CAD kernel / parametric modeling
+
+Do not interpret the improved 3D review as #17 completion.
+
+Still required by #17:
+
+- reviewed Open CASCADE or equivalent kernel architecture;
+- exact B-Rep/source geometry separate from render tessellation;
+- parametric feature tree and regeneration diagnostics;
+- sketch-to-solid operations;
+- booleans, fillet/chamfer, shell, patterns, sweep/loft and documented supported features;
+- assembly instances and mate semantics;
+- exact interference/clearance;
+- mass/volume properties;
+- STEP import/export qualification;
+- worker/process isolation, cancellation and deterministic cache invalidation.
+
+## U5 handoff decision
+
+U5 does not need another UI-only slice before U6. Adding more labels, shape buttons or Three.js effects would create false progress.
+
+Mechanical now has a sufficiently coherent shell/representation model. The correct next product-convergence phase is **U6 Firmware**, while #16/#17 continue in the parallel engineering track and are only closed when their stated acceptance criteria are genuinely satisfied.
