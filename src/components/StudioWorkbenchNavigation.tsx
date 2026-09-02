@@ -38,6 +38,7 @@ import { PcbProjectDrawer } from './board/PcbProjectDrawer';
 import { MechanicalProjectDrawer } from './mechanical/MechanicalProjectDrawer';
 import { FirmwareProjectDrawer } from './firmware/FirmwareProjectDrawer';
 import { ValidationProjectDrawer } from './validation/ValidationProjectDrawer';
+import { ReleaseProjectDrawer } from './release/ReleaseProjectDrawer';
 
 interface StudioWorkbenchTabsProps {
   drawerOpen: boolean;
@@ -94,7 +95,7 @@ export const StudioWorkbenchTabs: React.FC<StudioWorkbenchTabsProps> = ({ drawer
   const setActiveView = useProjectStore((state) => state.setActiveView);
   const activeWorkbench = getWorkbenchForView(activeView);
   const contextualItems = getContextualNavigationItemsForView(activeView);
-  const hasDrawer = contextualItems.length > 0 || ['pcb', 'mechanical', 'firmware', 'validation'].includes(activeWorkbench?.id || '');
+  const hasDrawer = contextualItems.length > 0 || ['pcb', 'mechanical', 'firmware', 'validation', 'release'].includes(activeWorkbench?.id || '');
 
   return (
     <div className="flex h-10 shrink-0 items-stretch border-b border-[#cfc9bd] bg-[#f4f0e7]" data-studio-shell="workbench-tabs">
@@ -161,6 +162,7 @@ export const StudioProjectDrawer: React.FC<StudioProjectDrawerProps> = ({ open }
   if (activeWorkbench.id === 'mechanical') return <MechanicalProjectDrawer />;
   if (activeWorkbench.id === 'firmware') return <FirmwareProjectDrawer />;
   if (activeWorkbench.id === 'validation') return <ValidationProjectDrawer />;
+  if (activeWorkbench.id === 'release') return <ReleaseProjectDrawer />;
   if (contextualItems.length === 0) return null;
 
   return (

@@ -14,19 +14,15 @@ import { RECOVER_TO_DASHBOARD_KEY } from '../lib/reliability';
 import { TopBar } from './TopBar';
 import { StudioProjectDrawer, StudioWorkbenchTabs } from './StudioWorkbenchNavigation';
 import { BlueprintCanvas } from './BlueprintCanvas';
-import { ExportCenter } from './ExportCenter';
 import { PropertiesPanel } from './PropertiesPanel';
 import { ProductVisualizer } from './ProductVisualizer';
-import { ReadinessDashboard } from './ReadinessDashboard';
 import { ProjectDashboard } from './ProjectDashboard';
-import { BlueprintSheets } from './BlueprintSheets';
-import { FactoryPackageBuilder } from './FactoryPackageBuilder';
-import { RevisionsStudio } from './revisions/RevisionsStudio';
 import { ProductStudio } from './product/ProductStudio';
 import { EngineeringFirmwareWorkbench } from './firmware/EngineeringFirmwareWorkbench';
 import { UnifiedValidationWorkbench } from './studio/UnifiedValidationWorkbench';
 import { UnifiedMechanicalWorkbench } from './studio/UnifiedWorkbenchAdapters';
 import { ElectronicsWorkspace, ELECTRONICS_WORKSPACE_VIEW_IDS } from './studio/ElectronicsWorkspace';
+import { UnifiedReleaseWorkbench } from './release/UnifiedReleaseWorkbench';
 
 function renderSurface(surface: NavigationSurface, viewId: string): React.ReactNode {
   if (ELECTRONICS_WORKSPACE_VIEW_IDS.has(viewId)) return <ElectronicsWorkspace />;
@@ -35,7 +31,7 @@ function renderSurface(surface: NavigationSurface, viewId: string): React.ReactN
     case 'dashboard': return <ProjectDashboard />;
     case 'legacy-blueprint': return <BlueprintCanvas />;
     case 'product-studio': return <ProductStudio initialMode={viewId} />;
-    case 'readiness': return <ReadinessDashboard />;
+    case 'readiness': return <UnifiedReleaseWorkbench mode="readiness" />;
     case 'mechanical-canvas': return <UnifiedMechanicalWorkbench defaultMode="canvas" />;
     case 'mechanical-assembly': return <UnifiedMechanicalWorkbench defaultMode="assembly" />;
     case 'firmware-modules': return <EngineeringFirmwareWorkbench initialMode={viewId === 'firmware-evidence' ? 'evidence' : 'modules'} />;
@@ -45,10 +41,10 @@ function renderSurface(surface: NavigationSurface, viewId: string): React.ReactN
     case 'validation-tests': return <UnifiedValidationWorkbench initialMode="tests" />;
     case 'validation-coverage': return <UnifiedValidationWorkbench initialMode="coverage" />;
     case 'validation-factory-qa': return <UnifiedValidationWorkbench initialMode="factory-qa" />;
-    case 'blueprint-sheets': return <BlueprintSheets />;
-    case 'exports': return <ExportCenter />;
-    case 'revisions': return <RevisionsStudio />;
-    case 'factory-builder': return <FactoryPackageBuilder />;
+    case 'blueprint-sheets': return <UnifiedReleaseWorkbench mode="drawings" />;
+    case 'exports': return <UnifiedReleaseWorkbench mode="outputs" />;
+    case 'revisions': return <UnifiedReleaseWorkbench mode="snapshots" />;
+    case 'factory-builder': return <UnifiedReleaseWorkbench mode="factory" />;
     case 'component-library':
     case 'schematic-editor':
     case 'power-budget':
