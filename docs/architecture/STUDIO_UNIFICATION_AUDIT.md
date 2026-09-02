@@ -1,43 +1,222 @@
-# Studio unification audit
+# Studio Unification Audit — Historical Finding and Current Reconciliation
 
-Status: corrective architecture record.
+**Original role:** corrective architecture audit  
+**Reconciled:** 2026-09-02  
+**Current master:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Current Studio phase:** U8 — Release convergence
 
-## Core finding
+## Status of this audit
 
-Hardware Studio currently mounts many separate workbench components through one shell, but that is not the same as a unified engineering product.
+This audit originally identified a real product failure: Hardware Studio had many useful routes and components, but the Studio behaved like a collection of independent pages rather than one connected engineering product.
 
-The current shell switches between independent pages such as Component Library, Schematic, Board Designer, Mechanical, Firmware, Validation, and Outputs. Each page may use the same project store, but the user is not given one continuous engineering context, one selected-object context, or a visible cross-domain path.
+That diagnosis remains historically important. However, several corrective ideas in the original document have since been **superseded by a better shell decision**.
 
-## Current fractures
+In particular, the original recommendation for a permanent product-stage rail is **not current architecture**. U0/U1 convergence established workbench tabs plus a contextual Project Drawer instead. Do not reintroduce the permanent stage rail based on this historical audit.
 
-1. **Navigation is page-centric rather than product-centric.** Users see many workbench names, but not a clear progression from product intent to component selection, schematic, PCB, physical assembly, firmware, validation, and release.
-2. **PCB and schematic feel hidden.** They exist as routes, but the Studio does not present them as the next connected state of the same design.
-3. **Visual representations are isolated.** The representation inspector and lightweight 3D preview exist, but they are not embedded as a persistent product-view capability in the main Studio.
-4. **Selection context is local.** Selecting a component in one editor does not create a global cross-domain context that can be inspected in schematic, PCB, BOM, firmware mapping, and 3D.
-5. **Workbench layouts are inconsistent.** Different pages use different headers, side panels, density, terminology, and action placement.
-6. **The shell does not explain what is real, provisional, or missing at the point of work.** Trust information exists in some subsystems but is not consistently visible.
-7. **Several editors still expose prototype-era interaction patterns.** For example, native browser confirmation remains in the schematic editor, and some workbenches create placeholder board/block identities.
-8. **The product graph is not visible.** Shared data may exist in the store, but the user cannot see how one artifact propagates across domains.
+Current source of truth:
 
-## Corrective direction
+1. `docs/CURRENT_STATUS.md`
+2. `docs/development/STUDIO_PHASE_EXECUTION_STATUS.md`
+3. `docs/development/STUDIO_UX_CONVERGENCE_EXECUTION_PLAN.md`
+4. `docs/ARCHITECTURE.md`
 
-Stop adding isolated pages. Build a unified product workspace with:
+## Original core finding
 
-- a permanent product-stage rail: Define → Architecture → Components → Schematic → PCB → 3D/Mechanical → Firmware → Validate → Release;
-- a shared context header showing active product, board, selected component/object, revision, and trust state;
-- a shared inspector that follows the selected engineering object across workbenches;
-- cross-probing between component library, schematic, PCB, BOM, firmware mapping, and representations;
-- one consistent workbench frame and interaction grammar;
-- explicit empty, unresolved, and not-yet-connected states;
-- direct next/previous transitions between connected stages;
-- embedded lightweight 3D in the Studio rather than only in a modal inspector;
-- no fake exact geometry, no silent placeholder records, and no native browser dialogs;
-- responsive behavior designed at the shell level rather than independently per page.
+The original Studio mounted separate workbench components through one shell, but shared mounting did not provide:
 
-## First corrective slice
+- one continuous product context;
+- one predictable interaction grammar;
+- explicit selected-object context;
+- consistent diagnostics/evidence ownership;
+- connected handoffs between engineering representations;
+- visible trust/limitation state.
 
-The first implementation must unify the Electronics path end to end:
+The user therefore had to understand the application's route structure rather than the product-development workflow.
 
-Component Library → Schematic → PCB → BOM → Representation/3D
+## What has since been corrected
 
-It must use one selected component identity and show its state in every stage. The slice is incomplete unless a user can create/select a component, place it in schematic, see its PCB placement state, inspect BOM and visual representations, and move between those views without losing context.
+### Navigation architecture
+
+**Original fracture:** page-centric navigation with overlapping global and per-domain navigation.
+
+**Current correction:**
+
+- workbench tabs own top-level Product/Requirements/Architecture/Components/Schematic/PCB/Mechanical/Firmware/Validate/Release access;
+- contextual Project Drawers own supporting tools and local domain navigation;
+- clean `/studio/...` URLs replace hash-routed workbench state;
+- legacy aliases are compatibility only;
+- duplicate permanent rails/subnavigation are frozen out.
+
+### Shared editor chrome
+
+**Original fracture:** every workbench invented its own headers, side panels, findings and action placement.
+
+**Current correction:**
+
+- shared command-bar/editor framing;
+- one reusable Inspector grammar;
+- one reusable bottom diagnostics/jobs/evidence dock;
+- one status-bar grammar;
+- domain Project Drawers instead of private explorer/navigation panels where appropriate.
+
+PCB, Mechanical, Firmware and Validation now use this structure materially more consistently.
+
+### Explicit context
+
+**Original fracture:** selection was local and inconsistent.
+
+**Current correction:**
+
+- shared Studio context supports cross-domain component/board/net handoffs where the model allows it;
+- newer workbenches avoid silent first-record selection;
+- Firmware no longer silently selects the first module/file in its converged flow;
+- Validation no longer silently selects the first test/run;
+- PCB convergence emphasizes explicit board context.
+
+Explicit Release selection is a U8 requirement.
+
+### Electronics visibility and connected workflow
+
+**Original fracture:** Schematic/PCB were technically present but felt disconnected.
+
+**Current correction:**
+
+- Electronics identity and representation work established a connected reference workbench;
+- component identity can cross Component Library, Schematic, PCB, BOM and Validation foundations;
+- Schematic/PCB/BOM progression uses real current blockers through Electronics workflow evaluation;
+- PCB owns contextual setup/rules/DRC/BOM tools rather than exposing them as unrelated domains.
+
+This is structural convergence, not proof that #15 ECAD depth is complete.
+
+### Mechanical
+
+**Original fracture:** lightweight 3D was detached and trust boundaries were unclear.
+
+**Current correction:**
+
+- one Mechanical workbench now owns 2D Layout / 3D Review / Assembly representations;
+- 3D is explicitly review/visualization, not CAD authority;
+- shared selection/context is preserved;
+- missing exact geometry remains a limitation rather than a hidden default.
+
+#16/#17 remain open for real constraints/CAD depth.
+
+### Firmware
+
+**Original fracture:** duplicate internal mode navigation, private source Explorer, implicit module/file selection and center-page evidence forms.
+
+**Current correction through U6:**
+
+- one Firmware Project Drawer;
+- one center work surface;
+- one Inspector;
+- bottom Problems / Build Evidence / Device Evidence dock;
+- explicit module/file/build selection;
+- generated source and recorded evidence truth boundaries.
+
+#18 remains open for real filesystem/PlatformIO/device/serial execution.
+
+### Validation
+
+**Original fracture:** definition, execution, evidence and review blended together with multiple implicit selected-test models.
+
+**Current correction through U7:**
+
+- one Validation drawer: Tests / Coverage / Factory QA / Runs;
+- explicit test/run selection;
+- Define → Execute → Review center jobs;
+- specification no longer edits actual execution observations;
+- run history is reviewed read-only;
+- run output/logs use the shared bottom dock.
+
+#19 remains open for durable release-grade validation infrastructure.
+
+### Project Home
+
+**Original fracture:** the product graph and next path were not visible enough.
+
+**Current correction:**
+
+- Project Home uses evidence-driven domain state;
+- one primary next action is surfaced;
+- attention/blocker queue uses real missing/blocked conditions;
+- counts are inventory only, not completion proof.
+
+Durable recent engineering history still depends on repository/event work.
+
+## What remains unresolved
+
+The Studio is more unified, but the underlying architecture still has major gaps.
+
+### Canonical data architecture
+
+- current project/store shape still contains legacy/new overlap;
+- durable repository boundaries are incomplete;
+- typed command/event coverage is incomplete;
+- canonical graph semantics and relationship ownership remain recovery work.
+
+### Deep engineering authority
+
+- #15 PCB/ECAD;
+- #16 sketch/constraints;
+- #17 CAD kernel/features/assemblies;
+- #18 firmware execution/device/serial;
+- #19 durable validation/evidence/review;
+- #20 immutable versions/branches/merges/releases;
+- #21 qualified drawings/manufacturing outputs.
+
+A unified UI cannot substitute for those engines.
+
+### Release convergence — active U8
+
+Release is the remaining major Studio-structure phase before final polish.
+
+Current U8 requirements:
+
+- one Release Project Drawer;
+- explicit revision/version/output/package/candidate selection;
+- one central selected job/surface;
+- one contextual Inspector;
+- bottom blockers/jobs/preflight/logs/evidence;
+- no snapshot presented as immutable version;
+- no status toggle presented as trusted approval;
+- no generated ZIP/file presented as qualified artifact;
+- draft/unqualified state must remain visible;
+- #20/#21 remain open.
+
+### Final polish — U9
+
+Only after U8 structural convergence:
+
+- visual hierarchy/design-system refinement;
+- accessibility/keyboard review;
+- responsive/editor-density work;
+- performance/motion refinement;
+- selected browser E2E journeys;
+- complete empty/error/recovery consistency.
+
+## Current corrective architecture
+
+The current Studio direction is:
+
+```text
+TopBar
+→ workbench tabs
+→ contextual Project Drawer
+→ central engineering work surface
+→ shared Inspector
+→ shared bottom diagnostics/jobs/evidence dock
+→ status bar
+```
+
+The user journey is not a mandatory linear wizard. Product development is iterative. Workbench tabs expose major product views while contextual tools and evidence-driven next actions guide the current job.
+
+## Audit conclusion — current
+
+The original unification problem was real and drove a successful structural recovery program. U0–U7 have corrected much of the interaction fragmentation.
+
+The remaining risk has shifted:
+
+> **Hardware Studio must now avoid mistaking a coherent Studio for a complete engineering system.**
+
+Future work should deepen canonical data, engines, evidence, versioning, interoperability and qualification while preserving the shared shell already established. Another navigation abstraction or another mini-app is not progress unless it replaces something and makes the connected reference-product journey measurably stronger.
