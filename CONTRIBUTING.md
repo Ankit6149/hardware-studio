@@ -1,124 +1,86 @@
 # Contributing to Hardware Studio
 
-Thank you for helping build Hardware Studio.
+Hardware Studio is an experimental connected engineering workspace. Contributions should increase **truthful, connected engineering behavior** rather than feature count or visual surface area.
 
-This project has a large long-term vision, but contributions should prioritize truthful, connected engineering behavior over feature count.
+**Documentation sync:** 2026-09-02  
+**Current master at sync:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Active Studio phase:** U8 — Release convergence  
+**Current structural UX state:** U0–U7 landed; U8 active; U9 intentionally deferred.
+
+> Structural UX convergence does not mean the underlying engineering engine is complete. The deep recovery issues remain the authority for real capability.
 
 ## Before contributing
 
-Read:
+Read these in order:
 
-- [Product Vision](docs/PRODUCT_VISION.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Current Status](docs/CURRENT_STATUS.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Safety and Limitations](docs/SAFETY_AND_LIMITATIONS.md)
+1. [Current Status](docs/CURRENT_STATUS.md)
+2. [Studio Phase Execution Status](docs/development/STUDIO_PHASE_EXECUTION_STATUS.md)
+3. [Product Recovery Execution Plan](docs/development/PRODUCT_RECOVERY_EXECUTION_PLAN.md)
+4. [Architecture](docs/ARCHITECTURE.md)
+5. [Safety and Limitations](docs/SAFETY_AND_LIMITATIONS.md)
+6. [Product Vision](docs/PRODUCT_VISION.md)
+7. the relevant domain convergence/research notes.
+
+Research documents describe useful target models and external-tool lessons; they do not prove a feature exists.
 
 ## Core contribution rule
 
 A feature is not complete because:
 
-- a TypeScript interface exists
-- a helper function exists
-- a test creates an object
-- a UI tab or button exists
-- an SDK dependency is installed
-- documentation describes the intended behavior
-- lint, typecheck, or build passes
+- a TypeScript interface exists;
+- a helper function exists;
+- a test creates an object;
+- a UI tab, card, panel, or button exists;
+- an SDK dependency is installed;
+- documentation describes intended behavior;
+- lint, typecheck, tests, or build pass in isolation;
+- a generator emits a file name;
+- a local approximation returns a result.
 
-A completed vertical slice should normally include:
+A production vertical slice normally needs the appropriate combination of:
 
-1. domain model
-2. production engine
-3. command/store integration
-4. production UI
-5. persistence
-6. undo/redo where applicable
-7. cross-domain staleness or impact
-8. automated tests using production code
-9. documentation and current-status update
+1. canonical domain model;
+2. real production engine/adapter;
+3. command/store integration;
+4. production UI using the shared Studio grammar;
+5. persistence and migration behavior;
+6. undo/redo or transactional semantics where applicable;
+7. cross-domain identity, staleness, impact, or provenance;
+8. automated tests exercising production behavior;
+9. explicit truth/limitation handling;
+10. documentation and current-status updates.
 
-## Do not overstate completion
+## Current architecture expectations
 
-Do not use commit messages or documentation such as:
+### One canonical product context
 
-- complete professional implementation
-- production ready
-- fully integrated
-- fabrication ready
-- all gates pass
+Do not create private duplicate engineering models inside components. UI/session state may contain panel state, active representation, explicit local selection, and similar ephemeral state. Canonical requirements, components, boards, geometry, firmware records, validation records, revisions, outputs, and relationships belong to the project model/repository architecture.
 
-unless the real production workflow and evidence support the claim.
+### One Studio shell grammar
 
-Use precise language:
+Reuse:
 
-- foundation
-- partial implementation
-- experimental
-- needs review
-- blocked
-- verified in a specific workflow
+- TopBar;
+- workbench tabs;
+- contextual Project Drawer;
+- central work surface;
+- shared Inspector;
+- shared bottom dock;
+- status bar.
 
-## No browser automation dependency
+Do not add another permanent navigation rail, duplicate Inspector, duplicate Problems implementation, or a mini-app shell inside a workbench.
 
-Do not add:
+### Explicit selection
 
-- Playwright
-- Puppeteer
-- Cypress
-- Selenium
-- WebdriverIO
-- Chromium test downloads
-
-Use:
-
-- Vitest
-- React Testing Library where useful
-- Zustand integration tests
-- Node process tests
-- MCP protocol tests
-- deterministic geometry tests
-- serializer tests
-- manual development-build verification
-
-## Development setup
-
-```bash
-npm install
-npm run dev
-```
-
-Application routes:
-
-```text
-/          public landing page
-/studio    experimental engineering workspace
-```
-
-Verification:
-
-```bash
-npm run lint
-npm run typecheck
-npm test
-npm run build
-```
-
-Dedicated MCP and bridge scripts should be added as those package boundaries mature.
-
-## Architecture expectations
-
-### One canonical product document
-
-Do not create private duplicate domain state inside a component when it belongs in the project graph.
+Passive navigation must not silently choose the first available canonical record. A board/module/file/test/run/revision/artifact becomes active because the user explicitly selected or created it, or because a clearly defined persisted context owns it.
 
 ### Typed engineering commands
 
-User and MCP mutations should share typed domain operations.
+User and MCP mutations should converge on typed, auditable domain operations rather than ad hoc component mutations.
 
 ### Reversible changes
 
-Pointer interactions should follow:
+Pointer interactions should follow the transaction model:
 
 ```text
 begin
@@ -127,67 +89,156 @@ begin
 → persist
 ```
 
-### Derived outputs
+A drag should not create dozens of undo entries.
 
-Changes to source engineering data should mark affected blueprints, manufacturing packages, validation results, or releases stale.
+### Derived outputs and staleness
+
+Changes to source engineering data should invalidate or mark dependent analysis/output/review state stale. Never silently keep a release/output/validation claim green after its dependencies changed.
 
 ### Missing data
 
-Do not silently invent authoritative engineering values.
+Do not invent authoritative engineering values. Missing package dimensions, board identity, geometry, evidence, provenance, calibration, tool version, or release hashes must remain visible as unresolved state, warning, or blocker according to domain policy.
 
-For example, missing package dimensions should create a warning or blocker—not a successful collision result based on guessed geometry.
+## Deep-engine boundaries that must stay honest
+
+Current structural workbenches do not close the following recovery authorities:
+
+- #15 — real PCB/ECAD depth;
+- #16 — sketch and constraints;
+- #17 — CAD kernel/features/assemblies;
+- #18 — firmware filesystem, PlatformIO, device and serial execution;
+- #19 — durable validation execution/evidence/review;
+- #20 — versions, branches, comparisons, merges, freezes and immutable releases;
+- #21 — qualified drawings, manufacturing packages and outputs.
+
+The active U8 phase may reorganize Release UI, but it must not present snapshot revisions/status toggles/generated files as #20/#21-grade engineering guarantees.
+
+## Do not overstate completion
+
+Avoid broad phrases such as:
+
+- production ready;
+- fabrication ready;
+- fully integrated;
+- complete professional implementation;
+- all engineering gates pass.
+
+Use scoped language such as:
+
+- foundation;
+- structural UX convergence;
+- implemented local rule set;
+- experimental;
+- draft/unqualified;
+- needs review;
+- blocked;
+- verified for a named workflow and exact commit.
+
+## Development setup
+
+```bash
+npm install
+npm run dev
+```
+
+Routes:
+
+```text
+/                    public landing page
+/studio              Project Home
+/studio/requirements
+/studio/architecture
+/studio/components
+/studio/schematic
+/studio/pcb
+/studio/mechanical
+/studio/firmware
+/studio/validate
+/studio/release
+```
+
+Studio routing uses clean paths. Do not reintroduce hash-based Studio navigation.
+
+## Required verification for a bounded PR
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+Then inspect deployment status for the **exact PR head**. If Vercel fails because of an external plan/build-rate limit, document that separately from application correctness; never report deployment success when no deployment occurred.
+
+Before merge:
+
+1. verify changed-file scope;
+2. verify there is no accidental landing-page redesign;
+3. scan for duplicate/retired shell paths;
+4. verify no silent first-record fallback was introduced;
+5. verify parent engineering issues remain correctly open;
+6. verify truth labels and unsupported capability boundaries;
+7. merge with expected-head SHA protection when available;
+8. update the phase/domain documentation checkpoint.
 
 ## Testing expectations
 
-Tests must exercise production behavior.
+Tests should exercise production behavior and exact contracts.
 
 Avoid tests that:
 
-- manually create the final state and claim the UI created it
-- redefine a simplified version of production logic inside the test
-- check only that a value is defined
-- accept an empty array as success
-- instantiate an MCP class without testing the protocol
-- inspect a disclaimer string as proof of live-data synchronization
+- manually construct the desired final state and claim the production flow created it;
+- duplicate simplified production logic inside the test;
+- check only that something is defined;
+- accept an empty collection as proof of success;
+- use disclaimer copy as proof of correctness;
+- hard-code stale UI text when the real behavioral contract is stronger.
 
-Good tests assert exact state transitions and outputs.
+Prefer guards for:
 
-Examples:
+- exact state transitions and undo/redo;
+- canonical object identity across workbenches;
+- board isolation;
+- explicit selection;
+- one-drawer/one-Inspector/one-dock ownership;
+- missing-data blockers;
+- validation execution authority;
+- immutable/history semantics where implemented;
+- deterministic output/provenance rules.
 
-- exact pointer-down, committed, undo, and redo coordinates
-- exact source and target schematic anchors after symbol rotation
-- empty-space PCB route rejection through the production routing controller
-- active-board output excluding every object from other boards
-- missing package dimensions producing a blocker
-- MCP draft causing no mutation before apply
-- MCP apply changing the durable project through the command layer
-- known SHA-256 fixture matching the generated digest
+### Browser E2E
+
+Do not add a heavy browser-automation stack casually or use it as a substitute for deterministic domain tests. However, recovery issues that explicitly require end-to-end browser proof may introduce a reviewed E2E strategy. The decision should be deliberate, scoped, reproducible in CI, and documented.
 
 ## Engineering safety
 
-Never remove review warnings from generated manufacturing output merely to make the product appear more complete.
+Never remove warnings or blockers merely to make the UI look complete. Current manufacturing and release output still requires independent engineering and toolchain review.
 
-Manufacturing drafts must continue to require:
+Examples of required external review include:
 
-- independent engineering review
-- Gerber/CAM viewer review
-- fab-house DFM validation
-- verified footprints and package geometry
-- prototype testing
+- verified schematic/PCB review;
+- CAM/Gerber/Excellon inspection for fabrication outputs;
+- DFM review by the fabricator/assembler;
+- verified component footprints/package geometry;
+- exact mechanical CAD/clearance review where required;
+- prototype and validation testing;
+- applicable regulatory/safety review.
 
 ## Pull request structure
 
-A focused pull request should include:
+A focused PR should explain:
 
-- problem statement
-- affected domains
-- production files changed
-- user workflow
-- persistence behavior
-- undo/redo behavior
-- tests
-- known limitations
-- screenshots or logs where helpful
+- problem and user job;
+- affected domains;
+- canonical state ownership;
+- production files changed;
+- persistence/migration behavior;
+- undo/redo/transaction behavior where relevant;
+- cross-domain impact;
+- tests and exact-head verification;
+- known limitations/non-goals;
+- parent issues that intentionally remain open;
+- screenshots/logs when they materially improve review.
 
 ## Suggested commit style
 
@@ -195,36 +246,25 @@ A focused pull request should include:
 feat(pcb): preserve structured route anchors
 fix(bridge): bind approvals to upload target
 refactor(commands): share pointer transaction controller
-test(mcp): verify real stdio draft and apply workflow
-docs(status): record remaining validation limitations
+test(validation): reject implicit first-run context
+docs(status): record release qualification boundary
 ```
 
-Avoid `complete`, `final`, or `production-ready` unless the scope is narrow and fully evidenced.
+Avoid `complete`, `final`, or `production-ready` unless the statement is deliberately narrow and fully evidenced.
 
-## Areas where help is valuable
+## High-value contribution areas
 
-- product-graph design
-- schema migrations
-- command and history architecture
-- computational geometry
-- schematic connectivity and ERC
-- PCB graph routing and DRC
-- 3D geometry synchronization
-- PlatformIO and serial tooling
-- validation execution and evidence models
-- revision and release systems
-- MCP safety and typed tools
-- deterministic blueprint and manufacturing generators
+- canonical schema/repository/migrations;
+- command and event architecture;
+- computational geometry;
+- schematic connectivity/ERC;
+- PCB topology/routing/DRC;
+- mechanical constraints/CAD integration;
+- firmware workspace/device tooling;
+- validation execution/evidence/provenance;
+- version/release architecture;
+- drawing/manufacturing qualification;
+- MCP safety and typed operations;
+- interoperability and independent verification.
 
-## Questions and design discussions
-
-For large architectural changes, open an issue or discussion before implementing a broad rewrite. Explain:
-
-- the engineering problem
-- the proposed domain model
-- how it interacts with the canonical graph
-- migration impact
-- undo/redo behavior
-- safety implications
-
-Hardware Studio should grow through deep connected workflows, not another layer of disconnected feature shells.
+For broad architectural changes, open or update an issue first and explain the domain model, migration impact, reversibility, safety implications, and how the proposal fits the recovery execution plan.
