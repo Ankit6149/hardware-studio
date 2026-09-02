@@ -1,181 +1,273 @@
 # Hardware Studio — Current Product Baseline
 
-_Last reviewed: 2026-08-15_
+**Baseline reconciled:** 2026-09-02  
+**Current master:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Active Studio phase:** U8 — Release convergence
 
-This document is the repository's **current-state contract**. It is not a feature wishlist, redesign brief, or replacement for GitHub issues. Its purpose is to stop the product from accumulating contradictory implementations while the underlying engineering workflow is still being unified.
+This document is the repository's **current product-behavior contract**. It is intentionally shorter and more operational than the recovery plan. It defines rules that new implementation work must preserve.
 
-If an issue, mockup, generated implementation, or old test conflicts with this baseline, the baseline wins until it is deliberately revised with evidence.
+If a historical issue, old mockup, stale test, research proposal, or generated implementation conflicts with this baseline, defer to:
 
-## 1. What Hardware Studio is today
+1. `docs/CURRENT_STATUS.md`;
+2. `docs/development/STUDIO_PHASE_EXECUTION_STATUS.md`;
+3. `docs/development/PRODUCT_RECOVERY_EXECUTION_PLAN.md`;
+4. this baseline;
+5. the live GitHub issue acceptance criteria.
 
-Hardware Studio is currently a **connected engineering workflow foundation for physical-product development**.
+## 1. Product classification
 
-The codebase already contains product requirements, architecture, component definitions and project component instances, schematic connectivity, PCB/board state, mechanical representations, firmware state, validation records, BOM/output workflows, project persistence, and manufacturing-oriented surfaces.
+Hardware Studio is currently a **connected engineering-workspace prototype under active recovery**.
 
-However, the product must **not** yet be described internally or externally as a qualified replacement for professional CAD, ECAD, EDA, firmware IDE, simulation, PLM, or manufacturing-signoff software. Several editors and export paths are still incomplete, partially generated, or not yet backed by enough domain validation to make that claim truthfully.
+It already has meaningful production foundations across:
 
-The near-term objective is not to create more screens. It is to make the existing system behave as **one trustworthy product**.
+- requirements and architecture;
+- component/electronics identity;
+- schematic and PCB;
+- Mechanical 2D/3D review/assembly context;
+- Firmware modules/source/hardware mapping/evidence;
+- Validation definitions/runs/review;
+- readiness/revisions/outputs;
+- local machine bridge;
+- MCP.
 
-## 2. Canonical vertical path
+It is not yet a qualified replacement for mature CAD, ECAD, firmware, validation/QMS, PLM/release, or manufacturing systems.
 
-The primary connected path we are using to establish the product baseline is:
+The near-term objective remains: **make existing workflows connected, truthful, durable, and deep before expanding breadth.**
 
-**Component Library → Schematic → Board Settings → PCB Layout → DRC → BOM / Validation → Output**
+## 2. Current Studio structural baseline
 
-This path is intentionally narrower than the full product vision. It provides a concrete place to prove that one engineering object can move through multiple disciplines without being duplicated, silently rewritten, or replaced by placeholder data.
+U0–U7 structural UX convergence is accepted baseline.
 
-Mechanical, firmware, requirements, architecture, release, manufacturing, MCP, and other domains remain part of the product. They should integrate with the same product graph, but they should not each invent a second implementation of the core identity/state model.
+### Required shell grammar
 
-## 3. Non-negotiable engineering invariants
+```text
+TopBar
+→ workbench tabs
+→ contextual Project Drawer
+→ central work surface
+→ shared Inspector
+→ shared bottom Problems / jobs / evidence / logs dock
+→ status bar
+```
 
-### 3.1 Unknown means unknown
+### Do not reintroduce
 
-Do not manufacture engineering facts to make a screen look complete.
+- permanent product-stage rail;
+- persistent domain sidebar as a second top-level navigation system;
+- duplicate Inspector/property panels;
+- duplicate Problems/diagnostics surfaces;
+- per-workbench mini-app navigation strips that duplicate shell ownership;
+- private source/test/explorer panels when the Project Drawer owns that context;
+- hash-based Studio routing.
+
+### Landing page
+
+The public landing page is an approved surface and is outside the Studio redesign program. Change it only for correctness, accessibility, routing, or explicitly requested maintenance.
+
+## 3. Canonical vertical path
+
+The current reference product path is broader than the original Electronics-only slice:
+
+```text
+Project Home / requirements / architecture
+→ components
+→ schematic / PCB
+→ mechanical context
+→ firmware
+→ validation Define / Execute / Review
+→ readiness / outputs / release
+```
+
+Every step should preserve identity and evidence instead of recreating engineering objects.
+
+## 4. Non-negotiable invariants
+
+### 4.1 Unknown means unknown
+
+Do not manufacture engineering facts to make a UI or generator look complete.
 
 Examples:
-- Missing board dimensions remain unresolved; they do not become `50x50`, `68.6 x 53.4`, or `100x60` automatically.
-- Missing board identity remains unassigned; it does not become `board-main`, `board_main`, or `board_0`.
-- Missing circuit-block identity remains unassigned; it does not become `block_0` or an invented `Main` block.
-- Missing footprint, sourcing, electrical, thermal, RF, mechanical, validation, or manufacturing data must be presented as unresolved unless a reviewed generator explicitly creates a **Draft / Needs Review** artifact.
 
-### 3.2 One canonical project component identity
+- missing board dimensions remain unresolved;
+- missing board ownership remains unresolved;
+- missing component/package dimensions remain unresolved;
+- missing placements remain unresolved;
+- missing evidence/provenance/reviewer data remains unresolved;
+- missing release hashes/qualification remain unresolved.
 
-A component selected from the reusable component library becomes **one project component instance**.
+Use states such as **Unknown / Unresolved / Approximate / Draft / Needs Review / Blocked** instead of guessed values.
 
-That same identity should be referenced by:
-- schematic placement and pin connectivity;
-- PCB placement and routing context;
-- BOM/procurement state;
-- mechanical representation when linked;
-- firmware mappings when linked;
-- validation evidence and tests;
-- output/manufacturing records when applicable.
+### 4.2 One canonical engineering identity
 
-Do not create separate hidden component copies for individual workbenches.
+A project component, board, net, firmware module, validation test/run, revision, or output record must not be silently duplicated for individual workbenches.
 
-### 3.3 Real relationships are explicit
+UI/session state may remember which record is selected; it does not own a parallel engineering record.
 
-A board-scoped action must operate on a real board that exists in project state.
+### 4.3 Explicit context
 
-Routing, placement, DRC, board exports, board-level 3D, and manufacturing preparation must not guess a board because a board was not selected.
+Opening a workbench must not silently select the first available canonical record.
 
-Legacy sentinel IDs may be repaired during migration **only when the target is unambiguous**. Ambiguous relationships remain unresolved and must be surfaced to the user.
+This applies especially to:
 
-### 3.4 Generated artifacts are not verified facts
+- board;
+- firmware module/file/build;
+- validation test/run;
+- revision/version;
+- output/package/candidate.
 
-Generators can accelerate work, but generated engineering content must carry its real confidence/state.
+An explicit user creation action may select the object just created.
 
-Generated content should default to a state such as:
+### 4.4 Navigation must not mutate engineering state
+
+Opening a route/view/representation should not create project objects, alter timestamps as an engineering change, generate files, or repair ambiguous relationships merely to make the destination non-empty.
+
+### 4.5 Generated artifacts are not verified facts
+
+Generation and qualification are different states.
+
+Generated content should carry truthful status such as:
+
 - Draft;
 - Concept;
-- Not Started;
+- Generated in app;
 - Needs Review;
-- Unverified.
+- Unqualified;
+- Stale;
+- Blocked.
 
-A generator must not make a product appear manufacturing-ready merely by filling empty fields.
+A generator must never turn missing upstream engineering truth into apparent readiness.
 
-### 3.5 Editors mutate real project state
+### 4.6 Editors mutate real project state
 
-Visible editor actions must affect canonical project data, not isolated demo state.
+Visible production editing actions must affect the canonical project/repository model, not isolated demo state, unless the UI clearly identifies a transient preview.
 
-If an editor displays a component, net, board, validation test, requirement, or output record, its add/edit/delete/placement/connect actions must map back to that same project object unless the UI clearly labels the content as a transient preview.
+### 4.7 Destructive changes respect dependency impact
 
-### 3.6 One shell, contextual tools
+Distinguish:
 
-The application should have one clear workspace shell and one shared engineering context model.
+- removing one representation;
+- removing a domain relationship;
+- deleting the canonical product object.
 
-Do not solve navigation problems by stacking more persistent navigation bars, build maps, duplicated context cards, or global toolbars. Persistent shell UI should be minimal; workbench-specific actions belong inside the relevant workbench.
+Cross-product deletion must surface dependent objects/evidence/output impact before commit.
 
-### 3.7 Deletion and destructive actions respect dependency impact
+### 4.8 Derived state becomes stale
 
-Deleting or unplacing an engineering object must distinguish between:
-- removing a representation from one workbench;
-- removing a discipline-specific relationship;
-- deleting the canonical product object and its dependent artifacts.
+A source change should invalidate affected downstream:
 
-Dependencies should be surfaced before destructive cross-product deletion.
+- checks;
+- firmware build/device evidence;
+- validation evidence;
+- drawings;
+- manufacturing packages;
+- release candidates/approvals;
 
-### 3.8 Output truthfulness is stricter than editor convenience
+according to dependency policy.
 
-Gerber, drill, BOM/CPL, blueprint, STEP/STL, firmware build, validation evidence, and release/manufacturing outputs must not be marked ready merely because a file-shaped artifact can be emitted.
+### 4.9 Output truth is stricter than editor convenience
 
-Output readiness requires appropriate upstream identity, geometry, checks, provenance, and review state.
+A file-shaped artifact is not sufficient proof for:
 
-## 4. What is already baseline-correct
+- Gerber/drill qualification;
+- BOM/CPL correctness;
+- exact CAD/STEP authority;
+- firmware execution proof;
+- accepted validation evidence;
+- immutable release.
 
-The following work is now part of the accepted baseline:
+## 5. Accepted structural progress
 
-- Retired CI source-transport workflows and generated repository debris have been removed.
-- The duplicate persistent Studio Build Map has been removed from the global shell.
-- The sidebar has been consolidated rather than layered with another navigation system.
-- Board Studio no longer pre-fills an invented board dimension.
-- PCB editor view state no longer starts with a synthetic active board.
-- Project migrations preserve missing board/block relationships as unresolved and only repair legacy sentinel IDs when unambiguous.
-- Component-library handoff requires a real project board instead of creating placeholder board/block IDs.
-- Board DRC requires explicit valid board context and does not borrow another board's outline.
-- PCB canvas mutations require real board context and board-scoped entities.
-- Board Designer no longer creates a starter board or hidden fallback outline for auto-placement.
-- Browser-native save alert behavior has been removed from the active PCB canvas in favor of the shared feedback system.
-- Regression tests now defend these rules.
+### Project Home
 
-## 5. Known baseline blockers
+- evidence drives area state;
+- counts are inventory only;
+- next action and attention are explicit.
 
-These are architectural/product-truth blockers, not a complete issue list.
+### Electronics / PCB
 
-### 5.1 Canonical store still contains legacy fallbacks
+- connected component/board/net context exists;
+- PCB owns one contextual drawer/Inspector/Problems grammar;
+- board context is explicit in repaired flows;
+- fake auto-place/autoroute claims are excluded from convergence work.
 
-`src/store/projectStore.ts` still contains several paths that can reintroduce synthetic board identity, dimensions, or template-specific relationships. These must be normalized at the state boundary so cleaned workbenches cannot regress after save/load or through legacy actions.
+### Mechanical
 
-### 5.2 Legacy generators mix convenience with engineering truth
+- one Mechanical workbench;
+- 2D Layout / 3D Review / Assembly representations;
+- 3D remains review/visualization rather than exact CAD authority.
 
-Several generators still infer a first board, produce template-oriented values, or create detailed design values from high-level product names. These may remain useful as drafting helpers, but they need explicit provenance/review semantics and must not masquerade as verified engineering decisions.
+### Firmware
 
-### 5.3 Export and blueprint readiness is not yet strict enough
+- one Firmware Project Drawer/workbench;
+- explicit module/file selection;
+- shared Inspector and bottom evidence/Problems dock;
+- generated source distinguished from verification;
+- recorded evidence distinguished from executed proof.
 
-Some native export / blueprint paths still contain fallback identity or geometry behavior. Manufacturing-oriented output must eventually refuse invalid or unresolved prerequisites rather than silently generate plausible files.
+### Validation
 
-### 5.4 The editors are not yet qualification-grade CAD / EDA
+- one Validation Project Drawer;
+- explicit test/run selection;
+- Define → Execute → Review separation;
+- historical run review is read-only;
+- current local execution authority remains bounded and truthful.
 
-Schematic, PCB, mechanical, firmware, and validation surfaces have meaningful state and interaction, but they still need deeper domain functionality, constraints, editing ergonomics, interoperability, and verification before they can be treated as professional-tool replacements.
+## 6. Active U8 baseline
 
-### 5.5 Product graph ownership is still distributed
+U8 must converge Release without creating false release authority.
 
-The product has shared IDs and increasingly connected workflows, but some state/action responsibilities remain duplicated across legacy models, workbench adapters, generators, and store actions. Consolidation should reduce parallel implementations rather than adding new abstractions on top of them.
+Required rules:
 
-## 6. Execution order from this baseline
+- one Release Project Drawer;
+- explicit selected revision/version/output/package/candidate;
+- shared Inspector;
+- shared bottom blockers/jobs/preflight/log/evidence dock;
+- no JSON snapshot presented as an immutable content-addressed version;
+- no status toggle presented as trusted approval;
+- no generated filename/ZIP presented as qualified output;
+- missing source version/provenance/qualification remains visible;
+- draft/unqualified artifacts remain visually distinct from accepted release evidence;
+- no second UI-only version/output project model;
+- #20 and #21 remain open.
 
-Work should proceed in this order unless a blocking CI/security/data-loss issue takes precedence:
+## 7. Deep engineering issues remain authoritative
 
-1. **Canonical state invariants** — remove synthetic identity/data fallbacks at persistence and mutation boundaries.
-2. **Prove the electronics vertical slice** — Component Library → Schematic → Board → PCB → DRC → BOM/Validation with canonical identity and regression coverage.
-3. **Consolidate duplicate actions/state** — remove parallel creation, placement, routing, deletion, and context implementations.
-4. **Make output truthful** — strict readiness checks, provenance, export prerequisites, and artifact validation.
-5. **Strengthen editor depth** — real schematic/PCB/mechanical/firmware/validation workflows rather than placeholder representations.
-6. **Unify visual/workspace system** — apply a consistent CAD/EDA-style interaction and visual hierarchy after structural duplication is removed.
-7. **Expand breadth** — only after one connected vertical slice is demonstrably trustworthy.
+Structural convergence must not close:
 
-## 7. GitHub issue policy during baseline work
+- #15 — professional PCB/ECAD depth;
+- #16 — sketch/constraint engine;
+- #17 — CAD kernel/features/assemblies;
+- #18 — filesystem/PlatformIO/device/serial execution;
+- #19 — durable validation evidence/execution/review;
+- #20 — immutable versions/branches/merges/releases;
+- #21 — qualified drawings/manufacturing outputs.
 
-GitHub issues are **evidence and acceptance contracts**, not the sole source of truth for what should be worked on next.
+Foundation issues for schema/repository/commands/graph/backend/interoperability also remain active.
 
-- Do not close a broad issue because one subcomponent improved.
-- Do not implement a stale issue literally when it conflicts with the current product baseline.
-- Update tests and issue context when an old acceptance condition protects behavior that is now known to be unsafe.
-- Close an issue only when its user-facing acceptance criteria are demonstrably complete and tested.
-- New discoveries that materially affect architecture, safety, data integrity, or product truth should be captured, but baseline work should not stop merely to create issue bookkeeping.
+## 8. Validation authority baseline
 
-## 8. Definition of a professionally complete baseline change
+The current system may only make these bounded claims:
+
+- local DRC: implemented local PCB rules;
+- firmware state-machine validation: structural state-machine checks;
+- Mechanical: approximate AABB screening, not exact clearance certification;
+- Thermal: no internal solver; external evidence + reviewer required;
+- other manual/physical tests: explicit engineer verdict required;
+- retest: append a new run; preserve prior history.
+
+Downstream readiness/Release must not infer stronger evidence than this.
+
+## 9. Merge/completion rule
 
 A baseline change is complete only when:
 
-1. the old contradictory behavior is actually removed, not left beside the new implementation;
-2. canonical state and downstream consumers agree on the new rule;
-3. migration/backward compatibility is handled deliberately;
-4. regression coverage protects the invariant;
-5. lint, typecheck, tests, and production build pass;
-6. the change does not falsely close a broader product issue;
-7. documentation/tests that encoded the old unsafe behavior are updated in the same baseline direction.
+1. contradictory/retired behavior is removed rather than left beside the new path;
+2. canonical state and consumers agree on ownership;
+3. migration/backward compatibility is deliberate;
+4. regression tests protect the behavior, not stale copy;
+5. exact-head lint/typecheck/full tests/build pass;
+6. deployment status is inspected honestly;
+7. broad parent issues remain open when their engineering criteria are incomplete;
+8. documentation is updated in the same change/handoff.
 
----
-
-This file should stay short enough to function as a contract. Detailed domain architecture, product specifications, issue acceptance criteria, and future roadmap material belong in their respective documents/issues rather than being duplicated here.
+The current baseline should become **stricter** as professional engineering capability grows; it should never become more permissive merely to make completion easier to claim.
