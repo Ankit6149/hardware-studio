@@ -1,351 +1,401 @@
 # Hardware Studio Architecture
 
-## Status
+**Architecture sync:** 2026-09-02  
+**Master at sync:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Current Studio phase:** U8 — Release convergence
 
-This document describes the intended architecture and the foundations currently present in the repository. It is not a claim that every subsystem is complete.
+This document describes the architectural direction and the production boundaries that currently exist. It is not a claim that every target layer is complete.
 
-## Architectural goal
+## 1. Core architectural principle
 
-Every Hardware Studio workbench should operate on the same canonical product document.
+Hardware Studio is one product-development environment, not a bundle of unrelated engineering mini-apps.
+
+The user mental model is:
+
+> I am in one product/project, and Product, Electronics, PCB, Mechanical, Firmware, Validation, and Release are connected views of that same product.
+
+That requires two kinds of unification:
+
+1. **interaction unification** — one predictable Studio shell and explicit context;
+2. **engineering-data unification** — one canonical durable product/repository model with typed relationships and controlled derived state.
+
+The first has progressed substantially through U0–U7. The second remains a major recovery program across #6–#12 and the domain-engine issues.
+
+## 2. Current/target system shape
 
 ```mermaid
 flowchart TB
-    UI[Engineering UI]
-    MCP[MCP Server]
-    COMMANDS[Reversible Engineering Commands]
+    TOP[Shared Studio Shell]
+    UI[Connected Engineering Workbenches]
+    UISTATE[UI / Session Stores]
+    CMD[Typed Engineering Commands]
+    REPO[Durable Project Repository]
     GRAPH[Canonical Product Graph]
-
-    PRODUCT[Product & Systems Engine]
-    MECH[Mechanical Geometry Engine]
-    ELEC[Electrical Connectivity Engine]
-    PCB[PCB Geometry & Routing Engine]
-    FW[Firmware Workspace Engine]
-    VALIDATE[Validation Engine]
-    RELEASE[Revision & Release Engine]
-    OUTPUTS[Derived Output Engine]
-
+    MCP[MCP Server / Semantic Tools]
     BRIDGE[Authenticated Local Machine Bridge]
-    STORAGE[Local Project Repository]
 
-    UI --> COMMANDS
-    MCP --> COMMANDS
-    COMMANDS --> GRAPH
-    GRAPH --> PRODUCT
-    GRAPH --> MECH
-    GRAPH --> ELEC
-    GRAPH --> PCB
-    GRAPH --> FW
-    GRAPH --> VALIDATE
-    GRAPH --> RELEASE
-    GRAPH --> OUTPUTS
-    GRAPH <--> STORAGE
+    TOP --> UI
+    UI <--> UISTATE
+    UI --> CMD
+    MCP --> CMD
+    CMD --> REPO
+    REPO <--> GRAPH
+
+    GRAPH --> PRODUCT[Requirements / Architecture]
+    GRAPH --> ELEC[Components / Schematic / PCB]
+    GRAPH --> MECH[Mechanical]
+    GRAPH --> FW[Firmware]
+    GRAPH --> VAL[Validation]
+    GRAPH --> REL[Versions / Outputs / Release]
+
     FW --> BRIDGE
     MCP --> BRIDGE
 ```
 
-## Core layers
+Current code contains real parts of each layer, but the durable repository, schema normalization, command coverage, graph semantics, backend/roles, and interoperability layers are not yet complete.
 
-### 1. Canonical product graph
+## 3. Shared Studio shell
 
-The graph is the durable source of engineering state. It should include:
+The shell is now a product architecture rule, not just a visual preference.
 
-- project identity and schema version
-- product requirements
-- architecture nodes and interfaces
-- mechanical objects, dimensions, constraints, bodies, and assemblies
-- component definitions and component instances
-- schematic symbols, pins, wires, junctions, and nets
-- boards, layers, outlines, placements, traces, vias, drills, zones, and rules
-- firmware configuration, modules, states, mappings, files, and build records
-- validation tests, runs, measurements, evidence, and approvals
-- revisions, branches, release candidates, releases, and manifests
-- MCP proposals and audit records
-- generated-output state and staleness
-
-No workbench should maintain an unrelated private version of the same product data.
-
-### 2. Command layer
-
-All meaningful changes should pass through typed engineering commands.
-
-A command should capture:
-
-- command type
-- author or source
-- affected domain
-- before state
-- after state
-- affected object IDs
-- validation result
-- stale derived outputs
-- timestamp
-- approval information when required
-
-Pointer interactions should use a transaction lifecycle:
+### Shell grammar
 
 ```text
-begin command
-→ update transient preview
+TopBar
+→ workbench tabs
+→ contextual Project Drawer
+→ central engineering work surface
+→ selection-aware Inspector
+→ bottom Problems / jobs / evidence / logs dock
+→ thin status bar
+```
+
+### Ownership rules
+
+- Workbench tabs own top-level domain navigation.
+- Project Drawer owns contextual project/domain navigation.
+- The center owns the active user job or representation.
+- Inspector owns properties/context for explicitly selected objects.
+- Bottom dock owns diagnostics, operations, evidence, logs, and similar transient supporting work.
+- Status bar owns compact state—not another workflow surface.
+
+Do not create:
+
+- another permanent domain rail;
+- another workbench navigation strip inside every editor;
+- duplicate Inspector/property systems;
+- duplicate Problems implementations;
+- center-page evidence/diagnostic mini-apps when the shared dock is the correct owner.
+
+### Current structural convergence
+
+U0–U7 have established this grammar across the major workbenches. U8 is applying it to Release. U9 will refine hierarchy/accessibility/responsiveness after structure stabilizes.
+
+## 4. UI/session state vs engineering state
+
+A major architecture boundary is **what may live outside the canonical project model**.
+
+Appropriate UI/session state includes:
+
+- active workbench representation;
+- drawer section;
+- explicit locally selected record/object;
+- Inspector open/closed;
+- bottom-dock tab/open state;
+- temporary editor viewport/presentation state.
+
+Examples already following this direction include Firmware and Validation workspace UI stores.
+
+UI state must not become a second engineering source of truth.
+
+Canonical engineering state includes requirements, components, board objects, firmware records, validation tests/runs, revisions/output records, and their relationships.
+
+## 5. Explicit context and selection
+
+Passive navigation must not silently invent canonical context.
+
+Opening a workbench should not automatically choose:
+
+- first board;
+- first component;
+- first module;
+- first source file;
+- first validation test;
+- first validation run;
+- first revision;
+- first artifact/release record.
+
+Explicit user selection or an intentionally persisted canonical context should drive engineering operations. Selecting a newly created object after the user explicitly created it is a different, valid interaction.
+
+This rule prevents hidden “current object” state from diverging between editors.
+
+## 6. Canonical product graph
+
+The target graph is the durable connected source of engineering identity and relationships.
+
+It should represent at least:
+
+- project identity and schema version;
+- requirements and acceptance criteria;
+- architecture nodes/interfaces;
+- component definitions and product-specific component instances;
+- schematic symbols/pins/wires/junctions/nets;
+- boards, stack/layers, outlines, placements, pads, traces, vias, drills, zones and rules;
+- mechanical sketches/geometry/features/parts/assemblies/dimensions/constraints;
+- firmware modules, mappings, source/configuration/build/device records;
+- validation definitions, runs, measurements, evidence, reviewer decisions and lineage;
+- versions/workspaces/branches/comparisons/merge conflicts/candidates/releases;
+- drawings/manufacturing/output recipes, jobs, artifacts, hashes and qualification;
+- proposals/audit events/MCP operations;
+- dependency and stale-state relationships.
+
+### Current limitation
+
+The current `Project`/store architecture still contains overlapping legacy/new representations and broad optional state. #6, #11/#42, #12 and related recovery work remain open. Do not document the current model as a finished canonical graph merely because cross-workbench identity has improved.
+
+## 7. Command and transaction architecture
+
+Meaningful engineering mutations should converge on typed commands rather than arbitrary component-local state writes.
+
+A mature command/event record should support:
+
+- stable command type;
+- actor/source;
+- affected domain/object IDs;
+- exact before/after data or reversible operation representation;
+- validation result;
+- stale/impact propagation;
+- time and repository revision;
+- approval context where required.
+
+Pointer transactions should use:
+
+```text
+begin
+→ transient preview
 → commit once
 → persist
-→ mark derived artifacts stale
+→ propagate affected/stale state
 ```
 
-Cancellation should restore exact pointer-down state. Undo and redo should restore exact committed states.
+Undo must restore exact committed prior state; redo must restore exact final state.
 
-### 3. Product and systems engine
+#8/#39 and repository/event work remain open because not every domain mutation has reached this architecture.
 
-Responsibilities:
+## 8. Repository and persistence boundary
 
-- requirements
-- architecture
-- interfaces
-- risks
-- traceability
-- change impact
-- requirement coverage
+The long-term project repository must be usable consistently by:
 
-### 4. Mechanical geometry engine
+- browser UI;
+- local services/bridge;
+- MCP process;
+- future collaboration/backend layers;
+- release/output jobs.
 
-Responsibilities:
+Browser `localStorage` or a monolithic Zustand store cannot be the final cross-process engineering repository.
 
-- 2D geometry
-- object transforms
-- dimensions
-- lightweight constraints
-- assembly bodies
-- board/enclosure synchronization
-- collision and clearance calculations
-- future parametric geometry
+Target properties include:
 
-The current repository contains early 2D and WebGL foundations. It is not a production CAD kernel.
+- schema/version-aware load/save;
+- deterministic migrations;
+- transaction boundaries;
+- corruption/recovery behavior;
+- project/workspace identity;
+- conflict/revision checks;
+- event/audit history;
+- blob/artifact handling;
+- eventually cloud/local parity without sacrificing local ownership.
 
-### 5. Electrical connectivity engine
+#7/#38 and related backend work remain active.
 
-Responsibilities:
+## 9. Domain-engine architecture and current authority
 
-- components and electrical pins
-- schematic anchors
-- wires and junctions
-- nets and labels
-- ERC
-- component deletion and replacement impact
-
-Electrical connectivity should be represented structurally, not inferred from display coordinates or concatenated strings.
-
-### 6. PCB geometry and routing engine
+### Product / requirements / architecture
 
 Responsibilities:
 
-- active-board isolation
-- board outlines and layers
-- footprints and pads
-- placements
-- route anchors
-- traces and vias
-- connectivity graph
-- copper zones and keepouts
-- DRC
-- selected-board manufacturing outputs
+- requirements and acceptance criteria;
+- architecture/interfaces;
+- traceability;
+- impact/risk/decision context;
+- linked validation coverage.
 
-A routed net should be considered complete only when every assigned pad belongs to the same connected electrical graph.
+Current UI foundations exist. Full graph/lifecycle/impact semantics still depend on recovery work.
 
-### 7. Firmware workspace engine
+### Electronics / schematic / PCB
 
 Responsibilities:
 
-- project configuration
-- source tree
-- generated and user-authored files
-- hardware mappings
-- state machines
-- PlatformIO configuration
-- builds and artifacts
-- upload and serial operations
+- canonical component/pin/net identity;
+- schematic connectivity/ERC;
+- board identity/stack/outline;
+- footprint/pad placement;
+- routing/connectivity graph;
+- zones/keepouts/rules;
+- DRC;
+- qualified board-derived outputs.
 
-The browser should not execute arbitrary local commands. Machine actions belong behind the local bridge.
+Current structural workbench is coherent, but #15 remains open for professional ECAD depth. Current local DRC does not imply comprehensive industry-grade verification.
 
-### 8. Validation engine
-
-Responsibilities:
-
-- test definitions
-- execution runs
-- measurements and tolerances
-- evidence
-- reviewer decisions
-- retests
-- immutable history
-- requirement coverage
-- release blocking
-
-Unsupported or manual tests must never auto-pass.
-
-### 9. Revision and release engine
+### Mechanical
 
 Responsibilities:
 
-- named revisions
-- branches
-- state restoration
-- comparisons
-- merge conflicts
-- release candidates
-- approvals
-- immutable released snapshots
-- release manifests
+- sketch topology;
+- dimensions/constraints;
+- exact parametric feature model;
+- parts/bodies/assemblies/mates;
+- board/package coordination;
+- exact interference/clearance;
+- drawings/export derived from exact geometry.
 
-A released snapshot should remain immutable while allowing a new working branch to be created from it.
+Current 2D and 3D review foundations are not a CAD-kernel authority. #16/#17 remain open.
 
-### 10. Derived output engine
+### Firmware
 
 Responsibilities:
 
-- blueprints
-- BOM and CPL
-- board drafts
-- firmware packages
-- validation reports
-- readiness summaries
-- release manifests
-- checksums
+- source/configuration;
+- generated/user-authored file distinctions;
+- hardware mapping;
+- behavior/state machine;
+- reproducible build environment;
+- build artifacts/logs;
+- upload/device/serial operations;
+- durable evidence tied to exact source/environment/device.
 
-Derived outputs must be marked stale whenever their dependencies change.
+The UI is structurally converged, but #18 remains open for real filesystem/PlatformIO/device/serial execution infrastructure.
 
-Generated manufacturing output must remain explicitly labelled as draft until independently reviewed.
+### Validation
 
-## Local project repository
+Responsibilities:
 
-The long-term repository layer should be usable by both the browser application and Node-based processes such as the MCP server.
+- definition/procedure/criteria;
+- execution jobs;
+- observed measurements/results;
+- evidence/provenance;
+- reviewer decisions;
+- append-only run/retest lineage;
+- requirement coverage;
+- stale propagation and release gating.
 
-Possible architecture:
+U7 established one **Define → Execute → Review** UX grammar and explicit test/run selection. Current local execution authority remains intentionally bounded. #19 remains open for durable evidence, equipment/DUT/version binding, trusted review, long-running execution and release-grade lineage.
 
-```text
-Browser UI
-   ↓ authenticated local RPC
-Local canonical project repository
-   ↑
-MCP stdio process
-```
+### Versions / Release
 
-Browser-only localStorage cannot be the final shared source for MCP and machine operations.
+Responsibilities:
 
-## MCP server
+- editable workspace identity;
+- immutable named versions/content trees;
+- branch ancestry;
+- comparisons;
+- three-way merges/conflicts;
+- freeze policy;
+- release candidates tied to exact versions/artifacts;
+- trusted approvals;
+- immutable releases and supersession/withdrawal.
 
-The MCP server should expose only implemented tools and resources.
+U8 is currently converging the UI. #20 remains open for the real engine.
 
-### Tool categories
+### Outputs / drawings / manufacturing
 
-#### Read
+Responsibilities:
 
-- get current project
-- get requirements
-- get architecture
-- get mechanical layout
-- get schematic
-- get PCB status
-- get firmware workspace
-- get validation status
-- get revision and release state
+- recipes tied to exact canonical inputs;
+- deterministic generation jobs;
+- drawings based on qualified exact geometry;
+- board outputs based on authoritative topology/geometry;
+- firmware/validation reports tied to immutable evidence;
+- provenance/tool/input/output hashes;
+- independent parser/viewer/preflight checks;
+- review/approval bound to exact manifest;
+- content-addressed artifacts integrated with release.
 
-#### Draft
+#21 remains open. A generated file is not a qualified artifact.
 
-- draft requirement
-- draft architecture change
-- draft component replacement
-- draft schematic connection
-- draft PCB change
-- draft firmware change
-- draft validation test
+## 10. Validation execution authority
 
-#### Apply and control
+Current local validation modes are explicitly limited:
 
-- apply draft
-- reject draft
-- undo last change
+- DRC automation: implemented local PCB rules only;
+- firmware-state automation: structural state-machine validation only;
+- Mechanical: approximate local AABB screening; clean screen is not exact CAD clearance proof;
+- Thermal: no internal solver; external simulation/lab evidence and reviewer are required for a verdict;
+- other manual/physical tests: explicit engineer verdict required.
 
-#### High impact
+This authority boundary is architectural because Release/readiness code must not infer stronger evidence than Validation actually produced.
 
-- delete critical component
-- change board outline
-- upload firmware
-- approve release
+## 11. Local bridge
 
-High-impact operations require explicit, scoped approval.
+Machine operations belong behind an authenticated local bridge rather than arbitrary browser command execution.
 
-## Local bridge
+Security properties should include:
 
-The local bridge is responsible for approved machine operations.
+- loopback-only binding;
+- session authentication;
+- strict origin policy;
+- canonical workspace root and path containment;
+- argument-array spawning rather than shell strings;
+- operation-scoped approvals for high-impact actions;
+- explicit target/device/port binding;
+- lifecycle records, cancellation/recovery and logs.
 
-Security requirements:
+Current foundations exist; #18 and security/repository work remain active.
 
-- loopback-only binding
-- mandatory session token
-- strict origin allowlist
-- canonical workspace root
-- path containment validation
-- argument-array process spawning
-- no arbitrary shell endpoint
-- short-lived, operation-scoped approvals
-- operation history
-- cancellation
+## 12. MCP architecture
 
-Target operations include:
+MCP should expose semantic engineering operations over the same canonical repository/command layer as the UI.
 
-- PlatformIO detection
-- builds
-- serial-port listing
-- firmware upload
-- serial monitor
-- workspace export
-- blueprint export
+Desired categories:
 
-## Persistence and migrations
+- **read** — inspect product/domain state;
+- **draft** — create reversible proposals without immediate mutation;
+- **apply/control** — apply reviewed proposal, undo/revert where supported;
+- **high impact** — device/release/destructive operations behind explicit approval/policy.
 
-Every persisted project should include a schema version.
+MCP must never gain authority to fabricate geometry, placement, evidence, qualification or human approval.
 
-Migrations should:
+Current MCP protocol/tool foundations exist; complete live durable repository integration and policy remain recovery work.
 
-- preserve known data
-- convert legacy representations
-- avoid silently discarding unknown V1 fields
-- validate structural integrity
-- produce actionable warnings
+## 13. Derived state and staleness
 
-Round-trip tests should cover export, reset, import, project switching, and reload.
+Readiness, validation acceptance, outputs and release eligibility must derive from real dependencies.
 
-## Derived-state truthfulness
+Examples of blockers/stale conditions include:
 
-Readiness, validation, release eligibility, and manufacturing status must derive from actual project state.
+- unresolved requirement/interface;
+- ERC/DRC blocker;
+- unrouted/unresolved connectivity;
+- invalid/missing board or package geometry;
+- mechanical collision or unresolved exact-clearance evidence;
+- failed/missing firmware build/device evidence;
+- failed/missing critical validation evidence;
+- source change after validation/output generation;
+- stale drawing/manufacturing artifact;
+- missing qualification/reviewer/approval;
+- release candidate referencing changed dependencies.
 
-Examples of real blockers:
+An empty array, existing screen, generated file, or status badge is not evidence of readiness.
 
-- unresolved critical requirement
-- ERC or DRC error
-- unrouted net
-- invalid route anchor
-- component outside board
-- missing package dimensions
-- mechanical collision
-- failed firmware build
-- failed critical validation run
-- stale blueprint
-- stale manufacturing package
-- missing approval
+## 14. Current structural phase state
 
-An empty array or existing UI panel is not proof of readiness.
+| Studio phase | Architecture state |
+| --- | --- |
+| U0 | Architecture/navigation lock landed |
+| U1 | Shared shell foundation landed |
+| U2 | Evidence-driven Project Home landed |
+| U3 | Electronics structural convergence landed |
+| U4 | PCB structural convergence landed |
+| U5 | Mechanical structural convergence landed |
+| U6 | Firmware structural convergence landed |
+| U7 | Validation structural convergence landed |
+| **U8** | **Active — Release convergence** |
+| U9 | Deferred final polish |
 
-## Current architectural limitations
+See `docs/development/STUDIO_PHASE_EXECUTION_STATUS.md` for exact PR/commit evidence and current next action.
 
-The current repository still has gaps in:
+## 15. Architecture completion rule
 
-- shared durable storage between browser and MCP
-- complete command integration across all canvases
-- PCB connectivity and strict multi-board isolation
-- parametric mechanical geometry
-- complete local bridge operations
-- validation execution UI
-- branch and release integration
-- fabrication-grade outputs
+Do not call an architecture layer complete because the UI uses the intended shape. Completion requires the relevant issue acceptance criteria, production engine, persistence/repository behavior, tests, failure/recovery semantics, provenance, independent verification where needed, and end-to-end workflow evidence.
 
-See [CURRENT_STATUS.md](CURRENT_STATUS.md) for the maintained status summary.
+For current implementation reality, defer to [`CURRENT_STATUS.md`](CURRENT_STATUS.md).
