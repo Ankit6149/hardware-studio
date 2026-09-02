@@ -6,221 +6,252 @@
 
 ### Design the whole product—not disconnected files.
 
-**An experimental, local-first engineering workspace by [Ankit Bhardwaj](https://github.com/Ankit6149)**
+**An experimental connected engineering workspace by [Ankit Bhardwaj](https://github.com/Ankit6149)**
 
-[Landing page](https://hardware-studio.vercel.app/) · [Development workspace](https://hardware-studio.vercel.app/studio) · [Product vision](docs/PRODUCT_VISION.md) · [Current status](docs/CURRENT_STATUS.md) · [Roadmap](docs/ROADMAP.md)
+[Landing page](https://hardware-studio.vercel.app/) · [Studio](https://hardware-studio.vercel.app/studio) · [Current status](docs/CURRENT_STATUS.md) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md)
 
 </div>
 
 ---
 
 > [!WARNING]
-> **Hardware Studio is not ready for production use.** The base engineering engines and several cross-domain workflows are incomplete. Current PCB, mechanical, firmware, validation, blueprint, and manufacturing outputs must not be used directly for fabrication, certification, safety decisions, or production hardware.
+> **Hardware Studio is not a production-qualified engineering system.** Current PCB, Mechanical, Firmware, Validation, Release, drawing, and manufacturing foundations still have major engineering limitations. Do not use generated output directly for fabrication, certification, safety decisions, or production hardware without qualified independent review.
 
-## Overview
+## Current snapshot — September 2, 2026
 
-Hardware Studio is an attempt to build one operating environment for designing, validating, and releasing complete physical products.
+**Master at documentation sync:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Stable release:** None  
+**Active Studio phase:** **U8 — Release convergence**
 
-Hardware development is usually fragmented across mechanical CAD, schematic and PCB tools, firmware repositories, spreadsheets, test documents, supplier portals, revision folders, and manufacturing packages. Important relationships are maintained manually—or lost entirely.
+The Studio recovery program has structurally converged U0 through U7:
 
-Hardware Studio explores a different model:
+- U0 — architecture/navigation lock;
+- U1 — shared Studio shell and clean routes;
+- U2 — evidence-driven Project Home;
+- U3 — connected Electronics reference workbench;
+- U4 — PCB workbench convergence;
+- U5 — Mechanical workbench convergence;
+- U6 — Firmware workbench convergence;
+- U7 — Validation **Define → Execute → Review** convergence.
 
-> **One durable product graph shared by every engineering workbench.**
+U7.1 landed through PR #116. Its exact verified head passed lint, typecheck, **339/339 tests across 89 test files**, production build, and Vercel deployment status. U8 is now focused on making Release coherent and truthful.
+
+> **Important:** “structurally converged” means the workbench uses the intended shared interaction grammar. It does **not** mean the underlying professional engineering engine is complete. Deep issues #15–#21 remain open for PCB, Mechanical, Firmware, Validation, versions/releases, and qualified outputs.
+
+## What Hardware Studio is trying to become
+
+Hardware development is fragmented across requirements documents, block diagrams, ECAD, CAD, firmware repositories, spreadsheets, validation reports, supplier portals, revision folders, and manufacturing packages. Relationships are often duplicated or lost between tools.
+
+Hardware Studio explores a different mental model:
+
+> **One product/project context with connected engineering views and one evolving digital thread.**
 
 ```text
-Product requirements
-        ↓
-System architecture and interfaces
-        ↓
-Mechanical geometry and assemblies
-        ↓
-Components, schematic, and PCB
-        ↓
-Firmware mappings and source
-        ↓
-Validation evidence and retests
-        ↓
-Blueprints, manufacturing, and releases
+Requirements + architecture
+          ↓
+Components + schematic + PCB
+          ↓
+Mechanical geometry + assembly context
+          ↓
+Firmware + hardware mapping
+          ↓
+Validation definitions + runs + review
+          ↓
+Readiness + revisions + outputs + release
 ```
 
-The project is inspired by the depth of Autodesk Fusion, KiCad, Altium, Onshape, PlatformIO, FreeCAD, and product-lifecycle systems—but it is **not currently a replacement for any of them**.
+The product is inspired by proven interaction and engineering patterns in tools such as KiCad, Altium, Autodesk Fusion, Onshape, FreeCAD, PlatformIO, NI TestStand, and PLM/release systems. It is **not currently a replacement for those tools**.
 
-## At a glance
+## The current Studio mental model
 
-| Area | Direction | Current state |
-|---|---|---|
-| Product | Requirements, architecture, interfaces, risks, traceability | Foundation |
-| Mechanical | 2D layout, enclosure intent, assemblies, dimensions, 3D coordination | Partial |
-| Electronics | Components, symbols, nets, schematic, PCB, ERC and DRC | Partial |
-| Firmware | Hardware mapping, state machines, source, PlatformIO workflows | Partial |
-| Validation | EVT, DVT, PVT, evidence, measurements, retests | Partial |
-| Release | Revisions, branches, blueprints, factory packages, approvals | Partial |
-| MCP | Typed, reviewable engineering operations over the live product | Foundation |
+A user should feel:
 
-Detailed reality—not promotional status—is maintained in [Current Status](docs/CURRENT_STATUS.md).
+> “I am in one product/project. Product, Electronics, PCB, Mechanical, Firmware, Validation, and Release are connected views of that same product.”
 
-## The core idea: one product graph
+The shared Studio grammar is:
 
-A component should not exist as unrelated records in different tools. It should be one connected engineering entity with links to its:
+```text
+TopBar
+  ↓
+Workbench tabs
+  ↓
+Contextual Project Drawer | central work surface | Inspector
+                           ↓
+                   bottom diagnostics/jobs/evidence dock
+                           ↓
+                        status bar
+```
 
-- requirement and system role
-- architecture block and interfaces
-- schematic symbol and electrical pins
-- PCB footprint, pads, placement, nets, traces, and rules
-- 3D package and mechanical clearance envelope
-- BOM, sourcing, lifecycle, and alternatives
-- firmware driver, protocol, and pin mapping
-- power and thermal assumptions
-- validation tests, measurements, and evidence
-- release and manufacturing state
+Domain workbenches should not create their own permanent navigation systems, duplicate Inspectors, or separate mini-app shells.
 
-Eventually, replacing one component should reveal the effects across the complete product instead of silently breaking downstream files.
+## Clean Studio routes
 
-## Workbenches
+Studio navigation uses real paths rather than hash fragments:
 
-### Product
+```text
+/studio
+/studio/requirements
+/studio/architecture
+/studio/components
+/studio/schematic
+/studio/pcb
+/studio/mechanical
+/studio/firmware
+/studio/validate
+/studio/release
+```
 
-Requirements, system architecture, interfaces, constraints, risks, decisions, and requirement coverage.
+Nested contextual routes exist within domains. Legacy hash aliases are migration compatibility only; new code must not reintroduce hash-routed Studio navigation.
+
+The approved public landing page is intentionally separate from Studio convergence and should not be redesigned as part of workbench recovery.
+
+## Current workbenches
+
+### Project / Product
+
+Project Home, requirements, architecture, connected engineering context, next-action/blocker state, and lifecycle framing.
+
+Project Home uses domain evidence rather than raw object counts to decide whether an area is in progress or reviewable. Durable “recent engineering changes” still depends on deeper repository/event infrastructure.
+
+### Electronics / PCB
+
+Connected component identity across component definitions, schematic intent, board context, PCB state, DRC/BOM surfaces, and cross-probing foundations.
+
+**Boundary:** #15 remains open for professional ECAD depth, topology, routing, comprehensive rules/checks, multi-board guarantees, and fabrication qualification.
 
 ### Mechanical
 
-2D layouts, enclosure intent, assembly stacks, dimensions, lightweight constraints, clearances, WebGL visualization, and future parametric geometry.
+One workbench with **2D Layout / 3D Review / Assembly** representations, shared selection, explicit physical inputs, lightweight geometry and review foundations.
 
-### Electronics
-
-Component definitions, symbols, pins, nets, schematic connectivity, PCB footprints, board layouts, routing, DRC/ERC, and manufacturing drafts.
+**Boundary:** #16/#17 remain open for a real sketch/constraint engine, CAD kernel, parametric features, exact assemblies, exact interference/clearance, and qualified exchange.
 
 ### Firmware
 
-Hardware mappings, state machines, source files, generated code, PlatformIO configuration, builds, uploads, serial monitoring, and validation links.
+One Firmware Project Drawer, module/source/hardware-map representations, shared Inspector, and bottom Problems / Build Evidence / Device Evidence grammar.
 
-### Validate
+Generated source is scaffolding, not verification. Recorded build/device evidence is metadata unless the local execution chain actually ran it.
 
-EVT, DVT, PVT, factory QA, measurements, evidence, retests, immutable run history, and requirement coverage.
+**Boundary:** #18 remains open for real filesystem operations, hardened PlatformIO build/upload, device operations, serial monitor, cancellation/recovery, and durable execution evidence.
 
-### Release
+### Validation
 
-Named revisions, branches, comparisons, approvals, blueprints, manufacturing packages, release candidates, and immutable releases.
+One Validation Project Drawer with **Tests / Coverage / Factory QA / Runs** and explicit **Define → Execute → Review** jobs.
 
-## Intended architecture
+- Define owns procedure, expected/tolerance schema, links, pass criteria, and editable definition references.
+- Execute owns observation, evidence reference, reviewer/verdict, and run/retest creation.
+- Review owns read-only historical run snapshots/history.
+
+Current execution authority remains deliberately bounded: local DRC rules are local, state-machine automation is structural only, Mechanical screening is approximate, Thermal has no internal solver, and manual/physical Pass requires explicit engineer judgment/evidence.
+
+**Boundary:** #19 remains open for durable hashed evidence, version/DUT/equipment binding, reviewer policy, execution jobs, stale propagation, and release-grade accepted evidence.
+
+### Release — active U8 phase
+
+Current code has readiness, revision/snapshot, output, drawing, factory-package, and release foundations. U8 is converging them into one coherent control surface.
+
+**Critical boundary:** current foundations must not be confused with:
+
+- content-addressed immutable versions;
+- real branch ancestry and three-way merge/conflict handling;
+- repository-enforced freezes;
+- trusted approvals bound to exact candidate hashes;
+- qualified, independently validated manufacturing artifacts;
+- immutable published releases.
+
+#20 and #21 remain the engineering authorities for those guarantees.
+
+## At-a-glance status
+
+| Domain | Studio structure | Engineering depth |
+| --- | --- | --- |
+| Product / Project Home | Converged foundation | Partial |
+| Requirements / Architecture | Connected | Partial |
+| Electronics / PCB | Structurally converged | Partial — #15 open |
+| Mechanical | Structurally converged | Partial — #16/#17 open |
+| Firmware | Structurally converged | Partial — #18 open |
+| Validation | Structurally converged | Partial — #19 open |
+| Release | U8 active | Foundation/partial — #20/#21 open |
+| Local bridge | Foundation | Partial |
+| MCP | Foundation | Partial |
+
+Detailed classification lives in [Current Status](docs/CURRENT_STATUS.md).
+
+## Canonical architecture direction
 
 ```mermaid
 flowchart TB
-    UI[Engineering Workbenches]
-    MCP[MCP Server]
-    CMD[Reversible Engineering Commands]
+    SHELL[Shared Studio Shell]
+    UI[Connected Engineering Workbenches]
+    CMD[Typed / Reversible Engineering Commands]
+    REPO[Durable Repository Boundary]
     GRAPH[Canonical Product Graph]
+    MCP[MCP Server / Typed Tools]
     BRIDGE[Approved Local Machine Bridge]
 
+    SHELL --> UI
     UI --> CMD
     MCP --> CMD
-    CMD --> GRAPH
-    GRAPH --> PRODUCT[Product & Systems]
-    GRAPH --> MECH[Mechanical Geometry]
-    GRAPH --> ELEC[Electrical Connectivity]
-    GRAPH --> PCB[PCB Geometry & Routing]
-    GRAPH --> FW[Firmware Workspace]
+    CMD --> REPO
+    REPO --> GRAPH
+    GRAPH --> PRODUCT[Requirements / Architecture]
+    GRAPH --> ELEC[Components / Schematic / PCB]
+    GRAPH --> MECH[Mechanical]
+    GRAPH --> FW[Firmware]
     GRAPH --> VAL[Validation]
-    GRAPH --> OUT[Derived Outputs & Releases]
+    GRAPH --> REL[Versions / Outputs / Release]
     FW --> BRIDGE
     MCP --> BRIDGE
 ```
 
-The project is intended to work in two directions:
-
-1. **Hardware Studio as an MCP server** — approved AI clients inspect and operate the product through semantic engineering tools.
-2. **Hardware Studio as an MCP host/client** — the workspace connects to engineering tools, component services, suppliers, and local devices.
-
-MCP actions should represent real operations such as `add_component`, `connect_component_pins`, `route_net`, `build_firmware`, or `create_validation_run`—not mouse-coordinate automation.
-
-## What exists today
-
-The repository contains early foundations for:
-
-- a multi-workbench browser application
-- a canonical local project model and project persistence
-- product requirements and architecture surfaces
-- mechanical 2D and WebGL workbenches
-- component, schematic, PCB, and design-review foundations
-- firmware modules, state machines, and source-file foundations
-- validation tests and run-engine foundations
-- revision, release, blueprint, and manufacturing-draft foundations
-- a local PlatformIO bridge foundation
-- an MCP server foundation
-- readiness scoring and project exports
-
-Some workflows are real, some are partial, and some remain architectural foundations.
-
-## What is not ready
-
-The following areas still require substantial production work:
-
-- pointer-correct undo and redo across every editor
-- robust polygon, dimension, constraint, and parametric mechanical workflows
-- fully anchored PCB traces and a true electrical connectivity graph
-- comprehensive DRC/ERC and strict multi-board isolation
-- canonical 3D geometry without guessed package or board dimensions
-- complete PlatformIO operations, serial monitoring, cancellation, and durable history
-- validation execution, tolerances, evidence review, retest comparison, and UI
-- real branch switching, merging, conflicts, and immutable release workflows
-- MCP connection to the live durable application project and typed command execution
-- fabrication-grade manufacturing outputs
-- complete CI coverage for the application, bridge, and MCP packages
+The current repository has pieces of this architecture, but persistence, schema normalization, command/event durability, graph semantics, backend/roles, and interoperability remain active recovery work.
 
 ## Product principles
 
 ### Truthful engineering state
 
-A workflow must not be called complete merely because a type, test, button, or document exists. Status must derive from real production behavior and evidence.
+Never mark a workflow complete because a type, button, test, generated file name, or status badge exists. Completion must derive from production behavior and evidence.
 
-### Local-first direction
+### Explicit context
 
-Projects should remain usable locally. Machine-level operations should be mediated through an authenticated loopback bridge with explicit approvals for high-impact actions.
-
-### Reversible by default
-
-Engineering changes should be versioned, reviewable, undoable, and traceable—whether initiated through the UI or MCP.
-
-### Intent-driven operations
-
-The system should expose semantic engineering actions instead of brittle browser or mouse automation.
+Opening a workbench should not silently pick the first board, module, file, test, run, revision, or artifact. Canonical context should be explicit.
 
 ### One source of product truth
 
-Every workbench should operate on the same canonical project document, with migrations and deterministic derived outputs.
+Each workbench should operate on the same connected project/repository model, not private copies of domain state.
 
-## Explore
+### Reversible and reviewable changes
 
-Public landing page:
+Engineering mutations should be transactional, auditable, undoable where appropriate, and eventually versioned through durable repository semantics.
 
-```text
-https://hardware-studio.vercel.app/
-```
+### Missing data stays missing
 
-Experimental workspace:
+The application must not invent authoritative dimensions, geometry, evidence, provenance, tool versions, or release identifiers merely to produce a green UI.
 
-```text
-https://hardware-studio.vercel.app/studio
-```
+### Local-first direction
 
-The development build is provided for exploration only. It is not a stable release.
+Local project usability and local machine/device operations remain core goals. High-impact operations should be mediated through explicit approvals and hardened local bridges.
 
 ## Run locally
 
 ### Requirements
 
-- Node.js 20 or newer
-- npm
-- PlatformIO CLI only when testing local firmware operations
+- Node.js 22 is used in current CI;
+- npm;
+- PlatformIO CLI only when explicitly testing local firmware bridge foundations.
 
-### Install
+### Install and run
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` for the landing page and `http://localhost:3000/studio` for the workspace.
+Open:
+
+```text
+http://localhost:3000
+http://localhost:3000/studio
+```
 
 ### Verify
 
@@ -231,58 +262,66 @@ npm test
 npm run build
 ```
 
-Dedicated MCP and bridge build/test scripts are not yet complete.
+See [QA_CHECKLIST.md](QA_CHECKLIST.md) for the exact-head merge and truth-verification checklist.
 
 ## Repository map
 
 ```text
-src/app/                     Next.js routes, metadata, and landing page
-src/components/              Product and engineering workbenches
-src/store/                   Canonical project state and command history
-src/lib/                     Engineering engines, validation, exports, and utilities
-src/types/                   Shared product-domain models
-packages/local-bridge/       Approved local machine operations
-packages/mcp-server/         Model Context Protocol foundation
-public/                      Public identity assets
-docs/                        Vision, architecture, roadmap, status, and safety
+src/app/                     Next.js routes, metadata, landing page
+src/components/              Shared shell + engineering workbenches
+src/store/                   Project state, command/history and UI stores
+src/lib/                     Engineering logic, validation, exports, utilities
+src/types/                   Shared domain models
+packages/local-bridge/       Approved local machine-operation foundation
+packages/mcp-server/         MCP protocol/tooling foundation
+public/                      Identity assets
+docs/                        Status, architecture, plans, safety, research
+.github/workflows/           Canonical CI and workflow policy
+.agents/                     Agent execution guidance
 ```
 
-## Documentation
+## Documentation source-of-truth order
+
+For current implementation work, read:
+
+1. [Current Status](docs/CURRENT_STATUS.md)
+2. [Studio Phase Execution Status](docs/development/STUDIO_PHASE_EXECUTION_STATUS.md)
+3. [Product Recovery Execution Plan](docs/development/PRODUCT_RECOVERY_EXECUTION_PLAN.md)
+4. [Architecture](docs/ARCHITECTURE.md)
+5. [Safety and Limitations](docs/SAFETY_AND_LIMITATIONS.md)
+6. domain convergence notes under `docs/development/`
+7. research documents as references, not implementation-status claims.
+
+Other useful docs:
 
 - [Product Vision](docs/PRODUCT_VISION.md)
-- [System Architecture](docs/ARCHITECTURE.md)
-- [Current Status](docs/CURRENT_STATUS.md)
 - [Roadmap](docs/ROADMAP.md)
-- [Safety and Limitations](docs/SAFETY_AND_LIMITATIONS.md)
+- [Product Constitution](docs/product/V1_PRODUCT_CONSTITUTION.md)
 - [Contributing](CONTRIBUTING.md)
-- [V1 Execution Ledger](docs/development/V1_EXECUTION_LEDGER.md)
+- [Verification Checklist](QA_CHECKLIST.md)
 
 ## Safety and fabrication notice
 
-Current output requires:
+Before any current generated output is used for a physical product, obtain the appropriate independent checks, which may include:
 
-- independent electrical engineering review
-- independent mechanical engineering review
-- real Gerber/CAM viewer inspection
-- fab-house DFM validation
-- verified component footprints and package geometry
-- physical prototype testing
-- applicable regulatory and safety review
+- electrical engineering review;
+- mechanical/CAD review;
+- CAM/Gerber/Excellon review;
+- fab/assembly-house DFM review;
+- verified footprints and package geometry;
+- verified firmware build/device evidence;
+- physical prototype validation;
+- applicable safety/regulatory/certification review.
 
-Never submit current generated output directly to manufacturing without qualified review.
+Never treat Hardware Studio's current generated output as fabrication-qualified merely because generation succeeded.
 
 ## Project status
 
-**Stage:** Research and active development  
-**Stable release:** None  
-**Primary goal:** Build a truthful connected foundation before presenting the platform as complete  
+**Stage:** research + active recovery + engineering development  
+**Stable release:** none  
+**Current Studio phase:** U8 Release convergence  
+**Primary goal:** one truthful connected product-development environment before claiming professional replacement-level depth  
 **Maintainer:** [Ankit Bhardwaj](https://github.com/Ankit6149)
-
-## Contributing
-
-Thoughtful engineering feedback is welcome, especially around product-graph architecture, computational geometry, schematic and PCB connectivity, local-first storage, firmware tooling, validation, revisions, manufacturing, and MCP safety.
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a change.
 
 ---
 
