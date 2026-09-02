@@ -11,11 +11,12 @@ describe('validation destructive-action baseline', () => {
   it('routes full test deletion through the shared feedback decision system', () => {
     expect(source).toContain("import { useFeedback } from '../feedback/FeedbackProvider';");
     expect(source).toContain('const feedback = useFeedback();');
+    expect(source).toContain('const deleteTest = async () =>');
     expect(source).toContain('const confirmed = await feedback.confirm({');
     expect(source).toContain("variant: 'destructive'");
     expect(source).toContain('if (!confirmed) return;');
     expect(source).toContain("store.executeProjectCommand('DEL_TEST'");
-    expect(source).toContain('onClick={handleDeleteTest}');
+    expect(source).toContain('onClick={() => void deleteTest()}');
   });
 
   it('does not use browser-native blocking dialogs in Validation Studio', () => {
