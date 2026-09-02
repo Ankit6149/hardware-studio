@@ -1,243 +1,323 @@
-# Hardware Studio Product Vision
+# Hardware Studio — Product Vision
+
+**Vision reconciliation:** 2026-09-02  
+**Current master at reconciliation:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Current Studio phase:** U8 — Release convergence
+
+This document describes the product Hardware Studio is being built toward. For current implementation reality, read `CURRENT_STATUS.md`; for active execution, read `development/STUDIO_PHASE_EXECUTION_STATUS.md`.
 
 ## Purpose
 
-Hardware Studio is being built as a unified operating environment for designing, validating, and releasing complete physical products.
+Hardware Studio is being built as one connected operating environment for designing, validating, reviewing, and releasing complete physical products.
 
-The project begins with a simple observation: hardware development is not one activity. A real product is simultaneously a set of requirements, a mechanical object, an electrical system, a PCB, firmware, test evidence, a supply chain, and a release package.
+The central observation is simple: a hardware product is never just a PCB file, CAD model, firmware repository, spreadsheet, or test report. It is simultaneously:
 
-Most teams represent those realities in separate tools and manually maintain the relationships between them. Hardware Studio explores whether those relationships can become part of the product itself.
+- product intent and requirements;
+- system architecture and interfaces;
+- electrical connectivity and physical electronics;
+- mechanical geometry and assembly context;
+- firmware and hardware mapping;
+- validation evidence;
+- revisions, outputs, manufacturing context, and release decisions.
 
-## The problem
+Most teams represent those realities in separate tools and manually preserve the relationships between them. Hardware Studio explores whether those relationships can become durable product state instead of tribal knowledge.
 
-A component replacement can affect:
+## The core product idea
 
-- system requirements
-- electrical interfaces
-- pin mappings
-- schematic symbols and nets
-- footprint and board placement
-- enclosure clearance
-- power and thermal budgets
-- firmware drivers and protocols
-- sourcing and BOM cost
-- validation tests
-- manufacturing outputs
+The target is **not** a launcher for unrelated mini-apps.
 
-Today, these effects are usually discovered late, tracked manually, or missed.
+The target mental model is:
 
-Hardware Studio is intended to make the product graph explicit enough that changes can be reviewed across every affected engineering domain.
+> “I am in one product/project, and Product, Electronics, PCB, Mechanical, Firmware, Validation, and Release are connected views of that same product.”
 
-## The long-term product
+That implies one connected digital thread, shared object identity, visible change impact, explicit engineering evidence, and predictable workbench interaction.
 
-The long-term system combines ideas commonly spread across:
+## Current progress toward that vision
 
-- mechanical CAD
-- electronic design automation
-- PCB layout
-- firmware development
-- requirements management
-- validation management
-- product lifecycle management
-- manufacturing release systems
+The Studio interaction model has already moved substantially in this direction:
 
-The target experience is not a collection of unrelated mini-apps. It is a set of workbenches over one shared product model.
+- U0–U7 structural UX convergence is landed;
+- workbench tabs own top-level domain navigation;
+- contextual Project Drawers own domain/project navigation;
+- the Inspector is a shared selection-aware surface;
+- the bottom dock is the shared home for diagnostics/jobs/evidence/logs;
+- Project Home uses domain evidence rather than raw counts;
+- PCB, Mechanical, Firmware, and Validation have been converged away from separate mini-app shells;
+- passive navigation is moving toward explicit selection rather than hidden first-record context;
+- Studio routing uses clean `/studio/...` paths rather than hash routing.
+
+U8 is now applying the same discipline to Release.
+
+This is meaningful product progress, but it does not mean the underlying engineering engines are complete. Issues #15–#21 remain the deep engineering authorities for PCB, Mechanical, Firmware, Validation, versions/releases, and qualified outputs.
+
+## The problem Hardware Studio should solve
+
+A single change can cross many engineering boundaries.
+
+Replacing a component can affect:
+
+- requirements and system behavior;
+- architecture interfaces;
+- voltage/current assumptions;
+- schematic symbol and pin mappings;
+- footprint, board placement and routing;
+- enclosure clearance and connector access;
+- power and thermal assumptions;
+- firmware driver/protocol/pin configuration;
+- sourcing and BOM risk;
+- validation procedures and accepted evidence;
+- drawings, manufacturing output and release eligibility.
+
+In fragmented workflows, those effects are discovered manually, late, or not at all.
+
+Hardware Studio should make relationships explicit enough that the system can answer:
+
+- What depends on this object?
+- Which downstream evidence becomes stale if this changes?
+- Which outputs must be regenerated?
+- Which validation must be repeated?
+- What is still unresolved?
+- What evidence actually supports a release claim?
+
+## Product graph vision
+
+A component is a useful example of the intended connected model:
+
+```text
+Component instance
+├── requirement / system role
+├── architecture node and interfaces
+├── electrical pins and schematic representation
+├── footprint / pads / board placement / nets
+├── physical package / keepout / clearance context
+├── sourcing / lifecycle / alternatives
+├── firmware mapping / driver / protocol
+├── power / thermal assumptions
+├── validation definitions and accepted runs
+└── version / output / release state
+```
+
+The same principle should apply to boards, requirements, firmware modules, validation procedures, mechanical features, versions, and artifacts.
 
 ## Shared workbenches
 
-### Product
+### Project / Product
 
-- requirements
-- architecture
-- interfaces
-- constraints
-- risks
-- decisions
-- traceability
+Purpose:
 
-### Mechanical
+- product intent;
+- requirements;
+- architecture and interfaces;
+- decisions and risks;
+- next engineering action;
+- connected lifecycle context.
 
-- sketches and layouts
-- parts and bodies
-- enclosure design
-- assembly relationships
-- dimensions and constraints
-- clearances and interference
-- drawings and blueprints
+The workbench should make the product understandable before users enter domain-specific editors.
 
 ### Electronics
 
-- reusable component definitions
-- schematic symbols and pins
-- electrical nets
-- footprints and pads
-- board outlines and layers
-- placement and routing
-- ERC and DRC
-- fabrication drafts
+Purpose:
+
+- component definitions and product instances;
+- schematic symbols and electrical pins;
+- nets/connectivity;
+- board/PCB realization;
+- ERC/DRC and implementation evidence;
+- BOM/manufacturing context.
+
+The long-term target is real ECAD depth with canonical connectivity and independently qualified outputs, not simply a visual schematic/board editor.
+
+### Mechanical
+
+Purpose:
+
+- sketch/layout intent;
+- dimensions and constraints;
+- parts/features/bodies;
+- board/enclosure coordination;
+- assemblies and mates;
+- exact clearance/interference;
+- drawings and exchange.
+
+Current 2D/3D review foundations are stepping stones. The vision requires qualified exact geometry and a mature feature/constraint model.
 
 ### Firmware
 
-- hardware mappings
-- pin and protocol configuration
-- state machines
-- source files
-- generated code
-- builds and artifacts
-- uploads and serial logs
+Purpose:
 
-### Analyze
+- source/configuration;
+- hardware mapping;
+- state/behavior modeling;
+- reproducible builds;
+- device upload and serial workflows;
+- build/device evidence tied to exact source/environment/device.
 
-- electrical checks
-- power budgets
-- thermal assumptions
-- mechanical interference
-- tolerances
-- DRC and ERC
+The browser should not pretend recorded metadata is locally executed proof. Machine operations belong behind hardened local tooling.
 
-### Validate
+### Validation
 
-- EVT
-- DVT
-- PVT
-- factory QA
-- measurements
-- evidence
-- retests
-- requirement coverage
+Purpose:
+
+- test definition;
+- execution;
+- measurements and observations;
+- evidence and provenance;
+- reviewer decisions;
+- retest lineage;
+- requirement coverage;
+- release blocking.
+
+The current **Define → Execute → Review** grammar is the intended interaction direction. The long-term vision adds durable, version-bound, trustworthy evidence and review infrastructure.
 
 ### Release
 
-- named revisions
-- branches
-- comparisons
-- approvals
-- blueprints
-- manufacturing packages
-- firmware artifacts
-- release manifests
+Purpose:
 
-## The product graph
+- readiness and blockers;
+- editable workspaces and immutable versions;
+- branch lineage and comparisons;
+- merges/conflicts;
+- outputs and preflight;
+- release candidates;
+- trusted approvals;
+- immutable published releases and supersession.
 
-A component should link all of its representations:
+U8 is currently converging this area structurally. The vision requires much more than revision cards, snapshots, generated ZIPs, or status toggles.
+
+## One interaction grammar
+
+The target interaction model is intentionally consistent across domains:
 
 ```text
-Component
-├── Requirement and system role
-├── Architecture node and interfaces
-├── Schematic symbol and electrical pins
-├── PCB footprint and pads
-├── PCB placement, traces, and rules
-├── 3D package and clearance envelope
-├── BOM and sourcing information
-├── Firmware driver and pin mapping
-├── Power and thermal assumptions
-├── Validation tests and evidence
-└── Release and manufacturing state
+TopBar
+→ workbench tabs
+→ contextual Project Drawer
+→ central user job / engineering representation
+→ contextual Inspector
+→ bottom Problems / jobs / evidence / logs dock
+→ compact status bar
 ```
 
-The graph should support questions such as:
+A mature engineering application is complex, but complexity should come from the product and engineering problem—not from every domain inventing a different shell.
 
-- Which requirements depend on this component?
-- Which firmware modules use this pin?
-- Which tests become stale after this footprint changes?
-- Which manufacturing files must be regenerated after the board outline changes?
-- Can this component be replaced without violating enclosure clearances?
+## Explicit context as a product principle
 
-## Intent-driven operations
-
-Hardware Studio should expose semantic engineering operations rather than fragile interface automation.
+Hardware Studio should not silently choose engineering context merely because a record exists.
 
 Examples:
 
-- `create_requirement`
-- `add_component`
-- `connect_component_pins`
-- `create_board`
-- `place_footprint`
-- `route_net`
-- `run_drc`
-- `create_firmware_module`
-- `map_firmware_pin`
-- `build_firmware`
-- `create_validation_run`
-- `generate_blueprints`
-- `create_release_revision`
+- opening PCB should not invent an active board;
+- opening Firmware Source should not silently choose the first file;
+- opening Validation should not silently choose the first test/run;
+- opening Release should not silently choose the first revision/artifact/candidate.
 
-These operations should be available to the UI and, where safe, through MCP.
+Explicit context makes automation, audit, review, and cross-domain impact safer.
 
-## MCP direction
+## Intent-driven engineering operations
+
+The UI and MCP should eventually share semantic domain operations such as:
+
+- `create_requirement`;
+- `add_component`;
+- `connect_component_pins`;
+- `create_board`;
+- `place_footprint`;
+- `route_net`;
+- `run_drc`;
+- `create_firmware_module`;
+- `map_firmware_pin`;
+- `build_firmware`;
+- `create_validation_run`;
+- `create_version`;
+- `generate_output_package`;
+- `create_release_candidate`.
+
+These operations should be typed, reviewable, reversible where appropriate, policy-aware, and backed by the same project/repository model as the UI.
+
+Mouse-coordinate automation is not a substitute for engineering semantics.
+
+## AI and MCP direction
 
 Hardware Studio is intended to work both as:
 
-1. an MCP server that exposes the product to approved AI clients; and
-2. an MCP host/client that can connect to external engineering systems.
+1. an MCP server exposing safe semantic engineering capabilities; and
+2. an MCP host/client integrating with external engineering services and tools.
 
-Potential adapters include:
+Potential integrations include ECAD/CAD tool APIs, PlatformIO/device tooling, supplier/component services, simulation systems, test equipment, and project/release infrastructure.
 
-- Autodesk Fusion MCP
-- KiCad IPC/MCP adapters
-- Onshape API/MCP adapters
-- PlatformIO MCP or CLI adapters
-- supplier and component-data services
-- local hardware and device tools
+The product vision is **not unrestricted AI control**.
 
-The goal is not unrestricted AI control. The goal is safe, typed, reviewable engineering operations.
+AI/MCP must not be allowed to silently invent:
 
-## Safety model
+- dimensions or geometry;
+- component qualification;
+- placements/routing evidence;
+- validation evidence;
+- equipment/calibration records;
+- human reviewer identity/approval;
+- manufacturing qualification;
+- release approval.
 
-Operations should be separated into three levels.
-
-### Read
-
-Inspect product state, geometry, components, nets, tests, builds, and outputs.
-
-### Draft
-
-Create reversible proposals without immediately changing the project.
-
-### High impact
-
-Require explicit approval for operations such as:
-
-- deleting critical components
-- changing board outlines
-- overwriting firmware
-- flashing devices
-- approving releases
-- publishing manufacturing packages
-
-All applied changes should be versioned, auditable, and undoable where technically possible.
+The safest model is typed read → draft → reviewed apply → explicitly approved high-impact operation.
 
 ## Local-first direction
 
-Hardware Studio should remain useful without a mandatory cloud account.
+Local ownership remains a central goal.
 
-The desired model is:
+The desired architecture supports:
 
-- local project ownership
-- deterministic project serialization
-- local revision history
-- optional collaboration and synchronization later
-- loopback-only machine bridge for local commands
-- explicit approvals for high-impact operations
+- local project ownership;
+- deterministic serialization/migrations;
+- durable local repository/history;
+- optional collaboration later;
+- local bridge for machine/device operations;
+- explicit approvals for high-impact operations;
+- reproducible artifacts and release history without requiring a cloud account for core use.
+
+Local-first does not mean browser-only `localStorage` forever. Shared repository/process architecture is still required.
+
+## Truth and evidence hierarchy
+
+The product should make trust explicit.
+
+Useful categories include:
+
+- canonical engineering state;
+- derived state;
+- approximation / screening result;
+- draft/unqualified artifact;
+- independently checked artifact;
+- reviewed/accepted evidence;
+- release-grade immutable evidence.
+
+A generator succeeding is not verification. A visual 3D model is not automatically exact CAD. A clean approximate collision screen is not a physical-clearance certification. A status toggle is not trusted approval.
 
 ## What Hardware Studio is not yet
 
 Hardware Studio is not currently:
 
-- a replacement for Fusion, SolidWorks, KiCad, Altium, Onshape, or PlatformIO
-- a fabrication-ready PCB tool
-- a professional parametric mechanical solver
-- a certified manufacturing package generator
-- a stable firmware flashing environment
-- a complete PLM system
-- a production-ready MCP engineering agent
+- a replacement for Fusion, SolidWorks, KiCad, Altium, Onshape, FreeCAD, or PlatformIO;
+- a fabrication-qualified ECAD system;
+- a professional parametric CAD kernel/workflow;
+- a stable production flashing/device-management environment;
+- a release-grade validation/QMS system;
+- a complete PLM/version/release platform;
+- a qualified manufacturing-package generator;
+- a production-ready autonomous engineering agent.
 
-The repository contains early foundations for the larger system.
+Current status is maintained in `CURRENT_STATUS.md`.
 
 ## Success definition
 
-The project succeeds when a team can move from product intent to a reviewed release without manually reconstructing the relationship between every engineering representation.
+Hardware Studio succeeds when a team can take a bounded product from intent to a reviewed release while preserving the relationships, provenance, decisions, evidence, and change impact between engineering domains—without manually rebuilding that thread in spreadsheets and file names.
 
-A successful Hardware Studio should make change impact visible, preserve the history of decisions, and prevent generated output from appearing more trustworthy than the evidence behind it.
+A successful system should:
+
+- make change impact visible;
+- preserve canonical identity across representations;
+- expose unresolved engineering state instead of hiding it;
+- distinguish approximation from authority;
+- make validation/review evidence traceable;
+- make generated outputs no more trustworthy than their source data and qualification;
+- preserve version/release history;
+- support safe semantic automation without surrendering engineering accountability.
