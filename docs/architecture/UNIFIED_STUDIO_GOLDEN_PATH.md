@@ -1,206 +1,364 @@
-# Unified Hardware Studio golden path
+# Unified Hardware Studio Golden Path
 
-**Status:** active connected-object architecture. The bounded issue #64 implementation is complete; the broader V1 convergence program remains active.  
-**Current shell decision:** PR #69, merged August 25, 2026.
+**Reconciled:** 2026-09-02  
+**Current master:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Current Studio phase:** U8 — Release convergence
 
-## Why this exists
+## Purpose
 
-Hardware Studio accumulated useful workbenches, but a collection of routes is not a product. A user must be able to carry one engineering object through the complete build process without recreating it, losing context, or returning to unrelated surfaces to unlock the next editor.
+Hardware Studio must allow one product and its engineering objects to move across domains without being recreated, silently copied, or losing identity.
 
-The first production golden path is:
+The original first connected-object proof focused on Electronics:
 
-`Component definition → project component instance → schematic placement → pins and nets → PCB placement/routing → lightweight board 3D → BOM → validation`
+```text
+Component definition
+→ project component instance
+→ schematic placement / pins / nets
+→ PCB placement / routing context
+→ BOM / representation context
+→ linked validation
+```
 
-This document defines which layer owns each fact and which UI state may be temporary.
+That remains an important golden path. The broader product path is now:
 
-## Canonical engineering ownership
+```text
+Product Home / requirements / architecture
+→ components
+→ schematic / PCB
+→ mechanical context
+→ firmware
+→ validation Define / Execute / Review
+→ readiness / outputs / release
+```
+
+This document defines ownership and handoff principles. It does not claim the deep engineering engines behind every step are complete.
+
+## 1. Canonical engineering ownership
 
 ### Component definition
 
-Owned by the component library domain.
+Owned by the reusable component-library domain.
 
 Contains reusable knowledge such as:
 
-- library ID and revision identity;
-- name, category, manufacturer and part number;
-- symbol and footprint references;
-- pin definitions and electrical roles;
-- package metadata and datasheet provenance.
+- library/revision identity;
+- manufacturer and part number;
+- category/name;
+- pin definitions/electrical roles;
+- symbol/footprint/package references;
+- datasheet/provenance/qualification metadata where known.
 
-A definition is not automatically a project component and is not automatically placed in a schematic or PCB.
+A definition is not automatically a project instance, schematic placement, PCB placement, or qualified part.
 
 ### Project component instance
 
-Owned by canonical `boardComponents` project state today, pending migration into the canonical repository/domain packages.
+The project-specific component identity is consumed by downstream workbenches.
 
-This is the shared identity used by every downstream workbench. It contains:
+Current code still uses project structures such as `boardComponents` pending deeper canonical schema/repository migration. The important product rule is that Schematic, PCB, BOM, Firmware links, Mechanical representation links and Validation should refer to the same instance identity rather than create parallel copies.
 
-- one stable instance ID;
-- source `libraryId`;
+Useful instance relationships include:
+
+- stable instance ID;
+- library-definition source;
 - reference designator;
-- selected board ID;
-- component pins and their net assignments;
-- schematic placement state;
-- PCB placement state;
-- footprint/package references;
-- BOM link;
-- architecture and circuit links;
-- lifecycle and qualification notes.
-
-Component Library creates this instance. Schematic, PCB, BOM, 3D and Validation consume it. Those editors must not create parallel copies.
+- board ownership/context;
+- pins and canonical net IDs;
+- schematic representation/placement;
+- PCB footprint/placement;
+- package/mechanical references;
+- BOM relationship;
+- architecture links;
+- firmware links;
+- validation links.
 
 ### Board
 
-Owned by canonical `boards` plus `boardOutlines`.
+Board identity belongs to canonical project engineering state.
 
-The PCB workbench can recover from an empty project by creating or configuring the real board context. It must never depend on a removed dashboard generator.
+Rules:
 
-A starter outline is explicitly provisional until the user verifies dimensions. It is not silently treated as manufacturing authority.
+- board-scoped operations must use explicit board identity;
+- missing board context remains unresolved or routes to setup;
+- no new placeholder `board_0`-style truth should be invented;
+- selected-board exports/checks must not leak other-board objects;
+- board outline/stack/geometry must carry appropriate provisional/authoritative trust state.
 
-### Schematic
+### Schematic connectivity
 
-Owned by component `schematic` placement, `schematicWires`, `nets`, component pin net fields and `padNetAssignments` while the canonical electrical graph is being completed.
+Current foundations use project component instances, structured pin anchors, wires/nets and related connectivity state.
 
-The live Schematic editor:
+Rules:
 
-- places existing project instances;
-- connects their real pins;
-- creates or reuses canonical nets;
-- exposes ERC findings linked to responsible objects;
-- does not create a second project component from a library definition;
-- uses in-app dependency review for destructive whole-product changes.
+- moving/rotating a symbol should not destroy electrical identity;
+- wires should connect to structured anchors rather than display-only coordinates;
+- component deletion/replacement should expose relationship impact;
+- Schematic must not create a second copy of a project component merely to render it;
+- ERC claims are limited to implemented checks.
 
 ### PCB
 
-Owned by component `pcb` placement, board geometry, traces, vias, constraints and pad-net assignments.
+PCB consumes the same project component/net/board identity.
 
-PCB is part of the **Electronics** product area in the V1 shell. Board setup, routing rules and DRC are contextual PCB tools, not separate product domains.
+The converged PCB workbench owns contextual board setup, rules, DRC and BOM access through its drawer/workbench grammar.
 
-The live PCB editor receives the selected board, component and net from shared UI context while editing canonical project records.
+Rules:
 
-### Lightweight 3D
+- active board must be explicit;
+- component/net context should survive Schematic → PCB handoff;
+- routing/DRC state must refer to canonical engineering objects;
+- DRC results belong in the shared bottom Problems surface;
+- no fake auto-route/auto-place completion;
+- current routing/rule depth remains governed by #15.
 
-Owned as a derived visual view, not engineering authority.
+### Mechanical context
 
-The connected board 3D view:
+Mechanical uses one workbench with 2D Layout / 3D Review / Assembly representations.
 
-- filters to the selected board;
-- highlights the selected canonical component;
-- uses the board outline when available;
-- uses package dimensions when available;
-- labels provisional envelopes when exact dimensions are missing;
-- renders only on interaction, resize or visibility return;
-- does not auto-rotate or run a permanent animation loop;
-- releases WebGL resources when closed.
+Rules:
 
-It must never authorize dimensional clearance, interference, mass, manufacturing or release. Exact STEP/B-Rep authority remains part of the CAD-kernel roadmap.
+- board/package/component links should preserve shared IDs;
+- exact geometry must not be inferred from an attractive visualization;
+- 3D review is derived visualization unless backed by exact qualified geometry;
+- missing dimensions/models remain unresolved;
+- #16/#17 remain the authority for sketch/CAD depth.
 
-### BOM
+### Firmware
 
-Owned by canonical `bom` records and the component instance's `bomItemId`.
+Firmware consumes canonical hardware/component/pin/net relationships and owns firmware records.
 
-A selected project component can create one linked BOM record. Electrical values remain blank until they are explicitly qualified; the UI must not infer authoritative values from a generic family visual.
+Converged rules:
+
+- opening Firmware does not silently select the first module/file;
+- one Firmware Project Drawer owns Modules / Files / Map / Environment context;
+- source editor does not own a second private Explorer;
+- generated files are scaffolding, not verification;
+- recorded build/device evidence is metadata unless a real execution chain produced it;
+- successful build evidence is not silently selected for downstream device evidence;
+- #18 remains open for real filesystem/PlatformIO/device/serial execution.
 
 ### Validation
 
-Owned by canonical `validationTests` and `validationRuns`.
+Validation owns canonical test definitions and run records.
 
-A component-linked test stores the same component ID and current canonical net IDs. The validation editor remains capable of generic requirement/factory testing, but selected-object context is preserved across handoffs.
+U7 established explicit responsibilities:
 
-## UI-only Studio context
+#### Define
 
-`studioContextStore` is intentionally separate from project persistence.
+- test name/stage/category;
+- requirement/component/net/firmware links;
+- procedure instructions and expected results;
+- expected measurement/tolerance schema;
+- pass criteria;
+- editable definition/reference context.
 
-It may store:
+Definition state is not execution evidence.
+
+#### Execute
+
+- explicitly selected test;
+- observation/measurement input supported by the current runner;
+- evidence reference;
+- reviewer/operator attribution where supported;
+- explicit manual verdict where required;
+- creation of a new append-only run/retest record.
+
+#### Review
+
+- explicitly selected historical run;
+- frozen run snapshot/history;
+- logs/output/provenance currently captured by the project record;
+- read-only historical interpretation.
+
+Rules:
+
+- no implicit first-test or first-run selection;
+- linked component/net IDs should be canonical;
+- manual/physical tests do not auto-pass from text/measurement alone;
+- current evidence is not yet #19-grade durable release evidence.
+
+### Version / Release context
+
+U8 is the active convergence phase.
+
+Release must eventually connect the same complete product state to:
+
+- editable workspace identity;
+- immutable named version;
+- branch ancestry;
+- comparisons/merge conflicts;
+- readiness/blockers;
+- exact generated artifacts;
+- validation evidence;
+- release candidate;
+- trusted approval;
+- immutable published release.
+
+Current revision/output foundations do not yet provide all of those guarantees. #20/#21 remain open.
+
+## 2. UI-only Studio context
+
+UI/session stores may preserve navigation and selection context such as:
 
 - active board ID;
-- active component-definition ID;
-- active component-instance ID;
-- active net name;
-- selected object type and ID;
-- origin and return workbench;
-- requested mechanical/3D mode.
+- active component definition/instance;
+- active net;
+- selected object;
+- active representation;
+- selected firmware module/file;
+- selected validation test/run;
+- Project Drawer section;
+- Inspector/dock state;
+- origin/return-workbench hints.
 
-It must not become a second engineering database. Clearing this store must not modify project records.
+This state is intentionally separate from canonical engineering data.
 
-## V1 Studio frame
+Clearing a UI context store must not delete or rewrite engineering project state.
 
-The V1 shell deliberately has one stable product lifecycle:
+## 3. Current Studio frame
 
-`Home → Define → Electronics → Mechanical → Firmware → Validate → Release`
+The former lifecycle-rail idea has been superseded.
 
-The global shell owns only:
+Current global frame:
 
-1. product-area navigation;
-2. the active area's compact primary-workbench navigation;
-3. project/storage state and recovery;
-4. the active workbench.
+```text
+TopBar
+→ workbench tabs
+→ contextual Project Drawer
+→ central work surface
+→ shared Inspector
+→ shared bottom diagnostics/jobs/evidence dock
+→ status bar
+```
 
-The owning workbench supplies its own toolbar, inspector, findings/status and contextual next action. Supporting tools remain inside that workbench instead of becoming additional global routes the user has to learn.
+Top-level workbench access currently includes:
 
-The following are **not** part of the current V1 shell architecture:
+```text
+Home / Requirements / Architecture / Components / Schematic / PCB /
+Mechanical / Firmware / Validate / Release
+```
 
-- workflow profiles;
-- custom domain visibility configuration;
-- Scope/show-hidden-domain controls;
-- permanent workspace coaching;
-- permanent “Start here” tutorials beside every workbench.
+Product development is iterative; this is not a forced linear wizard. Project Home and domain evaluators may recommend the next action without preventing the engineer from moving between connected views.
 
-Those systems were removed in PR #69 because they duplicated navigation and guidance rather than completing the engineering lifecycle.
+## 4. Connected handoff rules
 
-## Connected handoff rules
+### Project Home → domain
+
+- next action derives from real domain evidence;
+- counts are inventory, not completion;
+- navigation must not mutate engineering state merely to make the destination usable.
 
 ### Components → Schematic
 
-- preserve board, definition and instance IDs;
-- place the selected instance if explicitly requested and unplaced;
-- focus the existing symbol if already placed;
-- navigation alone must never create engineering data.
+- preserve definition/instance/board context;
+- an explicit placement action may create placement state;
+- navigation alone must not duplicate/create engineering records.
 
 ### Schematic → PCB
 
-- preserve board, instance and net context;
-- if no board exists, the PCB workspace must expose the real setup action;
-- otherwise open PCB with the same selected object.
+- preserve board/component/net context;
+- if required board context is missing, expose setup/blocker rather than invent a board;
+- open PCB around the same connected object where possible.
 
-### PCB → 3D
+### PCB → Mechanical / 3D review
 
-- preserve board and selected instance;
-- open the event-driven board-context viewer;
-- mark provisional dimensions and preview trust.
+- preserve board/component context;
+- distinguish exact geometry from provisional envelopes;
+- visualization never grants clearance/manufacturing authority.
 
-### Any engineering workbench → BOM
+### Electronics / Mechanical → Firmware
 
-- preserve selected component;
-- show its linked BOM row first;
-- create a link through `bomItemId`, not a copied name.
+- preserve canonical component/pin/net identities where links exist;
+- hardware mapping references real project IDs;
+- source/module selection remains explicit.
 
-### Any engineering workbench → Validation
+### Any domain → Validation
 
-- preserve selected component and active net;
-- create tests with `linkedComponentIds` and `linkedNetIds` only through an explicit mutation action.
+- preserve relevant requirement/component/net/firmware context;
+- creating a linked test is an explicit mutation;
+- entering Validation does not silently pick a test;
+- run/review context remains explicit.
 
-## Empty-state rule
+### Validation → Release
 
-Every empty state must do one of the following:
+- Release should consume accepted current evidence without rewriting historical runs;
+- stale/failed/missing required evidence must remain a release blocker;
+- current browser run history is not yet a substitute for #19-grade evidence binding.
 
-- create the real missing canonical object after an explicit user action;
-- route to the workbench/tool that owns it;
-- explain why progress is blocked.
+### Engineering state → Outputs / Release
 
-It must not reference deleted actions, hidden generators, unrelated dashboards, or create placeholder engineering truth merely by opening a view.
+- outputs derive from explicit source context;
+- missing version/geometry/provenance must remain unresolved;
+- generator success does not equal qualification;
+- selected artifact/package/revision context must be explicit;
+- #20/#21 remain the authority for professional release/output guarantees.
 
-## Current completion boundary
+## 5. Empty-state rule
 
-Issue #64 proved a bounded connected Electronics → PCB → 3D path with one component/board/net identity and production verification. It did **not** complete the broader product architecture.
+Every meaningful empty state should do one of three things:
 
-The remaining convergence work is governed by the product constitution and recovery plan, especially:
+1. explicitly create the real missing canonical object after a user action;
+2. route to the workbench/context that owns the missing object;
+3. explain the blocker and what evidence/input is required.
 
-- canonical schema and ownership;
-- durable shared repository;
-- typed command/transaction lifecycle;
-- monolith decomposition;
-- browser-level reference-product verification;
-- authoritative electrical/mechanical/firmware/validation/release depth.
+It must not:
 
-A new shell wrapper or another navigation abstraction is not progress unless it replaces an existing path and makes the reference-product lifecycle measurably more complete.
+- create placeholder engineering truth on view open;
+- silently choose the first unrelated record;
+- refer to deleted generators/actions;
+- fabricate dimensions/placements/evidence;
+- mark a domain complete because its collection is non-empty.
+
+## 6. Cross-domain trust rule
+
+A representation or result carries only the authority its source can support.
+
+Examples:
+
+- component family visual ≠ qualified exact package;
+- Three.js view ≠ CAD-kernel solid;
+- local DRC ≠ complete ECAD qualification;
+- state-machine structural scan ≠ firmware runtime verification;
+- approximate AABB screen ≠ exact physical clearance proof;
+- generated ZIP ≠ qualified manufacturing package;
+- JSON snapshot ≠ content-addressed immutable version;
+- status field ≠ trusted release approval.
+
+Handoffs must preserve these trust boundaries rather than becoming more confident downstream.
+
+## 7. Golden-path proof status
+
+### Proven structural progress
+
+The repository now has meaningful integration/regression coverage around:
+
+- shared Electronics component/board/net identity;
+- Schematic → PCB/BOM/Validation relationships;
+- PCB explicit board context;
+- Mechanical representation synchronization;
+- Firmware explicit module/file/evidence grammar;
+- Validation explicit Define/Execute/Review grammar;
+- Project Home evidence-driven next action.
+
+### Still not proven end to end at professional depth
+
+The following remain major blockers to a true release-grade reference journey:
+
+- normalized canonical schema;
+- durable cross-process repository;
+- complete typed command/event architecture;
+- professional PCB engine;
+- professional sketch/CAD engine;
+- real firmware workspace/device execution;
+- durable trusted validation evidence;
+- immutable version/release architecture;
+- qualified drawings/manufacturing artifacts;
+- independent interchange/tool verification;
+- selected production browser E2E journey through the complete reference product.
+
+## 8. Current completion boundary
+
+U0–U7 prove that Hardware Studio can increasingly feel like one connected product rather than disconnected pages. They do **not** prove every workbench is professionally complete.
+
+U8 must finish Release structural convergence without hiding #20/#21 gaps. U9 will then polish the stable shell.
+
+The deeper engineering recovery program remains the final authority for whether the reference product can move from requirements to a trustworthy reviewed release.
