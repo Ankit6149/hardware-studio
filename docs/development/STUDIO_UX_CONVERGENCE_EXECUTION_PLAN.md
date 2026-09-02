@@ -1,851 +1,506 @@
-# Hardware Studio Studio UX Convergence Execution Plan
+# Hardware Studio — Studio UX Convergence Execution Plan
 
-**Status:** subordinate implementation plan to `docs/development/PRODUCT_RECOVERY_EXECUTION_PLAN.md`  
-**Decision date:** 2026-08-30  
-**Applies to:** Studio shell, information architecture, workbench composition, progressive disclosure, cross-domain navigation, and UX migration order.  
-**Does not override:** canonical-domain, repository, command, migration, validation, release, or truthfulness requirements in the parent recovery plan.
+**Original decision:** 2026-08-30  
+**Reconciled:** 2026-09-02  
+**Current master:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Status:** subordinate Studio/interaction plan to `PRODUCT_RECOVERY_EXECUTION_PLAN.md`  
+**Current phase:** **U8 — Release convergence**
 
----
+This plan governs information architecture, shared shell composition, progressive disclosure, cross-domain handoffs, contextual tools, interaction consistency and migration away from disconnected mini-app patterns.
+
+It does **not** lower or replace the engineering acceptance criteria for schema, repository, commands, PCB, Mechanical, Firmware, Validation, versions/releases or qualified outputs.
 
 ## 1. Why this plan exists
 
-Hardware Studio is materially cleaner than the earlier prototype, but direct use of the current Studio still shows a structural problem: the product exposes too much of its internal taxonomy to the user.
+Hardware Studio accumulated many useful workbenches, but a list of routes is not a coherent engineering product.
 
-The current application still asks a user to understand a hierarchy similar to:
+The product must feel like:
 
-`Hardware Studio -> domain -> workbench -> supporting tool -> selected object`
+> **I am in one product/project. Requirements, architecture, components, schematic, PCB, Mechanical, Firmware, Validation and Release are connected views of the same product.**
 
-before the user can complete an engineering job.
+It must not feel like:
 
-The current two-level rail/sub-navigation model was a valid convergence step away from the original long sidebar, but it is not the final architecture. Production feedback now shows its ceiling: there are still too many persistent destinations, too much explanatory chrome, and too many equally weighted concepts competing for attention.
+> I am opening unrelated engineering apps that happen to share a database.
 
-The goal of the next UX phase is therefore not to redesign colors or add more navigation. The goal is to make the application feel like **one product with multiple connected representations of the same hardware**, using progressive disclosure and contextual tools.
+The convergence program therefore prioritizes:
 
-The target mental model is:
+- one shared Studio grammar;
+- explicit engineering context;
+- canonical identity across representations;
+- progressive disclosure;
+- contextual diagnostics/evidence;
+- truthful empty/blocker states;
+- removal of duplicate navigation and private mini-app shells.
 
-> I am building one product. Requirements, schematic, PCB, 3D, firmware, validation, and release are connected views of that product.
+## 2. Benchmark lessons
 
-Not:
-
-> I am navigating a collection of independent engineering applications.
-
----
-
-## 2. Benchmark conclusions
-
-This plan is informed by current professional-tool patterns, without copying any one product visually.
+The plan draws interaction lessons from established engineering tools without copying their visual styling.
 
 ### Flux
 
-Official source: https://docs.flux.ai/Introduction/new-workspace-transition
+Useful pattern:
 
-Flux shipped its largest workspace redesign on 2026-08-17. The useful principle is not its visual styling; it is the decision to stop showing everything simultaneously.
+- major engineering views as workspace/document tabs;
+- contextual project drawer for utilities/objects;
+- one Inspector;
+- less simultaneous chrome.
 
-Relevant patterns:
-
-- major design views such as Schematic, Layout, Files, Preview/3D, Components, BOM, and Nets are presented as workspace tabs;
-- project utilities such as layers, rules, objects, and manufacturing are placed in a collapsible project drawer;
-- properties of the selected object live in one contextual Inspector;
-- the workspace surfaces what is relevant to the current task and tucks away the rest.
-
-**Hardware Studio lesson:** persistent global navigation should describe product-level context; editor-specific utilities belong inside the active workbench.
+Hardware Studio lesson: top-level navigation should represent meaningful product views; editor utilities belong to the active workbench.
 
 ### KiCad
 
-Official source: https://docs.kicad.org/9.0/en/eeschema/eeschema.html
+Useful pattern:
 
-Relevant patterns:
+- large primary canvas;
+- contextual hierarchy/properties/tool panels;
+- editor tools remain inside editor context rather than becoming product-level pages.
 
-- a large central editing canvas is the primary work surface;
-- hierarchy/navigation is contextual to the schematic editor rather than a global product destination;
-- object properties are invoked from selection/context;
-- editor tools surround the work surface without becoming separate application-level pages.
+Hardware Studio lesson: board setup, rules, nets, DRC/ERC and similar tools should not become independent global applications.
 
-**Hardware Studio lesson:** PCB rules, layers, nets, DRC, board setup, hierarchy, and related utilities should be panels/tools in the relevant editor, not first-class global destinations.
+### Altium
 
-### Altium Designer
+Useful pattern:
 
-Official source: https://www.altium.com/documentation/altium-designer/sch-pcb/navigator-panel
+- contextual panels;
+- cross-probing between representations;
+- selection identity persists across schematic/PCB views.
 
-Relevant patterns:
-
-- active-editor panels change with engineering context;
-- the Navigator supports cross-probing between schematic and PCB objects;
-- object identity and navigation are more important than maintaining independent copies of the same object.
-
-**Hardware Studio lesson:** cross-workbench object identity and cross-probing are a core product capability. The Inspector should change representation while preserving selected canonical identity.
+Hardware Studio lesson: canonical object identity matters more than identical panel layout.
 
 ### Autodesk Fusion Electronics
 
-Official sources:
+Useful pattern:
 
-- https://help.autodesk.com/view/fusion360/ENU/?contextId=LP-READ-P13N-SNP-GS-ECD-CRD-6
-- https://help.autodesk.com/view/fusion360/ENU/?guid=ECAD-NAV-DOCUMENTS
+- linked Schematic / PCB / 3D representations under one Electronics umbrella;
+- synchronized document context.
 
-Relevant patterns:
-
-- one umbrella Electronics Design keeps Schematic, 2D PCB, and 3D PCB linked;
-- these views appear as linked document tabs rather than unrelated top-level applications;
-- switching between documents preserves design context and synchronization.
-
-**Hardware Studio lesson:** Electronics should behave as one connected product area with linked documents/views rather than Components -> Schematic -> Board Setup -> PCB -> Rules -> DRC as separate application destinations.
+Hardware Studio lesson: connected representations should not look like copied datasets.
 
 ### Onshape
 
-Official source: https://cad.onshape.com/help/Content/Home/user_interface_basics.htm
+Useful pattern:
 
-Relevant patterns:
+- stable document context;
+- workflow-specific tools;
+- feature/assembly trees next to the active work surface.
 
-- document-level context remains stable;
-- toolbars change according to current workflow such as Part Studio, Sketch, Assembly, or Drawing;
-- feature/document trees and contextual controls live next to the active work surface.
+Hardware Studio lesson: Mechanical should reveal tools based on the active representation/job rather than expose every capability globally.
 
-**Hardware Studio lesson:** Mechanical should expose context-specific commands and a feature/assembly tree rather than every mechanical capability as global navigation.
+### PlatformIO / VS Code
 
-### PlatformIO
+Useful pattern:
 
-Official source: https://docs.platformio.org/en/latest/integration/ide/vscode.html
+- files/editor separated from build/upload/monitor/problems/terminal output;
+- execution output lives in supporting regions.
 
-Relevant patterns:
-
-- source files, project tasks, build/upload/monitor actions, problems, and terminal output are separate but connected regions;
-- execution output belongs in terminal/panel regions rather than inside the source editor itself.
-
-**Hardware Studio lesson:** Firmware needs files/editor/context plus a bottom Build/Upload/Serial/Problems region. Build and device execution should not be represented as another global page.
+Hardware Studio lesson: Firmware execution/evidence belongs in a bottom operation/evidence dock rather than inside source authoring.
 
 ### NI TestStand
 
-Official source: https://www.ni.com/en/support/documentation/supplemental/06/guide-to-effective-test-software-development-with-teststand.html
+Useful pattern:
 
-Relevant patterns:
+- test authoring and execution/review are distinct jobs.
 
-- authoring a test procedure and executing/debugging a test are distinct interaction modes;
-- execution has its own context, progress, variables, reports, and state.
+Hardware Studio lesson: Validation should separate **Define / Execute / Review**.
 
-**Hardware Studio lesson:** Validation must distinguish test definition, execution, and evidence/review rather than blending them into one large form.
-
----
-
-## 3. Core UX principles
+## 3. Universal UX principles
 
 ### 3.1 One product, many representations
 
-A component, requirement, net, board, feature, firmware module, validation test, or release object should keep one canonical identity while its representation changes by workbench.
-
-Example component identity:
-
-`Component definition -> project instance -> schematic symbol/pins -> PCB footprint/pads -> BOM line -> package/3D -> firmware mapping -> validation evidence`
-
-The UI must never make these feel like unrelated copied records.
+A requirement/component/board/net/Mechanical object/firmware module/validation test/release object keeps canonical identity while the workbench representation changes.
 
 ### 3.2 Progressive disclosure
 
 Do not show every capability permanently.
 
-- global shell shows global context;
-- document/workbench tabs show active engineering views;
-- left drawer shows objects/tools relevant to the active workbench;
-- right Inspector shows properties/actions relevant to current selection;
-- bottom dock shows diagnostics, execution, evidence, and asynchronous work;
-- advanced options appear when the user opens the relevant tool or selects the relevant object.
+- shell: project/product context;
+- workbench tabs: major views;
+- Project Drawer: domain objects and contextual tools;
+- center: active engineering job/representation;
+- Inspector: explicit selected object;
+- bottom dock: diagnostics, operations, evidence, logs, jobs;
+- status bar: compact state.
 
 ### 3.3 Context before taxonomy
 
-Users should see what they need for the current job, not an inventory of everything Hardware Studio knows how to do.
+The UI should help users perform the current engineering job, not teach the internal component/module taxonomy of the application.
 
-### 3.4 One universal workbench grammar
+### 3.4 Explicit selection
 
-Every major editor should use the same high-level anatomy:
+Passive navigation does not silently choose the first engineering record.
 
-1. global project bar;
-2. open workbench/document tabs;
-3. contextual left drawer;
-4. central work surface;
-5. contextual Inspector;
-6. bottom diagnostics/jobs/evidence dock;
-7. thin status bar.
+This is a central safety and predictability rule for board/module/file/test/run/revision/artifact/candidate context.
 
-Domain-specific editors can differ internally, but the surrounding grammar should remain predictable.
+### 3.5 Contextual guidance
 
-### 3.5 Guidance should be contextual, not permanent chrome
+Permanent instructional paragraphs should not consume scarce editor space.
 
-Long explanatory sentences, consequences, tutorials, and workflow education belong in:
+Use:
 
 - Project Home;
-- first-use onboarding;
 - empty states;
+- blockers/attention;
 - tooltips/help;
-- an optional Learn surface;
-- a compact Next Action / Blocker summary.
+- first-use guidance;
+- compact next-action information.
 
-They should not permanently consume editor space once the user is actively working.
+### 3.6 Recommendations, not artificial workflow locks
 
-### 3.6 Recommendations, not artificial locks
+Hardware development is iterative. Project Home may recommend the next action, but experienced users can open any valid workbench directly.
 
-Hardware Studio should recommend the next meaningful action based on project state, but experienced users must be able to open any valid workbench directly.
+### 3.7 Truth is part of UX
 
-### 3.7 Truthfulness remains part of UX
+- approximate looks approximate;
+- unresolved stays unresolved;
+- draft output looks draft;
+- missing evidence remains visible;
+- unsupported capability is not hidden behind optimistic wording.
 
-- approximate geometry is visibly approximate;
-- unresolved data stays unresolved;
-- failed checks cannot be overridden by unrelated UI state;
-- draft output cannot look released;
-- missing evidence cannot be hidden by friendly wording.
-
----
-
-## 4. Target Studio anatomy
+## 4. Current Studio anatomy
 
 ```text
-+--------------------------------------------------------------------------+
-| Hardware Studio | Project | Workspace/Version | Search | Save | Undo ... |
-+--------------------------------------------------------------------------+
-| Requirements | Architecture | Schematic | PCB | 3D | Firmware | ...     |
-+----------------+--------------------------------------+------------------+
-|                |                                      |                  |
-| PROJECT DRAWER |                                      | INSPECTOR        |
-|                |            ACTIVE EDITOR             |                  |
-| objects/tree   |                                      | selection        |
-| library        |                                      | properties       |
-| layers/rules   |                                      | links/actions    |
-| files/etc.     |                                      |                  |
-+----------------+--------------------------------------+------------------+
-| Problems | DRC/ERC | Builds | Serial | Tests | Jobs | Logs              |
-+--------------------------------------------------------------------------+
-| Active board / sheet / body | unresolved count | coordinates / status  |
-+--------------------------------------------------------------------------+
++----------------------------------------------------------------------------+
+| TopBar: Hardware Studio | Project | storage/save | undo/redo | search ...   |
++----------------------------------------------------------------------------+
+| Home | Requirements | Architecture | Components | Schematic | PCB | ...      |
++-------------------+--------------------------------------+------------------+
+| PROJECT DRAWER    |                                      | INSPECTOR        |
+|                   |         ACTIVE WORK SURFACE          |                  |
+| objects/context   |                                      | explicit         |
+| tools/files/rules |                                      | selection        |
++-------------------+--------------------------------------+------------------+
+| Problems | checks | builds | device | evidence | jobs | logs               |
++----------------------------------------------------------------------------+
+| compact status / coordinates / unresolved context                            |
++----------------------------------------------------------------------------+
 ```
 
-### 4.1 Global top bar
+This grammar is now a product baseline, not merely a design proposal.
 
-Only global context belongs here:
+## 5. Shell ownership rules
 
-- Hardware Studio identity;
-- current project;
-- current editable workspace / immutable version when versioning exists;
-- global search/command palette;
-- save/storage/sync health;
-- undo/redo;
-- later: review/share/AI proposal state where applicable.
+### TopBar
 
-Do not put discipline-specific engineering tools in the global bar.
+Owns global product/application concerns:
 
-### 4.2 Workbench/document tabs
+- project identity;
+- storage/save/recovery state;
+- global undo/redo where supported;
+- search/command entry where implemented;
+- global application settings/context.
 
-Primary work surfaces should behave as open connected documents/views:
+It should not expose every domain operation.
 
-- Requirements
-- Architecture
-- Schematic
-- PCB
-- Mechanical / 3D
-- Firmware
-- Validation
-- Release
+### Workbench tabs
 
-Additional views can be opened from the Project Drawer or command palette without becoming permanent global navigation.
+Own top-level engineering views.
 
-Tabs are not merely a horizontal recreation of the old sidebar. They represent **open work surfaces in the current project**, similar to linked documents in professional design tools.
+Current top-level structure includes:
 
-### 4.3 Left Project Drawer
-
-The drawer changes with active workbench.
-
-Examples:
-
-#### Requirements
-- Requirements
-- Interfaces
-- Risks
-- Verification links
-
-#### Architecture
-- Functions
-- Components/subsystems
-- Interfaces
-- Decisions
-
-#### Schematic
-- Sheets
-- Objects
-- Library
-- Nets
-
-#### PCB
-- Objects
-- Nets
-- Layers
-- Rules
-- Stackup
-
-#### Mechanical
-- Sketch/feature tree
-- Parts
-- Assembly
-- References
-
-#### Firmware
-- Files
-- Modules
-- Hardware map
-- Tasks/environments
-
-#### Validation
-- Test definitions
-- Runs
-- Evidence
-- Equipment/fixtures later
-
-#### Release
-- Readiness
-- Versions
-- Changes
-- Outputs/package
-
-The drawer must be collapsible and preserve layout as UI preference, not engineering project state.
-
-### 4.4 Right Inspector
-
-There should be one canonical Inspector primitive.
-
-Its content is driven by:
-
-- active workbench;
-- selected canonical object;
-- selected representation;
-- qualification/trust state;
-- current workspace/version permissions.
-
-Selecting `U1` in schematic and switching to PCB should keep the same component identity selected while showing PCB-relevant properties.
-
-### 4.5 Bottom dock
-
-Use the bottom dock for diagnostics, execution, evidence, and asynchronous work:
-
-- Problems
-- ERC / DRC
-- Build
-- Upload/device operation
-- Serial
-- Validation execution/results
-- Jobs
-- Logs
-
-The exact tabs are workbench-dependent; the shell owns the panel primitive and persistence behavior.
-
-### 4.6 Status bar
-
-Use a thin status bar for high-frequency low-level context:
-
-- active board/sheet/body/environment;
-- coordinates/units/zoom where relevant;
-- selection count;
-- unresolved/error count;
-- read-only/version state;
-- operation state where useful.
-
----
-
-## 5. Project Home
-
-Project Home has one job:
-
-> Tell the user where the product is, what is blocked, and what the next meaningful engineering action is.
-
-Target information:
-
-- project name/workspace/version;
-- one recommended next action;
-- compact lifecycle progress;
-- unresolved/blocking conditions;
-- recent meaningful engineering changes;
-- storage/recovery warnings when applicable.
-
-Avoid:
-
-- generic analytics dashboards;
-- decorative KPI card walls;
-- duplicate editor controls;
-- broad enterprise project-management UI;
-- long tutorials.
-
-A healthy Home example:
-
-```text
-Environmental Monitor
-Workspace: Main
-
-Next action
-Complete schematic connectivity
-3 component pins remain unresolved.
-[Open schematic]
-
-Product state
-Requirements       8 / 10
-Architecture       Ready
-Electronics        In progress
-Mechanical         Not started
-Firmware           Not started
-Validation         Blocked
-Release            Blocked
-
-Needs attention
-3 unconnected pins
-2 components missing footprints
-PCB outline not defined
-1 requirement has no validation plan
-```
-
----
-
-## 6. Workbench contracts
-
-### 6.1 Electronics reference implementation
-
-Electronics is the first workbench family that must prove the new UX model.
-
-Connected views:
-
-`Components -> Schematic -> PCB -> BOM -> 3D representation`
-
-However, Power, Pin Mapping, Board Setup, Rules, DRC, Layers, Nets, and manufacturing preview are **contextual tools/panels**, not global product destinations.
-
-Required behavior:
-
-- one selected component identity survives view switching;
-- schematic and PCB cross-probe the same pins/nets/components;
-- BOM refers to the same component instances;
-- 3D/package state is inspectable without creating a second component model;
-- missing footprint/package/model is explicitly unresolved;
-- DRC/ERC findings navigate directly to affected objects;
-- active board is explicit and never fabricated.
-
-PCB target anatomy:
-
-- left: objects / nets / layers / rules;
-- center: board editor;
-- right: selected footprint/trace/via/net inspector;
-- bottom: DRC / unrouted / connectivity / jobs;
-- contextual toolbar: select / route / via / zone / keepout / measure / etc.
-
-### 6.2 Mechanical
-
-Use a CAD-like contextual model:
-
-- left: sketch/feature/assembly tree;
-- center: 2D sketch or 3D viewport;
-- right: selected geometry/feature/mate Inspector;
-- bottom: constraints / regeneration / interference / problems;
-- contextual toolbar changes between Sketch, Part, Assembly, Drawing.
-
-Do not make sketch constraints, assembly, interference, dimensions, or drawing tools global navigation destinations.
-
-### 6.3 Firmware
-
-Target anatomy:
-
-- left: files / modules / hardware map / environments/tasks;
-- center: source editor or behavior/state view;
-- right: selected file/module/hardware mapping Inspector;
-- bottom: Problems / Build / Upload / Serial / Logs.
-
-State machine and hardware mapping are alternate work surfaces/contextual views inside Firmware, not equal global product destinations.
-
-### 6.4 Validation
-
-Separate three jobs:
-
-1. **Define** test specification/procedure;
-2. **Execute** a specific run against a product/build/device/sample;
-3. **Review** measurements/evidence/retest lineage.
-
-Do not mix editable procedure authoring and immutable run evidence into one undifferentiated surface.
-
-### 6.5 Release
-
-Release is a product-level control surface, not another CAD editor.
-
-Primary concepts:
-
-- readiness;
-- changes/versions;
-- exact output artifacts;
-- manufacturing/release package;
-- review/approval;
-- published release/supersession.
-
-Supporting generation tools remain contextual.
-
----
-
-## 7. Progressive disclosure policy
-
-A new project may initially emphasize:
-
-- Requirements
-- Architecture
-- Components
-
-The application then recommends Schematic, PCB, Mechanical, Firmware, Validation, and Release as project evidence develops.
-
-This is a recommendation system, not a hard lock.
-
-Experienced users can open any supported workbench from tabs/drawer/search.
-
-The UI should distinguish:
-
-- available now;
-- recommended next;
-- blocked because required source data is absent;
-- experimental/unsupported;
-- read-only because the user is viewing a version/release.
-
----
-
-## 8. Phase plan
-
-The UI phases run in parallel with the engineering-foundation phases from the parent recovery plan. No UI phase may create a second canonical data model to make the interface easier to build.
-
-### Phase U0 — Architecture lock and navigation freeze
-
-**Goal:** stop further UI divergence before more implementation.
-
-Actions:
-
-- freeze creation of new permanent navigation destinations;
-- freeze additional permanent workflow/stage rails;
-- freeze new dashboard-card systems;
-- freeze additional instructional banners in active editors;
-- adopt this document as the detailed Studio UX direction under the recovery plan;
-- revise issues #34, #43, #46, and #66 so their acceptance criteria no longer conflict;
-- define canonical shell regions and shared terminology;
-- define migration map from current domain rail/sub-navigation to workbench tabs + contextual drawer.
-
-**Exit gate:** one documented shell model and one non-conflicting implementation backlog.
-
-### Phase U1 — Shared Studio shell
-
-**Goal:** implement the universal workbench grammar without rewriting every domain.
-
-Build:
-
-- global TopBar contract;
-- open workbench/document tabs;
-- collapsible Project Drawer primitive;
-- central workbench host;
-- contextual Inspector primitive;
-- bottom diagnostics/jobs dock primitive;
-- thin status bar;
-- layout state as UI preference rather than canonical project mutation;
-- loading/empty/unavailable/error/read-only states.
-
-Existing workbenches mount inside the new shell during migration.
-
-**Exit gate:** Requirements, Electronics, Mechanical, Firmware, Validation, and Release can mount inside one predictable shell without adding per-workbench shell forks.
-
-### Phase U2 — Project Home
-
-**Goal:** make the product understandable from the first screen.
-
-Build:
-
-- next meaningful action;
-- lifecycle progress derived from real state;
-- blockers/unresolved conditions;
-- recent meaningful changes;
-- storage/recovery state;
-- direct links into the relevant workbench/object.
-
-**Exit gate:** a first-time user can identify where the project is and what to do next without understanding Hardware Studio's internal architecture.
-
-### Phase U3 — Electronics reference workbench
-
-**Goal:** prove one connected multi-representation workflow end-to-end.
-
-Build/converge:
-
+- Home;
+- Requirements;
+- Architecture;
 - Components;
 - Schematic;
 - PCB;
-- BOM;
-- package/3D representation access;
-- shared selection/cross-probe;
-- contextual Power, Pin Map, Board Setup, Layers, Rules, DRC, Nets;
+- Mechanical;
+- Firmware;
+- Validate;
+- Release.
+
+### Project Drawer
+
+Owns contextual navigation/objects/tools for the current workbench.
+
+Examples:
+
+- PCB: setup/rules/DRC/BOM/board context;
+- Mechanical: object/assembly context;
+- Firmware: modules/files/map/environment;
+- Validation: tests/coverage/factory QA/runs;
+- Release U8 target: readiness/revisions or versions/outputs/drawings/factory package/release context.
+
+### Center work surface
+
+Owns the primary user job or representation.
+
+It should not become a permanent dashboard of every supporting tool.
+
+### Inspector
+
+Owns contextual properties/actions for the explicitly selected object/record.
+
+It is not a second navigation system.
+
+### Bottom dock
+
+Owns supporting output such as:
+
+- Problems;
+- ERC/DRC;
+- build/device/serial output;
+- validation run logs/evidence;
+- generation/preflight jobs;
+- operation logs.
+
+Closed docks should not permanently steal canvas/workspace size.
+
+### Status bar
+
+Owns compact state only.
+
+## 6. Freeze rules
+
+Do not introduce:
+
+- a new permanent global domain rail;
+- a new persistent subnavigation bar for each workbench;
+- a second Inspector/property system;
+- a second Problems/diagnostics system;
+- a dashboard-card system inside every editor;
+- long permanent coaching headers;
+- duplicate context cards whose only purpose is to restate current navigation;
+- hash-fragment Studio routing;
+- UI-only duplicate engineering data models.
+
+Do not redesign the approved public landing page during Studio convergence.
+
+## 7. Phase status
+
+### U0 — Architecture lock — **Landed**
+
+Established:
+
+- target mental model;
+- navigation freeze;
+- issue reconciliation;
+- migration plan.
+
+### U1 — Shared Studio shell — **Foundation landed**
+
+Established:
+
+- workbench tabs;
+- contextual Project Drawer host;
+- shared Inspector;
+- shared bottom dock;
+- status grammar;
+- clean `/studio/...` routes;
+- legacy hash migration compatibility.
+
+Deep shell/repository/performance issues remain separate.
+
+### U2 — Project Home — **Landed**
+
+Established:
+
+- one primary next action;
+- lifecycle rows driven by domain evidence;
+- attention/blocker queue;
+- count/inventory separated from readiness.
+
+Durable recent change history awaits repository/event infrastructure.
+
+### U3 — Electronics reference workbench — **Structurally converged**
+
+Established:
+
+- connected component identity;
+- cross-representation patterns;
+- Electronics workflow evaluation;
+- contextual tools rather than more global destinations.
+
+### U4 — PCB — **Structurally converged**
+
+Established:
+
+- one PCB drawer;
 - one Inspector;
-- bottom diagnostics dock integration.
+- DRC Problems bottom dock;
+- explicit board context/rules grammar;
+- no convergence work pretending to deliver professional autorouting/placement.
 
-**Exit gate:** a user can follow one component from definition to schematic to PCB to BOM to 3D/package context without losing identity or navigating disconnected mini-apps.
+Engineering depth stays with #15.
 
-### Phase U4 — PCB editor depth
+### U5 — Mechanical — **Structurally converged**
 
-**Goal:** make PCB feel like a professional editor while the canonical PCB engine matures.
+Established:
 
-Focus:
+- one Mechanical drawer/workbench;
+- explicit physical input;
+- 2D Layout / 3D Review / Assembly representations;
+- shared selection/Inspector/dock;
+- 3D review explicitly non-authoritative.
 
-- editor-specific drawer/tree;
-- toolbar and routing modes;
-- board context/status;
-- object Inspector;
-- DRC/unrouted/connectivity dock;
-- cross-probe to schematic;
-- selection and keyboard behavior;
-- responsive laptop layout.
+Engineering depth stays with #16/#17.
 
-Engineering depth remains governed by PCB issue #15.
+### U6 — Firmware — **Structurally converged**
 
-### Phase U5 — Mechanical
+Established:
 
-**Goal:** apply the same shell grammar to sketch/part/assembly/3D work.
+- one Firmware drawer/workbench;
+- explicit module/file selection;
+- module/behavior/map/source center representations;
+- shared Inspector;
+- bottom Problems / Build Evidence / Device Evidence grammar;
+- generated source and recorded evidence truth boundaries;
+- retired duplicate `FirmwareStudio` implementation removed.
 
-Focus:
+Engineering execution stays with #18.
 
-- feature/assembly tree;
-- contextual toolbars;
-- geometry Inspector;
-- constraint/regeneration/interference dock;
-- cross-probe to PCB/package objects.
+### U7 — Validation — **Structurally converged**
 
-Real CAD capability remains governed by #16/#17.
+Established through PR #116:
 
-### Phase U6 — Firmware
+- one Validation drawer;
+- explicit test/run selection;
+- Define / Execute / Review;
+- specification separated from actual observations;
+- read-only historical review;
+- shared Inspector;
+- run logs/output in shared bottom dock;
+- current execution authority kept bounded.
 
-**Goal:** provide a coherent embedded-development workspace.
+Exact final head passed lint/typecheck, **339/339 tests across 89 files**, production build and Vercel status.
 
-Focus:
+Engineering evidence/execution depth stays with #19.
 
-- filesystem/project tree when repository/bridge permits;
-- source editor;
-- behavior/state views;
-- hardware-map context;
-- build/upload/serial/problems dock;
-- exact build/device evidence links.
+### U8 — Release — **Active**
 
-Engineering implementation remains governed by #18.
+Goal:
 
-### Phase U7 — Validation
+Make Release one predictable control surface while preserving the difference between current foundations and professional release authority.
 
-**Goal:** separate authoring, execution, and evidence review clearly.
+#### Current structural problems to audit/replace
 
-Focus:
+- readiness/revision/output/drawing/package surfaces may behave like independent pages;
+- revision/output/candidate context can be implicit or inconsistently owned;
+- generator/download surfaces can visually outrank their qualification evidence;
+- release/readiness state can over-rely on legacy helper assumptions;
+- selected record/Inspector/preflight ownership must become predictable.
 
-- test definition view;
-- run execution view;
-- evidence/result/retest review;
-- qualification/trust state;
-- product/build/device/sample context.
+#### U8 target grammar
 
-Engineering implementation remains governed by #19.
+**Project Drawer**
 
-### Phase U8 — Release
+- Readiness;
+- Revisions / future Versions context;
+- Outputs;
+- Drawings;
+- Factory Package;
+- candidate/release context only where real records exist.
 
-**Goal:** make release simple, reviewable, and controlled.
+**Center**
 
-Focus:
+- selected Release job/surface;
+- no duplicated navigation dashboard.
 
-- readiness;
-- versions/changes;
-- exact outputs/package;
-- approval/release state;
-- stale blockers;
-- immutable artifact identity.
+**Inspector**
 
-Engineering implementation remains governed by #20/#21.
+- explicitly selected revision/output/package/candidate/release record only.
 
-### Phase U9 — Final visual/system polish
+**Bottom dock**
 
-Only after the shell and workbench structures are proven:
+- blockers;
+- generation/preflight jobs;
+- logs;
+- review/evidence where real records exist.
 
-- semantic design-system completion;
-- spacing/typography tuning;
-- consistent icons/control states;
-- animations and transition refinement;
-- resizable/saved layouts;
-- accessibility;
-- reduced motion;
-- responsive laptop/tablet review modes;
-- visual regression;
-- performance budgets.
+**Top actions**
 
-Do not use visual polish to hide structural problems.
+- contextual actions only;
+- no fake approval/release shortcuts.
 
----
+#### U8 truth constraints
 
-## 9. Parallel engineering track
+- no silent first revision/release/artifact/candidate selection;
+- no JSON snapshot presented as content-addressed immutable version;
+- no status toggle presented as trusted approval;
+- no generated file/ZIP presented as qualified artifact merely because generation succeeded;
+- missing source version/provenance/qualification remains visible;
+- draft/unqualified output remains visually distinct;
+- no second UX-only release data model;
+- #20/#21 remain open.
 
-UI work must remain synchronized with the architecture recovery:
+### U9 — Final polish — **Pending**
 
-| UX track | Foundation dependency |
-| --- | --- |
-| Shell/context | #9, #34, #43, #42 |
-| Identity/cross-probe | #36, #40 |
-| Durable layout/project restore | #38 |
-| Editor mutations/undo | #39 |
-| Legacy route/data migration | #37 |
-| Electronics | #13-#15, #66 |
-| Mechanical | #16-#17 |
-| Firmware | #18 |
-| Validation | #19 |
-| Release | #20-#21 |
-| End-to-end proof | #10, #27 |
+Only after U8 structure stabilizes:
 
-The shell may land before the repository/command refactor is complete, but it must not introduce a new project data model or persist UI layout as engineering state.
+- visual hierarchy/design system;
+- accessibility/keyboard behavior;
+- responsive layouts/overflow;
+- editor density/readability;
+- motion where useful;
+- performance/profiling;
+- empty/error/recovery consistency;
+- selected browser E2E/smoke journeys.
 
----
+U9 must not hide unresolved engineering state.
 
-## 10. Issue reconciliation decisions
+## 8. Cross-domain selection rules
 
-### #34 — Information architecture
+The same canonical object should preserve identity where supported.
 
-Keep as the product/IA decision issue. Update its implementation direction to this shell model and use this document as the detailed execution reference.
+Examples:
 
-### #43 — Professional application shell
+- component: library definition → project instance → schematic → PCB → BOM → Mechanical/package → Firmware links → Validation;
+- net: Schematic → PCB → Firmware mapping → Validation;
+- board: PCB → Mechanical/3D → outputs → Release;
+- validation: requirement/component/net/module links → runs → Release evidence;
+- output: exact source context → artifact → candidate/release.
 
-Make #43 the primary implementation issue for the global shell regions, route/deep-link migration, contextual selection, error/read-only states, and panel primitives.
+UI selection is ephemeral. Engineering relationships are canonical project/repository state.
 
-### #46 — Navigation
+## 9. Empty and blocker-state rules
 
-The old final target of a permanent domain rail + contextual sub-navigation is superseded by production feedback.
+Every empty state should either:
 
-#46 should now implement:
+1. explicitly create the real missing object after user action;
+2. route to the owning workbench/context;
+3. explain the blocker.
 
-- workbench/document tabs;
-- contextual Project Drawer;
-- migration from current rail/subnav;
-- beginner-readable labels;
-- keyboard navigation;
-- compact laptop behavior;
-- compatibility handling for old `activeView` IDs.
+Never create placeholder engineering truth merely because a view opened.
 
-The current rail may remain temporarily during migration, but it is not the final architecture.
+## 10. Completion gate for every U-phase slice
 
-### #66 — Electronics unification
+Before merge:
 
-Keep cross-workbench identity, selection persistence, direct transitions, and shared grammar.
+1. inspect exact changed-file scope;
+2. verify no accidental landing redesign;
+3. verify no duplicate shell ownership;
+4. verify no implicit first-record fallback;
+5. run exact-head lint;
+6. run exact-head typecheck;
+7. run full tests;
+8. run production build;
+9. inspect exact-head deployment status;
+10. distinguish external Vercel capacity from application failures;
+11. confirm deep engineering parent issues remain correctly open;
+12. update domain notes + `STUDIO_PHASE_EXECUTION_STATUS.md`.
 
-Remove the requirement for another permanent product-stage rail.
+## 11. Relationship to the recovery plan
 
-The final Electronics experience should use:
+The UX plan intentionally stops at structural/product interaction claims.
 
-- workbench/document tabs;
-- contextual drawer;
-- Inspector;
-- bottom diagnostics dock;
-- shared canonical selection.
+Examples:
 
----
+- a coherent PCB workbench does not establish authoritative PCB topology;
+- a coherent Mechanical workbench does not create a CAD kernel;
+- a coherent Firmware workbench does not prove local compilation/device execution;
+- a coherent Validation workbench does not create release-grade evidence provenance;
+- a coherent Release workbench will not create immutable versions or qualified artifacts.
 
-## 11. Freeze rules during convergence
+Those remain governed by `PRODUCT_RECOVERY_EXECUTION_PLAN.md` and the live GitHub issues.
 
-Until U1/U3 are proven:
+## 12. End state of this convergence program
 
-- no new permanent global navigation destination;
-- no new permanent stage rail;
-- no new workflow-profile system;
-- no additional always-visible coach/tutorial layer;
-- no new workbench-specific shell architecture;
-- no duplicate Inspector/property system;
-- no second problems/findings implementation;
-- no new project dashboard card system;
-- no major landing-page redesign;
-- no feature should bypass canonical repository/command/domain plans for UX convenience.
+After U9, the Studio should be:
 
----
+- understandable as one product;
+- consistent enough that domain switching is predictable;
+- explicit about current engineering context;
+- free of duplicate navigation/Inspector/Problems ownership;
+- clear about draft/approximate/unresolved state;
+- ready for deeper engineering engines to grow without re-fragmenting the user experience.
 
-## 12. PR convergence gate
-
-Every Studio/UX PR must state:
-
-### Replaces
-What old UI path, chrome, navigation, or duplicate component becomes unnecessary?
-
-### Canonical context
-What project/workbench/object identity is authoritative?
-
-### User job
-What exact user task becomes easier or more coherent?
-
-### Progressive disclosure
-What information is hidden until it is relevant?
-
-### Proof
-As applicable:
-
-- lint;
-- typecheck;
-- tests;
-- production build;
-- browser interaction test;
-- supported laptop viewport review;
-- keyboard/focus behavior;
-- save/reload/context restore;
-- exact-head deployment.
-
-### Cleanup
-What compatibility code can be deleted now or after a defined migration gate?
-
-A PR that adds another layer without replacing anything should be treated as suspicious.
-
----
-
-## 13. UX acceptance metrics
-
-The redesign is not successful because it looks cleaner in a screenshot.
-
-Minimum evidence should eventually show:
-
-- a new user can identify the next meaningful project action from Home;
-- a user can open Schematic/PCB/Mechanical/Firmware without learning internal route taxonomy;
-- no global navigation requires knowledge of Power Budget, Pin Mapping, Board Setup, DRC, Factory QA, etc.;
-- one component remains identifiable while cross-probing Schematic -> PCB -> BOM -> 3D;
-- editor-specific tools are discoverable without permanently occupying global chrome;
-- a 1366x768 laptop viewport remains usable at 100% browser zoom;
-- Inspector/Drawer/Dock can collapse without losing project data;
-- diagnostics navigate to affected objects;
-- keyboard users can move among workbench tabs, drawer, editor, Inspector, and dock;
-- unsupported/read-only/stale states are explicit;
-- no UX convenience silently invents engineering data.
-
----
-
-## 14. Five-gate product completion model
-
-Do not measure recovery primarily by open issue count.
-
-### Gate 1 — Foundation
-
-Canonical schema, repository, commands, migrations, boundaries.
-
-### Gate 2 — Shell
-
-One understandable Studio with stable context and progressive disclosure.
-
-### Gate 3 — Design
-
-Requirements -> schematic -> PCB -> enclosure -> firmware works as one connected product.
-
-### Gate 4 — Prove
-
-Build -> validate -> evidence -> retest is truthful and durable.
-
-### Gate 5 — Ship
-
-Version -> outputs -> review -> release is controlled, reproducible, and immutable.
-
-Issues exist to advance these gates. Closing issue count alone is not progress.
-
----
-
-## 15. Immediate execution order
-
-1. Complete Phase U0 backlog/document convergence.
-2. Implement the U1 shell skeleton without rewriting domain engines.
-3. Rebuild Project Home around next action/blockers.
-4. Migrate Electronics into the new shell as the reference workbench.
-5. In parallel continue #36 -> #37/#38/#39/#42 foundation convergence.
-6. Deepen PCB once identity/repository/command contracts are stable enough.
-7. Extend the same workbench grammar to Mechanical, Firmware, Validation, and Release.
-8. Perform final visual/design-system polish only after the structural model is stable.
-
-The operating principle for this phase is:
-
-> **Convergence is progress. The user should see less structure while the product becomes more capable underneath.**
+The product will still require the deep recovery program before it can earn professional replacement-level claims.
