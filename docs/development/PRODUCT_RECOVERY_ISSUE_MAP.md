@@ -1,100 +1,234 @@
-# Hardware Studio Product Recovery Issue Map
+# Hardware Studio — Product Recovery Issue Map
 
-This map is subordinate to `PRODUCT_RECOVERY_EXECUTION_PLAN.md` and parent epic #4. It defines the implementation sequence and prevents work from drifting into disconnected feature development.
+**Reconciled:** 2026-09-02  
+**Current master:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Parent program:** #4 — Hardware Studio product recovery and end-to-end rebuild
 
-## Parent program
+This map is subordinate to `PRODUCT_RECOVERY_EXECUTION_PLAN.md` and the live GitHub issue bodies. It defines the dependency order for deep engineering recovery. It must be read alongside the separate U0–U9 Studio convergence plan.
 
-- #4 — **[EPIC][P0] Hardware Studio product recovery and end-to-end rebuild**
+## Important distinction: two parallel programs
 
-## Phase 0 — Control, truthfulness, and scope
+### Studio convergence
 
-- #5 — Establish product constitution, reference matrix, truthful status, and completion gates
+U0–U9 improves the connected product interaction model.
 
-**Gate:** public/product language is consistent; references are mapped to the backlog; no historical completion claim overrides the recovery plan.
+Current state:
+
+- U0–U7 structurally landed;
+- **U8 Release active**;
+- U9 final polish pending.
+
+A structurally completed Studio phase does not close its deep engineering issue.
+
+### Engineering recovery
+
+Issues #5–#27 define the deeper product architecture and professional engineering requirements. This map remains the main dependency ordering for that work.
+
+## Phase 0 — Control, truthfulness and scope
+
+### #5 — Product constitution, reference matrix, truthful status and completion gates
+
+Current status: major foundation landed; keep governance documents current as recovery proceeds.
+
+Gate:
+
+- current status and product scope agree;
+- historical completion claims cannot override live evidence;
+- references/research are mapped to current backlog or explicit non-goals;
+- qualification language is controlled.
 
 ## Phase 1 — Mandatory product foundations
 
-- #6 — Normalize canonical project schema, IDs, units, ownership, and migrations
-- #7 — Replace browser localStorage monolith with repository layer and durable project storage
-- #8 — Implement typed command bus, transactions, dependency invalidation, and complete undo/redo
-- #9 — Rebuild workspace shell, navigation, crash recovery, and performance foundations
-- #10 — Establish end-to-end test architecture and CI quality gates
-- #11 — Remove legacy and dead code, split the monolith, and enforce package boundaries
+### #6 — Canonical project schema, IDs, units, ownership and migrations
+### #7 / #38 — Durable repository and project storage
+### #8 / #39 — Typed commands, transactions, invalidation and undo/redo
+### #9 — Workspace shell, navigation, crash recovery and performance foundations
+### #10 — End-to-end test architecture and CI quality gates
+### #11 / #42 — Legacy/dead-code removal, monolith decomposition and package boundaries
 
-**Gate:** a project can be created, edited only through commands, saved, closed, reopened, migrated, backed up, restored, recovered read-only after corruption, and tested without field loss or hidden parallel engines.
+Current reality:
 
-No broad PCB, CAD, MCP-write, AI-write, release, or backend feature work should bypass this gate.
+- several individual repairs have landed;
+- Studio shell structure is materially better;
+- migrations/transactions/tests have improved;
+- the full foundation gate remains open because schema/repository/command/package architecture is not yet complete.
+
+Foundation gate:
+
+A project can be created, edited through governed mutations, saved, closed, reopened, migrated, backed up/restored/recovered, and verified without hidden parallel engines or field loss.
+
+No deep domain should bypass these architecture requirements by creating another private state model.
 
 ## Phase 2 — Shared engineering truth
 
-- #12 — Build canonical product graph, traceability, and change-impact engine
-- #13 — Rebuild component library, symbol/footprint/package models, and sourcing lifecycle
+### #12 — Canonical product graph, traceability and change-impact engine
+### #13 — Component library, symbol/footprint/package models and sourcing lifecycle
 
-**Gate:** one component/requirement change produces a deterministic affected-entity and stale-artifact set across domains.
+Current strengths:
+
+- shared component identity and downstream links have improved;
+- Electronics convergence provides a useful reference path.
+
+Remaining gate:
+
+One requirement/component/representation change must produce deterministic relationship/impact/stale-state behavior across affected domains.
 
 ## Phase 3 — Electrical vertical slice
 
-- #14 — Rebuild schematic editor around authoritative connectivity and ERC
-- #15 — Rebuild PCB editor, routing topology, DRC, multi-board isolation, and safe outputs
+### #14 — Authoritative schematic connectivity and ERC
+### #15 — PCB topology/routing/DRC/multi-board isolation/safe outputs
 
-**Gate:** a real reference design moves from qualified component definitions to schematic to PCB, survives save/reload/undo, and passes documented native plus independent KiCad checks.
+Studio state:
 
-## Phase 4 — Mechanical and real 3D
+- Electronics and PCB are structurally converged.
 
-- #16 — Build professional 2D sketch, dimension, constraint, and drawing foundations
-- #17 — Build real parametric 3D modeling, parts, assemblies, and interference on a CAD kernel
+Engineering state:
 
-**Gate:** a constrained enclosure is modeled as exact versioned solids, assembled with exact PCB/package geometry, checked for interference, edited parametrically, and exported/independently opened as STEP/STL according to declared support.
+- #14/#15 requirements remain deeper than the current UI and local rule engines.
+
+Gate:
+
+A real reference design moves from qualified component definitions through schematic and PCB, survives save/reload/undo, preserves authoritative connectivity, and passes documented native plus independent tool checks without cross-board leakage or guessed data.
+
+## Phase 4 — Mechanical and exact 3D
+
+### #16 — Professional sketch, dimension, constraint and drawing foundations
+### #17 — Parametric 3D, parts, assemblies and exact interference on a CAD kernel
+
+Studio state:
+
+- U5 structurally converged one Mechanical workbench with 2D Layout / 3D Review / Assembly.
+
+Engineering state:
+
+- current review geometry does not satisfy #16/#17.
+
+Gate:
+
+A constrained enclosure exists as exact versioned geometry, regenerates parametrically, assembles with exact PCB/package geometry, produces reliable interference/clearance results, and exchanges through declared/independently verified formats.
 
 ## Phase 5 — Firmware and physical devices
 
-- #18 — Build filesystem-backed firmware workspace and secure PlatformIO/device integration
+### #18 — Filesystem-backed firmware workspace and secure PlatformIO/device integration
 
-**Gate:** a supported reference board builds from exact source/environment, flashes only after trusted approval, streams serial output, and records version-bound artifacts and operation evidence.
+Studio state:
 
-## Phase 6 — Evidence, versions, outputs, and release
+- U6 structurally converged Firmware and removed implicit module/file selection and duplicate source-navigation ownership.
 
-- #19 — Build validation execution, durable evidence, measurements, and retest lineage
-- #20 — Build real versions, branches, comparisons, merges, freezes, and immutable releases
-- #21 — Rebuild blueprints, engineering drawings, manufacturing packages, and qualified exports
+Engineering state:
 
-**Gate:** reviewed evidence and exact content-addressed artifacts can form an immutable release candidate that is blocked by unresolved/stale dependencies and approved only by trusted role-bound decisions.
+- build/device evidence can still be recorded metadata rather than locally executed proof;
+- filesystem/build/upload/serial/cancellation/recovery/durable provenance remain open.
 
-## Phase 7 — Safe external operation, collaboration, and intelligence
+Gate:
 
-- #22 — Connect MCP to the live repository with typed proposals, approval, audit, and undo
-- #23 — Add backend API, authentication, teams, permissions, object storage, and collaboration
-- #24 — Build graph-grounded AI engineering copilot with explain-plan-propose-review workflows
-- #25 — Add electrical, power, thermal, tolerance, and simulation workbench with qualified adapters
-- #26 — Build qualified interoperability and round-trip adapters for KiCad, STEP/STL/DXF, PlatformIO, BOM, and external tools
+A supported reference board builds from exact source/environment, flashes only after trusted scoped approval, streams serial output, records real operation evidence, and survives reload/review.
 
-These issues can have early research/spike tasks, but production implementation must consume the canonical repository, commands, graph, version, approval, and domain services rather than introducing parallel paths.
+## Phase 6 — Evidence, versions, outputs and release
+
+### #19 — Validation execution, durable evidence, measurements and retest lineage
+### #20 — Real versions, branches, comparisons, merges, freezes and immutable releases
+### #21 — Blueprints, drawings, manufacturing packages and qualified exports
+
+### #19 current state
+
+U7 structurally landed one Validation drawer and Define → Execute → Review with explicit selection and append-only run history.
+
+Still required:
+
+- durable hashed evidence;
+- exact version/procedure/DUT/equipment/operator/environment binding;
+- trusted reviewer/signoff;
+- durable execution jobs;
+- stale propagation and release-grade evidence policy.
+
+### #20/#21 current state
+
+**U8 Release convergence is active.**
+
+U8 may reorganize current readiness/revision/output/drawing/package surfaces, but must not present them as equivalent to:
+
+- immutable content-addressed versions;
+- true branch ancestry/three-way merges;
+- repository-enforced freezes;
+- trusted approval bound to exact candidate hash;
+- qualified independently verified artifacts;
+- immutable published releases.
+
+Phase gate:
+
+Reviewed evidence and exact content-addressed artifacts can form an immutable release candidate that is blocked by unresolved/stale dependencies and approved only by trusted role-bound decisions.
+
+## Phase 7 — Safe external operation, collaboration and intelligence
+
+### #22 — MCP connected to live repository with typed proposals/approval/audit/undo
+### #23 — Backend API, auth, teams, permissions, object storage and collaboration
+### #24 — Graph-grounded AI engineering copilot with explain/plan/propose/review
+### #25 — Electrical/power/thermal/tolerance/simulation workbench with qualified adapters
+### #26 — Qualified interoperability and round-trip adapters
+
+Early research/spikes are allowed, but production implementation must consume the canonical repository, command, graph, version, approval and domain services rather than create parallel sources of truth.
+
+AI/MCP must never gain authority to fabricate geometry, qualification, evidence or human approval.
 
 ## Final integration and acceptance gate
 
-- #27 — Deliver and independently qualify one complete reference-product vertical slice
+### #27 — Independently qualify one complete reference-product vertical slice
 
-#27 is not a demo-polish task. It is the closing acceptance gate for #4 and requires a complete evidence bundle, independent tool/parser verification, physical-device operations where specified, repeatable clean-environment execution, and an immutable release.
+#27 is not a demo-polish issue.
 
-## Start order
+It requires the reference product to move through the complete bounded lifecycle with:
 
-Begin with:
+- canonical identity;
+- durable save/reload/recovery;
+- reversible governed changes;
+- independent tool/parser checks;
+- real physical-device operations where specified;
+- durable validation evidence;
+- exact content-addressed outputs;
+- immutable reviewed release;
+- repeatable clean-environment execution.
 
-1. #5 — product constitution/reference/status rules;
-2. #6 — canonical schema/IDs/units/migrations;
-3. #7 — repository and durable storage;
-4. #8 — commands/transactions/undo/invalidation;
-5. #10 — testing gates in parallel from the first foundation change;
-6. #11 — remove/consolidate legacy paths incrementally as authoritative replacements land;
-7. #9 — shell work in parallel, but finalize against the new repository/route model.
+#27 is the final evidence gate for closing parent recovery epic #4.
 
-Then proceed to #12 and #13 before beginning full electrical or mechanical implementation.
+## Recommended execution order from current state
+
+The original ordering remains broadly correct, but recovery is now incremental rather than strictly serial.
+
+### Immediate/current
+
+1. finish U8 Release structural convergence without closing #20/#21;
+2. run U9 only after U8 structure stabilizes;
+3. continue #6/#7/#8/#10/#11/#12 foundations in parallel;
+4. deepen #15–#21 behind the already converged workbench structure;
+5. preserve exact-head CI and documentation checkpoints after each bounded slice.
+
+### Dependency rule
+
+A domain-engine implementation may proceed when its required foundation interfaces are stable enough, but it must not bypass missing foundation work with another private schema/store/command/repository path.
 
 ## Non-deviation rules
 
-- Every implementation PR references exactly one primary issue and lists secondary dependencies.
-- Every issue is decomposed into reviewable child implementation issues before major coding begins.
-- New references are recorded in #5 and mapped to an existing issue, later issue, or explicit non-goal before implementation.
-- No issue closes because a type, helper, button, canvas, document, unit test, or generated file exists.
-- Completion requires the production UI, repository, commands, persistence, undo/redo, tests, error/recovery behavior, documentation, and evidence listed in the issue.
-- No fallback or guessed engineering data may satisfy a qualified check, validation result, manufacturing status, or release gate.
+- Every production PR has one primary bounded issue/slice and lists secondary dependencies.
+- Broad issues are decomposed into reviewable child work before major coding.
+- No issue closes because a type, helper, panel, canvas, generated file or isolated test exists.
+- No guessed/fallback engineering value may satisfy a qualified check, validation result, manufacturing status or release gate.
+- UI/session state must not become a second engineering model.
+- Passive navigation must not silently choose canonical records.
+- Deep parent issues remain open after UX-only convergence.
+- Exact-head lint/typecheck/full tests/build/deployment status are reviewed before merge.
+- Current status/domain docs are updated after meaningful merges.
+
+## Current relationship to Studio phases
+
+| Studio phase | Deep engineering issues that remain after structural work |
+| --- | --- |
+| U0/U1/U2 | #6–#12, #9/#10/#11 particularly |
+| U3/U4 Electronics/PCB | #13/#14/#15 |
+| U5 Mechanical | #16/#17 |
+| U6 Firmware | #18 |
+| U7 Validation | #19 |
+| **U8 Release** | **#20/#21** |
+| U9 polish | does not replace any engineering issue |
+
+The purpose of the two-track model is to let the product become understandable and coherent without lowering the engineering completion bar.
