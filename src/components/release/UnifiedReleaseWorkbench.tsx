@@ -6,11 +6,11 @@ import { useProjectStore } from '../../store/projectStore';
 import { useReleaseWorkspaceUiStore } from '../../store/releaseWorkspaceUiStore';
 import { validateReleaseEligibility } from '../../lib/releaseEngine';
 import { ReadinessDashboard } from '../ReadinessDashboard';
-import { ExportCenter } from '../ExportCenter';
 import { BlueprintSheets } from '../BlueprintSheets';
-import { FactoryPackageBuilder } from '../FactoryPackageBuilder';
 import { RevisionsStudio } from '../revisions/RevisionsStudio';
 import { EditorDockButton } from '../editor/EditorDockButton';
+import { ReleaseOutputsSurface } from './ReleaseOutputsSurface';
+import { ReleaseFactorySurface } from './ReleaseFactorySurface';
 import {
   EngineeringBottomDock,
   EngineeringEditorBar,
@@ -69,9 +69,14 @@ export const UnifiedReleaseWorkbench: React.FC<{ mode: ReleaseWorkbenchMode }> =
         <div className="h-full min-h-0 overflow-hidden">
           {mode === 'readiness' && <ReadinessDashboard />}
           {mode === 'snapshots' && <RevisionsStudio />}
-          {mode === 'outputs' && <ExportCenter />}
-          {mode === 'drawings' && <BlueprintSheets />}
-          {mode === 'factory' && <FactoryPackageBuilder />}
+          {mode === 'outputs' && <ReleaseOutputsSurface />}
+          {mode === 'drawings' && (
+            <div className="flex h-full min-h-0 flex-col overflow-hidden">
+              <div className="shrink-0 border-b border-amber-200 bg-amber-50 px-3 py-2 text-[9px] leading-4 text-amber-900"><strong>Drawing review:</strong> current sheets are review/draft outputs. Qualified versioned drawings, controlled regeneration, standards metadata and release-bound approval remain #21.</div>
+              <div className="min-h-0 flex-1 overflow-hidden"><BlueprintSheets /></div>
+            </div>
+          )}
+          {mode === 'factory' && <ReleaseFactorySurface />}
         </div>
 
         <EngineeringInspector
