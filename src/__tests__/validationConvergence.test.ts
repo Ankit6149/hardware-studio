@@ -101,7 +101,8 @@ describe('U7 Validation convergence', () => {
     const workbench = source('../components/studio/UnifiedValidationWorkbench.tsx');
 
     expect(runner).toContain("export type ValidationExecutionMode = 'drc-auto' | 'firmware-state-auto' | 'mechanical-screen' | 'manual'");
-    expect(runner).toContain('approximate AABB collision screen');
+    expect(runner).toContain('Approximate AABB collision screen completed');
+    expect(runner).toContain('not CAD-kernel or physical clearance verification');
     expect(runner).toContain('Hardware Studio does not currently run a thermal solver');
     expect(runner).toContain('Prior history remains immutable');
     expect(workbench).toContain('Durable hashed evidence, exact version/DUT/equipment binding and reviewed immutability remain #19.');
