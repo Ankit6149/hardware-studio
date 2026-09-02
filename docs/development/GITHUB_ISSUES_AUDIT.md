@@ -1,102 +1,141 @@
-# Hardware Studio — Production Codebase Audit & GitHub Issues
+# Hardware Studio — Historical GitHub Issues Audit
 
-This document registers the official detailed GitHub issues resulting from a comprehensive codebase audit using `@sentropic/graphify` static ontology analysis and deep AST file inspection across the entire Hardware Studio codebase.
+**Original purpose:** record an earlier Graphify/static-code audit and its immediate cleanup issues.  
+**Current reconciliation:** 2026-09-02  
+**Current master:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Authority status:** **historical only** — this document is not the current backlog or implementation order.
 
----
+## Why this document is being retained
 
-## ISSUE #1: Codebase Bloat & Legacy Prototype Deletion
+This audit captured a useful early moment in the recovery: the repository contained duplicate prototypes, inconsistent UI styling, disconnected 3D, and board-context problems. Several of those findings led to real cleanup.
 
-**Title:** `chore(arch): Remove 16 stale legacy prototype files and prune dead component subdirectories`
+However, its original five “issues” are too narrow and some acceptance claims are now misleading. In particular:
 
-**Labels:** `refactor`, `tech-debt`, `architecture`, `cleanup`
+- deleting a set of legacy files did not make the application architecture complete;
+- styling convergence did not create a finished design system;
+- routing Mechanical views to one Three.js surface did not create professional CAD;
+- synchronizing Board Settings did not complete canonical board ownership;
+- a Graphify snapshot is not product verification.
 
-### Summary
-The codebase contained 16 obsolete prototype components created prior to the V1 Studio Unification pass. These files were completely unreferenced in active navigation, created duplicate component names (`SchematicEditor` vs `UnifiedSchematicEditor`, `ComponentLibrary` vs `ComponentLibraryWorkbench`, `WebGL3DView` vs `UnifiedBoard3DView`), and cluttered developer mental models.
+Use the current recovery program instead:
 
-### Target Files for Removal
-1. `src/components/BOMTable.tsx` (superseded by `UnifiedBOMWorkbench.tsx`)
-2. `src/components/BlueprintEditor.tsx` (superseded by `BlueprintSheets.tsx` & `BlueprintCanvas.tsx`)
-3. `src/components/CircuitPlanner.tsx` (superseded by `UnifiedSchematicEditor.tsx`)
-4. `src/components/FirmwarePlan.tsx` (superseded by `FirmwareStudio.tsx`)
-5. `src/components/ManufacturingPack.tsx` (superseded by `FactoryPackageBuilder.tsx`)
-6. `src/components/NetlistPlanner.tsx` (superseded by `PinMapTable.tsx` & `BoardNetPanel.tsx`)
-7. `src/components/TestingBoard.tsx` (superseded by `UnifiedValidationWorkbench.tsx`)
-8. `src/components/component-library/ComponentLibrary.tsx` (superseded by `ComponentLibraryWorkbench.tsx`)
-9. `src/components/editor/EditorCanvas.tsx` (legacy prototype canvas)
-10. `src/components/editor/EditorInspector.tsx` (legacy prototype inspector)
-11. `src/components/editor/EditorLayerPanel.tsx` (legacy prototype layer panel)
-12. `src/components/editor/EditorToolbar.tsx` (legacy prototype toolbar)
-13. `src/components/editor/editorTypes.ts` (legacy prototype types)
-14. `src/components/mechanical/Mechanical3DView.tsx` (superseded by `UnifiedBoard3DView.tsx`)
-15. `src/components/mechanical/WebGL3DView.tsx` (superseded by `UnifiedBoard3DView.tsx`)
-16. `src/components/schematic/SchematicEditor.tsx` (superseded by `UnifiedSchematicEditor.tsx`)
+- `PRODUCT_RECOVERY_EXECUTION_PLAN.md`;
+- `PRODUCT_RECOVERY_ISSUE_MAP.md`;
+- `STUDIO_PHASE_EXECUTION_STATUS.md`;
+- live GitHub issues #4–#27 and later bounded child issues.
 
-### Acceptance Criteria
-- [x] All 16 legacy prototype files deleted from workspace.
-- [x] `src/components/editor/` directory purged.
-- [x] No lingering imports of dead components in active views.
-- [x] `npx vitest run` passes with 100% test success.
+## Current delta from the original findings
 
----
+### Legacy prototypes and duplicate paths
 
-## ISSUE #2: Design System & Styling Consistency
+**Original finding:** many stale workbench components created developer confusion.
 
-**Title:** `fix(ui): Eliminate raw inline styles and standardize dark/light CAD studio design system tokens`
+**Current state:** substantial legacy cleanup has occurred, including removal of retired Studio navigation/source-transport paths and later domain-specific duplicate surfaces. U6 physically removed the retired `FirmwareStudio.tsx` path; PCB/Mechanical/Firmware/Validation convergence also replaced several private shell patterns.
 
-**Labels:** `ui`, `design-system`, `refactor`, `frontend`
+**Still open:** #11/#42 and related architecture work remain because code ownership/package boundaries and monolith decomposition are not complete.
 
-### Summary
-Several components (e.g. `MechanicalStudio.tsx`, `BoardStudio.tsx`, and `BoardDesigner.tsx`) contained hardcoded inline `style={{ ... }}` objects and legacy hex color values (`#e2e8f0`, `#3b82f6`, `#1e293b`). This produced fragmented visual styling where some panels looked like basic prototypes alongside modern Tailwind CAD toolbars.
+### Design-system consistency
 
-### Acceptance Criteria
-- [x] `MechanicalStudio.tsx` refactored to use Tailwind classes consistent with `AppShell` and `UnifiedBoard3DView`.
-- [x] `BoardStudio.tsx` modernized into a sleek, dark/light theme CAD board configuration panel using unified UI controls (`Button`, `Badge`, Tailwind tokens).
-- [x] All workbench modes use unified typography, flex container bounds, and slate/indigo design tokens.
+**Original finding:** mixed inline styles and prototype-era visual language.
 
----
+**Current state:** shared editor-shell primitives, workbench tabs, contextual drawer, Inspector, bottom dock and status grammar now create much stronger consistency.
 
-## ISSUE #3: Mechanical 3D CAD & WebGL Synchronization
+**Still open:** U9 is intentionally reserved for final hierarchy/accessibility/responsiveness/motion/performance polish. Issue #45 and design-system work should not be considered complete merely because a few editors share Tailwind classes.
 
-**Title:** `feat(mechanical): Consolidate 3D previews into production Three.js UnifiedBoard3DView`
+### Mechanical / 3D
 
-**Labels:** `mechanical`, `3d`, `webgl`, `enhancement`
+**Original finding:** disconnected 3D rendering paths.
 
-### Summary
-`MechanicalStudio.tsx` maintained legacy references to SVG 3D previews and an isolated WebGL canvas. This resulted in disconnected 3D rendering where footprint placements, layer stackups, and mechanical enclosures were not consistently rendered in 3D.
+**Current state:** U5 established one Mechanical workbench with 2D Layout / 3D Review / Assembly and explicit trust language.
 
-### Acceptance Criteria
-- [x] `MechanicalStudio.tsx` routes all 3D view modes (`3d-preview` and `webgl-3d`) to `UnifiedBoard3DView`.
-- [x] Real-time 3D board stackup, footprint height bounding boxes, enclosure visibility toggle, and camera controls operate seamlessly.
-- [x] WebGL fallback gracefully handles environments without hardware acceleration.
+**Still open:** #16/#17. Three.js visualization is not a CAD kernel, exact B-Rep model, feature history, assembly solver, or qualified clearance engine.
 
----
+### Board settings / canonical board state
 
-## ISSUE #4: Single Source of Truth for Board Settings
+**Original finding:** Board Settings and Studio context could diverge.
 
-**Title:** `fix(board): Synchronize Board Settings surface with Studio Context Store and active project boards`
+**Current state:** PCB convergence and identity hardening now make explicit board context a core product invariant. Selected-board tests and DRC/output safeguards have improved.
 
-**Labels:** `board`, `pcb`, `state-management`, `cad`
+**Still open:** #6/#12/#15 and related repository work. The whole product schema and PCB topology are not yet fully canonical/professional.
 
-### Summary
-`BoardStudio.tsx` was using local state for board editing rather than cleanly committing commands via the `useProjectStore` command bus.
+### Static architecture reports
 
-### Acceptance Criteria
-- [x] Board CRUD actions in `BoardStudio.tsx` issue store actions (`addBoard`, `updateBoard`, `deleteBoard`, `addBoardComponent`).
-- [x] Active board selection syncs bi-directionally with `useStudioContextStore`.
-- [x] Switching between Board Settings and Board Designer maintains context without lost edits.
+**Original finding:** update Graphify after cleanup.
 
----
+**Current interpretation:** static graphs can help developers inspect dependency structure, but they are not a product completion gate. Current authority comes from production behavior, exact-head CI, integration tests, durable state, and live issue acceptance criteria.
 
-## ISSUE #5: Unified Graphify Architecture Snapshot & Verification
+## Current recovery issue hierarchy
 
-**Title:** `docs(arch): Update Graphify knowledge graph report following legacy deletion`
+The repository now uses a broader evidence-based recovery program.
 
-**Labels:** `documentation`, `graphify`, `ci`
+### Program and foundations
 
-### Summary
-Run `@sentropic/graphify update` to ensure graph nodes and community clusters reflect the pruned, unified single-app structure.
+- #4 — product recovery epic;
+- #5 — constitution/status/reference gate;
+- #6 — canonical schema/IDs/units/migrations;
+- #7/#38 — repository/durable storage;
+- #8/#39 — commands/transactions/undo;
+- #9 — shell/recovery/performance;
+- #10 — E2E/CI quality architecture;
+- #11/#42 — legacy cleanup/monolith decomposition;
+- #12 — canonical product graph.
 
-### Acceptance Criteria
-- [x] Rebuild `.graphify/graph.json` and `.graphify/GRAPH_REPORT.md`.
-- [x] Verify total nodes represent active, production-grade components without orphaned edges.
-- [x] Commit and push changes to master.
+### Engineering domains
+
+- #13 — component library/representations/sourcing;
+- #14 — schematic/connectivity/ERC;
+- #15 — PCB/routing/DRC/multi-board/output safety;
+- #16 — sketch/dimensions/constraints;
+- #17 — CAD kernel/features/assemblies/exact exchange;
+- #18 — firmware filesystem/PlatformIO/device/serial;
+- #19 — validation execution/evidence/review;
+- #20 — versions/branches/merges/releases;
+- #21 — drawings/manufacturing/qualified outputs.
+
+### Platform/intelligence/integration
+
+- #22 — MCP live repository/proposal/apply/audit;
+- #23 — backend/auth/teams/permissions/storage/collaboration;
+- #24 — graph-grounded AI workflow;
+- #25 — analysis/simulation adapters;
+- #26 — qualified interoperability;
+- #27 — independently qualified reference-product vertical slice.
+
+## Studio convergence program
+
+Separately, the U0–U9 Studio plan fixes interaction fragmentation without pretending to close the engineering issues above.
+
+As of this reconciliation:
+
+- U0–U7 are structurally landed;
+- **U8 Release convergence is active**;
+- U9 final polish is pending.
+
+See `STUDIO_PHASE_EXECUTION_STATUS.md` for exact evidence.
+
+## Historical original issue mapping
+
+The old audit grouped work into five buckets:
+
+1. legacy prototype deletion;
+2. styling consistency;
+3. Mechanical 3D consolidation;
+4. Board Settings synchronization;
+5. Graphify report update.
+
+These are now treated as **historical sub-findings**, not current completion epics. Any old `[x]` acceptance marker in Git history means that narrow historical cleanup was performed at that time; it must not be cited as evidence that architecture, CAD, PCB, design system, or product recovery is complete today.
+
+## Current issue-closing rule
+
+A live issue closes only when its current user-facing/engineering acceptance criteria are satisfied by production behavior, tests, persistence/recovery semantics, truthful evidence and required independent checks.
+
+Do not close a broad issue because:
+
+- files were deleted;
+- a panel was redesigned;
+- one helper/test passed;
+- an isolated route works;
+- a generator emitted an artifact;
+- a static graph/report looks cleaner.
+
+This historical audit is preserved for provenance. For all new work, use the current recovery plans and GitHub issues.
