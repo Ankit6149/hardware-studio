@@ -1,60 +1,150 @@
-# V1 Baseline Audit
+# V1 Baseline Audit — Historical Record with Current Reconciliation
 
-**Date**: 2026-07-20  
-**Commit Baseline**: `17918b01d232fbb82b6360fe20208ae4148440a6`
+**Original audit date:** 2026-07-20  
+**Original commit baseline:** `17918b01d232fbb82b6360fe20208ae4148440a6`  
+**Reconciled:** 2026-09-02  
+**Current master:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Authority status:** historical audit; **not** current product status.
 
----
+For current truth, use:
 
-## 1. Baseline Verification Commands Output
+1. `docs/CURRENT_STATUS.md`;
+2. `docs/development/STUDIO_PHASE_EXECUTION_STATUS.md`;
+3. `docs/development/PRODUCT_RECOVERY_EXECUTION_PLAN.md`;
+4. live GitHub issue acceptance criteria.
 
-| Command | Status | Result / Notes |
-|---------|--------|----------------|
-| `npm run lint` | ❌ FAIL | 12 errors (6 `no-explicit-any` in `projectMigrations.ts`, 1 in `types/index.ts`, 3 `react-hooks/refs` in `MechanicalCanvas.tsx`), 42 warnings |
-| `npm run typecheck` | ✅ PASS | 0 errors |
-| `npm test` | ✅ PASS | 33/33 vitest tests passed |
-| `npx next build` | ✅ PASS | Build completes cleanly |
+## Why this audit is still useful
 
----
+The July 20 baseline captured the early recovery state before the later architecture and Studio convergence program. It documents real defects that motivated subsequent work:
 
-## 2. Feature & Architecture Assessment
+- lint failures and weak verification coverage;
+- incomplete serialization/migration;
+- snapshot-heavy undo/redo;
+- dangling schematic-wire behavior;
+- weak PCB board/routing context;
+- immature 3D/CAD authority;
+- incomplete Firmware build/device integration;
+- incomplete Validation/release/MCP systems;
+- legacy/dead components.
 
-### Working Features
-- **Product Studio**: `@xyflow/react` node/edge graph editor with draggable nodes, persistent x/y coordinates, requirements panel, and inspector.
-- **Mechanical Studio**: 2D SVG canvas editor with rect/circle shapes, drag, resize, mm grid, and assembly layer manager.
-- **Firmware Studio**: State machine canvas (`@xyflow/react`), C/C++ header and source code generator (`firmwareCodegen.ts`), module mapping.
-- **Validation Studio**: Measurement evaluation engine with numeric/boolean/text checks, step manager, requirement coverage matrix, and Factory QA panel.
-- **Store & Persistence**: LocalStorage project store with snapshot undo/redo.
+Those findings are useful historical context. They must not be read as the present backlog verbatim because many surfaces have since changed or been replaced.
 
-### Partial Features
-- **Schematic Editor**: Wires use absolute coordinates rather than pin-anchored endpoints. Moving component symbols leaves wire endpoints dangling.
-- **PCB Designer**: Board selector needs strict active-board filtering. Traces need strict pad-aware routing and anchor tracking.
-- **3D Preview**: Lacks parametric 3D body generation (extrusion from 2D profiles) and 3D interference checking.
-- **Firmware IDE**: Missing local PlatformIO build bridge integration, build log recording, and local execution.
-- **Component Library**: Custom component definitions need full project/workspace persistence linking symbols, footprints, 3D packages, and pin models.
-- **Revision History**: Lacks Git/Onshape style named revisions, branches, and immutable release candidate approval.
-- **MCP Control**: Missing native Model Context Protocol (MCP) server for local tool/resource inspection, drafting, approval, and audit.
+## Original verification snapshot
 
-### Data-Loss Risks & Import/Export Gaps
-- `importProjectJSON` in `projectStore.ts` does not fully normalize and restore schema v5 fields (`architectureConnections`, `mechanicalDimensions`, `firmwareStates`, `firmwareTransitions`, `firmwareSourceFiles`, `customComponentLibrary`, etc.).
-- Undo/redo commands for drag interactions currently record full snapshots rather than explicit before/after reversible actions with pointer-up committing.
+At commit `17918b01...` the audit recorded:
 
-### Dead Routes & Misleading Components
-- `TestingBoard.tsx` (legacy placeholder for DRC).
-- `CircuitPlanner.tsx`, `NetlistPlanner.tsx` (legacy form shells superseded by real editors).
+| Check | Historical result |
+| --- | --- |
+| `npm run lint` | fail — 12 errors / 42 warnings |
+| `npm run typecheck` | pass |
+| `npm test` | 33/33 tests pass |
+| `next build` | pass |
 
----
+Current CI and test counts are much broader. The latest U7 structural slice, for example, passed lint/typecheck/build plus **339/339 tests across 89 test files** on exact head `643757f7...`. That comparison shows recovery progress, but test-count growth alone is not product completion evidence.
 
-## 3. Corrective Action Plan for V1 Completion
+## Current delta from July 20 findings
 
-1. Fix lint errors in `MechanicalCanvas.tsx` (`react-hooks/refs`) and `projectMigrations.ts` (`no-explicit-any`).
-2. Implement schema v5 project serialization/deserialization/migration with round-trip test (`src/lib/projectSerialization.ts`).
-3. Refactor command history to explicit pointer-up committed reversible commands (`ProjectCommand`).
-4. Establish unified canonical product graph query layer (`src/core/productGraph/`).
-5. Complete component library persistence with linked representations (symbol, footprint, 3D package, pin model).
-6. Anchor schematic wires to component pins so wire endpoints follow moving symbols.
-7. Complete PCB strict pad-aware routing, active board filtering, and 2D/3D enclosure spatial synchronization.
-8. Implement 3D parametric product preview with profile extrusions and interference checking.
-9. Implement local PlatformIO bridge for firmware building/logging (`packages/local-bridge`).
-10. Implement native Hardware Studio MCP server with read, draft, apply, and approval tools (`packages/mcp-server`).
-11. Build named versioning, branch, and release engine.
-12. Expand unit & integration test suite to 82+ tests without Playwright or browser automation.
+### Product / Studio structure
+
+**Then:** workbenches were present but interaction architecture was fragmented.
+
+**Now:** U0–U7 structural convergence is landed:
+
+- shared workbench tabs;
+- contextual Project Drawers;
+- shared Inspector/bottom-dock/status grammar;
+- clean `/studio/...` routes;
+- evidence-driven Project Home;
+- connected PCB/Mechanical/Firmware/Validation workbench patterns.
+
+**Still open:** durable shell/repository/performance/recovery work under foundation issues; U8 Release active; U9 polish pending.
+
+### Schematic / PCB
+
+**Then:** schematic wires and board/routing context were major gaps.
+
+**Now:** structured anchors, board-identity hardening, connected Electronics identity and PCB shell convergence have improved.
+
+**Still open:** #14/#15 remain the authority for professional connectivity/ERC/PCB topology/routing/rules/multi-board/output qualification.
+
+### Mechanical / 3D
+
+**Then:** 3D was a preview with no parametric authority.
+
+**Now:** U5 gives one Mechanical workbench with 2D Layout / 3D Review / Assembly and explicit visualization-only trust boundaries.
+
+**Still open:** #16/#17 for real constraints/CAD kernel/feature history/assemblies/exact interference/exchange.
+
+### Firmware
+
+**Then:** no complete local PlatformIO execution/log integration.
+
+**Now:** U6 structurally converged Firmware, removed implicit module/file selection, separated authoring from Build/Device Evidence and deleted the duplicate `FirmwareStudio` implementation.
+
+**Still open:** #18 for real filesystem/PlatformIO/device/serial/durable operation evidence.
+
+### Validation
+
+**Then:** validation forms/measurement helpers existed but execution/review integration was incomplete.
+
+**Now:** U7 structurally landed explicit **Define → Execute → Review**, explicit test/run selection, append-only run review and shared Inspector/dock.
+
+**Still open:** #19 for durable hashed evidence, exact version/DUT/equipment binding, trusted reviewer policy, execution service and stale propagation.
+
+### Versions / Release
+
+**Then:** named versions/branches/releases were identified as missing.
+
+**Now:** current revision/readiness/output foundations exist and **U8 Release convergence is active**.
+
+**Still open:** #20 for real immutable versions/branches/comparisons/three-way merges/freezes/approvals/releases and #21 for qualified drawings/manufacturing outputs.
+
+### MCP / bridge
+
+**Then:** MCP and PlatformIO bridge were largely missing target systems.
+
+**Now:** meaningful official SDK/protocol/local-process/security foundations exist.
+
+**Still open:** shared durable repository integration, typed proposal/apply policy, hardened operation lifecycle, backend/roles and interoperability.
+
+## Superseded original corrective sequence
+
+The July audit proposed a linear list of 12 corrective actions. Several remain valid engineering goals, but the repository now uses a clearer two-track program:
+
+### Studio track
+
+- U0–U7 landed;
+- U8 active;
+- U9 pending.
+
+### Engineering recovery track
+
+- #5–#12 foundations;
+- #13–#21 domain engines/evidence/release/output;
+- #22–#26 platform/intelligence/interoperability;
+- #27 independently qualified reference-product acceptance.
+
+Use `PRODUCT_RECOVERY_EXECUTION_PLAN.md` instead of the old numbered list.
+
+## Current lessons retained from the original audit
+
+The following principles remain correct and are now stronger product rules:
+
+- serialization/migration must preserve all known state;
+- undo/redo should model real transactions, not UI illusions;
+- schematic connectivity needs structured anchors/graph semantics;
+- PCB operations require explicit board/topology context;
+- 3D visualization must not impersonate CAD authority;
+- firmware evidence must reflect real execution provenance;
+- validation needs immutable/reviewable run lineage;
+- versions/releases must be real, not status cards;
+- MCP must use typed semantic operations over the live governed project;
+- tests must exercise production behavior rather than helper presence.
+
+## Historical completion boundary
+
+This audit must never be used to claim that a domain is complete because its July checklist item was later addressed superficially.
+
+Current completion requires the live issue's acceptance criteria, production behavior, persistence/recovery, truthful authority, exact-head verification, and independent evidence where the claim requires it.
+
+The July baseline is preserved as historical evidence of how far the project has moved—not as today's specification.
