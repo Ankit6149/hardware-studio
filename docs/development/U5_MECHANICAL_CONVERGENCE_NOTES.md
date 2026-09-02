@@ -1,109 +1,173 @@
-# U5 Mechanical convergence notes
+# U5 Mechanical Convergence Notes
 
-This file records the bounded Mechanical UX/convergence decisions while the broader Mechanical engineering issues remain open.
+**Reconciled:** 2026-09-02  
+**Structural phase:** complete  
+**Current Studio phase:** U8 — Release convergence  
+**Engineering authorities still open:** #16 and #17
 
-## Current status
+This file records the bounded Mechanical UX decisions that remain part of the accepted Studio baseline. It is a handoff record, not a claim that Mechanical engineering is complete.
 
-**U5 structural UX convergence is complete enough to hand off to U6.**
+## Merged evidence
 
-Completed slices:
+### U5.1
 
-- **U5.1 — PR #107 / issue #106**  
-  Merge: `e1bc7f457329c2c0837b425ca4b862f916e566fe`
-- **U5.2 — PR #110 / issue #109**  
-  Merge: `f83b2e51b99c259b8e885f241d903b0f116ac7ae`
+- PR #107 / issue #106
+- merge commit: `e1bc7f457329c2c0837b425ca4b862f916e566fe`
+- exact-head repository gate at the time:
+  - lint: pass;
+  - typecheck: pass;
+  - tests: 321/321;
+  - production build: pass.
 
-Engineering parents that intentionally remain open: **#16 and #17**.
+### U5.2
 
-## U5.1 — one Mechanical shell and explicit physical input
+- PR #110 / issue #109
+- merge commit: `f83b2e51b99c259b8e885f241d903b0f116ac7ae`
+- exact-head repository gate at the time:
+  - lint: pass;
+  - typecheck: pass;
+  - tests: 326/326;
+  - production build: pass;
+  - Vercel deployment status: pass.
 
-U5.1 established:
+Those historical test counts are evidence for the corresponding exact heads, not permanent expected suite sizes.
 
-- one shell-owned Mechanical Project Drawer;
-- canonical Features / Dimensions / Assembly context;
-- shared `mechanical-object` selection between drawer, viewport and Inspector;
-- UI-only Mechanical panel state;
+## Landed Mechanical grammar
+
+### One shell-owned Mechanical Project Drawer
+
+Mechanical no longer needs another global navigation system to expose its local context.
+
+The drawer/workbench owns:
+
+- features/objects;
+- dimensions/evidence context;
+- assembly context;
+- explicit user selection.
+
+### Explicit physical input
+
+U5 intentionally rejected fake starter truth.
+
+Rules established:
+
 - no automatic first-object selection;
 - no fabricated starter geometry;
-- no default tolerance values;
+- no default tolerance values presented as engineering decisions;
 - no invented material/fastening evidence;
-- explicit PCB-envelope synchronization only from real board/outline context.
+- PCB envelope synchronization occurs only from real board/outline context and explicit actions.
 
-Exact-head verification before merge:
+### Three representations, one workbench
 
-- lint: pass;
-- TypeScript: pass;
-- tests: 321/321 pass;
-- production build: pass.
+Mechanical supports the structural representation grammar:
 
-## U5.2 — one Mechanical workbench, three explicit representations
+- **2D Layout**;
+- **3D Review**;
+- **Assembly**.
 
-U5.2 converged **2D Layout / 3D Review / Assembly** into one Mechanical workbench.
+Representation selection is UI/session state, not engineering project state.
 
-Implemented:
+Legacy Mechanical mode requests may be translated for compatibility, but must not recreate separate applications.
 
-- contextual Mechanical representation tabs rather than another global navigation layer;
-- representation choice stored in `mechanicalWorkspaceUiStore`, not project engineering state;
-- legacy `canvas`, `assembly`, `3d-preview`, and `webgl-3d` requests translated as compatibility handoffs and cleared;
-- same shared Mechanical Project Drawer remains the structural owner around representations;
-- canonical shared selection is preserved while representations change;
-- 3D review now sits inside the shared editor grammar instead of presenting itself as a separate application;
-- 3D review explicitly states **Visualization only — not CAD / not validation authority**;
-- no guessed board, outline, package, placement or mechanical dimensions are introduced for rendering.
+### Shared context
 
-Exact-head verification before merge:
+The same Mechanical object selection is intended to flow between:
 
-- lint: pass;
-- TypeScript: pass;
-- tests: 326/326 pass;
-- production build: pass;
-- Vercel deployment: pass.
+- Project Drawer;
+- viewport/representation;
+- Inspector;
+- validation/check context where linked.
 
-## Mechanical representation boundary
+Panel state must not become a duplicate Mechanical data model.
 
-The repository now has a coherent Mechanical UX, but two engineering layers must remain clearly separated:
+## 3D authority boundary
 
-1. **Current authoritative project evidence** — canonical mechanical objects, dimensions, assembly layers, explicit board references, command-backed pointer edits and validation findings.
-2. **Current 3D visualization** — Three.js renders only explicit board/package/mechanical dimensions when available and leaves missing geometry unresolved.
+The central U5 truth rule remains:
 
-The 3D renderer is useful for coordination/review, but it is **not** the modeling source of truth.
+> **3D Review is visualization/review, not CAD or validation authority.**
 
-## #16 remains open — real sketch/drawing foundation
+Current Three.js rendering may coordinate explicit board/package/mechanical dimensions when available. It must not invent exact engineering geometry when those dimensions are absent.
 
-Do not interpret U5 completion as #16 completion.
+A visually plausible scene does not prove:
 
-Still required by #16:
+- exact B-Rep geometry;
+- exact clearance;
+- exact interference absence;
+- exact mass/volume;
+- exact assembly constraints;
+- tooling/manufacturing readiness.
 
-- exact sketch documents/primitives/topology;
-- persistent geometric constraints;
+This boundary must be preserved by U8 Release/readiness code. Release must not upgrade a 3D-review result into stronger Mechanical evidence than it actually is.
+
+## #16 remains open — sketch / dimensions / constraints / drawing foundations
+
+U5 does not satisfy #16.
+
+Still required includes:
+
+- canonical sketch documents and topology;
+- line/arc/spline/polygon/construction primitives as scoped;
 - persistent dimensional constraints;
-- real constraint solving with under/fully/over-constrained state;
-- conflict and degrees-of-freedom explanation;
+- persistent geometric constraints;
+- under/fully/over-constrained state;
+- solver conflicts and degrees-of-freedom explanation;
 - deterministic profile/region detection;
-- typed parameters, units and expressions;
+- typed parameters/units/expressions;
 - stable topology references;
 - drawing document/view foundations;
-- qualified DXF/SVG round-trip and the required solver/E2E fixtures.
+- qualified supported interchange and regression/E2E fixtures.
 
-## #17 remains open — real CAD kernel / parametric modeling
+## #17 remains open — CAD kernel / parametric modeling / assemblies
 
-Do not interpret the improved 3D review as #17 completion.
+U5 does not satisfy #17.
 
-Still required by #17:
+Still required includes:
 
-- reviewed Open CASCADE or equivalent kernel architecture;
-- exact B-Rep/source geometry separate from render tessellation;
+- reviewed Open CASCADE/equivalent kernel architecture;
+- exact B-Rep/source geometry distinct from render meshes;
 - parametric feature tree and regeneration diagnostics;
-- sketch-to-solid operations;
-- booleans, fillet/chamfer, shell, patterns, sweep/loft and documented supported features;
-- assembly instances and mate semantics;
+- sketch-to-solid features;
+- booleans and declared supported modeling features;
+- assembly instances and mates;
 - exact interference/clearance;
-- mass/volume properties;
-- STEP import/export qualification;
+- mass/volume properties as scoped;
+- qualified STEP/STL import/export;
 - worker/process isolation, cancellation and deterministic cache invalidation.
 
-## U5 handoff decision
+## Cross-domain handoff rules after U5
 
-U5 does not need another UI-only slice before U6. Adding more labels, shape buttons or Three.js effects would create false progress.
+Mechanical must consume connected product context without taking ownership away from other domains.
 
-Mechanical now has a sufficiently coherent shell/representation model. The correct next product-convergence phase is **U6 Firmware**, while #16/#17 continue in the parallel engineering track and are only closed when their stated acceptance criteria are genuinely satisfied.
+Examples:
+
+- board identity remains canonical PCB/product state;
+- package/component identity remains canonical component/product state;
+- Mechanical may reference those IDs and derive review geometry;
+- Validation may reference Mechanical objects/results but must preserve their authority level;
+- Release/output may consume Mechanical evidence only at the strength actually supported.
+
+## Current status after U6/U7
+
+Since U5 landed:
+
+- U6 Firmware has structurally converged;
+- U7 Validation has structurally converged;
+- U8 Release is now active.
+
+Therefore the Mechanical handoff is no longer “next phase U6.” The standing requirement is now:
+
+> Preserve the U5 shell/representation contract while #16/#17 deepen the engine and U8/U9 consume Mechanical evidence truthfully.
+
+## Non-negotiable regression rules
+
+Do not improve Mechanical by:
+
+- reintroducing a second Mechanical app shell;
+- auto-selecting the first Mechanical object;
+- inventing geometry/tolerances/materials;
+- treating Three.js display geometry as exact CAD;
+- duplicating Inspector/Problems ownership;
+- adding decorative 3D effects that imply stronger engineering authority;
+- closing #16/#17 because the workbench looks coherent.
+
+U5 is structurally complete. Mechanical engineering completion remains governed by #16/#17 and the reference-product acceptance path.
