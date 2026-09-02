@@ -1,318 +1,548 @@
-# Hardware Studio Product Recovery and End-to-End Execution Plan
+# Hardware Studio — Product Recovery and End-to-End Execution Plan
 
-**Audit baseline:** `a70a958a2b560dcc2609fb4b61e9e114e0390fcb`  
-**Audit scope:** complete repository snapshot, including application routes, all workbenches, Zustand project store, shared types, domain engines, exporters, tests, local bridge, MCP server, CI, and product documentation.  
-**Status:** authoritative recovery plan. Existing documents that claim V1/V5 completion do not override this plan.
+**Plan reconciliation:** 2026-09-02  
+**Current master:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Status:** authoritative deep-engineering recovery plan  
+**Parallel Studio plan:** `STUDIO_UX_CONVERGENCE_EXECUTION_PLAN.md`  
+**Live phase ledger:** `STUDIO_PHASE_EXECUTION_STATUS.md`
+
+This plan governs the deep engineering recovery of Hardware Studio. It is intentionally separate from the U0–U9 Studio convergence program.
+
+> **Studio convergence makes the product coherent. Engineering recovery makes the product trustworthy. Neither can replace the other.**
 
 ## 1. Product definition
 
-Hardware Studio should become a connected engineering environment for moving from product intent to a reviewed physical-product release. It should not be a collection of forms and unrelated canvases. Product, mechanical, electronics, PCB, firmware, validation, sourcing, drawings, and releases must operate on one canonical product model.
+Hardware Studio should become a connected engineering environment for moving from product intent to a reviewed physical-product release.
 
-The first credible product milestone is not “replace Fusion, KiCad, Altium, Onshape, or PlatformIO.” The first credible milestone is a truthful connected V1 that can:
+The bounded V1 goal is not to instantly replace Fusion, KiCad, Altium, Onshape, PlatformIO, PLM, QMS and manufacturing systems. The credible V1 goal is a truthful connected workflow for a small embedded product that can:
 
-1. create and manage requirements and architecture;
-2. create reusable electronic components with linked symbol, footprint, package, sourcing, and 3D representations;
-3. create an authoritative schematic connectivity graph;
-4. create and validate a multi-layer PCB draft without cross-board leakage;
-5. create constrained mechanical sketches and parametric solid features for enclosure/assembly work;
-6. map firmware to real components, pins, nets, and build environments;
-7. execute validation with durable evidence and retest lineage;
-8. create named immutable versions, branches, comparisons, release candidates, and qualified outputs;
-9. expose safe semantic operations through MCP and AI without bypassing the command, approval, or audit systems.
+1. define requirements and architecture;
+2. create/qualify reusable components and project instances;
+3. create authoritative electrical connectivity;
+4. create and validate a board without cross-board leakage;
+5. create constrained Mechanical design and exact physical context;
+6. map firmware to exact hardware and execute reproducible builds/device operations;
+7. execute validation with durable evidence/retest lineage;
+8. create immutable versions, branches, comparisons, candidates and releases;
+9. generate qualified drawings/manufacturing/output artifacts tied to exact source versions;
+10. expose safe semantic operations through MCP/AI without bypassing commands, review, policy or audit.
 
-## 2. Audit conclusion
+The reference product and exact V1 scope remain defined by `docs/product/V1_PRODUCT_CONSTITUTION.md`.
 
-The repository contains useful foundations, but the current application is not an integrated V1. The main problem is architectural divergence:
+## 2. Current recovery position
 
-- a 3,700+ line Zustand store combines persistence, project management, commands, history, every domain mutation, generators, and release state;
-- the project schema is a large optional object containing legacy and newer representations of the same concepts;
-- the browser stores complete projects and command snapshots synchronously in `localStorage`;
-- several production-looking engines are only exercised by isolated tests and are not used by the live UI;
-- workbench navigation frequently maps several different sidebar entries to the same generic surface;
-- the electrical, PCB, mechanical, firmware, validation, and release models are not authoritative enough to support professional operations;
-- Three.js is being used as a renderer, but there is no CAD kernel or feature model;
-- the MCP server runs against its own in-memory project rather than the user's live project;
-- documentation contains mutually contradictory “complete” and “not ready” claims;
-- tests validate helpers far more often than end-to-end user workflows.
+The repository has advanced significantly since the original audit, especially in Studio structure.
 
-This should be treated as a controlled rebuild around retained useful code, not as a sequence of cosmetic fixes.
+### Structurally landed
 
-## 3. Immediate safety and truthfulness rules
+- U0 architecture/navigation lock;
+- U1 shared shell foundation and clean routes;
+- U2 evidence-driven Project Home;
+- U3 Electronics convergence;
+- U4 PCB convergence;
+- U5 Mechanical convergence;
+- U6 Firmware convergence;
+- U7 Validation convergence.
 
-Until the corresponding recovery issues are complete:
+### Active
 
-- do not label the product V1 complete, release candidate, factory ready, parametric CAD, authoritative 3D, or fully integrated;
-- do not present generated Gerber, drill, CPL, firmware, validation, or release data as qualified output;
-- do not silently substitute guessed package dimensions, board dimensions, placements, or geometry in engineering checks;
-- do not allow manual checkboxes alone to convert draft output into verified output;
-- do not merge new feature work that creates a second model or second engine for an existing domain;
-- do not mark an issue complete because types, UI controls, helper functions, or isolated unit tests exist.
+- **U8 Release convergence**.
 
-## 4. Major findings
+### Still not professionally complete
 
-### 4.1 Application architecture and UX
+The core recovery findings remain valid at the engineering layer:
 
-- The application is a single full-screen client route with no backend API, durable server repository, authentication, permissions, object storage, or collaboration layer.
-- Multiple sidebar destinations render the same component, so the information architecture promises distinct workflows that do not exist.
-- View classification is duplicated between shell and sidebar.
-- There is no route/deep-link model for project/workbench/object selection.
-- There is no global error boundary, recovery mode, command palette, autosave status, storage-health display, or project corruption recovery.
-- Broad Zustand subscriptions and a monolithic store create avoidable rerenders and coupling.
-- Native browser alerts, confirms, and prompts are used for engineering and destructive actions.
+- schema/domain ownership is still too broad/legacy-heavy;
+- durable repository/event architecture is incomplete;
+- typed command coverage is incomplete;
+- the canonical product graph is not complete;
+- PCB/CAD/Firmware/Validation/Release/output engines are below professional depth;
+- MCP/backend/interoperability remain partial;
+- generated output is not comprehensively independently qualified.
 
-### 4.2 Canonical project model and persistence
+The recovery program should therefore continue as a controlled evolution around retained useful code, not a cosmetic rewrite and not a second parallel architecture.
 
-- Legacy entities (`nodes`, `edges`, `bom`, `testing`, `pinMap`, etc.) coexist with newer domain entities (`requirements`, `architectureNodes`, `mechanicalObjects`, `firmwareModules`, etc.).
-- Board placement exists in both flat and nested structures.
-- IDs, units, status values, board ownership, and active-board defaults are inconsistent.
-- Complete project maps and unbounded history snapshots are synchronously serialized to browser `localStorage`.
-- Some project fields are not included in the store's clean persistence path.
-- Import can load a project even when validation reports errors.
-- Navigation can mutate project timestamps/state.
-- The history model is not whole-project and does not cover every domain.
+## 3. Recovery principles
 
-### 4.3 Product graph and traceability
+### 3.1 Truth before appearance
 
-- Two product-graph implementations exist.
-- Most relationships are arrays of IDs without an indexed graph, integrity constraints, domain events, or dependency-specific invalidation.
-- Change-impact analysis is incomplete and partly hard-coded.
-- There is no reliable mechanism to mark only affected tests, drawings, builds, or releases stale after a change.
+Do not label a domain complete, verified, qualified, release-ready or fabrication-ready unless the corresponding production behavior/evidence supports that exact claim.
 
-### 4.4 Components and sourcing
+### 3.2 Unknown stays unresolved
 
-- The component library is mainly hard-coded local data plus project-local custom definitions.
-- Symbol, footprint, pad-stack, package, and 3D representations are not complete editors.
-- There is no durable shared library, versioning, lifecycle state, supplier normalization, pricing/stock history, alternate qualification, or datasheet ingestion.
-- Component creation and BOM/PCB/schematic registration are not guaranteed transactional.
+Do not substitute guessed:
 
-### 4.5 Schematic and electrical connectivity
+- board dimensions/identity;
+- placements;
+- package dimensions;
+- geometry;
+- evidence;
+- tool versions;
+- reviewer identity;
+- qualification;
+- release hashes.
 
-- Component placement uses hard-coded board/circuit IDs in one path.
-- Wire anchoring has structured fields but retains fragile encoded-ID fallbacks.
-- The editor lacks hierarchical sheets, buses, ports, global/local labels, junction semantics, no-connect markers, annotation workflows, and robust wire editing.
-- ERC is heuristic and text-driven rather than based on a complete electrical pin/connectivity model.
-- There is no qualified KiCad interchange or round-trip test.
+### 3.3 One canonical engineering model
 
-### 4.6 PCB editor and manufacturing data
+A workbench may have UI/session state, but must not create a private copy of canonical project objects to make its workflow easier.
 
-- Active-board identifiers are inconsistent (`board-main`, `board_main`, `board_0`, and template-specific IDs).
-- Some selection/hit-testing and generators can operate outside the active board.
-- Route anchors and net identity mix net IDs and net names.
-- Routing can end as dangling drafts and does not persist a complete source/target topology.
-- Autorouting and auto-placement are demonstrations, not engineering algorithms.
-- DRC omits major classes of rules and uses simplified bounding boxes.
-- Copper zones, topology, layer stackup, impedance, differential pairs, length tuning, thermal relief, and robust board geometry are absent.
-- Native manufacturing exporters use simplified custom generation and fallbacks; outputs are not round-trip qualified.
+### 3.4 One governed mutation path
 
-### 4.7 Mechanical 2D
+UI, MCP and future backend operations should converge on typed command/repository semantics with validation, impact, audit and reversibility where appropriate.
 
-- The live tool supports basic rectangles/circles and simple movement/resizing.
-- Polygon is present in types but not a complete creation/edit workflow.
-- Rotation, dimensions, and constraints are not authoritative feature relationships.
-- “Constraints” immediately rewrite geometry rather than remaining persistent and solvable.
-- There is no sketch topology, line/arc/spline system, trim/extend, offset, fillet/chamfer, construction geometry, profile detection, or solver.
-- Assembly thickness is parsed from free-form notes instead of typed dimensions.
+### 3.5 Derived output never outranks its source
 
-### 4.8 3D modeling and assemblies
+A derived visualization/check/report/package can only be as authoritative as:
 
-- The WebGL view renders hard-coded/fallback boxes and automatically rotates the scene.
-- The first PCB is rendered with fixed dimensions even when an outline exists.
-- Missing package dimensions and placements receive guessed values.
-- Collision is axis-aligned bounding-box overlap, not authoritative geometric interference.
-- The separate “parametric 3D preview” is SVG projection, not 3D modeling.
-- There is no feature tree, sketch-to-solid workflow, B-Rep model, boolean operations, shell, fillet/chamfer, sweep, loft, pattern, assembly mates, mass properties, or STEP/IGES exchange.
+- its source data;
+- algorithm/tool authority;
+- provenance;
+- qualification/review.
 
-### 4.9 Firmware and local bridge
+### 3.6 Structural UX completion does not close engineering issues
 
-- Firmware modules, states, and source files are browser records; the live UI does not call the local bridge.
-- The source editor is a textarea without language tooling, project tree, diagnostics, search, diff, or filesystem synchronization.
-- Code generation produces TODO skeletons and is not the authoritative build source.
-- Hardware mapping links components but does not comprehensively model pins, peripherals, interrupts, buses, addresses, clocks, DMA, or conflicts.
-- The bridge performs real `pio` process calls, but approval tokens are not bound to explicit human-approved operations, CORS/path policy needs hardening, long-running operations are not tracked/cancellable, overwrite reports success without writing, and serial monitoring is absent.
+Examples:
 
-### 4.10 Validation and evidence
+- U5 does not close #16/#17;
+- U6 does not close #18;
+- U7 does not close #19;
+- U8 will not close #20/#21.
 
-- The live Validation Studio edits definitions and evidence text, but does not execute the validation runner.
-- Evidence is a text field/reference, not durable content with hashes, provenance, reviewers, or object storage.
-- Validation runs are not connected to device serials, project versions, firmware builds, equipment/calibration, environmental conditions, or sample plans.
-- There is no complete retest comparison, immutable run review, statistical analysis, or sign-off workflow.
-
-### 4.11 Revisions, branches, releases, and outputs
-
-- Revisions are deep JSON snapshots stored inside the same project.
-- Branching and merging do not cover every domain and do not implement full base/source/target change semantics.
-- Release candidates mutate revision records and fabricate output identifiers rather than freezing actual content-addressed artifacts.
-- Eligibility checks are incomplete.
-- A freeze flag is not reliably persisted through every save path.
-- Blueprints and manufacturing files can be generated from incomplete/guessed data and manually marked verified.
-
-### 4.12 MCP and AI
-
-- The MCP transport uses the official SDK, but starts with a separate default in-memory project.
-- Several listed resources have no matching resource handler.
-- Proposal application shallow-merges arbitrary patches instead of executing typed domain commands.
-- Component deletion leaves cross-domain references orphaned.
-- Audit records can claim approval without a trusted approval event.
-- There is no live project selection, authentication, authorization, persisted proposal queue, UI review, or command-level undo.
-
-### 4.13 Testing, CI, and documentation
-
-- CI runs lint, TypeScript, Vitest, and Next build, but does not verify the browser workflows.
-- Vitest runs in Node; UI workbenches have no meaningful interaction coverage.
-- Many tests validate isolated helpers or disconnected engines.
-- There are no browser end-to-end, visual regression, accessibility, storage corruption, migration fuzz, security, real PlatformIO, real MCP client, manufacturing round-trip, or 3D rendering gates.
-- Status documents contradict one another; some claim complete V1/V5 while the honest status document says the system is partial.
-
-## 5. Target architecture
-
-### 5.1 Repository layout
-
-Move toward a monorepo with explicit boundaries:
+## 4. Recovery architecture target
 
 ```text
-apps/
-  web/                 browser workbenches and collaboration UI
-  desktop/             optional Tauri shell and local filesystem/device access
-  api/                 projects, users, permissions, revisions, artifacts, sync
-services/
-  local-bridge/        secure loopback operations and device sessions
-packages/
-  domain/              canonical schemas, IDs, units, invariants
-  commands/            typed commands, events, transactions, undo/redo
-  repository/          local and remote repository interfaces
-  product-graph/       relationships, indexes, impact analysis, stale propagation
-  electrical/          components, connectivity, ERC
-  pcb/                 geometry, routing topology, DRC
-  mechanical/          sketches, constraints, feature model, CAD-kernel adapter
-  firmware/            workspaces, mappings, PlatformIO contracts
-  validation/          tests, measurements, evidence, runs, retests
-  release/             versions, branches, merges, freezes, manifests
-  interchange/         KiCad, STEP/STL/DXF, BOM, manufacturing adapters
-  mcp/                 safe semantic tools over repository + commands
+Shared Studio Shell / MCP / APIs
+        ↓
+Typed domain commands and proposals
+        ↓
+Transactional durable repository + events
+        ↓
+Canonical product graph / domain packages
+        ↓
+Domain engines and external adapters
+        ↓
+Derived analysis / evidence / outputs
+        ↓
+Versions / candidates / review / release
 ```
 
-### 5.2 Data architecture
+No layer should bypass the ones beneath it with hidden local state or a parallel persistence path.
 
-- Canonical versioned domain schema with deterministic IDs and typed units.
-- Repository interface used by UI, API, MCP, tests, and local bridge.
-- Local-first cache using IndexedDB/OPFS or SQLite in a desktop shell; PostgreSQL for shared server state when collaboration is enabled.
-- Object storage for images, evidence, CAD files, build artifacts, and release packages.
-- Transactional command/event log with immutable named versions and content-addressed release artifacts.
-- Derived render/export caches that are reproducible and invalidated from dependency changes.
+## 5. Foundation recovery — #5–#12
 
-### 5.3 3D architecture
+### #5 — Constitution, reference, status and completion rules
 
-Three.js should remain the rendering layer, not the modeling kernel. Use a real CAD kernel—preferably Open CASCADE Technology through a maintained WASM/native adapter—for B-Rep topology, booleans, fillets, shells, tessellation, and STEP exchange.
+Purpose:
 
-V1 modeling scope:
+- define bounded product scope;
+- normalize truth language;
+- preserve reference-tool research without confusing aspiration with implementation;
+- establish evidence-based completion rules.
 
-1. sketches containing lines, arcs, circles, polygons, construction geometry, dimensions, and constraints;
-2. profile detection and validation;
-3. feature history for extrude, cut, revolve, fillet/chamfer, shell, pattern, and datum/reference operations;
-4. parts/bodies with stable topology references and generated tessellation caches;
-5. assembly instances, transforms, simple mates, exploded views, clearances, and exact interference;
-6. component package and PCB STEP placement inside assemblies;
-7. STEP/STL import/export and drawing views.
+Current state:
 
-Do not attempt to write a CAD kernel from scratch.
+- strong foundation exists;
+- documentation must continue to be synchronized after phase/domain changes.
 
-### 5.4 Electrical architecture
+### #6 — Canonical schema, IDs, units, ownership and migrations
 
-- One authoritative connectivity graph from component pins through labels, junctions, nets, pads, vias, traces, and zones.
-- Rule engines operate on typed pin classes, net classes, board stackup, geometry, and manufacturing constraints—not labels/notes.
-- Use KiCad interchange/CLI as a qualification and interoperability path while native editors mature.
-- Never generate fabrication output from unresolved topology or fallback geometry.
+Target:
 
-### 5.5 MCP and AI architecture
+- stable typed identity families;
+- explicit units and coordinate systems;
+- normalized board/component/net/mechanical/firmware/validation/release ownership;
+- runtime validation;
+- deterministic migration diagnostics;
+- removal of ambiguous legacy duplicate representations.
 
-- MCP and AI read/write through the same repository and typed command service as the UI.
-- Read operations can be immediate; write operations create explicit proposals with deterministic diffs.
-- High-impact commands require a trusted approval record bound to project, command, user, expiry, and exact payload hash.
-- Every applied operation produces a command/event record and can be reverted where domain-safe.
-- AI output should explain assumptions and unresolved evidence; it must not invent geometry or approval.
+Completion requires more than cleaning individual fallback IDs.
 
-## 6. Phased execution
+### #7 / #38 — Durable repository and project storage
 
-### Phase 0 — Recovery control and truthfulness
+Target:
 
-Create the authoritative product constitution, reference matrix, completion gates, status vocabulary, safety gates, and epic backlog. Remove contradictory completion claims and disable misleading release/fabrication language.
+- repository abstraction shared by browser/Node/MCP/jobs;
+- transactional writes;
+- durable project/workspace identity;
+- atomic save/recovery;
+- corruption/read-only recovery;
+- backup/export/import;
+- artifact/blob handling;
+- conflict/revision checks;
+- eventual local/cloud parity without sacrificing local-first ownership.
 
-**Exit gate:** one authoritative plan; every domain has a truthful status and owner; no simulated/guessed output is presented as verified.
+Browser-local storage is not the final cross-process repository architecture.
 
-### Phase 1 — Foundation before features
+### #8 / #39 — Typed commands, transactions, invalidation and undo/redo
 
-Normalize schema/IDs/units; introduce repository abstraction and durable storage; build typed command/event transactions; implement complete undo/redo; rebuild shell/error recovery; establish browser/system test infrastructure; split monolithic boundaries.
+Target:
 
-**Exit gate:** a project can be created, edited through commands, closed, reopened, migrated, backed up, restored, corrupted safely, and tested without data loss.
+- typed mutation registry;
+- exact before/after/reversible semantics;
+- pointer begin → preview → commit-once lifecycle;
+- deterministic undo/redo;
+- affected-object/domain IDs;
+- validation before commit;
+- dependency invalidation;
+- audit/event records.
 
-### Phase 2 — Product graph and component truth
+### #9 — Shell, routing, recovery and performance
 
-Build indexed graph/invariants/change impact; rebuild shared component definitions, representations, lifecycle, sourcing, and transactional instantiation.
+U1 solved major interaction-structure problems, but #9 still covers deeper platform quality:
 
-**Exit gate:** changing a component or requirement produces a deterministic impact set and stale propagation across affected domains.
+- route/layout durability;
+- error boundaries/recovery;
+- storage health;
+- autosave/repository status;
+- performance profiling;
+- crash/reload behavior;
+- accessibility and browser robustness foundations.
 
-### Phase 3 — Electrical vertical slice
+### #10 — Test architecture and CI quality gates
 
-Rebuild schematic connectivity/ERC, PCB ownership/topology/routing/DRC, and qualified KiCad/manufacturing interchange.
+Current root CI is meaningful:
 
-**Exit gate:** a small real reference design can go from component library to schematic to PCB, survive save/reload/undo, pass native and KiCad checks, and produce reviewable non-fallback outputs.
+- workflow hygiene;
+- lint;
+- typecheck;
+- full configured Vitest suite;
+- production build.
 
-### Phase 4 — Mechanical and real 3D
+Future completion also requires selected browser E2E, durability/recovery, adapter/interchange, accessibility/visual/performance and domain-independent verification as specified by issues.
 
-Build sketches/constraints/features, CAD-kernel adapter, assembly model, exact interference, PCB/package integration, STEP/STL exchange, and drawing generation.
+### #11 / #42 — Legacy cleanup, monolith decomposition and package boundaries
 
-**Exit gate:** a constrained enclosure can be modeled parametrically, edited by feature, assembled with PCB/components, checked for interference, versioned, and exported to STEP/STL.
+Target:
 
-### Phase 5 — Firmware and device workflow
+- remove retired duplicate engines/surfaces as authoritative replacements land;
+- reduce monolithic store/component ownership;
+- separate domain packages/services;
+- keep source reviewable and ordinary—no encoded workflow source transport.
 
-Build filesystem-backed firmware projects, editor/language tooling, typed hardware mapping, PlatformIO environments/build/upload/monitor workflows, secure bridge operation records, cancellation, and artifact linkage.
+### #12 — Canonical product graph and impact engine
 
-**Exit gate:** a project can build and flash a supported reference board through explicit approval, with logs/artifacts recorded against the correct product version.
+Target:
 
-### Phase 6 — Validation, versions, release, and manufacturing
+- typed relationships;
+- indexed traversal;
+- integrity constraints;
+- domain events;
+- deterministic affected-entity calculation;
+- dependency-specific stale propagation;
+- traceability from requirement through implementation/evidence/release.
 
-Build evidence storage, measurements, equipment context, immutable runs/retests, branch/version/merge system, release gates, drawings, manifests, and content-addressed artifacts.
+## 6. Components and sourcing — #13
 
-**Exit gate:** a release candidate cannot be approved until all required evidence, checks, reviews, and exact artifacts are present and frozen.
+Target capabilities:
 
-### Phase 7 — Backend, collaboration, MCP, AI, and extensions
+- reusable versioned component definitions;
+- normalized manufacturer/supplier identity;
+- typed electrical pins;
+- symbol/footprint/pad/package/3D representations;
+- representation provenance/qualification;
+- alternatives and lifecycle/sourcing risk;
+- transactional project-instance creation;
+- downstream change impact.
 
-Add API/auth/permissions/teams, project sync, object storage, collaboration, live MCP repository access, proposal UI, AI workflows, simulation adapters, and integration APIs.
+Current Electronics identity foundations are useful, but do not satisfy the complete component lifecycle model.
 
-**Exit gate:** multiple authorized users and approved AI clients can work on one project without bypassing versioning, commands, approval, or audit.
+## 7. Schematic — #14
 
-## 7. Definition of done for every issue
+Target:
 
-An issue is complete only when all applicable conditions are met:
+- authoritative connectivity graph;
+- robust pin/electrical types;
+- structured anchors;
+- wires/junctions/labels/no-connect semantics;
+- hierarchy/buses/ports as scoped;
+- annotation/replacement impact;
+- ERC based on canonical connectivity;
+- save/reload/undo correctness;
+- qualified KiCad/interchange checks through #26.
 
-1. one canonical model is used; no parallel representation is introduced;
-2. the real UI uses the production implementation;
-3. state persists through the repository and survives reload/migration;
-4. operations use typed commands and transactions;
-5. undo/redo and cancellation behave correctly where applicable;
-6. dependency effects and stale outputs are deterministic;
-7. errors are recoverable and visible without native browser dialogs;
-8. automated tests exercise production workflows, not copied helper logic;
-9. CI runs the relevant package and integration gates;
-10. manual verification evidence is attached to the issue;
-11. documentation and status are updated truthfully;
-12. no fallback or guessed engineering data is silently treated as valid.
+Current structured pin anchors are a foundation, not completion.
 
-## 8. Reference-product principles
+## 8. PCB — #15
 
-- **Flux:** browser-native electronics workflow, one synchronized schematic/PCB model, contextual AI with user approval, live component/sourcing data, simulation, and collaboration. Hardware Studio should learn from the interaction model, not copy its branding or limit itself to electronics.
-- **Onshape:** immutable versions, editable workspaces, branches, comparisons, explicit merge ancestry/conflicts, and release history.
-- **Fusion/FreeCAD/Open CASCADE:** feature-based solid modeling, real CAD topology, manufacturing exchange, and assemblies.
-- **KiCad:** mature electrical semantics, file interchange, ERC/DRC, CLI verification, and manufacturing/3D exports.
-- **PlatformIO:** environment-based embedded builds, device discovery, upload targets, and serial monitoring.
+Studio U4 provides a coherent PCB workbench. #15 remains the engineering authority.
 
-New references supplied later must be added to the reference matrix and mapped to existing issues. They must not create unplanned side work or bypass phase dependencies.
+Target:
 
-## 9. Backlog governance
+- strict explicit board identity;
+- authoritative outline/stack/layers;
+- footprints/pads/placements;
+- route sessions with structured source/target anchors;
+- traces/vias/layer transitions;
+- connectivity graph and ratsnest;
+- zones/keepouts;
+- physical/electrical constraints;
+- comprehensive DRC for declared capability;
+- no cross-board leakage;
+- selected-board outputs from canonical geometry/topology;
+- independent KiCad/CAM verification.
 
-- The recovery epic is the single parent workstream.
-- P0 issues must be completed before broad feature expansion.
-- Each epic must be decomposed into reviewable implementation issues before coding starts.
-- Every PR references one issue, states affected domains, includes migration/rollback notes, and contains verification evidence.
-- No issue may be closed with “foundation,” “UI added,” or “tests pass” as the only evidence.
-- Scope changes require updating this plan and the parent epic before implementation.
+No demonstration auto-place/autoroute algorithm should be presented as professional routing authority.
+
+## 9. Mechanical sketch/drawings — #16
+
+Studio U5 provides coherent 2D/3D/assembly representations. #16 remains the 2D/constraint authority.
+
+Target:
+
+- canonical sketch topology;
+- lines/arcs/circles/splines/polygons and construction geometry;
+- trim/extend/offset/fillet/chamfer as scoped;
+- dimensions/tolerances;
+- persistent geometric constraints;
+- solver/conflict explanation;
+- profile detection;
+- typed parameters/expressions;
+- drawing object foundations;
+- exact undo/reload/regeneration semantics.
+
+## 10. CAD kernel, features and assemblies — #17
+
+Target:
+
+- reviewed geometry-kernel adapter;
+- exact B-Rep solids/topology;
+- sketch-to-feature workflow;
+- parametric feature history/regeneration;
+- part/body identity;
+- assemblies/mates;
+- exact interference/clearance;
+- mass/properties as scoped;
+- qualified STEP/STL exchange;
+- drawing views generated from exact model state.
+
+Three.js remains visualization, not CAD authority.
+
+## 11. Firmware and physical devices — #18
+
+Studio U6 established a strong interaction grammar, but current evidence may still be externally recorded metadata.
+
+Target:
+
+- filesystem-backed source workspace;
+- project/environment configuration;
+- generated vs user-authored file lifecycle;
+- hardware mapping;
+- reproducible PlatformIO build jobs;
+- exact build artifacts/logs/checksums/tool versions;
+- port/device discovery;
+- upload with scoped approval;
+- serial monitor;
+- cancellation/recovery;
+- version/source/environment/device-bound durable evidence.
+
+No UI state or manual evidence entry may impersonate an executed build/device operation.
+
+## 12. Validation and evidence — #19
+
+Studio U7 established one Define → Execute → Review workflow and explicit test/run selection.
+
+Current local execution authority remains bounded:
+
+- DRC = implemented local rules;
+- firmware-state = structural checks;
+- Mechanical = approximate AABB screen;
+- Thermal = no internal solver;
+- manual/physical = explicit engineer verdict.
+
+Target #19 capabilities:
+
+- immutable/versioned procedure definitions;
+- durable execution jobs;
+- DUT/sample/operator/environment binding;
+- equipment/calibration records and policy;
+- typed units/tolerances/uncertainty/statistics;
+- durable evidence blobs + hashes;
+- immutable run snapshots;
+- reviewer roles/signoff;
+- deviations/waivers;
+- retest lineage/comparison;
+- deterministic stale propagation;
+- release-grade accepted-evidence policy.
+
+## 13. Versions, branches and releases — #20
+
+**Current Studio phase U8 is structurally converging this domain.**
+
+U8 must not lower #20's engineering bar.
+
+Target:
+
+### Workspace
+
+Editable state with branch/base-version identity, repository revision, dirty/conflict state and governed history.
+
+### Version
+
+Immutable named content tree/snapshot with parent(s), author, time, message, schema/tool versions and content hashes.
+
+### Branch
+
+Named editable lineage from an explicit base, with archive/protection/review policy.
+
+### Comparison
+
+Domain-aware deltas for requirements, graph, electrical topology, PCB, Mechanical, firmware, validation and outputs.
+
+### Merge
+
+True base/source/target three-way merge with typed conflicts, explicit resolution, validation, abort/retry and provenance.
+
+### Freeze
+
+Repository/command enforced—not only disabled UI controls.
+
+### Release candidate
+
+Immutable candidate referencing exact versions, checks/evidence and artifact hashes.
+
+### Approval
+
+Trusted actor/role/scope/decision bound to exact candidate/payload hash.
+
+### Release
+
+Immutable manifest/artifact set; changes happen by supersession/withdrawal/new release, never silent mutation.
+
+## 14. Drawings, manufacturing and qualified outputs — #21
+
+Current generated output remains draft/unqualified unless stronger evidence exists.
+
+Target:
+
+### Mechanical drawings
+
+- exact model-derived orthographic/section/detail/assembly views;
+- controlled scale/projection;
+- dimensions/tolerances/datums/GD&T foundations as scoped;
+- title/revision/approval metadata;
+- stale tracking from exact model dependencies.
+
+### PCB/manufacturing outputs
+
+- authoritative Gerber/Excellon or declared fabrication format;
+- BOM/CPL/netlist/assembly/paste/drill outputs;
+- exact board/version/units/origin/tool/checksum manifest;
+- independent parser/viewer/KiCad/CAM comparison.
+
+### Firmware/validation reports
+
+- exact build artifacts/config/dependency/toolchain manifests;
+- validation reports referencing immutable accepted run/evidence records.
+
+### Package system
+
+- recipe definitions;
+- deterministic isolated generation jobs;
+- progress/cancellation/logs;
+- preflight blockers/warnings/waivers;
+- preview/download with exact source and hash;
+- trusted review bound to exact manifest;
+- content-addressed storage and #20 integration.
+
+Generator success is never qualification.
+
+## 15. Safe external operation and platform — #22–#26
+
+### #22 — MCP live repository integration
+
+Read/draft/apply/undo/high-impact operations over the same canonical repository/command layer as the UI, with proposal/approval/audit policy.
+
+### #23 — Backend/auth/teams/permissions/storage/collaboration
+
+Add only after repository/domain ownership is sufficiently stable. Cloud collaboration must not become a second canonical data model.
+
+### #24 — Graph-grounded AI copilot
+
+AI should explain, plan, propose and review over real graph state. It must not fabricate engineering facts or bypass approval/evidence gates.
+
+### #25 — Analysis/simulation workbench
+
+Power/thermal/tolerance/electrical/simulation capabilities should use declared qualified engines/adapters and explicit authority boundaries.
+
+### #26 — Interoperability
+
+Qualified round trips/import/export for KiCad, CAD formats, firmware, BOM/manufacturing and other external tools. Independent opening/parsing/comparison is part of completion.
+
+## 16. Reference-product acceptance — #27
+
+#27 is the closing evidence gate for parent epic #4.
+
+The reference product must demonstrate:
+
+```text
+requirements / architecture
+→ qualified components
+→ schematic
+→ PCB
+→ exact Mechanical context
+→ firmware build/device workflow
+→ validation evidence
+→ version / output preflight
+→ immutable reviewed release
+```
+
+Acceptance requires:
+
+- clean-environment repeatability;
+- save/reload/recovery;
+- canonical identity;
+- reversible governed mutations;
+- independent tool/parser checks;
+- real physical-device operations where specified;
+- durable accepted evidence;
+- exact content-addressed artifacts;
+- immutable release manifest and trusted approval.
+
+This is not a visual demo milestone.
+
+## 17. Current execution priority
+
+### Studio track
+
+1. finish U8 Release structural convergence;
+2. document/verify U8 without closing #20/#21;
+3. execute U9 final polish only after structure is stable.
+
+### Engineering track
+
+In parallel, prioritize architecture dependencies and the deepest blockers to the reference path:
+
+1. #6 schema;
+2. #7/#38 repository;
+3. #8/#39 commands/events;
+4. #10 verification architecture;
+5. #11/#42 decomposition/cleanup;
+6. #12 graph;
+7. #15–#21 domain depth according to dependency readiness;
+8. #22–#26 platform/integration consuming the canonical foundations;
+9. #27 final reference-product qualification.
+
+Do not block every domain improvement on a theoretical perfect foundation, but do not solve missing foundations by creating another private architecture.
+
+## 18. PR and completion discipline
+
+Every meaningful recovery slice should:
+
+1. have a bounded primary issue/scope;
+2. preserve canonical ownership;
+3. remove contradictory old paths where safe;
+4. include migration/backward-compatibility thinking;
+5. include focused behavioral tests;
+6. run exact-head lint/typecheck/full tests/build;
+7. inspect exact-head deployment status;
+8. distinguish external hosting capacity from application failures;
+9. keep broad parent issues open when criteria remain;
+10. update current-status/domain documentation after merge.
+
+## 19. Final recovery principle
+
+Hardware Studio should become **more truthful as it becomes more capable**.
+
+The recovery program fails if the product looks unified but hides uncertain engineering state. It also fails if deep engines exist behind fragmented workflows no one can reason about.
+
+The goal is one connected system in which identity, engineering authority, provenance, review and release strength increase together.
