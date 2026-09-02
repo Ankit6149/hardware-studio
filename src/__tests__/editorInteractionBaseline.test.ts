@@ -84,6 +84,7 @@ describe('editor-first interaction model', () => {
     }
     expect(shellNavigation).toContain('<PcbProjectDrawer />');
     expect(shellNavigation).toContain('<MechanicalProjectDrawer />');
+    expect(shellNavigation).toContain('<ValidationProjectDrawer />');
 
     expect(schematic).toContain('<SchematicCanvas');
     expect(pcb).toContain('<BoardCanvas');
@@ -97,8 +98,11 @@ describe('editor-first interaction model', () => {
     expect(mechanical).not.toContain('Design browser');
     expect(mechanicalCanvas).toContain('mechanicalDimensions');
 
-    expect(validation).toContain('testListOpen');
-    expect(unifiedValidation).toContain('runPanelOpen');
+    expect(validation).toContain('useValidationWorkspaceUiStore');
+    expect(validation).not.toContain('testListOpen');
+    expect(unifiedValidation).toContain('<EngineeringInspector');
+    expect(unifiedValidation).toContain('<EngineeringBottomDock');
+    expect(unifiedValidation).not.toContain('runPanelOpen');
     expect(firmwareSource).toContain('Firmware source editor');
   });
 });

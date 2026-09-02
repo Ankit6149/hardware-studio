@@ -125,11 +125,12 @@ describe('golden-path regression guards', () => {
     expect(bom).not.toContain('|| contextualComponents[0]');
   });
 
-  it('links validation to the selected component and its actual net IDs', () => {
+  it('links validation to the selected component and its actual pin net IDs', () => {
     const validation = source('../components/studio/UnifiedValidationWorkbench.tsx');
     expect(validation).toContain('activeComponentId');
-    expect(validation).toContain('activeNetName');
-    expect(validation).toContain('linkedNetIds');
+    expect(validation).toContain('.map((pin) => pin.netId)');
+    expect(validation).toContain('selectedNetIds');
+    expect(validation).toContain('linkedNetIds: selectedNetIds');
   });
 
   it('keeps board checks in the PCB bottom dock and routes findings to shared object context', () => {

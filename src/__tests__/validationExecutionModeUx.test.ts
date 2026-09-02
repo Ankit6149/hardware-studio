@@ -22,7 +22,7 @@ describe('validation execution mode UX contract', () => {
     expect(workbench).toContain('Run approximate screen');
     expect(workbench).toContain('exact CAD/physical evidence');
     expect(workbench).toContain('reviewer identity');
-    expect(workbench).toContain('No thermal solver is implemented in Hardware Studio yet');
+    expect(workbench).toContain('No internal thermal solver exists');
     expect(workbench).toContain('external simulation/lab evidence');
   });
 });
