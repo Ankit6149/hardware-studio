@@ -1,354 +1,466 @@
-# Hardware Studio Roadmap
+# Hardware Studio — Roadmap
 
-## Roadmap principle
+**Roadmap reconciliation:** 2026-09-02  
+**Current master at reconciliation:** `79902f6fceb0087e7f446960e9c8059841ba4daa`  
+**Active Studio phase:** U8 — Release convergence
 
-Hardware Studio should not expand through more disconnected panels. It should deepen a small number of complete vertical workflows over one canonical product graph.
+This roadmap uses **two coordinated tracks**:
 
-Every phase must connect:
+1. **Studio convergence track (U0–U9)** — make the product predictable, connected, truthful, and usable as one engineering environment.
+2. **Engineering recovery track** — deepen schema, repository, commands, graph, ECAD, CAD, firmware, validation, release, outputs, interoperability, backend, and safety until the product earns professional claims.
+
+The tracks must advance together. A coherent UI over weak engineering state is not completion; deep engines hidden behind fragmented mini-apps are not a good product either.
+
+## Roadmap principles
+
+### One connected product, not more panels
+
+Hardware Studio should deepen end-to-end product workflows instead of adding disconnected feature shells.
+
+### Structural convergence and engineering completion are separate gates
+
+A Studio phase may be structurally complete while its engineering parent issue remains open.
+
+Examples:
+
+- U5 Mechanical structure landed; #16/#17 remain open.
+- U6 Firmware structure landed; #18 remains open.
+- U7 Validation structure landed; #19 remains open.
+- U8 can structurally converge Release while #20/#21 remain open.
+
+### Every mature engineering capability eventually needs
 
 ```text
-Domain model
-→ engineering engine
-→ command layer
+canonical domain model
+→ production engine / adapter
+→ typed commands / transactions
+→ durable repository
 → production UI
-→ persistence
-→ undo/redo
-→ cross-domain effects
-→ tests
-→ CI
+→ failure / recovery semantics
+→ cross-domain impact / staleness
+→ provenance / review where required
+→ automated tests
+→ independent qualification where required
+→ release evidence
 ```
 
-## Phase 0 — Truthful public foundation
+## Track A — Studio convergence U0–U9
 
-### Goal
+### U0 — Architecture lock — **Landed**
 
-Make the repository understandable without overstating readiness.
+Goal:
 
-### Work
+- establish one product mental model;
+- freeze duplicate navigation patterns;
+- define shared shell ownership;
+- reconcile UX/recovery issues.
 
-- public landing page
-- development workspace at `/studio`
-- complete README
-- product vision
-- architecture overview
-- current-status document
-- safety and limitations
-- contribution rules
-- evidence-based execution ledger
+Outcome:
 
-### Exit criteria
+- one Studio direction established;
+- no new permanent domain rail/subnav;
+- no duplicate Inspector/Problems systems;
+- landing page excluded from redesign work.
 
-Visitors can understand:
+### U1 — Shared Studio shell — **Foundation landed**
 
-- what Hardware Studio is trying to become
-- what exists today
-- what remains incomplete
-- why current output is not fabrication-ready
+Goal:
 
-## Phase 1 — Durable product graph
+- one predictable application grammar across workbenches.
 
-### Goal
+Landed foundations:
 
-Create one reliable project document for every workbench and process.
+- workbench tabs;
+- contextual Project Drawer host;
+- shared Inspector;
+- shared bottom dock;
+- status bar;
+- clean `/studio/...` routes;
+- browser back/forward and legacy alias handling foundations.
 
-### Work
+Still separate engineering work:
 
-- explicit schema versioning
-- deterministic serializer and deserializer
-- complete domain persistence
-- migration system
-- integrity validation
-- shared Node-compatible local repository
-- browser and MCP access to the same active project
-- project switching and reload tests
+- repository/layout durability;
+- performance/crash hardening;
+- broader shell decomposition and testing.
 
-### Exit criteria
+### U2 — Project Home — **Landed**
 
-A complete project can be exported, reset, imported, switched, reloaded, and opened by MCP without losing any domain.
+Goal:
 
-## Phase 2 — Reversible engineering commands
+- show what matters now, based on real engineering evidence.
 
-### Goal
+Landed:
 
-Make every meaningful edit explicit and undoable.
+- next action;
+- lifecycle state;
+- attention/blocker queue;
+- counts treated as inventory rather than completion evidence.
 
-### Work
+Still open:
 
-- typed command registry
-- pointer transaction controller
-- exact before/after state
-- one history record per interaction
-- cancellation
-- domain validation before commit
-- affected-object tracking
-- derived-output staleness
-- command audit log
+- durable recent engineering history from real repository/event data.
 
-### Workbenches to connect
+### U3 — Electronics reference workbench — **Structurally converged**
 
-- product architecture
-- mechanical canvas
-- schematic canvas
-- PCB canvas
-- firmware state machine
+Goal:
 
-### Exit criteria
+- establish the reference interaction model for connected engineering representations and identity.
 
-Every supported interaction restores exact original state on undo and exact final state on redo.
+Landed direction:
 
-## Phase 3 — Product and systems traceability
+- component/schematic/PCB/BOM relationships;
+- shared identity and cross-probing foundations;
+- contextual tools instead of duplicate app shells.
 
-### Goal
+Deep engineering continues through Electronics/PCB recovery issues.
 
-Make product intent the root of downstream engineering state.
+### U4 — PCB — **Structurally converged**
 
-### Work
+Goal:
 
-- requirement hierarchy
-- interfaces and constraints
-- architecture connections
-- decision records
-- risks
-- requirement-to-component links
-- requirement-to-test links
-- impact analysis
-- coverage dashboard
+- make PCB one coherent editor/workbench with explicit board context.
 
-### Exit criteria
+Landed direction:
 
-A requirement can be traced through architecture, implementation, validation, and release.
+- one PCB Project Drawer;
+- one Inspector;
+- DRC in shared Problems dock;
+- explicit board/settings/rules context;
+- no false auto-place/autoroute claims.
 
-## Phase 4 — Electronics and schematic foundation
+Engineering exit for professional PCB remains issue #15, not U4.
 
-### Goal
+### U5 — Mechanical — **Structurally converged**
 
-Build a structurally correct electrical graph.
+Goal:
 
-### Work
+- one Mechanical workbench that distinguishes layout, review, and assembly context.
 
-- reusable component definitions
-- symbols and electrical pin types
-- structured wire anchors
-- junctions
-- labels
-- no-connect markers
-- net creation and deletion
-- symbol rotation and movement
-- ERC
-- component replacement impact
+Landed:
 
-### Exit criteria
+- explicit physical inputs;
+- one drawer/Inspector/dock grammar;
+- 2D Layout / 3D Review / Assembly representations;
+- 3D classified as review/visualization rather than CAD authority.
 
-Connectivity survives symbol movement, rotation, export/import, deletion, and component replacement.
+Engineering continuation:
 
-## Phase 5 — PCB V1 engine
+- #16 sketch/constraint engine;
+- #17 CAD-kernel/features/assemblies/exact exchange.
 
-### Goal
+### U6 — Firmware — **Structurally converged**
 
-Build a truthful board editor foundation before advanced routing features.
+Goal:
 
-### Work
+- one Firmware workspace around modules, files, hardware mapping and evidence.
 
-- strict active-board isolation
-- canonical board outlines and stack
-- footprints and pads
-- placements
-- structured trace anchors
-- route sessions
-- vias and layer transitions
-- connectivity graph
-- ratsnest derived from graph
-- DRC
-- keepouts and zones
-- selected-board exports
+Landed:
 
-### Exit criteria
+- one Firmware Project Drawer;
+- explicit module/file selection;
+- module/behavior/hardware-map/source center representations;
+- shared Inspector;
+- bottom Problems / Build Evidence / Device Evidence grammar;
+- generated source distinguished from verified implementation;
+- recorded external evidence distinguished from locally executed proof.
 
-A net is marked routed only when all assigned pads belong to one connected graph. No board-specific object leaks into another board or its output package.
+Engineering continuation:
 
-## Phase 6 — Mechanical 2D and 3D V1
+- #18 filesystem/PlatformIO/device/serial/durable operation infrastructure.
 
-### Goal
+### U7 — Validation — **Structurally converged**
 
-Provide a dependable layout and enclosure-coordination system without falsely presenting it as a mature CAD kernel.
+Goal:
 
-### Work
+- separate authoring, execution and review into predictable user jobs.
 
-- rectangles, circles, ellipses, polygons, lines, and arcs
-- vertex editing
-- transforms and grouping
-- persisted dimensions
-- lightweight persistent constraints
-- board and battery zones
-- enclosure bodies
-- package dimensions
-- board-derived 3D bodies
-- collision and clearance calculations
-- missing-geometry blockers
+Landed through PR #116:
 
-### Exit criteria
+- one Validation Project Drawer;
+- explicit test/run selection;
+- Define → Execute → Review;
+- no implicit first-test/run fallback;
+- specification separated from actual observations;
+- read-only historical run review;
+- shared Inspector and run-log bottom dock;
+- existing bounded execution authority preserved.
 
-The UI never guesses authoritative engineering geometry. Missing dimensions produce blockers rather than successful checks.
+Verified U7 head:
 
-## Phase 7 — Firmware workspace and local bridge
+- lint/typecheck/build pass;
+- **339/339 tests across 89 test files**;
+- Vercel pass.
 
-### Goal
+Engineering continuation:
 
-Connect firmware state to real local build and device workflows safely.
+- #19 durable evidence/execution/reviewer/stale/release-grade validation infrastructure.
 
-### Work
+### U8 — Release — **Active**
 
-- source tree
-- editor and dirty state
-- generated-file diffs
-- PlatformIO configuration
-- hardware mappings
-- builds and artifacts
-- port discovery
-- upload
-- serial monitor
-- operation registry
-- cancellation
-- durable logs
-- scoped approvals
+Goal:
 
-### Exit criteria
+- make readiness, revisions/versions, outputs, drawings, factory packages and release decisions one connected control surface without overstating current engineering guarantees.
 
-The bridge never simulates success. Every operation has a real process result and a durable project record.
+Target interaction grammar:
 
-## Phase 8 — Validation system
+- one Release Project Drawer;
+- explicit selected revision/version/output/package/candidate context;
+- center surface based on the active Release job;
+- one contextual Inspector;
+- bottom blockers/jobs/preflight/log/evidence dock;
+- contextual top actions;
+- draft/unqualified output visibly distinct from release evidence.
 
-### Goal
+Required structural work:
 
-Make evidence and retest history first-class product state.
+- audit current readiness/revision/output/drawing/factory-package surfaces;
+- retire duplicate navigation/mini-app shells;
+- remove silent first-record selection fallbacks;
+- unify explicit Release context in UI-only state where appropriate;
+- preserve current canonical project records rather than fork a UX-only release model;
+- surface missing source version/provenance/qualification honestly;
+- add regression guards;
+- exact-head CI/build/deployment verification;
+- dedicated U8 documentation handoff.
 
-### Work
+U8 must **not** claim completion of #20 or #21.
 
-- test definitions
-- step execution
-- operators and environments
-- numeric and boolean measurements
-- units and tolerances
-- evidence
-- reviewer decisions
-- immutable runs
-- retests
-- run comparison
-- critical release blockers
+#### #20 engineering continuation
 
-### Exit criteria
+- content-addressed immutable versions;
+- editable workspace/base ancestry;
+- branches/protection;
+- domain-aware comparisons;
+- three-way merge/conflict resolution;
+- repository-enforced freezes;
+- exact release candidates/manifests;
+- trusted approvals bound to exact payloads;
+- immutable releases + supersession/withdrawal.
 
-Unsupported tests never auto-pass, old runs cannot be overwritten, and failed critical validation blocks release.
+#### #21 engineering continuation
 
-## Phase 9 — Revisions, branches, and releases
+- exact model-derived drawings;
+- authoritative ECAD/manufacturing outputs;
+- deterministic generation jobs;
+- provenance/tool/input/output hashes;
+- independent parser/viewer/preflight qualification;
+- review/approval bound to manifest;
+- content-addressed release artifacts.
 
-### Goal
+### U9 — Final polish — **Deferred intentionally**
 
-Create safe hardware versioning over complete product state.
+Goal:
 
-### Work
+- polish a structurally stable product rather than beautifying unstable architecture.
 
-- named revisions
-- branch snapshots
-- branch switching
-- revision comparison
-- restore
-- domain-aware merge
-- conflict resolution
-- release candidates
-- approvals
-- immutable release snapshots
-- working branch from release
+Scope after U8:
 
-### Exit criteria
+- visual hierarchy/design-system convergence;
+- accessibility and keyboard behavior;
+- responsive layouts and overflow behavior;
+- editor density/readability;
+- motion only where it clarifies state;
+- performance profiling and perceived latency;
+- interaction consistency;
+- empty/error/recovery states;
+- production-browser smoke/E2E coverage for key journeys.
 
-Switching branches restores complete state. Released snapshots remain immutable while development continues on new working branches.
+U9 is not an excuse to hide unresolved engineering state behind visual polish.
 
-## Phase 10 — MCP live engineering control
+## Track B — Engineering recovery
 
-### Goal
+The engineering track is dependency-driven and remains authoritative even when the Studio phase for that domain is structurally complete.
 
-Allow approved AI clients to inspect and operate the real project through semantic commands.
+### Foundation layer — schema, repository, commands, graph, shell
 
-### Work
+Primary work includes:
 
-- shared durable repository
-- complete resource handlers
-- aligned tool registry
-- read tools
-- draft tools
-- typed apply tools
-- undo
-- high-impact approvals
-- persistent proposals
-- audit records
-- protocol-level tests
+- #6 canonical schema normalization;
+- #7/#38 durable repository and persistence;
+- #8/#39 typed commands, transactions, undo/redo;
+- #9 shell/navigation/crash/performance hardening;
+- #10 end-to-end/CI strategy;
+- #11/#42 monolith decomposition;
+- #12 canonical product graph.
 
-### Exit criteria
+Exit condition:
 
-A real MCP client can read the active project, draft a change without mutation, apply the change through the command layer, observe it in the UI, undo it, and inspect the audit record.
+Engineering domains share stable IDs, ownership, units, migrations, repository semantics, commands/events, and cross-domain relationships rather than relying on monolithic optional state.
 
-## Phase 11 — Blueprints and manufacturing drafts
+### Product / requirements / architecture
 
-### Goal
+Goals:
 
-Generate deterministic, selected-board, live-data outputs with explicit trust boundaries.
+- measurable requirements;
+- governed interfaces;
+- traceability;
+- decisions/risks;
+- impact analysis;
+- requirement-to-validation/release lifecycle.
 
-### Work
+Exit condition:
 
-- blueprint dependency tracking
-- selected-board copper layers
-- outline
-- drills
-- masks
-- silkscreen
-- paste
-- BOM
-- CPL
-- netlist
-- firmware package
-- validation report
-- release manifest
-- real checksums
-- independent-review labels
+A requirement change can deterministically reveal affected implementation, evidence, outputs and release state.
 
-### Exit criteria
+### Electronics / PCB — #15 and related work
 
-Outputs contain only live canonical data for the selected product and board, with no guessed coordinates or cross-board leakage.
+Goals:
 
-## Phase 12 — Collaboration and lifecycle
+- canonical connectivity graph;
+- robust schematic/ERC;
+- authoritative board topology;
+- real routing/via/layer behavior;
+- stackup/rules/zones/keepouts;
+- comprehensive DRC;
+- strict board isolation;
+- qualified interchange/output inputs.
 
-### Goal
+Exit condition:
 
-Add optional team workflows after the local product model is dependable.
+The reference board survives editing, save/reload, validation and independent output checks with no hidden cross-board or guessed-data behavior.
 
-### Possible work
+### Mechanical — #16/#17
 
-- optional synchronization
-- access control
-- review requests
-- comments
-- supplier integrations
-- component lifecycle data
-- change notifications
-- release distribution
+Goals:
 
-This phase should not compromise local ownership or require a cloud account for basic use.
+- canonical sketch topology;
+- persistent dimensional/geometric constraints;
+- solver/conflict explanation;
+- profiles/parameters/expressions;
+- reviewed CAD-kernel adapter;
+- exact B-Rep feature history/regeneration;
+- assemblies/mates;
+- exact interference/clearance;
+- qualified STEP/STL/drawing foundations.
 
-## Long-term research directions
+Exit condition:
 
-- parametric geometry kernel integration
-- external Fusion and Onshape adapters
-- KiCad IPC adapter
-- supplier-data graph
-- simulation adapters
-- device-fleet workflows
-- hardware-in-the-loop validation
-- AI-assisted impact analysis
-- engineering knowledge and reusable subsystem templates
+Mechanical design and release drawings derive from exact, reproducible, reviewable model state rather than screen geometry or approximate envelopes.
 
-## What is deliberately not promised
+### Firmware — #18
 
-The roadmap does not promise that Hardware Studio will quickly replace mature CAD, EDA, PLM, firmware, or manufacturing systems.
+Goals:
 
-The immediate priority is a truthful, connected engineering foundation with deep vertical workflows—not a large collection of superficial features.
+- real workspace/filesystem model;
+- reproducible PlatformIO configuration;
+- build jobs/artifacts/logs;
+- upload/device selection;
+- serial monitor;
+- cancellation/recovery;
+- exact source/environment/device provenance;
+- durable evidence integration.
+
+Exit condition:
+
+A build/upload/device claim corresponds to a real operation tied to exact source/environment/target and survives reload/review.
+
+### Validation — #19
+
+Goals:
+
+- version-bound test definitions;
+- execution jobs;
+- DUT/sample/operator/environment/equipment/calibration binding;
+- typed measurements/uncertainty;
+- durable evidence blobs/hashes;
+- immutable accepted run snapshots;
+- reviewer roles/signoff;
+- waivers/deviations;
+- retest comparison;
+- deterministic stale propagation;
+- release policy integration.
+
+Exit condition:
+
+A release can cite trusted accepted evidence that is immutable, attributable, reproducible enough for its scope, and stale when its dependencies change.
+
+### Versions / Release — #20
+
+Goals:
+
+- editable workspaces;
+- immutable versions;
+- branches and ancestry;
+- domain-aware comparisons;
+- real merges/conflicts;
+- freezes;
+- candidates;
+- trusted approvals;
+- immutable releases/manifests;
+- supersession/withdrawal.
+
+Exit condition:
+
+A complete branch → compare → merge → candidate → approval → release journey survives reload and cannot silently mutate reviewed/released state.
+
+### Drawings / outputs / manufacturing — #21
+
+Goals:
+
+- canonical recipes;
+- exact source dependencies;
+- drawings from exact models;
+- PCB/BOM/CPL/drill/manufacturing packages from authoritative topology;
+- firmware/validation artifacts from immutable records;
+- deterministic jobs;
+- hashes/provenance;
+- independent parsers/viewers/preflight;
+- review/approval bound to exact manifest;
+- release integration.
+
+Exit condition:
+
+A reference-product package is reproducible, reviewable, independently checkable, and clearly qualified or blocked—never merely “generated.”
+
+### MCP, backend, roles, interoperability
+
+Goals include:
+
+- shared durable repository for UI and MCP;
+- typed draft/apply operations;
+- audit/approval policy;
+- backend/role/security boundaries;
+- external tool adapters;
+- independent KiCad/CAD/output validation;
+- supplier/component services where useful.
+
+AI/MCP must remain subordinate to engineering truth and explicit approval policy.
+
+## Reference-product journey
+
+The bounded V1 reference product in the product constitution remains the end-to-end proof target.
+
+The roadmap should eventually demonstrate:
+
+```text
+requirements
+→ architecture
+→ components
+→ schematic
+→ PCB
+→ mechanical context
+→ firmware
+→ validation
+→ version/output preflight
+→ reviewed release
+```
+
+Every stage must preserve object identity and expose unresolved facts instead of inventing them.
+
+## Roadmap exit philosophy
+
+Hardware Studio does not “finish” by reaching U9. U9 closes the current Studio-convergence program. Professional readiness depends on the engineering recovery acceptance criteria and end-to-end evidence.
+
+The product should only claim mature capability when:
+
+- the engine is real;
+- UI uses the real engine;
+- state is durable;
+- change history/impact is correct;
+- missing data is not fabricated;
+- tests exercise production behavior;
+- independent verification exists where the claim requires it;
+- release evidence reflects exact source state.
+
+The immediate priority remains a truthful, deeply connected engineering foundation—not maximum feature count.
