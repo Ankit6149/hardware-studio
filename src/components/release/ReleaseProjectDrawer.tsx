@@ -77,7 +77,7 @@ export const ReleaseProjectDrawer: React.FC = () => {
             >
               {active && <span className="absolute inset-y-0 left-0 w-0.5 bg-slate-950" aria-hidden="true" />}
               <span className={`grid h-6 w-6 shrink-0 place-items-center border ${active ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-300 bg-[#fbfaf6] text-slate-500'}`}>
-                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                <Icon className="h-3.5 w-3.5" aria-hidden={true} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[10px] font-semibold">{item.label}</span>
