@@ -16,15 +16,27 @@ However, the product must **not** yet be described internally or externally as a
 
 The near-term objective is not to create more screens. It is to make the existing system behave as **one trustworthy product**.
 
-## 2. Canonical vertical path
+## 2. Start-anywhere baseline
 
-The primary connected path we are using to establish the product baseline is:
+There is no canonical user path.
 
-**Component Library → Schematic → Board Settings → PCB Layout → DRC → BOM / Validation → Output**
+The current recovery program still uses bounded vertical slices to prove integration, but those slices are test/implementation strategies rather than required product sequencing.
 
-This path is intentionally narrower than the full product vision. It provides a concrete place to prove that one engineering object can move through multiple disciplines without being duplicated, silently rewritten, or replaced by placeholder data.
+A Hardware Studio project may legitimately begin with requirements, architecture, components/BOM, schematic/PCB, mechanical geometry, firmware, manufacturing artifacts, validation evidence, or an empty product.
 
-Mechanical, firmware, requirements, architecture, release, manufacturing, MCP, and other domains remain part of the product. They should integrate with the same product graph, but they should not each invent a second implementation of the core identity/state model.
+The baseline contract is:
+
+1. adopt only facts the source actually supports;
+2. preserve source identity/provenance;
+3. keep missing context unresolved;
+4. reconcile later artifacts into the same canonical product identity;
+5. expose every available workbench without stage gating;
+6. block only the qualified operation whose prerequisites are missing;
+7. derive next-action guidance from capability/evidence gaps rather than lifecycle percentage.
+
+The electronics slice remains useful as an integration proving ground, but it is not the product's canonical workflow.
+
+See #120 for adoption/reconciliation and #122 for cross-domain context.
 
 ## 3. Non-negotiable engineering invariants
 
@@ -142,17 +154,23 @@ Schematic, PCB, mechanical, firmware, and validation surfaces have meaningful st
 
 The product has shared IDs and increasingly connected workflows, but some state/action responsibilities remain duplicated across legacy models, workbench adapters, generators, and store actions. Consolidation should reduce parallel implementations rather than adding new abstractions on top of them.
 
-## 6. Execution order from this baseline
+## 6. Implementation order from this baseline
 
-Work should proceed in this order unless a blocking CI/security/data-loss issue takes precedence:
+This order manages architectural risk. It is **not a user workflow**.
 
-1. **Canonical state invariants** — remove synthetic identity/data fallbacks at persistence and mutation boundaries.
-2. **Prove the electronics vertical slice** — Component Library → Schematic → Board → PCB → DRC → BOM/Validation with canonical identity and regression coverage.
-3. **Consolidate duplicate actions/state** — remove parallel creation, placement, routing, deletion, and context implementations.
-4. **Make output truthful** — strict readiness checks, provenance, export prerequisites, and artifact validation.
-5. **Strengthen editor depth** — real schematic/PCB/mechanical/firmware/validation workflows rather than placeholder representations.
-6. **Unify visual/workspace system** — apply a consistent CAD/EDA-style interaction and visual hierarchy after structural duplication is removed.
-7. **Expand breadth** — only after one connected vertical slice is demonstrably trustworthy.
+1. **Correct authority and canonical semantics** — product context, entity identity, units, provenance, qualification and unresolved state.
+2. **Adoption/migration boundary** — safe staged import, source identity, reconciliation and rollback (#37/#120).
+3. **Repository boundary** — durable local-first storage for canonical metadata, command history and large artifacts (#38).
+4. **Typed application commands** — one mutation path for UI, importers, MCP, AI and engine-derived changes (#39).
+5. **Canonical graph/impact** — typed relations, cross-domain queries and deterministic stale propagation (#40).
+6. **Universal context** — one object identity followed across every workbench (#122), with Electronics as the first bounded proof (#66).
+7. **Engineering runtime** — one capability/job/approval boundary for KiCad, OCCT/FreeCAD, PlatformIO, OpenOCD/GDB, ngspice and validators (#121).
+8. **Representation system** — real symbols/footprints/package/CAD/render assets with explicit authority/provenance (#60).
+9. **Truthful outputs and versioning** — exact prerequisites, immutable artifacts, evidence and release lineage.
+10. **Reference-product convergence** — prove the same environmental node can be adopted/built from multiple starting points (#27).
+11. **Expand breadth** — only after the shared spine survives real cross-domain use.
+
+A small blocking security/data-loss/CI repair may pre-empt this order, but new feature breadth must not bypass the shared spine.
 
 ## 7. GitHub issue policy during baseline work
 
