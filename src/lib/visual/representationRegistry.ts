@@ -1,18 +1,15 @@
-export const REPRESENTATION_KINDS = [
-  'architecture',
-  'schematic',
-  'pictorial',
-  'footprint',
-  'package',
-  'render3d',
-  'exact3d',
-  'photo',
-] as const;
+import {
+  REPRESENTATION_KINDS,
+  type RepresentationAvailabilityState,
+  type RepresentationKind,
+  type RepresentationTrustLevel,
+} from '../../core/domain';
 
-export type RepresentationKind = (typeof REPRESENTATION_KINDS)[number];
+export { REPRESENTATION_KINDS };
+export type { RepresentationKind };
 
-export type RepresentationStatus = 'available' | 'provisional' | 'unresolved' | 'unavailable';
-export type RepresentationTrust = 'semantic' | 'educational' | 'preview' | 'authoritative';
+export type RepresentationStatus = RepresentationAvailabilityState;
+export type RepresentationTrust = RepresentationTrustLevel;
 export type ArchitecturePortKind =
   | 'power'
   | 'ground'
