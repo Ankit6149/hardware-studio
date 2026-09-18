@@ -6,7 +6,7 @@ This document describes the intended architecture and the foundations currently 
 
 ## Architectural goal
 
-Every Hardware Studio workbench should operate on the same canonical product document.
+Every Hardware Studio workbench, importer, AI/MCP action, and engineering engine must resolve against the same canonical product graph and repository. A user may begin from any supported artifact or discipline; architecture must not require an upstream workbench to exist merely because implementation was built in that order.
 
 ```mermaid
 flowchart TB
@@ -42,6 +42,93 @@ flowchart TB
     FW --> BRIDGE
     MCP --> BRIDGE
 ```
+
+## Product architecture principles
+
+### Start anywhere
+
+Project creation and enrichment use a common adoption pipeline:
+
+```
+source artifact / native authoring
+        ↓
+inspect + fingerprint
+        ↓
+parse / classify semantics
+        ↓
+map source identity
+        ↓
+preview unresolved/lossy/conflicting state
+        ↓
+typed commands
+        ↓
+canonical graph + repository
+```
+
+Importers never own a second product model. Re-import reconciliation uses preserved source identities and explicit conflict resolution. See #120.
+
+### One object, many representations
+
+Canonical entities may be projected into multiple views:
+
+```
+canonical component / part / board / requirement / test
+        ├─ architecture representation
+        ├─ schematic representation
+        ├─ PCB representation
+        ├─ mechanical package / exact CAD
+        ├─ lightweight 3D render cache
+        ├─ firmware mapping
+        └─ validation / release context
+```
+
+Representation objects contain view/render data and stable references back to canonical identity. They do not become alternate engineering authorities.
+
+### Universal engineering context
+
+Workbench navigation follows canonical object identity through #122.
+
+Routing, tabs, drawer, inspector, search, diagnostics and deep links may store UI/session context, but canonical engineering payloads remain in repository/query services.
+
+### Engineering engine runtime
+
+External/native tools integrate through #121:
+
+```
+Hardware Studio application
+        ↓
+engine capability registry + durable job
+        ↓
+secure local agent / browser WASM / remote qualified service
+        ↓
+KiCad | OCCT/FreeCAD | PlatformIO | OpenOCD/GDB | ngspice | validators
+        ↓
+artifacts + diagnostics + qualification evidence
+        ↓
+repository registration / typed follow-up commands
+```
+
+An engine may produce evidence/artifacts but may not bypass typed commands to mutate canonical state.
+
+### Rendering and exact-geometry boundary
+
+Target hypotheses, subject to #35 ADR evidence:
+
+- React Flow: semantic architecture/system graphs.
+- PixiJS/WebGL-class retained 2D scene graph: dense schematic/PCB surfaces.
+- Three.js: interactive glTF/GLB visualization, picking, clipping and assembly views.
+- OCCT/Open CASCADE: exact B-Rep/mechanical geometry authority.
+- KiCad/`kicad-cli`: ECAD interchange, independent ERC/DRC and supported manufacturing/3D exports.
+- Monaco + xterm.js: firmware/code and console UI.
+- IndexedDB/repository metadata + OPFS/content-addressed blobs: durable local artifacts.
+
+Renderer coordinates, meshes and UI layout remain projections. Exact engineering geometry/topology is owned by the appropriate canonical domain/kernel/source representation.
+
+### Capability-based readiness
+
+Readiness is computed from domain facts, qualification and evidence, not from completing workbenches in order.
+
+A missing prerequisite blocks only operations that actually depend on it.
 
 ## Core layers
 
