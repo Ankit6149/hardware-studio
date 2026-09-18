@@ -4,9 +4,44 @@
 **Audit scope:** complete repository snapshot, including application routes, all workbenches, Zustand project store, shared types, domain engines, exporters, tests, local bridge, MCP server, CI, and product documentation.  
 **Status:** authoritative recovery plan. Existing documents that claim V1/V5 completion do not override this plan.
 
+## 0. Authoritative amendment — 2026-09-18
+
+The recovery plan's numbered phases are **implementation sequencing, not a product workflow**.
+
+Hardware Studio is now explicitly defined as a **start-anywhere, moldable engineering environment**:
+
+- one canonical product graph;
+- many linked representations;
+- many qualified engineering engines;
+- no mandatory first discipline;
+- staged adoption/reconciliation for existing work (#120);
+- one cross-domain engineering context (#122);
+- one engine/local-agent capability and job boundary (#121);
+- capability/evidence-based readiness rather than stage completion.
+
+A user may begin from requirements, ECAD/PCB, mechanical CAD, firmware, BOM/components, manufacturing files, evidence, or a blank project. Later artifacts must reconcile into the same canonical identity rather than forming parallel mini-app state.
+
+The reference-product gate #27 must prove multiple starting points converge on equivalent canonical product semantics.
+
+Where any older wording in this plan suggests a mandatory idea→requirements→electronics→mechanical→firmware→validation sequence, this amendment overrides that interpretation.
+
+### Technical direction to qualify through ADRs
+
+- React Flow for semantic architecture graphs;
+- PixiJS/WebGL-class scene graph for dense schematic/PCB rendering;
+- Three.js + glTF/GLB for interactive visualization only;
+- Open CASCADE/OCCT for exact CAD authority;
+- KiCad/`kicad-cli` as ECAD interoperability and independent qualification engine;
+- PlatformIO + OpenOCD/GDB for firmware/device execution;
+- ngspice for bounded circuit simulation;
+- IndexedDB/repository metadata + OPFS/content-addressed blobs for local-first storage;
+- Monaco/xterm.js for firmware editing and tool consoles.
+
+These are architectural hypotheses until accepted through #35 evidence/ADRs.
+
 ## 1. Product definition
 
-Hardware Studio should become a connected engineering environment for moving from product intent to a reviewed physical-product release. It should not be a collection of forms and unrelated canvases. Product, mechanical, electronics, PCB, firmware, validation, sourcing, drawings, and releases must operate on one canonical product model.
+Hardware Studio should become one connected engineering environment for building, adopting, understanding, modifying, validating, and releasing physical products. It should not be a collection of forms, unrelated canvases, or discipline-specific mini-apps. Product, mechanical, electronics, PCB, firmware, validation, sourcing, drawings, and releases must operate on one canonical product graph regardless of where the user starts.
 
 The first credible product milestone is not “replace Fusion, KiCad, Altium, Onshape, or PlatformIO.” The first credible milestone is a truthful connected V1 that can:
 
