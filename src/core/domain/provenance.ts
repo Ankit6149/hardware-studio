@@ -49,6 +49,7 @@ export interface EngineeringProvenance {
 
 export interface ProvenanceValidationIssue {
   code:
+    | 'missing-source'
     | 'missing-source-system'
     | 'missing-source-entity'
     | 'invalid-content-hash'
@@ -91,6 +92,13 @@ export function validateEngineeringProvenance(
   provenance: EngineeringProvenance,
 ): ProvenanceValidationIssue[] {
   const issues = provenance.source ? validateSourceIdentity(provenance.source) : [];
+
+  if ((provenance.origin === 'imported' || provenance.origin === 'observed') && !provenance.source) {
+    issues.push({
+      code: 'missing-source',
+      message: `${provenance.origin} engineering knowledge requires an explicit source identity.`,
+    });
+  }
 
   if (
     provenance.origin === 'generated-proposal' &&
