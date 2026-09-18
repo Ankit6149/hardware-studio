@@ -6,7 +6,7 @@
 
 This document answers one question before more screens or engines are added: **what complete product are we actually trying to finish first?**
 
-It is intentionally narrower than the long-term Hardware Studio vision. The long-term goal remains a unified environment for physical-product engineering. V1 proves that idea with one bounded product class and one connected lifecycle rather than shallow coverage of every professional CAD/EDA/PLM capability.
+It is intentionally narrower than the long-term Hardware Studio vision. The long-term goal remains a unified environment for physical-product engineering. V1 proves that idea with one bounded product class, one canonical product graph, multiple linked representations, and qualified engineering engines. The user may enter from any trustworthy artifact or discipline; V1 is not a mandatory stage sequence.
 
 ## 1. Primary V1 user
 
@@ -18,7 +18,7 @@ V1 is not designed first for enterprise PLM administrators, high-end mechanical 
 
 ### Primary job
 
-> Take a bounded embedded-product idea from requirements through electrical design, enclosure/assembly context, firmware, validation, and a reviewed release package while keeping the same product objects connected and traceable.
+> Build, adopt, understand, modify, validate, and release a bounded embedded product from whatever trustworthy engineering state already exists, while keeping the same product objects connected and traceable across every discipline.
 
 ## 2. Reference product
 
@@ -42,22 +42,72 @@ The reference product contains:
 
 This product is deliberately complex enough to exercise the whole environment but small enough that one authoritative implementation can be finished and tested end to end.
 
-## 3. V1 lifecycle
+## 3. V1 start-anywhere product model
 
-The product must support this connected journey without relying on fake data or unrelated fallback screens:
+Hardware Studio V1 is **non-linear**. Workbenches are engineering representations and tool contexts over one product, not stages that must be completed in order.
 
-1. Define product intent, measurable requirements, risks, and interfaces.
-2. Build system architecture and allocate requirements to real product objects.
-3. Select/create components with symbol, footprint, package, sourcing, and representation state.
-4. Create the schematic using canonical component and net identity.
-5. Move the same components/nets into a board context and complete PCB placement/routing/DRC foundations.
-6. Define board outline, mounting, enclosure geometry/clearances, and assembly context.
-7. Map firmware to hardware, build source/state-machine configuration, and record build/device evidence through approved local tooling.
-8. Define validation tests, execute them, attach measurements/evidence, record failures/retests, and trace results to requirements.
-9. Generate reviewed outputs from explicit real engineering state only.
-10. Create an immutable candidate/release record with exact artifacts, hashes, blockers, approvals, and lineage.
+A project may begin from:
 
-A screen existing for each step is not success. **The same objects must remain connected across the journey.**
+| Entry point | What it may establish | What must remain unresolved unless separately known |
+|---|---|---|
+| Blank product | project identity and user-authored intent | all engineering facts not yet authored |
+| Requirements/specification | requirements, interfaces, constraints, acceptance criteria | electrical/mechanical/firmware implementation |
+| Concept/sketch/reference image | concept artifact and explicitly measured/annotated facts | exact dimensions, topology, components, CAD truth |
+| Component/BOM | part/component identity, quantities, sourcing/provenance | schematic connectivity, PCB placement, mechanical fit |
+| KiCad schematic | supported symbols, pins, nets, hierarchy/connectivity | PCB/mechanical/firmware facts absent from the source |
+| KiCad PCB | supported board geometry, footprints, pads, nets, placements/routes | requirements, enclosure, firmware intent not present in source |
+| STEP/B-Rep mechanical source | exact supported geometry, units, transforms, assemblies | electronics/firmware semantics not represented by the CAD source |
+| STL/GLB/DXF | only the semantics the format and qualified parser can establish | exact CAD topology/parameters when the format cannot preserve them |
+| PlatformIO/firmware workspace | files, build environments, dependencies, detected target metadata | hardware mappings until canonical hardware identity is known |
+| Manufacturing package | supported output geometry/placement/BOM facts with source provenance | original design intent or semantics that cannot be reconstructed |
+| Validation/evidence bundle | measurements, reports, evidence and source context | unproven requirement or design relationships |
+
+Every entry path uses the staged adoption/reconciliation contract in #120.
+
+### 3.1 Progressive convergence
+
+New artifacts enrich the same canonical product. They do not create parallel discipline-owned documents.
+
+When later information arrives Hardware Studio must:
+
+1. preserve the source identity and hash;
+2. detect possible canonical matches;
+3. show ambiguity or unsupported/lossy state;
+4. preview proposed commands and impact;
+5. reconcile through typed transactions;
+6. retain provenance and user decisions;
+7. recalculate affected capability/readiness state.
+
+### 3.2 Workbench freedom
+
+The user may move directly among Requirements, Architecture, Components, Schematic, PCB, Mechanical, Firmware, Validation, and Release context.
+
+Qualified operations may be blocked by missing facts, but unrelated work must remain available.
+
+Example: an imported PCB can be inspected and mechanically placed before formal requirements exist. Fabrication qualification may still be blocked until its required checks/provenance are satisfied.
+
+### 3.3 Capability-based readiness
+
+Hardware Studio must not present one linear project percentage as engineering truth.
+
+Readiness is calculated by capability/evidence, such as:
+
+- requirements/trace coverage;
+- electrical connectivity confidence;
+- PCB manufacturability;
+- mechanical geometry authority;
+- firmware reproducibility;
+- validation evidence coverage;
+- manufacturing-package qualification;
+- release qualification.
+
+Recommended next actions may guide the user, but they must not become hidden workflow gates.
+
+### 3.4 Reference-product proof
+
+The environmental status node remains the bounded integration fixture. Issue #27 must prove that requirements-first, PCB/ECAD-first, mechanical-first, and firmware-first starts can converge to semantically equivalent canonical product identity and relations where the underlying artifacts describe the same product.
+
+Implementation phases used by the repository are never user-facing workflow stages.
 
 ## 4. V1 capability boundary
 
