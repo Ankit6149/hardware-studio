@@ -65,6 +65,10 @@ import {
   type PcbPlacementPatch,
 } from '../lib/pcb/pcbPlacementAuthority';
 import {
+  projectPatchFromLegacyArchitectureApplyPlan,
+  type LegacyArchitectureAdoptionApplyPlan,
+} from '../lib/product/legacyArchitectureAdoptionApply';
+import {
   serializeProject,
   deserializeProject,
   validateProjectIntegrity
@@ -297,6 +301,9 @@ interface ProjectState extends Project {
   addArchitectureConnection: (conn: Omit<ProductArchitectureConnection, 'id'>) => void;
   updateArchitectureConnection: (id: string, data: Partial<ProductArchitectureConnection>) => void;
   deleteArchitectureConnection: (id: string) => void;
+  applyLegacyArchitectureAdoptionPlan: (
+    plan: LegacyArchitectureAdoptionApplyPlan,
+  ) => { success: boolean; reason?: string };
 
   addMechanicalObject: (obj: Omit<MechanicalObject, 'id'> & { id?: string }) => void;
   updateMechanicalObject: (id: string, data: Partial<MechanicalObject>) => void;
@@ -3466,6 +3473,34 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const list = get().architectureConnections || [];
       const updated = list.filter(c => c.id !== id);
       persistChange({ architectureConnections: updated });
+    },
+
+    applyLegacyArchitectureAdoptionPlan: (plan) => {
+      const state = get();
+
+      if (!plan.canApply) {
+        return { success: false, reason: 'Adoption plan is not fully resolved and cannot be applied.' };
+      }
+      if (plan.projectId !== state.id) {
+        return { success: false, reason: 'Adoption plan belongs to a different project.' };
+      }
+      if (plan.sourceRevision !== state.version) {
+        return { success: false, reason: 'Project revision changed after adoption review. Regenerate the preview and plan.' };
+      }
+      if ((state.architectureNodes || []).length > 0 || (state.architectureConnections || []).length > 0) {
+        return { success: false, reason: 'Canonical architecture already exists. Reconciliation is required.' };
+      }
+
+      const patch = projectPatchFromLegacyArchitectureApplyPlan(plan);
+      get().executeProjectCommand(
+        'ADOPT_LEGACY_ARCHITECTURE',
+        `Adopt reviewed legacy architecture (${plan.adoptionSessionId})`,
+        () => {
+          persistChange(patch);
+        },
+      );
+
+      return { success: true };
     },
 
     // Mechanical Dimensions
