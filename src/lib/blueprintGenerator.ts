@@ -432,6 +432,7 @@ function generatePCBLayoutSheet(p: Project, reviewResults: ReturnType<typeof run
 // SHEET 8 — Component Placement Blueprint
 // ============================================================
 import { getFootprint as getFpPreset } from './footprints';
+import { resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 
 function generateComponentPlacementSheet(p: Project): BlueprintSheet {
   const activeBoardId = p.activeBoardId || 'board-main';
@@ -460,28 +461,41 @@ function generateComponentPlacementSheet(p: Project): BlueprintSheet {
   }
 
   components.forEach(c => {
-    if (c.placementX != null && c.placementY != null) {
+    const placement = resolvePcbPlacement(c);
+    if (placement.placed && placement.xMm !== undefined && placement.yMm !== undefined) {
       const fp = getFpPreset(c.footprint);
       const w = fp.bodyWidthMm || 3;
       const h = fp.bodyHeightMm || 2;
       drawObjs.push({
         id: objId(), type: "component", label: c.referenceDesignator || c.componentName,
-        x: startX + (c.placementX - w / 2) * scale,
-        y: startY + (c.placementY - h / 2) * scale,
+        x: startX + (placement.xMm - w / 2) * scale,
+        y: startY + (placement.yMm - h / 2) * scale,
         width: w * scale, height: h * scale,
-        rotation: c.rotationDeg, sourceType: "component", sourceId: c.id,
-        metadata: { footprint: c.footprint || "", value: c.value || "", side: c.side || "Top", packageName: c.packageName || "" }
+        rotation: placement.rotationDeg, sourceType: "component", sourceId: c.id,
+        metadata: { footprint: c.footprint || "", value: c.value || "", side: placement.side, packageName: c.packageName || "" }
       });
     }
   });
 
   if (components.length === 0) warnings.push({ id: warnId(), sheetId: "sh-8", severity: "Warning", title: "No Components", message: "No board components defined." });
-  const unplaced = components.filter(c => c.placementX == null || c.placementY == null);
+  const unplaced = components.filter(c => !resolvePcbPlacement(c).placed);
   if (unplaced.length > 0) warnings.push({ id: warnId(), sheetId: "sh-8", severity: "Warning", title: `${unplaced.length} Unplaced`, message: `${unplaced.length} components lack placement coordinates.` });
 
   const placementTable: BlueprintTable = {
     id: tblId(), title: "Component Placement", columns: ["RefDes", "Component", "Footprint", "X", "Y", "Rotation", "Side", "Status"],
-    rows: components.map(c => [c.referenceDesignator, c.componentName, c.footprint || "—", String(c.placementX ?? "—"), String(c.placementY ?? "—"), String(c.rotationDeg ?? 0), c.side || "Top", c.placementX != null ? "Placed" : "Unplaced"])
+    rows: components.map(c => {
+      const placement = resolvePcbPlacement(c);
+      return [
+        c.referenceDesignator,
+        c.componentName,
+        c.footprint || "—",
+        String(placement.xMm ?? "—"),
+        String(placement.yMm ?? "—"),
+        String(placement.rotationDeg),
+        placement.side,
+        placement.placed ? "Placed" : "Unplaced",
+      ];
+    })
   };
 
   return {
