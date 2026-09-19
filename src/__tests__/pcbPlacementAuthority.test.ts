@@ -4,8 +4,9 @@ import {
   resolvePcbPlacement,
   stripLegacyPcbPlacementPatch,
 } from '../lib/pcb/pcbPlacementAuthority';
+import { runBoardDRC } from '../lib/boardDRC';
 import { useProjectStore } from '../store/projectStore';
-import type { BoardComponent } from '../types';
+import type { BoardComponent, Project } from '../types';
 
 function makeComponent(overrides: Partial<BoardComponent> = {}): BoardComponent {
   return {
@@ -165,6 +166,132 @@ describe('PCB placement authority', () => {
     });
 
     expect(stripped).toEqual({ componentName: 'Updated Controller' });
+  });
+
+  it('does not let stale flat coordinates affect DRC when canonical placement exists', () => {
+    const component = makeComponent({
+      id: 'cmp_drc_authority',
+      referenceDesignator: 'U1',
+      placementX: 999,
+      placementY: 999,
+      pcb: {
+        placed: true,
+        xMm: 10,
+        yMm: 10,
+        rotationDeg: 0,
+        side: 'Top',
+        locked: false,
+        placementStatus: 'Placed',
+      },
+    });
+
+    const project = {
+      activeBoardId: 'board_authority_1',
+      boards: [{
+        id: 'board_authority_1',
+        name: 'Authority Board',
+        boardType: 'Main PCB',
+        status: 'Draft',
+      }],
+      boardComponents: [component],
+      boardOutlines: [{
+        id: 'outline_authority_1',
+        boardId: 'board_authority_1',
+        width: 50,
+        height: 40,
+        units: 'mm',
+        points: [
+          { x: 0, y: 0 },
+          { x: 50, y: 0 },
+          { x: 50, y: 40 },
+          { x: 0, y: 40 },
+        ],
+      }],
+      traces: [],
+      vias: [],
+      drillHoles: [],
+      keepoutZones: [],
+      nets: [],
+      pcbLayers: [],
+      pcbRules: [],
+      padNetAssignments: [],
+    } as unknown as Project;
+
+    const results = runBoardDRC(project);
+
+    expect(results.some((result) => (
+      result.linkedObjectId === component.id
+      && result.title.startsWith('Component outside board')
+    ))).toBe(false);
+  });
+
+  it('keeps generic editor layout movement separate from PCB engineering geometry', () => {
+    const component = makeComponent({
+      id: 'cmp_editor_projection',
+      pcb: {
+        placed: true,
+        xMm: 12,
+        yMm: 14,
+        rotationDeg: 45,
+        side: 'Top',
+        locked: false,
+        placementStatus: 'Placed',
+      },
+    });
+
+    useProjectStore.setState({
+      boardComponents: [applyCanonicalPcbPlacement(component, component.pcb!)],
+      editorLayouts: {
+        product: [],
+        mechanical: [],
+        assembly: [],
+        board: [],
+        components: [{
+          id: 'editor_component_projection',
+          mode: 'components',
+          sourceType: 'component',
+          sourceId: component.id,
+          label: component.referenceDesignator,
+          kind: 'component',
+          x: 100,
+          y: 100,
+          width: 80,
+          height: 40,
+          layer: 'Components',
+        }],
+        circuits: [],
+        nets: [],
+        power: [],
+        pins: [],
+        firmware: [],
+        testing: [],
+        handoff: [],
+      },
+    });
+
+    useProjectStore.getState().updateEditorObjectPosition(
+      'components',
+      'editor_component_projection',
+      500,
+      600,
+    );
+    useProjectStore.getState().updateEditorObjectRotation(
+      'components',
+      'editor_component_projection',
+      180,
+    );
+
+    const updated = useProjectStore.getState().boardComponents?.find(
+      (candidate) => candidate.id === component.id,
+    );
+
+    expect(updated?.pcb).toMatchObject({
+      xMm: 12,
+      yMm: 14,
+      rotationDeg: 45,
+      side: 'Top',
+      placementStatus: 'Placed',
+    });
   });
 
   it('does not let generic store updates overwrite canonical PCB placement', () => {
