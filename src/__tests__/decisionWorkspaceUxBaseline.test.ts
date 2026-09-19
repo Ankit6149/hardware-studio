@@ -28,7 +28,8 @@ describe('decision-first product UX baseline', () => {
     expect(readiness).toContain('Gate evidence');
     expect(readiness).toContain('routeForIssue');
 
-    expect(engine).toContain('component.placementX == null || component.placementY == null');
+    expect(engine).toContain('!resolvePcbPlacement(component).placed');
+    expect(engine).not.toContain('component.placementX == null || component.placementY == null');
     expect(engine).toContain("file.status !== 'Not Generated'");
     expect(engine).toContain('PCB DRC: ${result.title}');
   });
