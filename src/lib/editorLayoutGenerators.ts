@@ -11,6 +11,7 @@ import {
   FactoryFileStatus 
 } from '../types';
 import { applyCanonicalPcbPlacement, resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
+import { resolveArchitectureProjection } from './product/architectureAuthority';
 
 export const getInitialFactoryFiles = (project?: Project): Record<string, FactoryFileStatus> => {
   const hasBom = project && project.bom && project.bom.length > 0;
@@ -54,8 +55,9 @@ export const generateEditorLayouts = (project: Project): {
   };
   const connections: EditorConnection[] = [];
 
-  const nodes = project.nodes || [];
-  const edges = project.edges || [];
+  const architecture = resolveArchitectureProjection(project);
+  const nodes = architecture.nodes;
+  const edges = architecture.connections;
   const boards = project.boards || [];
   const boardComponents = project.boardComponents || [];
   const circuitBlocks = project.circuitBlocks || [];
@@ -68,21 +70,22 @@ export const generateEditorLayouts = (project: Project): {
 
   // 1. PRODUCT ARCHITECTURE LAYOUT
   const categories = ["Input", "Processing", "Power", "Feedback", "Wireless", "Firmware", "Mechanical", "Integration"];
-  nodes.filter(n => n.type !== 'boundaryNode').forEach((n, idx) => {
-    const cat = n.data?.category || "Processing";
+  nodes.forEach((node, idx) => {
+    const cat = node.category || "Unresolved";
     const catIdx = categories.indexOf(cat);
     const colIdx = catIdx !== -1 ? catIdx : 1;
-    
-    // Group in columns
+
+    // This generic editor layout is a display projection. Canonical architecture
+    // identity and semantics stay in architectureNodes/architectureConnections.
     const x = 50 + colIdx * 150;
     const y = 80 + (idx % 4) * 80;
 
     layouts.product!.push({
-      id: `obj_p_${n.id}`,
+      id: `obj_p_${node.id}`,
       mode: "product",
       sourceType: "node",
-      sourceId: n.id,
-      label: n.data.name,
+      sourceId: node.id,
+      label: node.name,
       kind: "block",
       x,
       y,
@@ -91,27 +94,35 @@ export const generateEditorLayouts = (project: Project): {
       layer: "Architecture",
       metadata: {
         category: cat,
-        status: n.data.status,
-        priority: n.data.priority || "Medium"
+        status: node.status,
+        authoritySource: architecture.source,
       }
     });
   });
 
   // Map edges to connections
-  edges.forEach((e, idx) => {
+  edges.forEach((connection, idx) => {
     connections.push({
-      id: `conn_p_${e.id || idx}`,
+      id: `conn_p_${connection.id || idx}`,
       mode: "product",
-      sourceObjectId: `obj_p_${e.source}`,
-      targetObjectId: `obj_p_${e.target}`,
-      label: e.label || "link",
+      sourceObjectId: `obj_p_${connection.sourceNodeId}`,
+      targetObjectId: `obj_p_${connection.targetNodeId}`,
+      label: connection.name || "link",
       kind: "signal"
     });
   });
 
   // Warnings for product layout
-  const hasInput = nodes.some(n => n.data?.category?.toLowerCase() === 'input' || n.data?.name?.toLowerCase().includes('touch') || n.data?.name?.toLowerCase().includes('button'));
-  const hasPowerNode = nodes.some(n => n.data?.category?.toLowerCase() === 'power' || n.id.includes('battery'));
+  const hasInput = nodes.some((node) => (
+    node.category.toLowerCase() === 'input'
+    || node.name.toLowerCase().includes('touch')
+    || node.name.toLowerCase().includes('button')
+  ));
+  const hasPowerNode = nodes.some((node) => (
+    node.category.toLowerCase() === 'power'
+    || node.name.toLowerCase().includes('battery')
+    || node.id.toLowerCase().includes('battery')
+  ));
 
   if (!hasInput) {
     layouts.product!.push({
@@ -853,21 +864,23 @@ export const autoCreatePinMapFromCircuits = (project: Project): PinMapItem[] => 
 
 export const autoCreateFirmwareTasksFromHardware = (project: Project): FirmwareTask[] => {
   const tasks = [...(project.firmwareTasks || [])];
-  const nodes = project.nodes || [];
+  const architecture = resolveArchitectureProjection(project);
 
-  nodes.filter(n => n.type !== 'boundaryNode').forEach(n => {
-    const isInput = n.data?.category?.toLowerCase() === 'input' || n.data?.name?.toLowerCase().includes('touch');
-    const isFeedback = n.data?.category?.toLowerCase() === 'feedback' || n.data?.name?.toLowerCase().includes('haptic') || n.data?.name?.toLowerCase().includes('led');
-    const isRF = n.id.includes('rf') || n.id.includes('antenna') || n.data?.name?.toLowerCase().includes('wireless');
+  architecture.nodes.forEach((node) => {
+    const normalizedName = node.name.toLowerCase();
+    const normalizedCategory = node.category.toLowerCase();
+    const isInput = normalizedCategory === 'input' || normalizedName.includes('touch');
+    const isFeedback = normalizedCategory === 'feedback' || normalizedName.includes('haptic') || normalizedName.includes('led');
+    const isRF = node.id.toLowerCase().includes('rf') || node.id.toLowerCase().includes('antenna') || normalizedName.includes('wireless');
 
     if (isInput) {
       const exists = tasks.some(t => t.name.toLowerCase().includes('input') || t.name.toLowerCase().includes('debounce'));
       if (!exists) {
         tasks.push({
           id: `fw_task_auto_${Math.random()}_${Date.now()}`,
-          name: `Input driver polling loop: ${n.data.name}`,
+          name: `Input driver polling loop: ${node.name}`,
           type: "Driver",
-          linkedBlock: n.id,
+          linkedBlock: node.id,
           priority: "MVP",
           status: "Not Started",
           description: "Initialize hardware interrupt timers and configure debouncing algorithm for raw signal filters.",
@@ -882,9 +895,9 @@ export const autoCreateFirmwareTasksFromHardware = (project: Project): FirmwareT
       if (!exists) {
         tasks.push({
           id: `fw_task_auto_${Math.random()}_${Date.now()}`,
-          name: `Feedback alert driver: ${n.data.name}`,
+          name: `Feedback alert driver: ${node.name}`,
           type: "State",
-          linkedBlock: n.id,
+          linkedBlock: node.id,
           priority: "MVP",
           status: "Not Started",
           description: "Write PWM pulse registers generator to control coin motor vibration levels.",
@@ -901,7 +914,7 @@ export const autoCreateFirmwareTasksFromHardware = (project: Project): FirmwareT
           id: `fw_task_auto_${Math.random()}_${Date.now()}`,
           name: "BLE GATT Service advertising advertise loop",
           type: "BLE",
-          linkedBlock: n.id,
+          linkedBlock: node.id,
           priority: "MVP",
           status: "Not Started",
           description: "Initialize BLE stack, set UUID custom profiles, and publish button event updates.",
