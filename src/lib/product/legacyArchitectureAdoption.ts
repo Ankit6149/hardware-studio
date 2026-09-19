@@ -106,16 +106,39 @@ const CONNECTION_DIRECTIONS = new Set<CanonicalConnectionDirection>([
 const ADAPTER_ID = 'legacy-architecture-adoption';
 const ADAPTER_VERSION = '1';
 
+function stableSerialize(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableSerialize(record[key])}`)
+    .join(',')}}`;
+}
+
+async function sha256ContentHash(value: unknown): Promise<string> {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) throw new Error('SHA-256 is unavailable in this runtime');
+  const bytes = new TextEncoder().encode(stableSerialize(value));
+  const digest = await subtle.digest('SHA-256', bytes);
+  const hex = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+  return `sha256:${hex}`;
+}
+
 function sourceIdentity(
   project: Project,
   entityKind: 'node' | 'edge',
   entityId: string,
+  contentHash: string,
 ): SourceIdentity {
   return {
     system: 'hardware-studio-legacy-react-flow',
     documentId: project.id,
     entityId: `${entityKind}:${entityId}`,
     revision: project.version,
+    contentHash,
     adapterId: ADAPTER_ID,
     adapterVersion: ADAPTER_VERSION,
   };
@@ -183,6 +206,14 @@ async function previewNode(
     project.id,
     `legacy-architecture-node:${node.id}`,
   );
+  const contentHash = await sha256ContentHash({
+    id: node.id,
+    type: node.type,
+    position: node.position,
+    width: node.width,
+    height: node.height,
+    data: node.data,
+  });
 
   const name = node.data?.name?.trim() || '';
   if (!name) {
@@ -265,7 +296,7 @@ async function previewNode(
   return {
     sourceNodeId: node.id,
     canonicalId,
-    sourceIdentity: sourceIdentity(project, 'node', node.id),
+    sourceIdentity: sourceIdentity(project, 'node', node.id, contentHash),
     canAdopt: Boolean(proposed),
     proposed,
     issues,
@@ -283,6 +314,13 @@ async function previewConnection(
     project.id,
     `legacy-architecture-edge:${edge.id || `${edge.source}->${edge.target}`}`,
   );
+  const contentHash = await sha256ContentHash({
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
+    label: edge.label,
+    data: edge.data,
+  });
 
   const mappedSourceNodeId = nodeIdMap.get(edge.source);
   const mappedTargetNodeId = nodeIdMap.get(edge.target);
@@ -341,7 +379,7 @@ async function previewConnection(
   return {
     sourceEdgeId: edge.id,
     canonicalId,
-    sourceIdentity: sourceIdentity(project, 'edge', edge.id),
+    sourceIdentity: sourceIdentity(project, 'edge', edge.id, contentHash),
     mappedSourceNodeId,
     mappedTargetNodeId,
     canAdopt: Boolean(proposed),
