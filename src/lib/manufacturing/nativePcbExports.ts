@@ -1,5 +1,6 @@
 import { BoardComponent, BoardOutline, Project, Via, DrillHole } from '../../types';
 import { FOOTPRINT_LIBRARY } from '../footprints';
+import { resolvePcbPlacement } from '../pcb/pcbPlacementAuthority';
 import {
   ManufacturingContextError,
   assertManufacturingContext,
@@ -44,19 +45,27 @@ function componentPlacement(component: BoardComponent): {
   rotationDeg: number;
   side: 'Top' | 'Bottom';
 } {
-  const xMm = finite(component.pcb?.xMm) ? component.pcb.xMm : component.placementX;
-  const yMm = finite(component.pcb?.yMm) ? component.pcb.yMm : component.placementY;
-  const rotationDeg = finite(component.pcb?.rotationDeg) ? component.pcb.rotationDeg : component.rotationDeg;
-  const side = component.pcb?.side || component.side;
-
-  if (!finite(xMm) || !finite(yMm) || !finite(rotationDeg) || (side !== 'Top' && side !== 'Bottom')) {
+  const placement = resolvePcbPlacement(component);
+  if (
+    !placement.placed
+    || !finite(placement.xMm)
+    || !finite(placement.yMm)
+    || !finite(placement.rotationDeg)
+    || (placement.side !== 'Top' && placement.side !== 'Bottom')
+  ) {
     throw new ManufacturingContextError([{
       code: 'UNPLACED_COMPONENT',
       objectId: component.id,
       message: `Component ${component.referenceDesignator || component.id} does not have complete physical placement data.`,
     }]);
   }
-  return { xMm, yMm, rotationDeg, side };
+
+  return {
+    xMm: placement.xMm,
+    yMm: placement.yMm,
+    rotationDeg: placement.rotationDeg,
+    side: placement.side,
+  };
 }
 
 function rotatePoint(x: number, y: number, rotationDeg: number): { x: number; y: number } {
