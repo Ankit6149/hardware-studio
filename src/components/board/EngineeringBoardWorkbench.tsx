@@ -21,6 +21,7 @@ import { DEFAULT_VIEW_STATE, GRID_PRESETS, type BoardDesignerUIState } from './b
 import { runBoardDRC } from '../../lib/boardDRC';
 import { getFootprint } from '../../lib/footprints';
 import { resolvePcbRoutingRules } from '../../lib/pcb/pcbRuleResolution';
+import { resolvePcbPlacement } from '../../lib/pcb/pcbPlacementAuthority';
 import { EditorDockButton } from '../editor/EditorDockButton';
 import {
   EditorToolButton,
@@ -42,7 +43,6 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     pcbRules = [],
     setActiveBoard,
     updatePCBPlacement,
-    updateBoardComponent,
     updateTrace,
     setActiveView,
   } = store;
@@ -104,12 +104,13 @@ export const EngineeringBoardWorkbench: React.FC = () => {
     && ((outline.points?.length || 0) >= 3 || ((outline.width || 0) > 0 && (outline.height || 0) > 0)),
   );
   const components = activeBoard ? boardComponents.filter((component) => component.boardId === activeBoard.id) : [];
-  const placed = components.filter((component) => component.placementX != null && component.placementY != null);
+  const placed = components.filter((component) => resolvePcbPlacement(component).placed);
   const boardTraces = activeBoard ? traces.filter((trace) => trace.boardId === activeBoard.id) : [];
   const routingRules = resolvePcbRoutingRules(pcbRules, activeBoard?.id);
   const routeWidthMm = routingRules.routeWidthMm;
 
   const selectedComponent = boardComponents.find((component) => component.id === effectiveViewState.selectedComponentId) || null;
+  const selectedPlacement = selectedComponent ? resolvePcbPlacement(selectedComponent) : null;
   const selectedTrace = traces.find((trace) => trace.id === effectiveViewState.selectedTraceId) || null;
   const selectedVia = vias.find((via) => via.id === effectiveViewState.selectedViaId) || null;
   const selectedFootprint = selectedComponent ? getFootprint(selectedComponent.footprint) : null;
@@ -250,7 +251,8 @@ export const EngineeringBoardWorkbench: React.FC = () => {
 
   const rotateSelected = () => {
     if (!selectedComponent) return;
-    updatePCBPlacement(selectedComponent.id, { rotationDeg: ((selectedComponent.rotationDeg || 0) + 90) % 360 });
+    const placement = resolvePcbPlacement(selectedComponent);
+    updatePCBPlacement(selectedComponent.id, { rotationDeg: (placement.rotationDeg + 90) % 360 });
   };
 
   const openSchematic = () => {
@@ -365,16 +367,16 @@ export const EngineeringBoardWorkbench: React.FC = () => {
                   <p className="mt-0.5 font-mono text-[9px] text-slate-500">{selectedComponent.footprint || 'footprint unresolved'}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="text-[9px] text-slate-500">X mm<input type="number" step={effectiveViewState.gridSizeMm} value={selectedComponent.placementX ?? ''} onChange={(event) => updatePCBPlacement(selectedComponent.id, { placementX: Number.parseFloat(event.target.value) })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
-                  <label className="text-[9px] text-slate-500">Y mm<input type="number" step={effectiveViewState.gridSizeMm} value={selectedComponent.placementY ?? ''} onChange={(event) => updatePCBPlacement(selectedComponent.id, { placementY: Number.parseFloat(event.target.value) })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
+                  <label className="text-[9px] text-slate-500">X mm<input type="number" step={effectiveViewState.gridSizeMm} value={selectedPlacement?.xMm ?? ''} onChange={(event) => { const parsed = Number.parseFloat(event.target.value); updatePCBPlacement(selectedComponent.id, { xMm: Number.isFinite(parsed) ? parsed : undefined }); }} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
+                  <label className="text-[9px] text-slate-500">Y mm<input type="number" step={effectiveViewState.gridSizeMm} value={selectedPlacement?.yMm ?? ''} onChange={(event) => { const parsed = Number.parseFloat(event.target.value); updatePCBPlacement(selectedComponent.id, { yMm: Number.isFinite(parsed) ? parsed : undefined }); }} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
                 </div>
-                <label className="block text-[9px] text-slate-500">Rotation<input type="number" value={selectedComponent.rotationDeg || 0} onChange={(event) => updatePCBPlacement(selectedComponent.id, { rotationDeg: Number.parseFloat(event.target.value) || 0 })} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
+                <label className="block text-[9px] text-slate-500">Rotation<input type="number" value={selectedPlacement?.rotationDeg ?? 0} onChange={(event) => { const parsed = Number.parseFloat(event.target.value); updatePCBPlacement(selectedComponent.id, { rotationDeg: Number.isFinite(parsed) ? parsed : 0 }); }} className="mt-1 h-8 w-full border border-slate-300 bg-white px-2 font-mono text-[10px]" /></label>
                 <div className="grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 text-[9px]">
                   {[
-                    ['Side', selectedComponent.pcb?.side || selectedComponent.side || 'Unresolved'],
+                    ['Side', selectedPlacement?.side || 'Unresolved'],
                     ['Pads', String(selectedFootprint?.pads.length || 0)],
                     ['Criticality', selectedComponent.placementCriticality],
-                    ['Status', selectedComponent.placementStatus || (selectedComponent.pcb?.placed ? 'Placed' : 'Unplaced')],
+                    ['Status', selectedPlacement?.placementStatus || 'Unplaced'],
                   ].map(([label, value]) => <div key={label} className="bg-white p-2"><p className="text-slate-400">{label}</p><p className="mt-0.5 truncate font-semibold text-slate-800">{value}</p></div>)}
                 </div>
                 {selectedFootprint && selectedFootprint.pads.length > 0 && (
@@ -405,7 +407,7 @@ export const EngineeringBoardWorkbench: React.FC = () => {
                 )}
                 <div className="flex gap-1">
                   <button type="button" onClick={rotateSelected} className="h-8 flex-1 border border-slate-300 bg-white text-[9px] font-semibold text-slate-700">Rotate 90°</button>
-                  <button type="button" onClick={() => updateBoardComponent(selectedComponent.id, { side: selectedComponent.side === 'Bottom' ? 'Top' : 'Bottom' })} className="h-8 flex-1 border border-slate-300 bg-white text-[9px] font-semibold text-slate-700">Flip side</button>
+                  <button type="button" onClick={() => updatePCBPlacement(selectedComponent.id, { side: selectedPlacement?.side === 'Bottom' ? 'Top' : 'Bottom' })} className="h-8 flex-1 border border-slate-300 bg-white text-[9px] font-semibold text-slate-700">Flip side</button>
                 </div>
               </div>
             ) : selectedTrace ? (
