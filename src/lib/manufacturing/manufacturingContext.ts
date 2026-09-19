@@ -8,6 +8,7 @@ import {
   Via,
 } from '../../types';
 import { FOOTPRINT_LIBRARY } from '../footprints';
+import { resolvePcbPlacement } from '../pcb/pcbPlacementAuthority';
 
 export type ManufacturingBlockerCode =
   | 'NO_BOARD'
@@ -150,21 +151,13 @@ function getPlacement(component: BoardComponent): {
   side?: string;
   placed: boolean;
 } {
-  const xMm = isFiniteNumber(component.pcb?.xMm) ? component.pcb.xMm : component.placementX;
-  const yMm = isFiniteNumber(component.pcb?.yMm) ? component.pcb.yMm : component.placementY;
-  const rotationDeg = isFiniteNumber(component.pcb?.rotationDeg) ? component.pcb.rotationDeg : component.rotationDeg;
-  const side = component.pcb?.side || component.side;
-  const hasCoordinates = isFiniteNumber(xMm) && isFiniteNumber(yMm);
-  const explicitlyUnplaced = component.pcb?.placementStatus === 'Unplaced'
-    || component.placementStatus === 'Unplaced'
-    || component.pcb?.placed === false;
-
+  const placement = resolvePcbPlacement(component);
   return {
-    xMm: hasCoordinates ? xMm : undefined,
-    yMm: hasCoordinates ? yMm : undefined,
-    rotationDeg: isFiniteNumber(rotationDeg) ? rotationDeg : undefined,
-    side,
-    placed: hasCoordinates && !explicitlyUnplaced,
+    xMm: placement.xMm,
+    yMm: placement.yMm,
+    rotationDeg: placement.rotationDeg,
+    side: placement.side,
+    placed: placement.placed,
   };
 }
 
