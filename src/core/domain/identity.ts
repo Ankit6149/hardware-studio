@@ -34,6 +34,7 @@ export const ENTITY_TYPES = [
   'job',
   'representation',
   'adoption-session',
+  'source-mapping',
 ] as const;
 
 export type EntityType = (typeof ENTITY_TYPES)[number];
