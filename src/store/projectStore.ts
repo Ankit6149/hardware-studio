@@ -151,7 +151,7 @@ interface ProjectState extends Project {
 
   addBoardComponent: (item: Partial<Omit<BoardComponent, 'id'>> & { id?: string }) => void;
   updateBoardComponent: (id: string, data: Partial<BoardComponent>) => void;
-  updatePCBPlacement: (componentId: string, placement: PcbPlacementPatch) => void;
+  updatePCBPlacement: (componentId: string, placement: PcbPlacementPatch & { boardId?: string }) => void;
   deleteBoardComponent: (id: string) => void;
 
   addNet: (item: Partial<Omit<NetItem, 'id'>> & { netName: string }) => void;
@@ -1449,7 +1449,11 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const currentComp = (state.boardComponents || []).find(c => c.id === componentId);
       if (!currentComp) return;
 
-      const updatedComp = applyCanonicalPcbPlacement(currentComp, placement);
+      const { boardId, ...placementPatch } = placement;
+      const componentWithOwnership = boardId !== undefined
+        ? { ...currentComp, boardId }
+        : currentComp;
+      const updatedComp = applyCanonicalPcbPlacement(componentWithOwnership, placementPatch);
       const canonicalPlacement = updatedComp.pcb!;
       const boardComponents = (state.boardComponents || []).map(
         (component) => component.id === componentId ? updatedComp : component,
