@@ -15,6 +15,7 @@ export type LegacyArchitectureAdoptionIssueSeverity = 'blocker' | 'warning' | 'i
 
 export type LegacyArchitectureAdoptionIssueCode =
   | 'canonical-architecture-already-present'
+  | 'legacy-architecture-empty'
   | 'legacy-node-name-missing'
   | 'legacy-node-category-unmapped'
   | 'legacy-node-status-unmapped'
@@ -372,6 +373,18 @@ export async function previewLegacyArchitectureAdoption(
   }
 
   const legacyNodes = project.nodes || [];
+  const legacyEdges = project.edges || [];
+  const candidateNodes = legacyNodes.filter((node) => node.type !== 'boundaryNode');
+
+  if (candidateNodes.length === 0 && legacyEdges.length === 0) {
+    issues.push({
+      code: 'legacy-architecture-empty',
+      severity: 'info',
+      message: 'No adoptable legacy architecture nodes or edges were found.',
+      resolution: 'There is nothing to adopt from the legacy architecture surface.',
+    });
+  }
+
   const boundaryNodes = legacyNodes.filter((node) => node.type === 'boundaryNode');
   for (const node of boundaryNodes) {
     issues.push({
@@ -382,7 +395,6 @@ export async function previewLegacyArchitectureAdoption(
     });
   }
 
-  const candidateNodes = legacyNodes.filter((node) => node.type !== 'boundaryNode');
   const nodeProposals = await Promise.all(
     candidateNodes.map((node) => previewNode(project, node)),
   );
@@ -395,7 +407,7 @@ export async function previewLegacyArchitectureAdoption(
   }
 
   const connectionProposals = await Promise.all(
-    (project.edges || []).map((edge) => previewConnection(project, edge, nodeIdMap)),
+    legacyEdges.map((edge) => previewConnection(project, edge, nodeIdMap)),
   );
 
   const allIssues = [
@@ -409,6 +421,9 @@ export async function previewLegacyArchitectureAdoption(
     sourceSystem: 'hardware-studio-legacy-react-flow',
     canonicalStatePresent,
     canApplyWithoutResolution: !canonicalStatePresent
+      && nodeProposals.length > 0
+      && nodeProposals.every((proposal) => proposal.canAdopt)
+      && connectionProposals.every((proposal) => proposal.canAdopt)
       && allIssues.every((issue) => issue.severity !== 'blocker'),
     nodeProposals,
     connectionProposals,
