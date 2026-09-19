@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
+import { resolvePcbPlacement } from '../../lib/pcb/pcbPlacementAuthority';
 
 export type Board3DQuality = 'low' | 'balanced' | 'high';
 
@@ -107,9 +108,10 @@ export const UnifiedBoard3DView: React.FC = () => {
   );
   const selectedComponent = components.find((component) => component.id === activeComponentId);
   const componentRepresentations = useMemo(() => components.map((component) => {
-    const xMm = component.pcb?.xMm ?? component.placementX;
-    const yMm = component.pcb?.yMm ?? component.placementY;
-    const hasPlacement = xMm != null && yMm != null && Number.isFinite(xMm) && Number.isFinite(yMm);
+    const placement = resolvePcbPlacement(component);
+    const xMm = placement.xMm;
+    const yMm = placement.yMm;
+    const hasPlacement = placement.placed && xMm !== undefined && yMm !== undefined;
     const hasDimensions = positiveDimensions(component.packageDimensions);
     return {
       component,
