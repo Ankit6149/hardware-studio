@@ -31,7 +31,6 @@ export function sourceIdentityKey(source: SourceIdentity): string {
     source.system.trim(),
     source.documentId?.trim() || '',
     source.entityId.trim(),
-    source.revision?.trim() || '',
   ].join('::');
 }
 
