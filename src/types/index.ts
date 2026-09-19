@@ -840,6 +840,13 @@ export interface ProductRequirement {
   notes?: string;
 }
 
+export interface ArchitectureReconciliationBaseline {
+  adoptionSessionId: string;
+  sourceContentHash: string;
+  adoptedAt: string;
+  canonicalSnapshot: Record<string, string | number | boolean | null | undefined>;
+}
+
 export interface ProductArchitectureNode {
   id: string;
   name: string;
@@ -857,6 +864,7 @@ export interface ProductArchitectureNode {
   status: "MVP" | "Later" | "Future";
   sourceIdentity?: SourceIdentity;
   provenance?: EngineeringProvenance;
+  reconciliationBaseline?: ArchitectureReconciliationBaseline;
 }
 
 export interface ProductArchitectureConnection {
@@ -871,6 +879,7 @@ export interface ProductArchitectureConnection {
   notes?: string;
   sourceIdentity?: SourceIdentity;
   provenance?: EngineeringProvenance;
+  reconciliationBaseline?: ArchitectureReconciliationBaseline;
 }
 
 export interface MechanicalObject {
