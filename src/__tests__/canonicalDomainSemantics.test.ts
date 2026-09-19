@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
   asEntityId,
+  assertEngineeringCoordinateFrame,
   createEntityId,
+  createQuantity,
   deriveEntityId,
   isEntityId,
   isIndependentlyQualified,
   isVisualizationOnlyRepresentation,
   parseEntityId,
   representationHasExactMechanicalAuthority,
+  toCanonicalQuantity,
   validateEngineeringProvenance,
   validateSourceIdentity,
   type CanonicalRepresentation,
+  type CoordinateFrame,
   type EngineeringProvenance,
   type SourceIdentity,
 } from '../core/domain';
@@ -56,6 +60,18 @@ describe('canonical domain semantics', () => {
       .toEqual(['missing-source-system', 'missing-source-entity']);
   });
 
+  it('requires source identity for imported or observed engineering truth', () => {
+    const imported: EngineeringProvenance = {
+      origin: 'imported',
+      qualification: 'provisional',
+      recordedAt: '2026-09-18T00:00:00.000Z',
+    };
+
+    expect(validateEngineeringProvenance(imported)).toEqual([
+      expect.objectContaining({ code: 'missing-source' }),
+    ]);
+  });
+
   it('prevents generated proposals from self-promoting into qualified engineering truth', () => {
     const invalid: EngineeringProvenance = {
       origin: 'generated-proposal',
@@ -82,6 +98,43 @@ describe('canonical domain semantics', () => {
     expect(isIndependentlyQualified(qualified)).toBe(true);
   });
 
+  it('normalizes typed quantities into canonical engineering units', () => {
+    expect(toCanonicalQuantity(createQuantity('length', 1000, 'mil'))).toMatchObject({
+      dimension: 'length',
+      value: 25.4,
+      unit: 'mm',
+    });
+    const canonicalVoltage = toCanonicalQuantity(createQuantity('voltage', 3300, 'mV'));
+    expect(canonicalVoltage.dimension).toBe('voltage');
+    expect(canonicalVoltage.unit).toBe('V');
+    expect(canonicalVoltage.value).toBeCloseTo(3.3, 12);
+    expect(toCanonicalQuantity(createQuantity('temperature', 32, 'F')).value).toBeCloseTo(0, 8);
+  });
+
+  it('rejects non-finite engineering quantities', () => {
+    expect(() => createQuantity('length', Number.NaN, 'mm')).toThrow(/finite/);
+    expect(() => createQuantity('voltage', Number.POSITIVE_INFINITY, 'V')).toThrow(/finite/);
+  });
+
+  it('prevents display pixels from becoming engineering geometry', () => {
+    const displayFrame: CoordinateFrame = {
+      id: 'pcb-canvas',
+      kind: 'render',
+      authority: 'display-only',
+      unit: 'px',
+    };
+    expect(() => assertEngineeringCoordinateFrame(displayFrame)).toThrow(/display-only/);
+
+    const boardFrame: CoordinateFrame = {
+      id: 'board-main-frame',
+      kind: 'pcb',
+      authority: 'engineering',
+      unit: 'mm',
+      axes: 'xy',
+    };
+    expect(() => assertEngineeringCoordinateFrame(boardFrame)).not.toThrow();
+  });
+
   it('keeps visual meshes separate from exact mechanical authority', () => {
     const entityId = createEntityId('component');
 
@@ -96,6 +149,12 @@ describe('canonical domain semantics', () => {
         qualification: 'provisional',
         recordedAt: '2026-09-18T00:00:00.000Z',
       },
+      coordinateFrame: {
+        id: 'three-scene',
+        kind: 'render',
+        authority: 'display-only',
+        unit: 'unitless',
+      },
     };
 
     const exact: CanonicalRepresentation = {
@@ -108,6 +167,19 @@ describe('canonical domain semantics', () => {
         origin: 'imported',
         qualification: 'independently-qualified',
         recordedAt: '2026-09-18T00:00:00.000Z',
+        source: {
+          system: 'manufacturer',
+          entityId: 'BME280.step',
+          contentHash: `sha256:${'b'.repeat(64)}`,
+        },
+      },
+      coordinateFrame: {
+        id: 'manufacturer-step-frame',
+        kind: 'source',
+        authority: 'source-native',
+        unit: 'mm',
+        axes: 'xyz',
+        handedness: 'right',
       },
     };
 

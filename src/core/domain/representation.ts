@@ -1,3 +1,4 @@
+import type { CoordinateFrame } from './coordinateFrame';
 import type { EntityId } from './identity';
 import type { EngineeringProvenance } from './provenance';
 
@@ -61,8 +62,7 @@ export interface CanonicalRepresentation {
   provenance: EngineeringProvenance;
   artifact?: RepresentationArtifactRef;
   sourceRepresentationId?: EntityId<'representation'>;
-  coordinateFrameId?: string;
-  unitSystem?: string;
+  coordinateFrame?: CoordinateFrame;
   note?: string;
 }
 
