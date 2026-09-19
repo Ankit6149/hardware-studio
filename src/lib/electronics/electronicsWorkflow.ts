@@ -1,5 +1,6 @@
 import type { Project } from '../../types';
 import { runBoardDRC } from '../boardDRC';
+import { resolvePcbPlacement } from '../pcb/pcbPlacementAuthority';
 
 export type ElectronicsWorkflowStageId =
   | 'component-library'
@@ -44,7 +45,7 @@ export function evaluateElectronicsWorkflow(project: Project): ElectronicsWorkfl
   );
   const schematicPlacedCount = boardComponents.filter((component) => component.schematic?.placed).length;
   const pcbPlacedCount = boardComponents.filter(
-    (component) => component.pcb?.placed || component.placementStatus === 'Placed' || component.placementStatus === 'Locked' || component.placementStatus === 'Verified',
+    (component) => resolvePcbPlacement(component).placed,
   ).length;
   const boardNets = project.nets || [];
   const routedNetNames = new Set(
