@@ -3,6 +3,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { BoardDesignerUIState } from './boardInteraction';
 import { getFootprint } from '../../lib/footprints';
 import { Info, Cpu, Route, Circle as CircleIcon, Drill, Layers, Shield } from 'lucide-react';
+import { resolvePcbPlacement } from '../../lib/pcb/pcbPlacementAuthority';
 
 interface BoardObjectInspectorProps {
   viewState: BoardDesignerUIState;
@@ -12,7 +13,7 @@ interface BoardObjectInspectorProps {
 export const BoardInspector: React.FC<BoardObjectInspectorProps> = ({ viewState }) => {
   const {
     boardComponents, traces, vias, drillHoles, keepoutZones, boards, boardOutlines,
-    updateBoardComponent, updateTrace, updateVia, updateDrillHole, updateKeepoutZone, nets,
+    updatePCBPlacement, updateTrace, updateVia, updateDrillHole, updateKeepoutZone, nets,
   } = useProjectStore();
 
   const {
@@ -65,6 +66,7 @@ export const BoardInspector: React.FC<BoardObjectInspectorProps> = ({ viewState 
     const comp = (boardComponents || []).find(c => c.id === selectedObjectId);
     if (!comp) return <NoSelection />;
     const fp = getFootprint(comp.footprint || '');
+    const placement = resolvePcbPlacement(comp);
     return (
       <div className="p-3">
         <div className="flex items-center gap-1.5 mb-3">
@@ -78,28 +80,37 @@ export const BoardInspector: React.FC<BoardObjectInspectorProps> = ({ viewState 
           <Field label="Footprint" value={comp.footprint || ''} />
           <Field label="Package" value={comp.packageName || ''} />
           <Field label="Value" value={comp.value || ''} />
-          <Field label="Side" value={comp.side || 'Top'} />
-          <EditField label="X (mm)" value={String(comp.placementX?.toFixed(2) || '0')} onChange={v => updateBoardComponent(comp.id, { placementX: parseFloat(v) || 0 })} />
-          <EditField label="Y (mm)" value={String(comp.placementY?.toFixed(2) || '0')} onChange={v => updateBoardComponent(comp.id, { placementY: parseFloat(v) || 0 })} />
-          <EditField label="Rotation" value={String(comp.rotationDeg || 0)} onChange={v => updateBoardComponent(comp.id, { rotationDeg: parseFloat(v) || 0 })} />
+          <Field label="Side" value={placement.side} />
+          <EditField label="X (mm)" value={placement.xMm === undefined ? '' : String(placement.xMm.toFixed(2))} onChange={v => {
+            const parsed = Number.parseFloat(v);
+            updatePCBPlacement(comp.id, { xMm: Number.isFinite(parsed) ? parsed : undefined });
+          }} />
+          <EditField label="Y (mm)" value={placement.yMm === undefined ? '' : String(placement.yMm.toFixed(2))} onChange={v => {
+            const parsed = Number.parseFloat(v);
+            updatePCBPlacement(comp.id, { yMm: Number.isFinite(parsed) ? parsed : undefined });
+          }} />
+          <EditField label="Rotation" value={String(placement.rotationDeg)} onChange={v => {
+            const parsed = Number.parseFloat(v);
+            updatePCBPlacement(comp.id, { rotationDeg: Number.isFinite(parsed) ? parsed : 0 });
+          }} />
           <div className="flex gap-1 pt-1">
             <button
-              onClick={() => updateBoardComponent(comp.id, { rotationDeg: ((comp.rotationDeg || 0) + 90) % 360 })}
+              onClick={() => updatePCBPlacement(comp.id, { rotationDeg: (placement.rotationDeg + 90) % 360 })}
               className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[9px] font-bold hover:bg-slate-700"
             >
               Rotate 90°
             </button>
             <button
-              onClick={() => updateBoardComponent(comp.id, { side: comp.side === 'Top' ? 'Bottom' : 'Top' })}
+              onClick={() => updatePCBPlacement(comp.id, { side: placement.side === 'Top' ? 'Bottom' : 'Top' })}
               className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[9px] font-bold hover:bg-slate-700"
             >
               Flip Side
             </button>
             <button
-              onClick={() => updateBoardComponent(comp.id, { lockedPlacement: !comp.lockedPlacement })}
-              className={`px-2 py-0.5 rounded text-[9px] font-bold ${comp.lockedPlacement ? 'bg-amber-800 text-amber-100' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+              onClick={() => updatePCBPlacement(comp.id, { locked: !placement.locked })}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold ${placement.locked ? 'bg-amber-800 text-amber-100' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
             >
-              {comp.lockedPlacement ? 'Unlock' : 'Lock'}
+              {placement.locked ? 'Unlock' : 'Lock'}
             </button>
           </div>
           <Field label="Criticality" value={comp.placementCriticality || 'Low'} />
