@@ -1,6 +1,7 @@
 import { Node, Edge } from '@xyflow/react';
 import type { BlueprintPack, BlueprintPackStatusType } from '../lib/blueprintSheetTypes';
 import type { ElectronicComponentDefinition } from '../lib/components/componentLibrary';
+import type { EngineeringProvenance, SourceIdentity } from '../core/domain/provenance';
 
 export type NodeData = {
   name: string;
@@ -854,6 +855,8 @@ export interface ProductArchitectureNode {
   linkedFirmwareModuleIds: string[];
   linkedTestIds: string[];
   status: "MVP" | "Later" | "Future";
+  sourceIdentity?: SourceIdentity;
+  provenance?: EngineeringProvenance;
 }
 
 export interface ProductArchitectureConnection {
@@ -866,6 +869,8 @@ export interface ProductArchitectureConnection {
   voltage?: number;
   direction: "Forward" | "Bidirectional";
   notes?: string;
+  sourceIdentity?: SourceIdentity;
+  provenance?: EngineeringProvenance;
 }
 
 export interface MechanicalObject {
