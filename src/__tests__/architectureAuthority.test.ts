@@ -63,7 +63,7 @@ function project(overrides: Partial<Project> = {}): Project {
   } as Project;
 }
 
-const legacyInputNode = {
+const legacyInputNode: Project['nodes'][number] = {
   id: 'legacy-input',
   type: 'default',
   position: { x: 10, y: 20 },
@@ -82,7 +82,7 @@ const legacyInputNode = {
   },
 };
 
-const legacyFeedbackNode = {
+const legacyFeedbackNode: Project['nodes'][number] = {
   id: 'legacy-feedback',
   type: 'default',
   position: { x: 30, y: 40 },
