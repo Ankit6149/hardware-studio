@@ -324,6 +324,22 @@ describe('legacy architecture adoption preview', () => {
     );
   });
 
+  it('does not claim an empty legacy project is ready to apply', async () => {
+    const preview = await previewLegacyArchitectureAdoption(project());
+
+    expect(preview.canApplyWithoutResolution).toBe(false);
+    expect(preview.nodeProposals).toHaveLength(0);
+    expect(preview.connectionProposals).toHaveLength(0);
+    expect(preview.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'legacy-architecture-empty',
+          severity: 'info',
+        }),
+      ]),
+    );
+  });
+
   it('reports edges whose canonical endpoints cannot be adopted', async () => {
     const invalidNode = legacyNode('integration', 'Integration', 'Integration', 'MVP');
     const edge: CustomEdge = {
