@@ -59,8 +59,9 @@ describe('Slice 2 Production PCB Editor & Routing Engine', () => {
 
     store.updatePCBPlacement('comp_test_u1', {
       boardId: board2.id,
-      placementX: 50,
-      placementY: 40,
+      placed: true,
+      xMm: 50,
+      yMm: 40,
       side: 'Top',
       placementStatus: 'Placed'
     });
@@ -163,8 +164,9 @@ describe('Slice 2 Production PCB Editor & Routing Engine', () => {
 
     store.updatePCBPlacement('comp_u1', {
       boardId: activeBoard,
-      placementX: 20,
-      placementY: 20
+      placed: true,
+      xMm: 20,
+      yMm: 20
     });
 
     const compU1 = requireBoardComponent('comp_u1');
@@ -185,8 +187,9 @@ describe('Slice 2 Production PCB Editor & Routing Engine', () => {
 
     store.updatePCBPlacement('comp_u2', {
       boardId: activeBoard,
-      placementX: 50,
-      placementY: 20
+      placed: true,
+      xMm: 50,
+      yMm: 20
     });
 
     const compU2 = requireBoardComponent('comp_u2');
@@ -294,8 +297,9 @@ describe('Slice 2 Production PCB Editor & Routing Engine', () => {
 
     store.updatePCBPlacement('comp_c1', {
       boardId: activeBoard,
-      placementX: 10,
-      placementY: 10
+      placed: true,
+      xMm: 10,
+      yMm: 10
     });
 
     store.addBoardComponent({
@@ -313,8 +317,9 @@ describe('Slice 2 Production PCB Editor & Routing Engine', () => {
 
     store.updatePCBPlacement('comp_c2', {
       boardId: activeBoard,
-      placementX: 40,
-      placementY: 10
+      placed: true,
+      xMm: 40,
+      yMm: 10
     });
 
     const compC1 = requireBoardComponent('comp_c1');
