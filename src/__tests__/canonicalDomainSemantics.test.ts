@@ -104,11 +104,10 @@ describe('canonical domain semantics', () => {
       value: 25.4,
       unit: 'mm',
     });
-    expect(toCanonicalQuantity(createQuantity('voltage', 3300, 'mV'))).toMatchObject({
-      dimension: 'voltage',
-      value: 3.3,
-      unit: 'V',
-    });
+    const canonicalVoltage = toCanonicalQuantity(createQuantity('voltage', 3300, 'mV'));
+    expect(canonicalVoltage.dimension).toBe('voltage');
+    expect(canonicalVoltage.unit).toBe('V');
+    expect(canonicalVoltage.value).toBeCloseTo(3.3, 12);
     expect(toCanonicalQuantity(createQuantity('temperature', 32, 'F')).value).toBeCloseTo(0, 8);
   });
 
