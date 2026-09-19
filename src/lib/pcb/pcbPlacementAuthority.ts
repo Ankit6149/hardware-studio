@@ -3,8 +3,15 @@ import type { BoardComponent } from '../../types';
 export type PcbPlacement = NonNullable<BoardComponent['pcb']>;
 export type PcbPlacementPatch = Partial<PcbPlacement>;
 
-export interface ResolvedPcbPlacement extends PcbPlacement {
+export interface ResolvedPcbPlacement {
   source: 'canonical' | 'legacy';
+  placed: boolean;
+  xMm?: number;
+  yMm?: number;
+  rotationDeg: number;
+  side: 'Top' | 'Bottom';
+  locked: boolean;
+  placementStatus: NonNullable<PcbPlacement['placementStatus']>;
 }
 
 const LEGACY_PLACEMENT_KEYS = [
