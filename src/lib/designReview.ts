@@ -1,12 +1,14 @@
 import { Project, ReviewResult } from '../types';
 import { isPointInsideOutline } from '../components/board/boardGeometry';
 import { resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
+import { resolveArchitectureProjection } from './product/architectureAuthority';
 
 export const runDesignReview = (project: Project): ReviewResult[] => {
   const results: ReviewResult[] = [];
 
-  const nodes = project.nodes || [];
-  const edges = project.edges || [];
+  const architecture = resolveArchitectureProjection(project);
+  const nodes = architecture.nodes;
+  const edges = architecture.connections;
   const boards = project.boards || [];
   const components = project.boardComponents || [];
   const circuits = project.circuitBlocks || [];
@@ -28,10 +30,10 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
   // ----------------------------------------------------
   // 1. ARCHITECTURE CHECKS
   // ----------------------------------------------------
-  const hasInput = nodes.some(n => 
-    n.data?.category?.toLowerCase() === 'input' || 
-    n.data?.name?.toLowerCase().includes('touch') || 
-    n.data?.name?.toLowerCase().includes('button')
+  const hasInput = nodes.some((node) =>
+    node.category.toLowerCase() === 'input'
+    || node.name.toLowerCase().includes('touch')
+    || node.name.toLowerCase().includes('button')
   );
   if (!hasInput) {
     results.push({
@@ -48,10 +50,10 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
     });
   }
 
-  const hasPowerNode = nodes.some(n => 
-    n.data?.category?.toLowerCase() === 'power' || 
-    n.data?.name?.toLowerCase().includes('battery') ||
-    n.data?.name?.toLowerCase().includes('charger')
+  const hasPowerNode = nodes.some((node) =>
+    node.category.toLowerCase() === 'power'
+    || node.name.toLowerCase().includes('battery')
+    || node.name.toLowerCase().includes('charger')
   );
   if (!hasPowerNode) {
     results.push({
@@ -68,10 +70,10 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
     });
   }
 
-  const hasFeedback = nodes.some(n => 
-    n.data?.category?.toLowerCase() === 'feedback' || 
-    n.data?.name?.toLowerCase().includes('haptic') || 
-    n.data?.name?.toLowerCase().includes('led')
+  const hasFeedback = nodes.some((node) =>
+    node.category.toLowerCase() === 'feedback'
+    || node.name.toLowerCase().includes('haptic')
+    || node.name.toLowerCase().includes('led')
   );
   if (!hasFeedback) {
     results.push({

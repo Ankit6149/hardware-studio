@@ -6,6 +6,7 @@
 import { Project } from '../types';
 import { calculateReadinessScore } from './readinessScore';
 import { runDesignReview } from './designReview';
+import { resolveArchitectureProjection } from './product/architectureAuthority';
 import type {
   BlueprintPack,
   BlueprintSheet,
@@ -43,55 +44,126 @@ function sheetStatus(hasData: boolean, warnings: BlueprintWarning[]): BlueprintS
 // SHEET 1 — Product Architecture Blueprint
 // ============================================================
 function generateProductArchitectureSheet(p: Project, reviewResults: ReturnType<typeof runDesignReview>): BlueprintSheet {
-  const nodes = p.nodes || [];
-  const edges = p.edges || [];
+  const architecture = resolveArchitectureProjection(p);
+  const nodes = architecture.nodes;
+  const connections = architecture.connections;
   const warnings: BlueprintWarning[] = [];
-  const sources: BlueprintSourceRef[] = nodes.map(n => ({ type: "node", id: n.id, label: n.data?.name || n.id }));
-
-  // Drawing objects from nodes
-  const drawObjs: BlueprintDrawingObject[] = nodes.map((n, i) => ({
-    id: objId(), type: "block" as const, label: n.data?.name || "Node",
-    x: 50 + (i % 4) * 180, y: 50 + Math.floor(i / 4) * 120, width: 160, height: 80,
-    sourceType: "node", sourceId: n.id,
-    metadata: { category: n.data?.category || "", status: n.data?.status || "", description: (n.data?.description || "").slice(0, 60) }
+  const sources: BlueprintSourceRef[] = nodes.map((node) => ({
+    type: node.source === 'canonical' ? 'architecture-node' : 'legacy-architecture-node',
+    id: node.id,
+    label: node.name || node.id,
   }));
 
-  // Drawing connections from edges
-  const drawConns: BlueprintDrawingConnection[] = edges.map(e => ({
-    id: connId(), sourceId: drawObjs.find(o => o.sourceId === e.source)?.id || "",
-    targetId: drawObjs.find(o => o.sourceId === e.target)?.id || "",
-    label: typeof e.label === 'string' ? e.label : undefined, type: "signal" as const
-  })).filter(c => c.sourceId && c.targetId);
+  const drawObjs: BlueprintDrawingObject[] = nodes.map((node, index) => ({
+    id: objId(),
+    type: 'block' as const,
+    label: node.name || 'Architecture node',
+    x: 50 + (index % 4) * 180,
+    y: 50 + Math.floor(index / 4) * 120,
+    width: 160,
+    height: 80,
+    sourceType: node.source === 'canonical' ? 'architecture-node' : 'legacy-architecture-node',
+    sourceId: node.id,
+    metadata: {
+      category: node.category || '',
+      status: node.status || '',
+      description: (node.description || '').slice(0, 60),
+      authoritySource: architecture.source,
+    },
+  }));
 
-  // Warnings
-  if (!nodes.some(n => n.data?.category?.toLowerCase().includes("input") || n.data?.name?.toLowerCase().includes("touch") || n.data?.name?.toLowerCase().includes("button")))
-    warnings.push({ id: warnId(), sheetId: "sh-1", severity: "Warning", title: "No Input Node", message: "Architecture has no primary user interaction input node.", sourceType: "architecture" });
-  if (!nodes.some(n => n.data?.category?.toLowerCase().includes("power") || n.id.toLowerCase().includes("battery")))
-    warnings.push({ id: warnId(), sheetId: "sh-1", severity: "Warning", title: "No Power Node", message: "Architecture has no power supply or charging source node.", sourceType: "architecture" });
-  if (!nodes.some(n => n.data?.category?.toLowerCase().includes("firmware") || n.data?.category?.toLowerCase().includes("software")))
-    warnings.push({ id: warnId(), sheetId: "sh-1", severity: "Warning", title: "No Firmware Node", message: "Architecture has no firmware/control processing node.", sourceType: "architecture" });
-  if (nodes.length === 0)
-    warnings.push({ id: warnId(), sheetId: "sh-1", severity: "Blocker", title: "Empty Architecture", message: "No subsystem nodes defined. Generate Product Plan first.", sourceType: "architecture" });
+  const drawConns: BlueprintDrawingConnection[] = connections
+    .map((connection) => ({
+      id: connId(),
+      sourceId: drawObjs.find((object) => object.sourceId === connection.sourceNodeId)?.id || '',
+      targetId: drawObjs.find((object) => object.sourceId === connection.targetNodeId)?.id || '',
+      label: connection.name,
+      type: connection.type === 'Power'
+        ? 'power' as const
+        : connection.type === 'Mechanical'
+          ? 'mechanical' as const
+          : 'signal' as const,
+    }))
+    .filter((connection) => connection.sourceId && connection.targetId);
 
-  // Architecture review warnings
-  reviewResults.filter(r => r.category === "Architecture").forEach(r => {
-    warnings.push({ id: warnId(), sheetId: "sh-1", severity: r.severity, title: r.title, message: r.description, sourceType: r.linkedObjectType, sourceId: r.linkedObjectId });
+  if (!nodes.some((node) => {
+    const name = node.name.toLowerCase();
+    return node.category.toLowerCase() === 'input' || name.includes('touch') || name.includes('button');
+  })) {
+    warnings.push({ id: warnId(), sheetId: 'sh-1', severity: 'Warning', title: 'No Input Node', message: 'Architecture has no primary user interaction input node.', sourceType: 'architecture' });
+  }
+
+  if (!nodes.some((node) => {
+    const name = node.name.toLowerCase();
+    return node.category.toLowerCase() === 'power' || name.includes('battery') || name.includes('charger');
+  })) {
+    warnings.push({ id: warnId(), sheetId: 'sh-1', severity: 'Warning', title: 'No Power Node', message: 'Architecture has no power supply or charging source node.', sourceType: 'architecture' });
+  }
+
+  if (!nodes.some((node) => {
+    const category = node.category.toLowerCase();
+    const name = node.name.toLowerCase();
+    return category === 'firmware'
+      || category === 'processing'
+      || name.includes('firmware')
+      || name.includes('controller')
+      || name.includes('mcu');
+  })) {
+    warnings.push({ id: warnId(), sheetId: 'sh-1', severity: 'Warning', title: 'No Firmware Node', message: 'Architecture has no firmware/control processing node.', sourceType: 'architecture' });
+  }
+
+  if (nodes.length === 0) {
+    warnings.push({ id: warnId(), sheetId: 'sh-1', severity: 'Blocker', title: 'Empty Architecture', message: 'No subsystem nodes defined. Build or adopt product architecture first.', sourceType: 'architecture' });
+  }
+
+  reviewResults.filter((result) => result.category === 'Architecture').forEach((result) => {
+    warnings.push({
+      id: warnId(),
+      sheetId: 'sh-1',
+      severity: result.severity,
+      title: result.title,
+      message: result.description,
+      sourceType: result.linkedObjectType,
+      sourceId: result.linkedObjectId,
+    });
   });
 
-  // Tables
   const subsystemTable: BlueprintTable = {
-    id: tblId(), title: "Subsystem Inventory",
-    columns: ["Block", "Category", "Status", "Description"],
-    rows: nodes.map(n => [n.data?.name || "", n.data?.category || "", n.data?.status || "", (n.data?.description || "").slice(0, 80)])
+    id: tblId(),
+    title: 'Subsystem Inventory',
+    columns: ['Block', 'Category', 'Status', 'Description'],
+    rows: nodes.map((node) => [
+      node.name || '',
+      node.category || '',
+      node.status || '',
+      (node.description || '').slice(0, 80),
+    ]),
   };
 
-  const drawing: BlueprintDrawing = { viewBox: "0 0 800 500", grid: true, objects: drawObjs, connections: drawConns, dimensions: [], callouts: [] };
+  const drawing: BlueprintDrawing = {
+    viewBox: '0 0 800 500',
+    grid: true,
+    objects: drawObjs,
+    connections: drawConns,
+    dimensions: [],
+    callouts: [],
+  };
 
   return {
-    id: "sh-1", sheetNo: "01", title: "Product Architecture Blueprint", category: "product",
-    status: sheetStatus(nodes.length > 0, warnings), sourceObjects: sources, drawing,
-    tables: [subsystemTable], notes: [`${nodes.length} subsystem nodes mapped.`, `${edges.length} connections established.`],
-    warnings, disclaimer: "Generated architecture diagram. Final system review required."
+    id: 'sh-1',
+    sheetNo: '01',
+    title: 'Product Architecture Blueprint',
+    category: 'product',
+    status: sheetStatus(nodes.length > 0, warnings),
+    sourceObjects: sources,
+    drawing,
+    tables: [subsystemTable],
+    notes: [
+      `${nodes.length} subsystem nodes mapped from ${architecture.source} architecture.`,
+      `${connections.length} connections established.`,
+    ],
+    warnings,
+    disclaimer: 'Generated architecture diagram. Final system review required.',
   };
 }
 
@@ -99,41 +171,127 @@ function generateProductArchitectureSheet(p: Project, reviewResults: ReturnType<
 // SHEET 2 — Product Requirements Blueprint
 // ============================================================
 function generateProductRequirementsSheet(p: Project): BlueprintSheet {
-  const nodes = p.nodes || [];
+  const canonicalRequirements = p.requirements || [];
+  const legacyNodes = p.nodes || [];
   const warnings: BlueprintWarning[] = [];
-  const sources: BlueprintSourceRef[] = [{ type: "project", id: p.id, label: p.projectName }];
+  const sources: BlueprintSourceRef[] = [{ type: 'project', id: p.id, label: p.projectName }];
 
-  const reqRows: string[][] = [];
-  nodes.forEach(n => {
-    if (n.data?.requirements) reqRows.push([n.data.name, n.data.requirements, n.data.priority || "Medium", n.data.status || "MVP", n.data.testingNotes || "—"]);
-  });
+  const usingCanonicalRequirements = canonicalRequirements.length > 0;
+  const reqRows: string[][] = usingCanonicalRequirements
+    ? canonicalRequirements.map((requirement) => [
+        requirement.title,
+        requirement.description,
+        requirement.priority,
+        requirement.status,
+        requirement.linkedTestIds.length > 0
+          ? `${requirement.linkedTestIds.length} linked test${requirement.linkedTestIds.length === 1 ? '' : 's'}`
+          : requirement.acceptanceCriteria.join('; ') || 'No verification link',
+      ])
+    : legacyNodes
+        .filter((node) => Boolean(node.data?.requirements))
+        .map((node) => [
+          node.data.name,
+          node.data.requirements,
+          node.data.priority || 'Medium',
+          node.data.status || 'MVP',
+          node.data.testingNotes || '—',
+        ]);
 
-  if (reqRows.length === 0) warnings.push({ id: warnId(), sheetId: "sh-2", severity: "Warning", title: "No Requirements", message: "No nodes have requirements fields populated." });
+  if (reqRows.length === 0) {
+    warnings.push({
+      id: warnId(),
+      sheetId: 'sh-2',
+      severity: 'Warning',
+      title: 'No Requirements',
+      message: 'No canonical requirements or legacy requirement text is available.',
+    });
+  }
 
-  const nodesWithoutReqs = nodes.filter(n => !n.data?.requirements);
-  if (nodesWithoutReqs.length > 0) warnings.push({ id: warnId(), sheetId: "sh-2", severity: "Info", title: "Missing Requirements", message: `${nodesWithoutReqs.length} nodes lack requirements fields.` });
+  if (!usingCanonicalRequirements && legacyNodes.length > 0) {
+    const nodesWithoutReqs = legacyNodes.filter((node) => !node.data?.requirements);
+    if (nodesWithoutReqs.length > 0) {
+      warnings.push({
+        id: warnId(),
+        sheetId: 'sh-2',
+        severity: 'Info',
+        title: 'Missing Requirements',
+        message: `${nodesWithoutReqs.length} legacy nodes lack requirements fields.`,
+      });
+    }
+  }
 
-  const nodesWithRisks = nodes.filter(n => n.data?.risks);
-  if (nodesWithRisks.length === 0 && nodes.length > 0) warnings.push({ id: warnId(), sheetId: "sh-2", severity: "Warning", title: "No Risk Analysis", message: "No nodes have risk fields populated." });
+  const canonicalRiskRows = canonicalRequirements.flatMap((requirement) =>
+    requirement.risks.map((risk) => [
+      requirement.title,
+      risk,
+      'Tracked on canonical requirement',
+      requirement.priority,
+    ]),
+  );
+  const legacyRiskRows = legacyNodes
+    .filter((node) => node.data?.risks)
+    .map((node) => [
+      node.data.name,
+      node.data.risks || '',
+      node.data?.mitigation || '—',
+      node.data?.priority || '—',
+    ]);
+  const riskRows = usingCanonicalRequirements ? canonicalRiskRows : legacyRiskRows;
+
+  if (riskRows.length === 0 && reqRows.length > 0) {
+    warnings.push({
+      id: warnId(),
+      sheetId: 'sh-2',
+      severity: 'Warning',
+      title: 'No Risk Analysis',
+      message: usingCanonicalRequirements
+        ? 'Canonical requirements contain no recorded risks.'
+        : 'Legacy architecture nodes contain no risk fields.',
+    });
+  }
+
+  if (usingCanonicalRequirements) {
+    sources.push(...canonicalRequirements.map((requirement) => ({
+      type: 'requirement',
+      id: requirement.id,
+      label: requirement.title,
+    })));
+  }
 
   const drawObjs: BlueprintDrawingObject[] = [
-    { id: objId(), type: "annotation", label: p.projectName, x: 50, y: 30, width: 300, height: 40, metadata: { description: p.description || "" } },
-    { id: objId(), type: "annotation", label: `Template: ${p.templateName || "Custom"}`, x: 50, y: 80, width: 200, height: 30 },
-    { id: objId(), type: "annotation", label: `Version: ${p.version}`, x: 260, y: 80, width: 120, height: 30 },
+    { id: objId(), type: 'annotation', label: p.projectName, x: 50, y: 30, width: 300, height: 40, metadata: { description: p.description || '' } },
+    { id: objId(), type: 'annotation', label: `Template: ${p.templateName || 'Custom'}`, x: 50, y: 80, width: 200, height: 30 },
+    { id: objId(), type: 'annotation', label: `Version: ${p.version}`, x: 260, y: 80, width: 120, height: 30 },
   ];
 
-  const reqTable: BlueprintTable = { id: tblId(), title: "Requirements Matrix", columns: ["Block", "Requirement", "Priority", "Status", "Test Coverage"], rows: reqRows };
+  const reqTable: BlueprintTable = {
+    id: tblId(),
+    title: 'Requirements Matrix',
+    columns: ['Requirement', 'Description', 'Priority', 'Status', 'Verification'],
+    rows: reqRows,
+  };
   const riskTable: BlueprintTable = {
-    id: tblId(), title: "Risk Register", columns: ["Block", "Risk", "Mitigation", "Priority"],
-    rows: nodes.filter(n => n.data?.risks).map(n => [n.data.name, n.data.risks || "", n.data?.mitigation || "—", n.data?.priority || "—"])
+    id: tblId(),
+    title: 'Risk Register',
+    columns: ['Requirement / Block', 'Risk', 'Mitigation / Context', 'Priority'],
+    rows: riskRows,
   };
 
   return {
-    id: "sh-2", sheetNo: "02", title: "Product Requirements Blueprint", category: "product",
-    status: sheetStatus(reqRows.length > 0, warnings), sourceObjects: sources,
-    drawing: { ...emptyDrawing(), objects: drawObjs }, tables: [reqTable, riskTable],
-    notes: [`${reqRows.length} requirements captured.`, `${nodesWithRisks.length} risks identified.`],
-    warnings, disclaimer: "Generated requirements summary. Final review required."
+    id: 'sh-2',
+    sheetNo: '02',
+    title: 'Product Requirements Blueprint',
+    category: 'product',
+    status: sheetStatus(reqRows.length > 0, warnings),
+    sourceObjects: sources,
+    drawing: { ...emptyDrawing(), objects: drawObjs },
+    tables: [reqTable, riskTable],
+    notes: [
+      `${reqRows.length} requirements captured from ${usingCanonicalRequirements ? 'canonical requirement records' : 'legacy architecture compatibility data'}.`,
+      `${riskRows.length} risks identified.`,
+    ],
+    warnings,
+    disclaimer: 'Generated requirements summary. Final review required.',
   };
 }
 
