@@ -127,6 +127,13 @@ export function applyCanonicalPcbPlacement(
     placementStatus = 'Unplaced';
   } else if (!hasCoordinates && coordinatesTouched && !hasOwn(patch, 'placementStatus')) {
     placementStatus = 'Unplaced';
+  } else if (
+    hasCoordinates
+    && coordinatesTouched
+    && !hasOwn(patch, 'placementStatus')
+    && current.placementStatus === 'Unplaced'
+  ) {
+    placementStatus = 'Needs Review';
   }
 
   const requestedPlaced = hasOwn(patch, 'placed')
