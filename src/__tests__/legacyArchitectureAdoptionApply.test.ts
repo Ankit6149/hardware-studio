@@ -105,7 +105,18 @@ describe('reviewed legacy architecture apply', () => {
         reviewedBy: 'reviewer-1',
         reviewedAt: '2026-09-20T00:10:00.000Z',
       },
+      reconciliationBaseline: {
+        adoptionSessionId: preview.adoptionSessionId,
+        adoptedAt: '2026-09-20T00:10:00.000Z',
+        canonicalSnapshot: {
+          name: 'Integration',
+          category: 'Processing',
+          status: 'Later',
+        },
+      },
     });
+    expect(patch.architectureNodes?.[0].reconciliationBaseline?.sourceContentHash)
+      .toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
   it('requires explicit edge type/direction and adopted endpoints', async () => {
