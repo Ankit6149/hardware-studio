@@ -54,10 +54,29 @@ export interface LegacyArchitectureConnectionProposal {
   issues: LegacyArchitectureAdoptionIssue[];
 }
 
+export interface LegacyArchitectureNodeResolution {
+  name?: string;
+  category?: ProductArchitectureNode['category'];
+  status?: ProductArchitectureNode['status'];
+}
+
+export interface LegacyArchitectureConnectionResolution {
+  type?: ProductArchitectureConnection['type'];
+  direction?: ProductArchitectureConnection['direction'];
+  protocol?: string;
+  voltage?: number;
+}
+
+export interface LegacyArchitectureAdoptionResolution {
+  nodes?: Record<string, LegacyArchitectureNodeResolution>;
+  connections?: Record<string, LegacyArchitectureConnectionResolution>;
+}
+
 export interface LegacyArchitectureAdoptionPreview {
   adoptionSessionId: EntityId<'adoption-session'>;
   sourceSystem: 'hardware-studio-legacy-react-flow';
   canonicalStatePresent: boolean;
+  canApply: boolean;
   canApplyWithoutResolution: boolean;
   nodeProposals: LegacyArchitectureNodeProposal[];
   connectionProposals: LegacyArchitectureConnectionProposal[];
@@ -176,6 +195,7 @@ function edgeSemanticData(edge: CustomEdge): {
 async function previewNode(
   project: Project,
   node: CustomNode,
+  resolution?: LegacyArchitectureNodeResolution,
 ): Promise<LegacyArchitectureNodeProposal> {
   const issues: LegacyArchitectureAdoptionIssue[] = [];
   const canonicalId = await deriveEntityId(
@@ -184,7 +204,7 @@ async function previewNode(
     `legacy-architecture-node:${node.id}`,
   );
 
-  const name = node.data?.name?.trim() || '';
+  const name = resolution?.name?.trim() || node.data?.name?.trim() || '';
   if (!name) {
     issues.push({
       code: 'legacy-node-name-missing',
@@ -195,7 +215,7 @@ async function previewNode(
     });
   }
 
-  const category = CATEGORY_MAP[node.data?.category || ''];
+  const category = resolution?.category || CATEGORY_MAP[node.data?.category || ''];
   if (!category) {
     issues.push({
       code: 'legacy-node-category-unmapped',
@@ -206,7 +226,7 @@ async function previewNode(
     });
   }
 
-  const status = STATUS_MAP[node.data?.status || ''];
+  const status = resolution?.status || STATUS_MAP[node.data?.status || ''];
   if (!status) {
     issues.push({
       code: 'legacy-node-status-unmapped',
@@ -276,6 +296,7 @@ async function previewConnection(
   project: Project,
   edge: CustomEdge,
   nodeIdMap: ReadonlyMap<string, EntityId<'architecture-node'>>,
+  resolution?: LegacyArchitectureConnectionResolution,
 ): Promise<LegacyArchitectureConnectionProposal> {
   const issues: LegacyArchitectureAdoptionIssue[] = [];
   const canonicalId = await deriveEntityId(
@@ -297,7 +318,13 @@ async function previewConnection(
     });
   }
 
-  const semantic = edgeSemanticData(edge);
+  const sourceSemantic = edgeSemanticData(edge);
+  const semantic = {
+    type: resolution?.type || sourceSemantic.type,
+    direction: resolution?.direction || sourceSemantic.direction,
+    protocol: resolution?.protocol?.trim() || sourceSemantic.protocol,
+    voltage: finite(resolution?.voltage) ? resolution.voltage : sourceSemantic.voltage,
+  };
   if (!semantic.type) {
     issues.push({
       code: 'legacy-edge-semantic-type-unresolved',
@@ -352,6 +379,7 @@ async function previewConnection(
 
 export async function previewLegacyArchitectureAdoption(
   project: Project,
+  resolutions: LegacyArchitectureAdoptionResolution = {},
 ): Promise<LegacyArchitectureAdoptionPreview> {
   const adoptionSessionId = await deriveEntityId(
     'adoption-session',
@@ -396,7 +424,7 @@ export async function previewLegacyArchitectureAdoption(
   }
 
   const nodeProposals = await Promise.all(
-    candidateNodes.map((node) => previewNode(project, node)),
+    candidateNodes.map((node) => previewNode(project, node, resolutions.nodes?.[node.id])),
   );
 
   const nodeIdMap = new Map<string, EntityId<'architecture-node'>>();
@@ -407,7 +435,12 @@ export async function previewLegacyArchitectureAdoption(
   }
 
   const connectionProposals = await Promise.all(
-    legacyEdges.map((edge) => previewConnection(project, edge, nodeIdMap)),
+    legacyEdges.map((edge) => previewConnection(
+      project,
+      edge,
+      nodeIdMap,
+      resolutions.connections?.[edge.id],
+    )),
   );
 
   const allIssues = [
@@ -416,15 +449,21 @@ export async function previewLegacyArchitectureAdoption(
     ...connectionProposals.flatMap((proposal) => proposal.issues),
   ];
 
+  const canApply = !canonicalStatePresent
+    && nodeProposals.length > 0
+    && nodeProposals.every((proposal) => proposal.canAdopt)
+    && connectionProposals.every((proposal) => proposal.canAdopt)
+    && allIssues.every((issue) => issue.severity !== 'blocker');
+
+  const usedResolution = Object.keys(resolutions.nodes || {}).length > 0
+    || Object.keys(resolutions.connections || {}).length > 0;
+
   return {
     adoptionSessionId,
     sourceSystem: 'hardware-studio-legacy-react-flow',
     canonicalStatePresent,
-    canApplyWithoutResolution: !canonicalStatePresent
-      && nodeProposals.length > 0
-      && nodeProposals.every((proposal) => proposal.canAdopt)
-      && connectionProposals.every((proposal) => proposal.canAdopt)
-      && allIssues.every((issue) => issue.severity !== 'blocker'),
+    canApply,
+    canApplyWithoutResolution: canApply && !usedResolution,
     nodeProposals,
     connectionProposals,
     issues: allIssues,
