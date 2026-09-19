@@ -1,4 +1,5 @@
 import { Project } from '../types';
+import { sourceIdentityKey, validateCanonicalSourceMapping } from '../core/domain/adoption';
 import {
   CURRENT_SCHEMA_VERSION,
   migrateProjectSchema as migrateBaseProjectSchema,
@@ -59,6 +60,7 @@ export function serializeProject(project: Project): string {
     requirements: project.requirements || [],
     architectureNodes: project.architectureNodes || [],
     architectureConnections: project.architectureConnections || [],
+    sourceMappings: project.sourceMappings || [],
     mechanicalObjects: project.mechanicalObjects || [],
     mechanicalDimensions: project.mechanicalDimensions || [],
     mechanicalBodies: project.mechanicalBodies || [],
@@ -102,6 +104,7 @@ export function migrateProjectSchema(raw: unknown): Project {
 
   const pRecord = project as unknown as Record<string, unknown>;
   if (!pRecord.architectureConnections) pRecord.architectureConnections = [];
+  if (!pRecord.sourceMappings) pRecord.sourceMappings = [];
   if (!pRecord.mechanicalDimensions) pRecord.mechanicalDimensions = [];
   if (!pRecord.mechanicalBodies) pRecord.mechanicalBodies = [];
   if (!pRecord.firmwareStates) pRecord.firmwareStates = [];
@@ -168,6 +171,32 @@ export function validateProjectIntegrity(project: Project): ProjectIntegrityIssu
         objectId: conn.id,
         message: `Architecture connection "${conn.id}" references missing target node: ${conn.targetNodeId}`
       });
+    }
+  }
+
+  // Validate durable source identity mappings
+  const mappingTargets = new Map<string, string>();
+  for (const mapping of project.sourceMappings || []) {
+    for (const issue of validateCanonicalSourceMapping(mapping)) {
+      issues.push({
+        severity: 'Error',
+        domain: 'Adoption',
+        objectId: mapping.id,
+        message: issue.message,
+      });
+    }
+
+    const sourceKey = sourceIdentityKey(mapping.source);
+    const existingTarget = mappingTargets.get(sourceKey);
+    if (existingTarget && existingTarget !== mapping.canonicalEntityId) {
+      issues.push({
+        severity: 'Error',
+        domain: 'Adoption',
+        objectId: mapping.id,
+        message: `Source identity "${sourceKey}" maps to more than one canonical entity.`,
+      });
+    } else {
+      mappingTargets.set(sourceKey, mapping.canonicalEntityId);
     }
   }
 
