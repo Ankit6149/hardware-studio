@@ -1,5 +1,6 @@
 import { Project } from '../types';
 import { runDesignReview } from './designReview';
+import { resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 
 export interface ReadinessReport {
   overallScore: number;
@@ -126,8 +127,7 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   // 5. COMPONENT PLACEMENT
   let compScore = 100;
   if (boardComponents.length > 0) {
-    // Zero is a valid engineering coordinate. Only null/undefined means unplaced.
-    const unplaced = boardComponents.filter((component) => component.placementX == null || component.placementY == null);
+    const unplaced = boardComponents.filter((component) => !resolvePcbPlacement(component).placed);
     if (unplaced.length > 0) {
       warnings.push(`${unplaced.length} SMT footprints have no placement coordinates.`);
       compScore -= Math.min(60, unplaced.length * 15);
