@@ -3,6 +3,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { BoardDesignerUIState } from './boardInteraction';
 import { Component, Search, GripVertical, Lock } from 'lucide-react';
 import { getFootprint } from '../../lib/footprints';
+import { resolvePcbPlacement } from '../../lib/pcb/pcbPlacementAuthority';
 
 interface BoardComponentBinProps {
   viewState: BoardDesignerUIState;
@@ -15,8 +16,8 @@ export const BoardComponentBin: React.FC<BoardComponentBinProps> = ({ viewState,
   const [search, setSearch] = useState('');
   const [showPlaced, setShowPlaced] = useState(false);
 
-  const unplaced = useMemo(() => boardComponents.filter((component) => component.placementX == null || component.placementY == null), [boardComponents]);
-  const placed = useMemo(() => boardComponents.filter((component) => component.placementX != null && component.placementY != null), [boardComponents]);
+  const unplaced = useMemo(() => boardComponents.filter((component) => !resolvePcbPlacement(component).placed), [boardComponents]);
+  const placed = useMemo(() => boardComponents.filter((component) => resolvePcbPlacement(component).placed), [boardComponents]);
 
   const filtered = useMemo(() => {
     const list = showPlaced ? placed : unplaced;
@@ -29,9 +30,10 @@ export const BoardComponentBin: React.FC<BoardComponentBinProps> = ({ viewState,
   }, [placed, search, showPlaced, unplaced]);
 
   const getStatus = (component: typeof boardComponents[0]) => {
-    if (component.lockedPlacement) return { text: 'Locked', cls: 'bg-amber-50 text-amber-800 border-amber-200' };
-    if (component.placementX == null || component.placementY == null) return { text: 'Unplaced', cls: 'bg-slate-100 text-slate-600 border-slate-200' };
-    if (component.placementStatus === 'Needs Review') return { text: 'Review', cls: 'bg-amber-50 text-amber-800 border-amber-200' };
+    const placement = resolvePcbPlacement(component);
+    if (placement.locked) return { text: 'Locked', cls: 'bg-amber-50 text-amber-800 border-amber-200' };
+    if (!placement.placed) return { text: 'Unplaced', cls: 'bg-slate-100 text-slate-600 border-slate-200' };
+    if (placement.placementStatus === 'Needs Review') return { text: 'Review', cls: 'bg-amber-50 text-amber-800 border-amber-200' };
     const footprint = getFootprint(component.footprint);
     if (footprint.name === 'CUSTOM_RECT' && component.footprint !== 'CUSTOM_RECT') return { text: 'No footprint', cls: 'bg-red-50 text-red-700 border-red-200' };
     return { text: 'Placed', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
@@ -86,7 +88,7 @@ export const BoardComponentBin: React.FC<BoardComponentBinProps> = ({ viewState,
                 <span className="max-w-[110px] truncate text-[9px] text-slate-500">{component.componentName}</span>
               </button>
               <span className={`rounded border px-1 py-0.5 text-[8px] font-semibold ${status.cls}`}>{status.text}</span>
-              {component.lockedPlacement && <Lock className="h-3 w-3 text-amber-600" aria-hidden="true" />}
+              {resolvePcbPlacement(component).locked && <Lock className="h-3 w-3 text-amber-600" aria-hidden="true" />}
             </div>
           );
         })}
