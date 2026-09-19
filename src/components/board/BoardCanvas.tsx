@@ -15,6 +15,7 @@ import {
   validateRouteStartAnchor,
   validateRouteFinishAnchor,
 } from '../../lib/pcb/pcbRoutingEngine';
+import { resolvePcbPlacement } from '../../lib/pcb/pcbPlacementAuthority';
 import { useFeedback } from '../feedback/FeedbackProvider';
 
 interface BoardCanvasProps {
@@ -177,8 +178,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     const point = screenToBoard(event.clientX, event.clientY);
     updatePCBPlacement(componentId, {
       boardId,
-      placementX: point.x,
-      placementY: point.y,
+      placed: true,
+      xMm: point.x,
+      yMm: point.y,
       placementStatus: 'Needs Review',
       side: 'Top',
     });
@@ -283,12 +285,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
 
     if (activeTool === 'select' || activeTool === 'place-component') {
       for (const component of filteredComponents) {
-        if (component.placementX == null || component.placementY == null) continue;
+        const placement = resolvePcbPlacement(component);
+        if (!placement.placed || placement.xMm === undefined || placement.yMm === undefined) continue;
         const footprint = getFootprint(component.footprint);
         const halfWidth = footprint.courtyardWidthMm / 2;
         const halfHeight = footprint.courtyardHeightMm / 2;
-        if (Math.abs(point.x - component.placementX) <= halfWidth
-          && Math.abs(point.y - component.placementY) <= halfHeight) {
+        if (Math.abs(point.x - placement.xMm) <= halfWidth
+          && Math.abs(point.y - placement.yMm) <= halfHeight) {
           onViewStateChange({
             selectedComponentId: component.id,
             selectedTraceId: null,
@@ -388,8 +391,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
       && selectedObjectType === 'component'
       && event.buttons === 1) {
       updatePCBPlacement(selectedObjectId, {
-        placementX: point.x,
-        placementY: point.y,
+        placed: true,
+        xMm: point.x,
+        yMm: point.y,
         placementStatus: 'Placed',
       });
     }
@@ -494,8 +498,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     if (event.key === 'r' && selectedObjectId && selectedObjectType === 'component') {
       const component = filteredComponents.find((candidate) => candidate.id === selectedObjectId);
       if (component) {
+        const placement = resolvePcbPlacement(component);
         updatePCBPlacement(selectedObjectId, {
-          rotationDeg: ((component.rotationDeg || 0) + 90) % 360,
+          rotationDeg: (placement.rotationDeg + 90) % 360,
         });
       }
     }
@@ -503,8 +508,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     if (event.key === 'f' && selectedObjectId && selectedObjectType === 'component') {
       const component = filteredComponents.find((candidate) => candidate.id === selectedObjectId);
       if (component) {
+        const placement = resolvePcbPlacement(component);
         updatePCBPlacement(selectedObjectId, {
-          side: component.side === 'Bottom' ? 'Top' : 'Bottom',
+          side: placement.side === 'Bottom' ? 'Top' : 'Bottom',
         });
       }
     }
@@ -521,8 +527,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     if (event.key === 'Delete' && selectedObjectId) {
       if (selectedObjectType === 'component') {
         updatePCBPlacement(selectedObjectId, {
-          placementX: undefined,
-          placementY: undefined,
+          placed: false,
+          xMm: undefined,
+          yMm: undefined,
           placementStatus: 'Unplaced',
         });
       } else if (selectedObjectType === 'trace') {
@@ -548,14 +555,17 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
       && selectedObjectId
       && selectedObjectType === 'component') {
       const component = filteredComponents.find((candidate) => candidate.id === selectedObjectId);
-      if (component && component.placementX != null && component.placementY != null) {
-        const dx = event.key === 'ArrowRight' ? nudge : event.key === 'ArrowLeft' ? -nudge : 0;
-        const dy = event.key === 'ArrowDown' ? nudge : event.key === 'ArrowUp' ? -nudge : 0;
-        updatePCBPlacement(selectedObjectId, {
-          placementX: component.placementX + dx,
-          placementY: component.placementY + dy,
-        });
-        event.preventDefault();
+      if (component) {
+        const placement = resolvePcbPlacement(component);
+        if (placement.placed && placement.xMm !== undefined && placement.yMm !== undefined) {
+          const dx = event.key === 'ArrowRight' ? nudge : event.key === 'ArrowLeft' ? -nudge : 0;
+          const dy = event.key === 'ArrowDown' ? nudge : event.key === 'ArrowUp' ? -nudge : 0;
+          updatePCBPlacement(selectedObjectId, {
+            xMm: placement.xMm + dx,
+            yMm: placement.yMm + dy,
+          });
+          event.preventDefault();
+        }
       }
     }
   }, [
@@ -857,18 +867,19 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
         })}
 
         {filteredComponents.map((component) => {
-          if (component.placementX == null || component.placementY == null) return null;
+          const placement = resolvePcbPlacement(component);
+          if (!placement.placed || placement.xMm === undefined || placement.yMm === undefined) return null;
           const footprint = getFootprint(component.footprint);
           const isSelected = selectedObjectId === component.id;
           const isNetHighlighted = selectedNetName && (padNetAssignments || []).some(
             (assignment) => assignment.componentId === component.id && assignment.netName === selectedNetName,
           );
-          const rotation = component.rotationDeg || 0;
+          const rotation = placement.rotationDeg;
 
           return (
             <g
               key={component.id}
-              transform={`translate(${bx(component.placementX)}, ${by(component.placementY)}) rotate(${rotation})`}
+              transform={`translate(${bx(placement.xMm)}, ${by(placement.yMm)}) rotate(${rotation})`}
               onClick={(event) => {
                 event.stopPropagation();
                 onViewStateChange({
@@ -889,8 +900,8 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
                 fill="none"
                 stroke={isSelected ? '#10b981' : '#64748b'}
                 strokeWidth={0.75}
-                strokeDasharray={component.side === 'Bottom' ? '2,2' : isSelected ? 'none' : '2,1'}
-                opacity={component.side === 'Bottom' ? 0.35 : 0.6}
+                strokeDasharray={placement.side === 'Bottom' ? '2,2' : isSelected ? 'none' : '2,1'}
+                opacity={placement.side === 'Bottom' ? 0.35 : 0.6}
               />
               <rect
                 x={-bs(footprint.bodyWidthMm / 2)}
@@ -900,11 +911,11 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
                 fill={isSelected ? '#dcfce7' : isNetHighlighted ? '#e0f2fe' : '#f1f5f9'}
                 stroke={isSelected ? '#059669' : isNetHighlighted ? '#0284c7' : '#334155'}
                 strokeWidth={isSelected ? 2 : 1.2}
-                strokeDasharray={component.side === 'Bottom' ? '3,3' : 'none'}
+                strokeDasharray={placement.side === 'Bottom' ? '3,3' : 'none'}
                 rx={bs(0.2)}
               />
               {footprint.pads.map((footprintPad, index) => {
-                const padXMm = component.side === 'Bottom' ? -footprintPad.xMm : footprintPad.xMm;
+                const padXMm = placement.side === 'Bottom' ? -footprintPad.xMm : footprintPad.xMm;
                 return (
                   <g key={index}>
                     <rect
@@ -912,10 +923,10 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
                       y={bs(footprintPad.yMm) - bs(footprintPad.heightMm / 2)}
                       width={bs(footprintPad.widthMm)}
                       height={bs(footprintPad.heightMm)}
-                      fill={isNetHighlighted ? '#38bdf8' : component.side === 'Bottom' ? '#60a5fa' : '#f59e0b'}
+                      fill={isNetHighlighted ? '#38bdf8' : placement.side === 'Bottom' ? '#60a5fa' : '#f59e0b'}
                       stroke="#d97706"
                       strokeWidth={0.5}
-                      opacity={component.side === 'Bottom' ? 0.8 : 1}
+                      opacity={placement.side === 'Bottom' ? 0.8 : 1}
                       rx={bs(0.05)}
                     />
                     {(component.footprint.includes('DIP') || component.footprint.includes('HEADER') || component.footprint.includes('USB')) && (
@@ -930,7 +941,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
                 );
               })}
               <circle
-                cx={bs((component.side === 'Bottom' ? -1 : 1) * (footprint.pads[0]?.xMm || -footprint.bodyWidthMm / 2 + 0.3))}
+                cx={bs((placement.side === 'Bottom' ? -1 : 1) * (footprint.pads[0]?.xMm || -footprint.bodyWidthMm / 2 + 0.3))}
                 cy={bs(footprint.pads[0]?.yMm || -footprint.bodyHeightMm / 2 + 0.3)}
                 r={bs(0.2)}
                 fill="#dc2626"
@@ -971,11 +982,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
           .filter((result) => result.linkedObjectType === 'component')
           .map((result, index) => {
             const component = filteredComponents.find((candidate) => candidate.id === result.linkedObjectId);
-            if (!component || component.placementX == null || component.placementY == null) return null;
+            if (!component) return null;
+            const placement = resolvePcbPlacement(component);
+            if (!placement.placed || placement.xMm === undefined || placement.yMm === undefined) return null;
             return (
               <g key={`${result.id}-${index}`} pointerEvents="none">
-                <circle cx={bx(component.placementX)} cy={by(component.placementY)} r={8} fill="none" stroke="#dc2626" strokeWidth={1.5} />
-                <text x={bx(component.placementX) + 10} y={by(component.placementY) - 8} fill="#b91c1c" fontSize={8} fontWeight="700">
+                <circle cx={bx(placement.xMm)} cy={by(placement.yMm)} r={8} fill="none" stroke="#dc2626" strokeWidth={1.5} />
+                <text x={bx(placement.xMm) + 10} y={by(placement.yMm) - 8} fill="#b91c1c" fontSize={8} fontWeight="700">
                   DRC
                 </text>
               </g>
