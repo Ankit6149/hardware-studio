@@ -96,6 +96,35 @@ function findConnectionResolution(
   return resolutions.find((resolution) => resolution.sourceEdgeId === sourceEdgeId);
 }
 
+function nodeBaselineSnapshot(
+  node: ProductArchitectureNode,
+): Record<string, string | number | boolean | null | undefined> {
+  return {
+    name: node.name,
+    category: node.category,
+    description: node.description,
+    x: node.x,
+    y: node.y,
+    width: node.width,
+    height: node.height,
+    status: node.status,
+  };
+}
+
+function connectionBaselineSnapshot(
+  connection: ProductArchitectureConnection,
+): Record<string, string | number | boolean | null | undefined> {
+  return {
+    sourceNodeId: connection.sourceNodeId,
+    targetNodeId: connection.targetNodeId,
+    name: connection.name,
+    type: connection.type,
+    protocol: connection.protocol,
+    voltage: connection.voltage,
+    direction: connection.direction,
+  };
+}
+
 function importedProvenance(
   review: LegacyArchitectureReviewMetadata,
   source: ProductArchitectureNode['sourceIdentity'] | ProductArchitectureConnection['sourceIdentity'],
@@ -149,26 +178,35 @@ function cloneNodeWithResolution(
   }
 
   const sourceIdentity = proposal.sourceIdentity;
-  return {
-    node: {
-      id: proposal.canonicalId,
-      name,
-      category,
-      description: base?.description || sourceNode.data?.description?.trim() || '',
-      x: base?.x ?? sourceNode.position?.x ?? 0,
-      y: base?.y ?? sourceNode.position?.y ?? 0,
-      width: base?.width ?? (typeof sourceNode.width === 'number' && sourceNode.width > 0 ? sourceNode.width : 160),
-      height: base?.height ?? (typeof sourceNode.height === 'number' && sourceNode.height > 0 ? sourceNode.height : 72),
-      linkedRequirementIds: [],
-      linkedCircuitIds: [],
-      linkedComponentIds: [],
-      linkedFirmwareModuleIds: [],
-      linkedTestIds: [],
-      status,
-      sourceIdentity,
-      provenance: importedProvenance(review, sourceIdentity),
-    },
+  const node: ProductArchitectureNode = {
+    id: proposal.canonicalId,
+    name,
+    category,
+    description: base?.description || sourceNode.data?.description?.trim() || '',
+    x: base?.x ?? sourceNode.position?.x ?? 0,
+    y: base?.y ?? sourceNode.position?.y ?? 0,
+    width: base?.width ?? (typeof sourceNode.width === 'number' && sourceNode.width > 0 ? sourceNode.width : 160),
+    height: base?.height ?? (typeof sourceNode.height === 'number' && sourceNode.height > 0 ? sourceNode.height : 72),
+    linkedRequirementIds: [],
+    linkedCircuitIds: [],
+    linkedComponentIds: [],
+    linkedFirmwareModuleIds: [],
+    linkedTestIds: [],
+    status,
+    sourceIdentity,
+    provenance: importedProvenance(review, sourceIdentity),
   };
+
+  if (sourceIdentity.contentHash) {
+    node.reconciliationBaseline = {
+      adoptionSessionId: preview.adoptionSessionId,
+      sourceContentHash: sourceIdentity.contentHash,
+      adoptedAt: review.reviewedAt,
+      canonicalSnapshot: nodeBaselineSnapshot(node),
+    };
+  }
+
+  return { node };
 }
 
 function cloneConnectionWithResolution(
@@ -221,22 +259,31 @@ function cloneConnectionWithResolution(
   }
 
   const sourceIdentity = proposal.sourceIdentity;
-  return {
-    connection: {
-      id: proposal.canonicalId,
-      sourceNodeId,
-      targetNodeId,
-      name: resolution.name?.trim()
-        || base?.name
-        || (typeof sourceEdge.label === 'string' ? sourceEdge.label.trim() || undefined : undefined),
-      type,
-      protocol: resolution.protocol?.trim() || base?.protocol,
-      voltage: Number.isFinite(resolution.voltage) ? resolution.voltage : base?.voltage,
-      direction,
-      sourceIdentity,
-      provenance: importedProvenance(review, sourceIdentity),
-    },
+  const connection: ProductArchitectureConnection = {
+    id: proposal.canonicalId,
+    sourceNodeId,
+    targetNodeId,
+    name: resolution.name?.trim()
+      || base?.name
+      || (typeof sourceEdge.label === 'string' ? sourceEdge.label.trim() || undefined : undefined),
+    type,
+    protocol: resolution.protocol?.trim() || base?.protocol,
+    voltage: Number.isFinite(resolution.voltage) ? resolution.voltage : base?.voltage,
+    direction,
+    sourceIdentity,
+    provenance: importedProvenance(review, sourceIdentity),
   };
+
+  if (sourceIdentity.contentHash) {
+    connection.reconciliationBaseline = {
+      adoptionSessionId: preview.adoptionSessionId,
+      sourceContentHash: sourceIdentity.contentHash,
+      adoptedAt: review.reviewedAt,
+      canonicalSnapshot: connectionBaselineSnapshot(connection),
+    };
+  }
+
+  return { connection };
 }
 
 export function buildLegacyArchitectureAdoptionApplyPlan(
