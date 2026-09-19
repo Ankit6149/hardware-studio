@@ -588,6 +588,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       requirements: state.requirements || [],
       architectureNodes: state.architectureNodes || [],
       architectureConnections: state.architectureConnections || [],
+      sourceMappings: state.sourceMappings || [],
       mechanicalObjects: state.mechanicalObjects || [],
       mechanicalDimensions: state.mechanicalDimensions || [],
       mechanicalBodies: state.mechanicalBodies || [],
@@ -3543,7 +3544,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
-        'requirements', 'architectureNodes', 'architectureConnections', 'mechanicalObjects', 'mechanicalDimensions',
+        'requirements', 'architectureNodes', 'architectureConnections', 'sourceMappings', 'mechanicalObjects', 'mechanicalDimensions',
         'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
       ];
 
@@ -3580,7 +3581,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
-        'requirements', 'architectureNodes', 'architectureConnections', 'mechanicalObjects', 'mechanicalDimensions',
+        'requirements', 'architectureNodes', 'architectureConnections', 'sourceMappings', 'mechanicalObjects', 'mechanicalDimensions',
         'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
       ];
 
@@ -3633,7 +3634,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
-        'requirements', 'architectureNodes', 'architectureConnections', 'mechanicalObjects', 'mechanicalDimensions',
+        'requirements', 'architectureNodes', 'architectureConnections', 'sourceMappings', 'mechanicalObjects', 'mechanicalDimensions',
         'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
       ];
 
