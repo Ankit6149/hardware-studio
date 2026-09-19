@@ -1,6 +1,7 @@
 // pcbRoutingEngine.ts — PCB routing anchors and connectivity
 import { BoardComponent, Trace, Via, PadNetAssignment, Project } from '../../types';
 import { getComponentPads, getNearestPad } from '../../components/board/boardGeometry';
+import { resolvePcbPlacement } from './pcbPlacementAuthority';
 
 export type PCBAnchorType = 'pad' | 'via' | 'trace-end' | 'dangling';
 
@@ -46,7 +47,7 @@ export function resolvePCBAnchor(
 
   const activeComps = (boardComponents || []).filter((component) => component.boardId === activeBoardId);
   const allPads = activeComps.flatMap((component) => {
-    if (component.placementX == null || component.placementY == null) return [];
+    if (!resolvePcbPlacement(component).placed) return [];
     return getComponentPads(component).map((pad) => ({
       ...pad,
       componentId: component.id,

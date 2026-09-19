@@ -1,4 +1,6 @@
 import { Project, ReviewResult } from '../types';
+import { isPointInsideOutline } from '../components/board/boardGeometry';
+import { resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 
 export const runDesignReview = (project: Project): ReviewResult[] => {
   const results: ReviewResult[] = [];
@@ -408,23 +410,29 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
     }
   });
 
-  // Check component placements inside board boundaries
+  // Check component placements against the real board outline.
   components.forEach(c => {
-    if (c.placementX !== undefined && c.placementY !== undefined) {
-      const outOfBounds = c.placementX < 50 || c.placementX > 550 || c.placementY < 40 || c.placementY > 400;
-      if (outOfBounds && !c.referenceDesignator.toUpperCase().startsWith("J")) {
-        results.push({
-          id: `rev_drc_bound_${c.id}`,
-          category: "PCB DRC",
-          severity: "Error",
-          title: `Footprint Outside Board Bounds: ${c.referenceDesignator}`,
-          description: `SMT footprint package [${c.referenceDesignator}] coordinates fall outside the physical board outline boundaries.`,
-          linkedObjectType: "component",
-          linkedObjectId: c.id,
-          suggestedFix: "Drag the component inside the green PCB board boundary outline.",
-          status: "Open"
-        });
-      }
+    const placement = resolvePcbPlacement(c);
+    const outline = boardOutlines.find((candidate) => candidate.boardId === c.boardId);
+    if (
+      placement.placed
+      && placement.xMm !== undefined
+      && placement.yMm !== undefined
+      && outline
+      && !isPointInsideOutline({ x: placement.xMm, y: placement.yMm }, outline)
+      && !c.referenceDesignator.toUpperCase().startsWith("J")
+    ) {
+      results.push({
+        id: `rev_drc_bound_${c.id}`,
+        category: "PCB DRC",
+        severity: "Error",
+        title: `Footprint Outside Board Bounds: ${c.referenceDesignator}`,
+        description: `SMT footprint package [${c.referenceDesignator}] coordinates fall outside the physical board outline boundaries.`,
+        linkedObjectType: "component",
+        linkedObjectId: c.id,
+        suggestedFix: "Move the component inside the selected PCB board outline.",
+        status: "Open"
+      });
     }
   });
 
@@ -712,48 +720,43 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
     });
   }
 
-  // Component placements missing XY / unknown side check
+  // Component placement completeness. Zero is a valid physical coordinate.
   components.forEach(c => {
-    if (c.placementX === undefined || c.placementY === undefined || c.placementX === 0 || c.placementY === 0) {
+    const placement = resolvePcbPlacement(c);
+    if (!placement.placed || placement.xMm === undefined || placement.yMm === undefined) {
       results.push({
         id: `rev_drc_placement_missing_${c.id}`,
         category: "PCB DRC",
         severity: "Error",
         title: `Component Not Placed: ${c.referenceDesignator}`,
-        description: `SMT component [${c.referenceDesignator}] is defined in the BOM but lacks physical board coordinates.`,
+        description: `SMT component [${c.referenceDesignator}] is defined in the BOM but lacks authoritative physical board coordinates.`,
         linkedObjectType: "component",
         linkedObjectId: c.id,
-        suggestedFix: "Open the Blueprint Editor to drag/place the footprint or click Auto-place.",
+        suggestedFix: "Place the footprint in the PCB workbench or run an explicit reviewed auto-placement.",
         status: "Open",
         autoFixAvailable: true
       });
     }
-    if (!c.side || c.side === 'Unknown') {
-      results.push({
-        id: `rev_drc_side_unknown_${c.id}`,
-        category: "PCB DRC",
-        severity: "Warning",
-        title: `Unknown Solder Side: ${c.referenceDesignator}`,
-        description: `Mounting side is not designated ('Top' or 'Bottom') for component [${c.referenceDesignator}].`,
-        linkedObjectType: "component",
-        linkedObjectId: c.id,
-        suggestedFix: "Select Top or Bottom layer placement side in Properties Inspector.",
-        status: "Open"
-      });
-    }
   });
 
-  // Component overlapping check (using 15px proximity threshold)
+  // Legacy coarse proximity review. Canonical PCB DRC remains the stronger physical check.
   for (let i = 0; i < components.length; i++) {
     for (let j = i + 1; j < components.length; j++) {
       const c1 = components[i];
       const c2 = components[j];
-      if (c1.placementX !== undefined && c1.placementY !== undefined && 
-          c2.placementX !== undefined && c2.placementY !== undefined &&
-          c1.placementX !== 0 && c1.placementY !== 0 &&
-          c2.placementX !== 0 && c2.placementY !== 0) {
-        const dx = c1.placementX - c2.placementX;
-        const dy = c1.placementY - c2.placementY;
+      const p1 = resolvePcbPlacement(c1);
+      const p2 = resolvePcbPlacement(c2);
+      if (
+        p1.placed
+        && p2.placed
+        && p1.xMm !== undefined
+        && p1.yMm !== undefined
+        && p2.xMm !== undefined
+        && p2.yMm !== undefined
+        && p1.side === p2.side
+      ) {
+        const dx = p1.xMm - p2.xMm;
+        const dy = p1.yMm - p2.yMm;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < 15) {
           results.push({
@@ -761,10 +764,10 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
             category: "PCB DRC",
             severity: "Error",
             title: `Component Collision: ${c1.referenceDesignator} & ${c2.referenceDesignator}`,
-            description: `Layout collision detected. Footprints of ${c1.referenceDesignator} and ${c2.referenceDesignator} are overlapping.`,
+            description: `Layout collision detected. Footprints of ${c1.referenceDesignator} and ${c2.referenceDesignator} are too close in the coarse design review.`,
             linkedObjectType: "component",
             linkedObjectId: c1.id,
-            suggestedFix: "Reposition components on the canvas to maintain spacing clearance.",
+            suggestedFix: "Reposition components and run PCB DRC for authoritative courtyard checks.",
             status: "Open"
           });
         }

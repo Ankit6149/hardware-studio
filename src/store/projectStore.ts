@@ -55,12 +55,15 @@ import {
 import { ElectronicComponentDefinition } from '../lib/components/componentLibrary';
 import { runDesignReview } from '../lib/designReview';
 import { generateBlueprintPack as generateBlueprintPackFn } from '../lib/blueprintGenerator';
-import { 
+import {
   migrateProjectSchema,
   normalizeProjectComponent,
-  syncLegacyPlacementFields,
-  syncNestedPcbFields
 } from '../lib/projectMigrations';
+import {
+  applyCanonicalPcbPlacement,
+  stripLegacyPcbPlacementPatch,
+  type PcbPlacementPatch,
+} from '../lib/pcb/pcbPlacementAuthority';
 import {
   serializeProject,
   deserializeProject,
@@ -148,7 +151,7 @@ interface ProjectState extends Project {
 
   addBoardComponent: (item: Partial<Omit<BoardComponent, 'id'>> & { id?: string }) => void;
   updateBoardComponent: (id: string, data: Partial<BoardComponent>) => void;
-  updatePCBPlacement: (componentId: string, placement: Partial<BoardComponent>) => void;
+  updatePCBPlacement: (componentId: string, placement: PcbPlacementPatch & { boardId?: string }) => void;
   deleteBoardComponent: (id: string) => void;
 
   addNet: (item: Partial<Omit<NetItem, 'id'>> & { netName: string }) => void;
@@ -1398,7 +1401,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
 
     addBoardComponent: (item) => {
       const id = item.id || `comp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-      const newComp: BoardComponent = {
+      const cleanItem = stripLegacyPcbPlacementPatch(item);
+      const baseComp: BoardComponent = {
         boardId: item.boardId || get().activeBoardId || '',
         referenceDesignator: 'U1',
         componentName: 'Component',
@@ -1409,19 +1413,33 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         value: '',
         partNumber: '',
         notes: '',
-        side: 'Top',
-        placementStatus: 'Unplaced',
         quantity: 1,
-        ...item,
+        pcb: {
+          placed: false,
+          xMm: undefined,
+          yMm: undefined,
+          rotationDeg: 0,
+          side: 'Top',
+          locked: false,
+          placementStatus: 'Unplaced',
+        },
+        ...cleanItem,
         id
       };
+      const newComp = applyCanonicalPcbPlacement(baseComp, item.pcb || {});
       const boardComponents = [...(get().boardComponents || []), newComp];
       persistChange({ boardComponents });
       get().markDerivedArtifactsStale(`Add board component ${newComp.referenceDesignator}`);
     },
 
     updateBoardComponent: (id, data) => {
-      const boardComponents = (get().boardComponents || []).map(c => c.id === id ? { ...c, ...data } : c);
+      const cleanData = stripLegacyPcbPlacementPatch(data);
+      const boardComponents = (get().boardComponents || []).map((component) => {
+        if (component.id !== id) return component;
+        const { pcb, ...nonPlacementData } = cleanData;
+        const updated = { ...component, ...nonPlacementData };
+        return pcb ? applyCanonicalPcbPlacement(updated, pcb) : updated;
+      });
       persistChange({ boardComponents });
       get().markDerivedArtifactsStale(`Update component ${id}`);
     },
@@ -1431,38 +1449,29 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const currentComp = (state.boardComponents || []).find(c => c.id === componentId);
       if (!currentComp) return;
 
-      const targetX = placement.placementX ?? placement.pcb?.xMm ?? currentComp.placementX ?? currentComp.pcb?.xMm;
-      const targetY = placement.placementY ?? placement.pcb?.yMm ?? currentComp.placementY ?? currentComp.pcb?.yMm;
-      const targetSide = placement.side ?? placement.pcb?.side ?? currentComp.side ?? 'Top';
-      const targetStatus = placement.placementStatus ?? placement.pcb?.placementStatus ?? currentComp.placementStatus ?? 'Unplaced';
-      const hasCoordinates = targetX != null && targetY != null;
-      const placed = placement.pcb?.placed ?? (targetStatus !== 'Unplaced' && hasCoordinates);
+      const { boardId, ...placementPatch } = placement;
+      const componentWithOwnership = boardId !== undefined
+        ? { ...currentComp, boardId }
+        : currentComp;
+      const updatedComp = applyCanonicalPcbPlacement(componentWithOwnership, placementPatch);
+      const canonicalPlacement = updatedComp.pcb!;
+      const boardComponents = (state.boardComponents || []).map(
+        (component) => component.id === componentId ? updatedComp : component,
+      );
 
-      const updatedComp: BoardComponent = {
-        ...currentComp,
-        ...placement,
-        placementX: targetX,
-        placementY: targetY,
-        side: targetSide,
-        placementStatus: targetStatus,
-        pcb: {
-          ...currentComp.pcb,
-          ...placement.pcb,
-          placed,
-          xMm: targetX,
-          yMm: targetY,
-          side: (targetSide === 'Bottom' ? 'Bottom' : 'Top') as 'Top' | 'Bottom',
-          locked: placement.pcb?.locked ?? currentComp.pcb?.locked ?? false,
-          placementStatus: targetStatus
-        }
-      };
-
-      const boardComponents = (state.boardComponents || []).map(c => c.id === componentId ? updatedComp : c);
-      
       let mechanicalObjects = state.mechanicalObjects;
       const linkedMechId = currentComp.mechanicalObjectId || currentComp.linkedMechanicalObjectId;
-      if (linkedMechId && mechanicalObjects && targetX != null && targetY != null) {
-        mechanicalObjects = mechanicalObjects.map(mo => mo.id === linkedMechId ? { ...mo, xMm: targetX, yMm: targetY } : mo);
+      if (
+        linkedMechId
+        && mechanicalObjects
+        && canonicalPlacement.xMm !== undefined
+        && canonicalPlacement.yMm !== undefined
+      ) {
+        mechanicalObjects = mechanicalObjects.map((object) => (
+          object.id === linkedMechId
+            ? { ...object, xMm: canonicalPlacement.xMm!, yMm: canonicalPlacement.yMm! }
+            : object
+        ));
       }
 
       persistChange({
@@ -2244,16 +2253,11 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     updateEditorObjectPosition: (mode, id, x, y) => {
       const layouts = { ...(get().editorLayouts || {}) };
       const modeObjects = layouts[mode] || [];
-      const updated = modeObjects.map(obj => obj.id === id ? { ...obj, x, y } : obj);
-      layouts[mode] = updated;
-      
-      let boardComponents = get().boardComponents || [];
-      const targetObj = modeObjects.find(o => o.id === id);
-      if (mode === 'components' && targetObj && targetObj.sourceType === 'component' && targetObj.sourceId) {
-        boardComponents = boardComponents.map(bc => bc.id === targetObj.sourceId ? { ...bc, placementX: x, placementY: y } : bc);
-      }
+      layouts[mode] = modeObjects.map(obj => obj.id === id ? { ...obj, x, y } : obj);
 
-      persistChange({ editorLayouts: layouts, boardComponents });
+      // Editor layout coordinates are a display projection. They must never
+      // mutate PCB engineering placement; PCB changes go through updatePCBPlacement.
+      persistChange({ editorLayouts: layouts });
     },
 
     updateEditorObjectSize: (mode, id, width, height) => {
@@ -2268,13 +2272,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const modeObjects = layouts[mode] || [];
       layouts[mode] = modeObjects.map(obj => obj.id === id ? { ...obj, rotation } : obj);
 
-      let boardComponents = get().boardComponents || [];
-      const targetObj = modeObjects.find(o => o.id === id);
-      if (mode === 'components' && targetObj && targetObj.sourceType === 'component' && targetObj.sourceId) {
-        boardComponents = boardComponents.map(bc => bc.id === targetObj.sourceId ? { ...bc, rotationDeg: rotation } : bc);
-      }
-
-      persistChange({ editorLayouts: layouts, boardComponents });
+      // Display rotation is not PCB engineering rotation.
+      persistChange({ editorLayouts: layouts });
     },
 
     updateEditorObjectMetadata: (mode, id, metadata) => {
@@ -2956,14 +2955,12 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       if (index === -1) return;
 
       const current = components[index];
-      let updated = { ...current, ...data };
-      
-      // Keep legacy and nested fields synchronized
-      if (data.pcb) {
-        updated.pcb = { ...current.pcb, ...data.pcb };
-        updated = syncNestedPcbFields(updated);
-      } else if (data.placementX !== undefined || data.placementY !== undefined || data.rotationDeg !== undefined || data.side !== undefined || data.lockedPlacement !== undefined || data.placementStatus !== undefined) {
-        updated = syncLegacyPlacementFields(updated);
+      const cleanData = stripLegacyPcbPlacementPatch(data);
+      const { pcb, ...nonPlacementData } = cleanData;
+      let updated = { ...current, ...nonPlacementData };
+
+      if (pcb) {
+        updated = applyCanonicalPcbPlacement(updated, pcb);
       }
 
       const updatedComponents = [...components];
@@ -3032,16 +3029,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
               locked: false,
               placementStatus: 'Unplaced' as const
             };
-            return {
-              ...c,
-              pcb: updatedPcb,
-              placementX: undefined,
-              placementY: undefined,
-              rotationDeg: 0,
-              side: 'Top' as const,
-              lockedPlacement: false,
-              placementStatus: 'Unplaced' as const
-            };
+            return applyCanonicalPcbPlacement(c, updatedPcb);
           }
           return c;
         });
@@ -3134,16 +3122,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
             locked: c.pcb?.locked || false,
             placementStatus: 'Placed' as const
           };
-          return {
-            ...c,
-            pcb: updatedPcb,
-            placementX: x,
-            placementY: y,
-            rotationDeg: updatedPcb.rotationDeg,
-            side: updatedPcb.side,
-            lockedPlacement: updatedPcb.locked,
-            placementStatus: 'Placed' as const
-          };
+          return applyCanonicalPcbPlacement(c, updatedPcb);
         }
         return c;
       });

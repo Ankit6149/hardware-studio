@@ -3,6 +3,7 @@
 
 import { Project, ReviewResult } from '../types';
 import { getFootprint } from './footprints';
+import { resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 import {
   componentsOverlap,
   isPointInsideOutline,
@@ -123,6 +124,7 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
   // ── Component checks ─────────────────────────────────────
   const refdeses = new Set<string>();
   for (const component of components) {
+    const placement = resolvePcbPlacement(component);
     const footprint = getFootprint(component.footprint);
     if (!component.footprint || (footprint.name === 'CUSTOM_RECT' && component.footprint !== 'CUSTOM_RECT')) {
       results.push({
@@ -135,23 +137,23 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
       });
     }
 
-    if (component.placementX == null || component.placementY == null) {
+    if (!placement.placed || placement.xMm === undefined || placement.yMm === undefined) {
       results.push({
         id: drcId(), category: 'Component', severity: 'Warning',
         title: `Unplaced component: ${component.referenceDesignator}`,
-        description: `${component.componentName} (${component.referenceDesignator}) has no board placement coordinates.`,
+        description: `${component.componentName} (${component.referenceDesignator}) has no authoritative board placement coordinates.`,
         linkedObjectType: 'component', linkedObjectId: component.id,
         suggestedFix: 'Place the component on the selected board.',
         status: 'Open',
       });
     }
 
-    if (component.placementX != null && component.placementY != null && primaryOutline) {
-      if (!isPointInsideOutline({ x: component.placementX, y: component.placementY }, primaryOutline)) {
+    if (placement.placed && placement.xMm !== undefined && placement.yMm !== undefined && primaryOutline) {
+      if (!isPointInsideOutline({ x: placement.xMm, y: placement.yMm }, primaryOutline)) {
         results.push({
           id: drcId(), category: 'Component', severity: 'Error',
           title: `Component outside board: ${component.referenceDesignator}`,
-          description: `${component.referenceDesignator} center (${component.placementX.toFixed(1)}, ${component.placementY.toFixed(1)}) is outside the selected board outline.`,
+          description: `${component.referenceDesignator} center (${placement.xMm.toFixed(1)}, ${placement.yMm.toFixed(1)}) is outside the selected board outline.`,
           linkedObjectType: 'component', linkedObjectId: component.id,
           suggestedFix: 'Move the component inside the board boundary.',
           status: 'Open',
@@ -171,7 +173,7 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
     }
     refdeses.add(component.referenceDesignator);
 
-    if (component.side === 'Unknown') {
+    if ((component.pcb?.side as string | undefined) === 'Unknown' || (!component.pcb && component.side === 'Unknown')) {
       results.push({
         id: drcId(), category: 'Component', severity: 'Info',
         title: `Unknown side: ${component.referenceDesignator}`,
@@ -187,13 +189,15 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
     for (let nextIndex = index + 1; nextIndex < components.length; nextIndex += 1) {
       const first = components[index];
       const second = components[nextIndex];
-      if (first.placementX == null || second.placementX == null) continue;
-      if (first.side !== second.side) continue;
+      const firstPlacement = resolvePcbPlacement(first);
+      const secondPlacement = resolvePcbPlacement(second);
+      if (!firstPlacement.placed || !secondPlacement.placed) continue;
+      if (firstPlacement.side !== secondPlacement.side) continue;
       if (componentsOverlap(first, second)) {
         results.push({
           id: drcId('overlap'), category: 'Component', severity: 'Error',
           title: `Overlapping components: ${first.referenceDesignator} & ${second.referenceDesignator}`,
-          description: `Courtyard areas of ${first.referenceDesignator} and ${second.referenceDesignator} overlap on the ${first.side} side.`,
+          description: `Courtyard areas of ${first.referenceDesignator} and ${second.referenceDesignator} overlap on the ${firstPlacement.side} side.`,
           linkedObjectType: 'component', linkedObjectId: first.id,
           suggestedFix: 'Move one of the components to eliminate overlap.',
           status: 'Open',
@@ -342,9 +346,10 @@ export const runBoardDRC = (project: Project): ReviewResult[] => {
     const maxY = zone.y + zone.height;
 
     for (const component of components) {
-      if (component.placementX == null || component.placementY == null) continue;
-      if (component.placementX >= minX && component.placementX <= maxX
-        && component.placementY >= minY && component.placementY <= maxY) {
+      const placement = resolvePcbPlacement(component);
+      if (!placement.placed || placement.xMm === undefined || placement.yMm === undefined) continue;
+      if (placement.xMm >= minX && placement.xMm <= maxX
+        && placement.yMm >= minY && placement.yMm <= maxY) {
         results.push({
           id: drcId(), category: 'Keepout', severity: 'Error',
           title: `Component in keepout: ${component.referenceDesignator}`,

@@ -1,6 +1,6 @@
-import { 
-  Project, 
-  EditorConnection, 
+import {
+  Project,
+  EditorConnection,
   BoardComponent, 
   NetItem, 
   PinMapItem, 
@@ -10,6 +10,7 @@ import {
   BoardItem, 
   FactoryFileStatus 
 } from '../types';
+import { applyCanonicalPcbPlacement, resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 
 export const getInitialFactoryFiles = (project?: Project): Record<string, FactoryFileStatus> => {
   const hasBom = project && project.bom && project.bom.length > 0;
@@ -724,44 +725,44 @@ export const generateEditorLayouts = (project: Project): {
 
 export const autoPlaceComponents = (project: Project): BoardComponent[] => {
   const components = [...(project.boardComponents || [])];
-  
-  components.forEach((c, idx) => {
-    if (c.lockedPlacement) return;
 
-    const ref = c.referenceDesignator.toUpperCase();
-    let x = 150;
-    let y = 120;
-    let rot = 0;
+  return components.map((component, idx) => {
+    const currentPlacement = resolvePcbPlacement(component);
+    if (currentPlacement.locked) return component;
+
+    const ref = component.referenceDesignator.toUpperCase();
+    let xMm = 150;
+    let yMm = 120;
+    let rotationDeg = 0;
 
     if (ref.startsWith('U1') || ref.startsWith('MCU')) {
-      // Processor center
-      x = 220;
-      y = 110;
-    } else if (ref.startsWith('ANT') || c.placementCriticality === 'RF Critical') {
-      // Antenna edge
-      x = 350;
-      y = 110;
+      xMm = 220;
+      yMm = 110;
+    } else if (ref.startsWith('ANT') || component.placementCriticality === 'RF Critical') {
+      xMm = 350;
+      yMm = 110;
     } else if (ref.startsWith('J') || ref.startsWith('POGO') || ref.startsWith('TP')) {
-      // Connectors/pads edge
-      x = 100 + (idx % 3) * 40;
-      y = 65;
+      xMm = 100 + (idx % 3) * 40;
+      yMm = 65;
     } else if (ref.startsWith('U3') || ref.startsWith('U4') || ref.startsWith('Q') || ref.startsWith('D')) {
-      // Power / charger near battery pogo
-      x = 150;
-      y = 160;
-      rot = 90;
+      xMm = 150;
+      yMm = 160;
+      rotationDeg = 90;
     } else {
-      // Passives scatter near center
-      x = 180 + (idx % 6) * 30;
-      y = 90 + (idx % 2) * 25;
+      xMm = 180 + (idx % 6) * 30;
+      yMm = 90 + (idx % 2) * 25;
     }
 
-    c.placementX = x;
-    c.placementY = y;
-    c.rotationDeg = rot;
+    return applyCanonicalPcbPlacement(component, {
+      placed: true,
+      xMm,
+      yMm,
+      rotationDeg,
+      side: currentPlacement.side,
+      locked: false,
+      placementStatus: 'Needs Review',
+    });
   });
-
-  return components;
 };
 
 export const autoCreateNetsFromPinMap = (project: Project): NetItem[] => {
