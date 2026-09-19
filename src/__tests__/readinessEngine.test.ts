@@ -31,7 +31,7 @@ describe('Slice 10 Real Readiness Engine & Gate Verification', () => {
       partNumber: 'MCU1',
       notes: ''
     });
-    store.updatePCBPlacement('cmp_clash_1', { placementX: 10, placementY: 10 });
+    store.updatePCBPlacement('cmp_clash_1', { placed: true, xMm: 10, yMm: 10 });
 
     store.addBoardComponent({
       id: 'cmp_clash_2',
@@ -45,7 +45,7 @@ describe('Slice 10 Real Readiness Engine & Gate Verification', () => {
       partNumber: 'MCU2',
       notes: ''
     });
-    store.updatePCBPlacement('cmp_clash_2', { placementX: 10, placementY: 10 });
+    store.updatePCBPlacement('cmp_clash_2', { placed: true, xMm: 10, yMm: 10 });
 
     const report = calculateReadinessScore(useProjectStore.getState());
     expect(report.canMoveToFabrication).toBe(false);
