@@ -12,6 +12,7 @@ import {
 import type { BOMItem, BoardComponent, BoardItem, BoardOutline } from '../../types';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
+import { resolvePcbPlacement } from '../../lib/pcb/pcbPlacementAuthority';
 
 export type ElectronicsRepresentation = 'schematic' | 'pcb' | 'bom' | '3d';
 export type ElectronicsRepresentationState = 'ready' | 'incomplete' | 'blocked';
@@ -63,9 +64,7 @@ function hasPositivePackageDimensions(component: BoardComponent): boolean {
 }
 
 function hasExplicitPcbPlacement(component: BoardComponent): boolean {
-  const x = component.pcb?.xMm ?? component.placementX;
-  const y = component.pcb?.yMm ?? component.placementY;
-  return x != null && y != null;
+  return resolvePcbPlacement(component).placed;
 }
 
 export function deriveElectronicsRepresentationStatuses(
