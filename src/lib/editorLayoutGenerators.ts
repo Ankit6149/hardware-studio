@@ -69,7 +69,7 @@ export const generateEditorLayouts = (project: Project): {
   const isRing = project.projectName.toLowerCase().includes("ring") || project.templateName?.toLowerCase().includes("ring");
 
   // 1. PRODUCT ARCHITECTURE LAYOUT
-  const categories = ["Input", "Processing", "Power", "Feedback", "Wireless", "Firmware", "Mechanical", "Integration"];
+  const categories = ["Input", "Processing", "Power", "Communication", "Wireless", "Feedback", "Mechanical", "Firmware", "Safety", "Manufacturing", "Integration"];
   nodes.forEach((node, idx) => {
     const cat = node.category || "Unresolved";
     const catIdx = categories.indexOf(cat);
