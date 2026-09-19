@@ -9,6 +9,8 @@ import {
   autoCreateFirmwareTasksFromHardware,
   generateEditorLayouts,
 } from '../lib/editorLayoutGenerators';
+import { calculateReadinessScore } from '../lib/readinessScore';
+import { generateBlueprintPack } from '../lib/blueprintGenerator';
 
 function project(overrides: Partial<Project> = {}): Project {
   return {
@@ -235,6 +237,74 @@ describe('architecture authority', () => {
     expect(tasks.some((task) => task.linkedBlock === 'canonical-input')).toBe(true);
     expect(tasks.some((task) => task.linkedBlock === 'legacy-feedback')).toBe(false);
     expect(tasks.some((task) => task.name.toLowerCase().includes('feedback'))).toBe(false);
+  });
+
+  it('scores readiness from canonical architecture when legacy graph disagrees', () => {
+    const report = calculateReadinessScore(project({
+      nodes: [legacyInputNode, legacyFeedbackNode],
+      architectureNodes: [canonicalPowerNode],
+    }));
+
+    expect(report.warnings).toContain('Architecture lacks user input node (Button/Touch).');
+    expect(report.warnings).toContain('Architecture lacks user feedback node (LED/Haptics).');
+  });
+
+  it('generates architecture and requirements blueprints from canonical records first', () => {
+    const legacyNodeWithRequirement: Project['nodes'][number] = {
+      ...legacyInputNode,
+      data: {
+        ...legacyInputNode.data,
+        requirements: 'Legacy requirement must not override canonical requirements.',
+        risks: 'Legacy risk must not override canonical requirement risks.',
+      },
+    };
+
+    const pack = generateBlueprintPack(project({
+      nodes: [legacyNodeWithRequirement],
+      architectureNodes: [canonicalPowerNode, canonicalInputNode],
+      architectureConnections: [{
+        id: 'canonical-connection',
+        sourceNodeId: 'canonical-power',
+        targetNodeId: 'canonical-input',
+        name: 'Power feed',
+        type: 'Power',
+        direction: 'Forward',
+      }],
+      requirements: [{
+        id: 'req-canonical-1',
+        title: 'Canonical temperature requirement',
+        description: 'Measure ambient temperature within the qualified tolerance.',
+        type: 'Functional',
+        priority: 'High',
+        status: 'Approved',
+        source: 'Product specification',
+        acceptanceCriteria: ['Temperature measurement is within tolerance.'],
+        linkedArchitectureNodeIds: ['canonical-input'],
+        linkedComponentIds: [],
+        linkedFirmwareModuleIds: [],
+        linkedTestIds: ['test-temp-1'],
+        risks: ['Sensor self-heating may bias the reading.'],
+      }],
+    }));
+
+    const architectureSheet = pack.sheets.find((sheet) => sheet.id === 'sh-1');
+    const requirementsSheet = pack.sheets.find((sheet) => sheet.id === 'sh-2');
+
+    expect(architectureSheet).toBeDefined();
+    expect(architectureSheet?.sourceObjects.map((source) => source.id)).toEqual(
+      expect.arrayContaining(['canonical-power', 'canonical-input']),
+    );
+    expect(architectureSheet?.sourceObjects.some((source) => source.id === 'legacy-input')).toBe(false);
+    expect(architectureSheet?.drawing.connections).toHaveLength(1);
+
+    expect(requirementsSheet).toBeDefined();
+    const requirementRows = requirementsSheet?.tables.find((table) => table.title === 'Requirements Matrix')?.rows || [];
+    expect(requirementRows.some((row) => row[0] === 'Canonical temperature requirement')).toBe(true);
+    expect(requirementRows.flat().some((value) => value.includes('Legacy requirement'))).toBe(false);
+
+    const riskRows = requirementsSheet?.tables.find((table) => table.title === 'Risk Register')?.rows || [];
+    expect(riskRows.flat()).toContain('Sensor self-heating may bias the reading.');
+    expect(riskRows.flat().some((value) => value.includes('Legacy risk'))).toBe(false);
   });
 
   it('keeps genuinely empty architecture empty', () => {
