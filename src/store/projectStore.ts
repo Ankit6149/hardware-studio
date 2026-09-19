@@ -2253,16 +2253,11 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     updateEditorObjectPosition: (mode, id, x, y) => {
       const layouts = { ...(get().editorLayouts || {}) };
       const modeObjects = layouts[mode] || [];
-      const updated = modeObjects.map(obj => obj.id === id ? { ...obj, x, y } : obj);
-      layouts[mode] = updated;
-      
-      let boardComponents = get().boardComponents || [];
-      const targetObj = modeObjects.find(o => o.id === id);
-      if (mode === 'components' && targetObj && targetObj.sourceType === 'component' && targetObj.sourceId) {
-        boardComponents = boardComponents.map(bc => bc.id === targetObj.sourceId ? { ...bc, placementX: x, placementY: y } : bc);
-      }
+      layouts[mode] = modeObjects.map(obj => obj.id === id ? { ...obj, x, y } : obj);
 
-      persistChange({ editorLayouts: layouts, boardComponents });
+      // Editor layout coordinates are a display projection. They must never
+      // mutate PCB engineering placement; PCB changes go through updatePCBPlacement.
+      persistChange({ editorLayouts: layouts });
     },
 
     updateEditorObjectSize: (mode, id, width, height) => {
@@ -2277,13 +2272,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const modeObjects = layouts[mode] || [];
       layouts[mode] = modeObjects.map(obj => obj.id === id ? { ...obj, rotation } : obj);
 
-      let boardComponents = get().boardComponents || [];
-      const targetObj = modeObjects.find(o => o.id === id);
-      if (mode === 'components' && targetObj && targetObj.sourceType === 'component' && targetObj.sourceId) {
-        boardComponents = boardComponents.map(bc => bc.id === targetObj.sourceId ? { ...bc, rotationDeg: rotation } : bc);
-      }
-
-      persistChange({ editorLayouts: layouts, boardComponents });
+      // Display rotation is not PCB engineering rotation.
+      persistChange({ editorLayouts: layouts });
     },
 
     updateEditorObjectMetadata: (mode, id, metadata) => {
