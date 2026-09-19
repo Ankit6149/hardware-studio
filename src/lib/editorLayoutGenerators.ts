@@ -334,9 +334,16 @@ export const generateEditorLayouts = (project: Project): {
     });
 
     boardComponents.forEach((c, idx) => {
-      // Deterministic auto-placement fallback positions if not already set
-      const xVal = c.placementX || (120 + (idx % 5) * 80);
-      const yVal = c.placementY || (100 + Math.floor(idx / 5) * 55);
+      const placement = resolvePcbPlacement(c);
+      // Generic editor layout coordinates are only a display projection. If no
+      // engineering placement exists, use deterministic UI coordinates without
+      // writing them back into PCB geometry.
+      const xVal = placement.placed && placement.xMm !== undefined
+        ? placement.xMm
+        : 120 + (idx % 5) * 80;
+      const yVal = placement.placed && placement.yMm !== undefined
+        ? placement.yMm
+        : 100 + Math.floor(idx / 5) * 55;
 
       layouts.components!.push({
         id: `obj_c_${c.id}`,
@@ -349,8 +356,8 @@ export const generateEditorLayouts = (project: Project): {
         y: yVal,
         width: c.referenceDesignator.startsWith('U') ? 44 : 24,
         height: c.referenceDesignator.startsWith('U') ? 30 : 16,
-        rotation: c.rotationDeg || 0,
-        layer: c.side === 'Bottom' ? "Bottom SMT" : "Top SMT",
+        rotation: placement.rotationDeg,
+        layer: placement.side === 'Bottom' ? "Bottom SMT" : "Top SMT",
         metadata: {
           partName: c.componentName,
           footprint: c.footprint || c.packageName || 'STD',

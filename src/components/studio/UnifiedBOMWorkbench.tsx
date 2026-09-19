@@ -15,6 +15,7 @@ import {
 import type { BOMItem } from '../../types';
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
+import { resolvePcbPlacement } from '../../lib/pcb/pcbPlacementAuthority';
 
 const statusOptions = ['Not Started', 'Sourced', 'Ordered', 'Received', 'Tested', 'Rejected'] as const satisfies readonly NonNullable<BOMItem['status']>[];
 
@@ -47,6 +48,7 @@ export const UnifiedBOMWorkbench: React.FC = () => {
   const selectedBomItem = selectedComponent
     ? bom.find((item) => item.id === selectedComponent.bomItemId || item.componentId === selectedComponent.id)
     : undefined;
+  const selectedPcbPlacement = selectedComponent ? resolvePcbPlacement(selectedComponent) : undefined;
   const orderedBom = useMemo(() => {
     if (!selectedBomItem) return bom;
     return [selectedBomItem, ...bom.filter((item) => item.id !== selectedBomItem.id)];
@@ -128,7 +130,7 @@ export const UnifiedBOMWorkbench: React.FC = () => {
             {selectedComponent ? (
               <div className="mt-3 space-y-3">
                 <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3"><p className="text-[10px] font-extrabold uppercase tracking-wide text-indigo-700">{selectedComponent.referenceDesignator}</p><p className="mt-1 text-sm font-bold text-slate-950">{selectedComponent.componentName}</p><p className="mt-1 font-mono text-[10px] text-slate-600">{selectedComponent.id}</p></div>
-                <dl className="grid grid-cols-2 gap-2 text-xs"><div className="rounded-lg border border-slate-200 bg-slate-50 p-2"><dt className="text-[9px] uppercase text-slate-500">Footprint</dt><dd className="mt-1 font-mono text-slate-800">{selectedComponent.footprint || 'Unresolved'}</dd></div><div className="rounded-lg border border-slate-200 bg-slate-50 p-2"><dt className="text-[9px] uppercase text-slate-500">Pins</dt><dd className="mt-1 font-bold text-slate-800">{selectedComponent.pins?.length || 0}</dd></div><div className="rounded-lg border border-slate-200 bg-slate-50 p-2"><dt className="text-[9px] uppercase text-slate-500">Schematic</dt><dd className="mt-1 text-slate-800">{selectedComponent.schematic?.placed ? 'Placed' : 'Unplaced'}</dd></div><div className="rounded-lg border border-slate-200 bg-slate-50 p-2"><dt className="text-[9px] uppercase text-slate-500">PCB</dt><dd className="mt-1 text-slate-800">{selectedComponent.pcb?.placed || selectedComponent.placementStatus === 'Placed' ? 'Placed' : 'Unplaced'}</dd></div></dl>
+                <dl className="grid grid-cols-2 gap-2 text-xs"><div className="rounded-lg border border-slate-200 bg-slate-50 p-2"><dt className="text-[9px] uppercase text-slate-500">Footprint</dt><dd className="mt-1 font-mono text-slate-800">{selectedComponent.footprint || 'Unresolved'}</dd></div><div className="rounded-lg border border-slate-200 bg-slate-50 p-2"><dt className="text-[9px] uppercase text-slate-500">Pins</dt><dd className="mt-1 font-bold text-slate-800">{selectedComponent.pins?.length || 0}</dd></div><div className="rounded-lg border border-slate-200 bg-slate-50 p-2"><dt className="text-[9px] uppercase text-slate-500">Schematic</dt><dd className="mt-1 text-slate-800">{selectedComponent.schematic?.placed ? 'Placed' : 'Unplaced'}</dd></div><div className="rounded-lg border border-slate-200 bg-slate-50 p-2"><dt className="text-[9px] uppercase text-slate-500">PCB</dt><dd className="mt-1 text-slate-800">{selectedPcbPlacement?.placed ? 'Placed' : 'Unplaced'}</dd></div></dl>
                 {selectedBomItem ? <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /><p><strong>Linked BOM record:</strong> {selectedBomItem.id}. Editing the highlighted row updates this component’s sourcing record.</p></div> : <button type="button" onClick={ensureLinkedBom} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 text-sm font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"><Plus className="h-4 w-4" /> Create linked BOM record</button>}
               </div>
             ) : (

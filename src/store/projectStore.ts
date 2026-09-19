@@ -519,6 +519,19 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     return boards.length === 1 ? boards[0] : undefined;
   };
 
+  const withUnplacedPcb = (
+    component: BoardComponent,
+    side: 'Top' | 'Bottom' = 'Top',
+  ): BoardComponent => applyCanonicalPcbPlacement(component, {
+    placed: false,
+    xMm: undefined,
+    yMm: undefined,
+    rotationDeg: 0,
+    side,
+    locked: false,
+    placementStatus: 'Unplaced',
+  });
+
   const getCleanProjectData = (state: ProjectState): Project => {
     return {
       id: state.id,
@@ -2734,7 +2747,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const nextIdx = components.length + 1;
       const circuitBlockId = (get().circuitBlocks || []).find(block => block.boardId === targetBoard.id && block.circuitType === 'MCU')?.id;
       
-      const r1: BoardComponent = {
+      const r1 = withUnplacedPcb({
         id: `cmp_r_pull1_${Date.now()}`,
         boardId: targetBoard.id,
         circuitBlockId,
@@ -2746,13 +2759,11 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         footprint: "R_0603",
         partNumber: "RC0603FR-0710KL",
         quantity: 1,
-        side: "Top",
         placementCriticality: "Medium",
-        placementStatus: 'Unplaced',
         notes: "I2C SDA pullup"
-      };
+      }, 'Top');
 
-      const r2: BoardComponent = {
+      const r2 = withUnplacedPcb({
         id: `cmp_r_pull2_${Date.now()}`,
         boardId: targetBoard.id,
         circuitBlockId,
@@ -2764,11 +2775,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         footprint: "R_0603",
         partNumber: "RC0603FR-0710KL",
         quantity: 1,
-        side: "Top",
         placementCriticality: "Medium",
-        placementStatus: 'Unplaced',
         notes: "I2C SCL pullup"
-      };
+      }, 'Top');
 
       persistChange({ boardComponents: [...components, r1, r2] });
       get().generateEditorLayouts();
@@ -2782,7 +2791,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const nextIdx = components.length + 1;
       const circuitBlockId = (get().circuitBlocks || []).find(block => block.boardId === targetBoard.id && block.circuitType === 'Haptic')?.id;
       
-      const diode: BoardComponent = {
+      const diode = withUnplacedPcb({
         id: `cmp_d_fly_${Date.now()}`,
         boardId: targetBoard.id,
         circuitBlockId,
@@ -2794,11 +2803,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         footprint: "SOD123",
         partNumber: "B130-13-F",
         quantity: 1,
-        side: "Top",
         placementCriticality: "High",
-        placementStatus: 'Unplaced',
         notes: "Motor flyback clamp protection"
-      };
+      }, 'Top');
 
       persistChange({ boardComponents: [...components, diode] });
       get().generateEditorLayouts();
@@ -2812,7 +2819,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const nextIdx = components.length + 1;
       const circuitBlockId = (get().circuitBlocks || []).find(block => block.boardId === targetBoard.id && block.circuitType === 'Debug')?.id;
       
-      const tp1: BoardComponent = {
+      const tp1 = withUnplacedPcb({
         id: `cmp_tp_swdio_${Date.now()}`,
         boardId: targetBoard.id,
         circuitBlockId,
@@ -2824,13 +2831,11 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         footprint: "TEST_PAD",
         partNumber: "TP_1MM_ROUND",
         quantity: 1,
-        side: "Bottom",
         placementCriticality: "High",
-        placementStatus: 'Unplaced',
         notes: "MCU SWDIO target interface point"
-      };
+      }, 'Bottom');
 
-      const tp2: BoardComponent = {
+      const tp2 = withUnplacedPcb({
         id: `cmp_tp_swclk_${Date.now()}`,
         boardId: targetBoard.id,
         circuitBlockId,
@@ -2842,11 +2847,9 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         footprint: "TEST_PAD",
         partNumber: "TP_1MM_ROUND",
         quantity: 1,
-        side: "Bottom",
         placementCriticality: "High",
-        placementStatus: 'Unplaced',
         notes: "MCU SWCLK target interface point"
-      };
+      }, 'Bottom');
 
       persistChange({ boardComponents: [...components, tp1, tp2] });
       get().generateEditorLayouts();
