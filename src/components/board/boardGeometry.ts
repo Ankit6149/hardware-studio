@@ -2,6 +2,7 @@
 
 import { Project, BoardComponent, BoardOutline, Trace, PadNetAssignment } from '../../types';
 import { getFootprint, FootprintPad, FootprintPreset } from '../../lib/footprints';
+import { applyCanonicalPcbPlacement, resolvePcbPlacement } from '../../lib/pcb/pcbPlacementAuthority';
 
 // ─── Coordinate transform ─────────────────────────────────────────
 export const mmToSvg = (mm: number, zoom: number): number => mm * zoom;
@@ -41,9 +42,10 @@ export const getComponentPads = (
 ): AbsolutePad[] => {
   const fp = footprint || getFootprint(comp.footprint);
   if (!fp || !fp.pads) return [];
-  const cx = comp.placementX ?? 0;
-  const cy = comp.placementY ?? 0;
-  const rot = comp.rotationDeg ?? 0;
+  const placement = resolvePcbPlacement(comp);
+  const cx = placement.xMm ?? 0;
+  const cy = placement.yMm ?? 0;
+  const rot = placement.rotationDeg;
 
   return fp.pads.map((pad: FootprintPad) => {
     const rotated = rotatePoint(pad.xMm, pad.yMm, rot);
@@ -371,8 +373,9 @@ export interface BBox {
 
 export const getComponentBoundingBox = (comp: BoardComponent, footprint?: FootprintPreset): BBox => {
   const fp = footprint || getFootprint(comp.footprint);
-  const cx = comp.placementX ?? 0;
-  const cy = comp.placementY ?? 0;
+  const placement = resolvePcbPlacement(comp);
+  const cx = placement.xMm ?? 0;
+  const cy = placement.yMm ?? 0;
   const hw = (fp.courtyardWidthMm || fp.bodyWidthMm) / 2;
   const hh = (fp.courtyardHeightMm || fp.bodyHeightMm) / 2;
   // For simplicity, use courtyard as AABB (ignore rotation for overlap check — close enough for DRC)
@@ -390,7 +393,10 @@ export const bboxesOverlap = (a: BBox, b: BBox): boolean => {
 };
 
 export const componentsOverlap = (a: BoardComponent, b: BoardComponent): boolean => {
-  if (a.side !== b.side && a.side !== 'Both' && b.side !== 'Both') return false;
+  const aPlacement = resolvePcbPlacement(a);
+  const bPlacement = resolvePcbPlacement(b);
+  if (!aPlacement.placed || !bPlacement.placed) return false;
+  if (aPlacement.side !== bPlacement.side) return false;
   return bboxesOverlap(getComponentBoundingBox(a), getComponentBoundingBox(b));
 };
 
@@ -423,57 +429,48 @@ export const autoPlaceComponents = (
   const centerX = bounds.minX + boardW / 2;
   const centerY = bounds.minY + boardH / 2;
 
-  // Sort components by placement priority
   const sortOrder: Record<string, number> = {
     'MCU': 0, 'RF': 1, 'Power': 2, 'Charger': 3, 'Sensor': 4,
     'Haptic': 5, 'LED': 6, 'Protection': 7, 'Connector': 8, 'Debug': 9,
   };
 
-  const sorted = [...components].sort((a, b) => {
-    const oa = sortOrder[a.componentType] ?? 10;
-    const ob = sortOrder[b.componentType] ?? 10;
-    return oa - ob;
-  });
+  const sorted = [...components].sort((a, b) => (
+    (sortOrder[a.componentType] ?? 10) - (sortOrder[b.componentType] ?? 10)
+  ));
 
   const placed: BoardComponent[] = [];
-  let ring = 0;
-  let angleStep = 0;
   let idx = 0;
 
-  for (const comp of sorted) {
-    if (comp.lockedPlacement && comp.placementX != null) {
-      placed.push(comp);
+  for (const component of sorted) {
+    const currentPlacement = resolvePcbPlacement(component);
+    if (currentPlacement.locked && currentPlacement.placed) {
+      placed.push(component);
       continue;
     }
 
-    // Place MCU at center
-    if (idx === 0) {
-      placed.push({
-        ...comp,
-        placementX: centerX,
-        placementY: centerY,
-        placementStatus: 'Needs Review',
-      });
-    } else {
-      // Concentric ring placement
-      ring = Math.floor((idx - 1) / 6) + 1;
-      angleStep = ((idx - 1) % 6) * (Math.PI * 2 / 6) + (ring * 0.3);
+    let xMm = centerX;
+    let yMm = centerY;
+
+    if (idx > 0) {
+      const ring = Math.floor((idx - 1) / 6) + 1;
+      const angleStep = ((idx - 1) % 6) * (Math.PI * 2 / 6) + (ring * 0.3);
       const radius = Math.min(boardW, boardH) * 0.15 * ring;
       const px = centerX + Math.cos(angleStep) * radius;
       const py = centerY + Math.sin(angleStep) * radius;
-
-      // Clamp inside board
-      const clampedX = Math.max(bounds.minX + 3, Math.min(bounds.maxX - 3, px));
-      const clampedY = Math.max(bounds.minY + 3, Math.min(bounds.maxY - 3, py));
-
-      placed.push({
-        ...comp,
-        placementX: Math.round(clampedX * 4) / 4, // snap to 0.25mm
-        placementY: Math.round(clampedY * 4) / 4,
-        placementStatus: 'Needs Review',
-      });
+      xMm = Math.round(Math.max(bounds.minX + 3, Math.min(bounds.maxX - 3, px)) * 4) / 4;
+      yMm = Math.round(Math.max(bounds.minY + 3, Math.min(bounds.maxY - 3, py)) * 4) / 4;
     }
-    idx++;
+
+    placed.push(applyCanonicalPcbPlacement(component, {
+      placed: true,
+      xMm,
+      yMm,
+      rotationDeg: currentPlacement.rotationDeg,
+      side: currentPlacement.side,
+      locked: false,
+      placementStatus: 'Needs Review',
+    }));
+    idx += 1;
   }
 
   return placed;
@@ -511,20 +508,29 @@ export const computeOctagonalPath = (p1: Point2D, p2: Point2D): Point2D[] => {
 
 /** Check if two component courtyard bounding boxes overlap */
 export const checkCourtyardOverlap = (compA: BoardComponent, compB: BoardComponent): boolean => {
-  if (compA.placementX == null || compA.placementY == null || compB.placementX == null || compB.placementY == null) {
+  const aPlacement = resolvePcbPlacement(compA);
+  const bPlacement = resolvePcbPlacement(compB);
+  if (
+    !aPlacement.placed
+    || !bPlacement.placed
+    || aPlacement.xMm === undefined
+    || aPlacement.yMm === undefined
+    || bPlacement.xMm === undefined
+    || bPlacement.yMm === undefined
+    || aPlacement.side !== bPlacement.side
+  ) {
     return false;
   }
+
   const fpA = getFootprint(compA.footprint);
   const fpB = getFootprint(compB.footprint);
-
   const halfWA = fpA.courtyardWidthMm / 2;
   const halfHA = fpA.courtyardHeightMm / 2;
   const halfWB = fpB.courtyardWidthMm / 2;
   const halfHB = fpB.courtyardHeightMm / 2;
 
-  const overlapX = Math.abs(compA.placementX - compB.placementX) < (halfWA + halfWB);
-  const overlapY = Math.abs(compA.placementY - compB.placementY) < (halfHA + halfHB);
-
+  const overlapX = Math.abs(aPlacement.xMm - bPlacement.xMm) < (halfWA + halfWB);
+  const overlapY = Math.abs(aPlacement.yMm - bPlacement.yMm) < (halfHA + halfHB);
   return overlapX && overlapY;
 };
 
