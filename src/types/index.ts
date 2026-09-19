@@ -1,6 +1,7 @@
 import { Node, Edge } from '@xyflow/react';
 import type { BlueprintPack, BlueprintPackStatusType } from '../lib/blueprintSheetTypes';
 import type { ElectronicComponentDefinition } from '../lib/components/componentLibrary';
+import type { CanonicalSourceMapping } from '../core/domain/adoption';
 
 export type NodeData = {
   name: string;
@@ -721,6 +722,7 @@ export interface Project {
   requirements?: ProductRequirement[];
   architectureNodes?: ProductArchitectureNode[];
   architectureConnections?: ProductArchitectureConnection[];
+  sourceMappings?: CanonicalSourceMapping[];
   mechanicalObjects?: MechanicalObject[];
   mechanicalDimensions?: MechanicalDimension[];
   mechanicalBodies?: MechanicalBody[];
