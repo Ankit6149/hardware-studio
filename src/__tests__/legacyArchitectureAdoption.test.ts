@@ -101,6 +101,9 @@ describe('legacy architecture adoption preview', () => {
     expect(first.nodeProposals.map((proposal) => proposal.canonicalId)).toEqual(
       second.nodeProposals.map((proposal) => proposal.canonicalId),
     );
+    expect(first.nodeProposals.map((proposal) => proposal.sourceIdentity.contentHash)).toEqual(
+      second.nodeProposals.map((proposal) => proposal.sourceIdentity.contentHash),
+    );
     expect(first.canApplyWithoutResolution).toBe(true);
   });
 
@@ -111,7 +114,7 @@ describe('legacy architecture adoption preview', () => {
 
     const proposal = preview.nodeProposals[0];
     expect(proposal.canonicalId).not.toBe('legacy-power');
-    expect(proposal.sourceIdentity).toEqual({
+    expect(proposal.sourceIdentity).toMatchObject({
       system: 'hardware-studio-legacy-react-flow',
       documentId: 'legacy-architecture-project',
       entityId: 'node:legacy-power',
@@ -119,6 +122,7 @@ describe('legacy architecture adoption preview', () => {
       adapterId: 'legacy-architecture-adoption',
       adapterVersion: '1',
     });
+    expect(proposal.sourceIdentity.contentHash).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(proposal.proposed?.id).toBe(proposal.canonicalId);
   });
 
