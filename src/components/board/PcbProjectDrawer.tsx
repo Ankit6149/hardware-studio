@@ -20,6 +20,7 @@ import {
   type PcbDrawerSection,
   usePcbWorkspaceUiStore,
 } from '../../store/pcbWorkspaceUiStore';
+import { resolvePcbPlacement } from '../../lib/pcb/pcbPlacementAuthority';
 
 const drawerSections: readonly { id: PcbDrawerSection; label: string; icon: typeof Boxes }[] = [
   { id: 'objects', label: 'Objects', icon: Boxes },
@@ -190,7 +191,7 @@ export const PcbProjectDrawer: React.FC = () => {
             <p className="px-1 pb-1.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Board objects</p>
             <div className="space-y-0.5">
               {boardObjects.map((component) => {
-                const placed = component.pcb?.placed === true || (component.placementX != null && component.placementY != null);
+                const placed = resolvePcbPlacement(component).placed;
                 const active = activeComponentId === component.id;
                 return (
                   <button
