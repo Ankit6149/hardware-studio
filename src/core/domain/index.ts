@@ -1,3 +1,4 @@
+export * from './adoption';
 export * from './coordinateFrame';
 export * from './identity';
 export * from './provenance';
