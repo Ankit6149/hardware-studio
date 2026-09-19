@@ -1,6 +1,7 @@
 import { Project } from '../types';
 import { runDesignReview } from './designReview';
 import { resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
+import { resolveArchitectureProjection } from './product/architectureAuthority';
 
 export interface ReadinessReport {
   overallScore: number;
@@ -51,7 +52,8 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   const suggestions: string[] = [];
   const nextActions: string[] = [];
 
-  const nodes = project.nodes || [];
+  const architecture = resolveArchitectureProjection(project);
+  const nodes = architecture.nodes;
   const bom = project.bom || [];
   const powerBudget = project.powerBudget || [];
   const pinMap = project.pinMap || [];
@@ -72,8 +74,20 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   // 1. PRODUCT ARCHITECTURE
   let archScore = 100;
   if (nodes.length > 0) {
-    const hasInput = nodes.some((node) => node.data?.name.toLowerCase().includes('button') || node.data?.name.toLowerCase().includes('touch') || node.data?.name.toLowerCase().includes('input'));
-    const hasFeedback = nodes.some((node) => node.data?.name.toLowerCase().includes('haptic') || node.data?.name.toLowerCase().includes('led') || node.data?.name.toLowerCase().includes('vibe'));
+    const hasInput = nodes.some((node) => {
+      const name = node.name.toLowerCase();
+      return node.category.toLowerCase() === 'input'
+        || name.includes('button')
+        || name.includes('touch')
+        || name.includes('input');
+    });
+    const hasFeedback = nodes.some((node) => {
+      const name = node.name.toLowerCase();
+      return node.category.toLowerCase() === 'feedback'
+        || name.includes('haptic')
+        || name.includes('led')
+        || name.includes('vibe');
+    });
     if (!hasInput) {
       warnings.push('Architecture lacks user input node (Button/Touch).');
       archScore -= 30;
