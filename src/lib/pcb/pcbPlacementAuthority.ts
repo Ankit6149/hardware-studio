@@ -115,15 +115,27 @@ export function applyCanonicalPcbPlacement(
     : current.yMm;
   const hasCoordinates = xMm !== undefined && yMm !== undefined;
 
-  const placementStatus = hasOwn(patch, 'placementStatus')
+  const coordinatesTouched = hasOwn(patch, 'xMm') || hasOwn(patch, 'yMm');
+  let placementStatus = hasOwn(patch, 'placementStatus')
     ? normalizeStatus(patch.placementStatus, hasCoordinates)
     : current.placementStatus;
 
+  if (
+    !hasCoordinates
+    && ['Placed', 'Locked', 'Outside Board', 'Verified'].includes(placementStatus)
+  ) {
+    placementStatus = 'Unplaced';
+  } else if (!hasCoordinates && coordinatesTouched && !hasOwn(patch, 'placementStatus')) {
+    placementStatus = 'Unplaced';
+  }
+
   const requestedPlaced = hasOwn(patch, 'placed')
     ? patch.placed === true
-    : hasOwn(patch, 'placementStatus')
-      ? placementStatus !== 'Unplaced'
-      : current.placed;
+    : coordinatesTouched
+      ? hasCoordinates && placementStatus !== 'Unplaced'
+      : hasOwn(patch, 'placementStatus')
+        ? placementStatus !== 'Unplaced'
+        : current.placed;
 
   const rotationDeg = hasOwn(patch, 'rotationDeg')
     ? finiteOrUndefined(patch.rotationDeg) ?? 0
