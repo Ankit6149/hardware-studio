@@ -722,6 +722,7 @@ export interface Project {
   requirements?: ProductRequirement[];
   architectureNodes?: ProductArchitectureNode[];
   architectureConnections?: ProductArchitectureConnection[];
+  architectureReconciliationSuppressions?: ArchitectureReconciliationSuppression[];
   mechanicalObjects?: MechanicalObject[];
   mechanicalDimensions?: MechanicalDimension[];
   mechanicalBodies?: MechanicalBody[];
@@ -848,6 +849,14 @@ export interface ArchitectureReconciliationBaseline {
   sourcePresence?: 'present' | 'deleted';
   resolution?: 'adopted' | 'keep-local' | 'take-source' | 'manual' | 'keep-after-source-delete';
   reviewedBy?: string;
+}
+
+export interface ArchitectureReconciliationSuppression {
+  sourceIdentity: SourceIdentity;
+  sourceContentHash: string;
+  decision: 'reject-new-source';
+  reviewedAt: string;
+  reviewedBy: string;
 }
 
 export interface ProductArchitectureNode {
