@@ -846,9 +846,11 @@ export interface ArchitectureReconciliationBaseline {
   sourceContentHash: string;
   adoptedAt: string;
   canonicalSnapshot: Record<string, string | number | boolean | null | undefined>;
+  sourceSnapshot?: Record<string, string | number | boolean | null | undefined>;
   sourcePresence?: 'present' | 'deleted';
   resolution?: 'adopted' | 'keep-local' | 'take-source' | 'manual' | 'keep-after-source-delete';
   reviewedBy?: string;
+  reviewedAt?: string;
 }
 
 export interface ArchitectureReconciliationSuppression {
