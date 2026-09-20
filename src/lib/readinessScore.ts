@@ -3,6 +3,7 @@ import { runDesignReview } from './designReview';
 import { resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 import { resolveArchitectureProjection } from './product/architectureAuthority';
 import { resolveValidationAuthority } from './validation/validationAuthority';
+import { resolveMechanicalAuthority } from './mechanical/mechanicalAuthority';
 
 export interface ReadinessReport {
   overallScore: number;
@@ -61,6 +62,7 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   const fwTasks = project.firmwareTasks || [];
   const validation = resolveValidationAuthority(project);
   const testing = validation.tests;
+  const mechanical = resolveMechanicalAuthority(project);
   const boards = project.boards || [];
   const circuitBlocks = project.circuitBlocks || [];
   const boardComponents = project.boardComponents || [];
@@ -70,8 +72,6 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   const schematicSymbols = project.schematicSymbols || [];
   const boardOutlines = project.boardOutlines || [];
   const traces = project.traces || [];
-
-  const isRing = project.projectName.toLowerCase().includes('ring') || project.templateName?.toLowerCase().includes('ring');
 
   // 1. PRODUCT ARCHITECTURE
   let archScore = 100;
@@ -103,27 +103,39 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
     blockers.push('Product architecture map has no active blocks.');
   }
 
-  // 2. MECHANICAL LAYOUT
+  // 2. MECHANICAL ENGINEERING STATE
+  // UI editor layouts are intentionally excluded from readiness. Only explicit
+  // mechanical engineering objects/bodies count as evidence.
   let mechanicalScore = 100;
-  const mechanicalLayoutObjects = project.editorLayouts?.mechanical || [];
-  if (mechanicalLayoutObjects.length === 0) {
-    warnings.push('No mechanical volume zones configured in the editor.');
-    mechanicalScore -= 50;
-  }
-  if (isRing) {
-    const shell = mechanicalLayoutObjects.find((object) => object.label.toLowerCase().includes('shell') || object.label.toLowerCase().includes('outline'));
-    if (!shell) {
-      warnings.push('Flagship ring mechanical layout requires outer casing shell circles.');
-      mechanicalScore -= 30;
+  if (!mechanical.hasMechanicalEvidence) {
+    warnings.push('No explicit mechanical engineering geometry is recorded.');
+    mechanicalScore = 0;
+  } else {
+    const incompleteObjects = mechanical.objects.filter(
+      (object) => object.type !== 'Annotation'
+        && !mechanical.engineeringObjects.some((candidate) => candidate.id === object.id),
+    );
+    if (incompleteObjects.length > 0) {
+      warnings.push(`${incompleteObjects.length} mechanical object${incompleteObjects.length === 1 ? '' : 's'} lack complete explicit geometry.`);
+      mechanicalScore -= Math.min(40, incompleteObjects.length * 10);
+    }
+    if (mechanical.dimensions.length === 0) {
+      suggestions.push('Mechanical geometry has no explicit dimensions/tolerances recorded.');
+      mechanicalScore -= 15;
     }
   }
 
-  // 3. ASSEMBLY LAYOUT
+  // 3. ASSEMBLY ENGINEERING STATE
   let assemblyScore = 100;
-  const assemblyObjects = project.editorLayouts?.assembly || [];
-  if (assemblyObjects.length === 0) {
-    suggestions.push('Assembly layers checklist has no steps generated.');
-    assemblyScore -= 40;
+  if (!mechanical.hasAssemblyEvidence) {
+    suggestions.push('No explicit assembly layers or fastening sequence is recorded.');
+    assemblyScore = 0;
+  } else {
+    const unordered = mechanical.assemblyLayers.filter((layer) => !Number.isFinite(layer.order));
+    if (unordered.length > 0) {
+      warnings.push(`${unordered.length} assembly layer${unordered.length === 1 ? '' : 's'} lack an explicit order.`);
+      assemblyScore -= Math.min(30, unordered.length * 10);
+    }
   }
 
   // 4. BOARD LAYOUT PREP
@@ -258,12 +270,28 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   }
 
   // 15. SAFETY / COMPLIANCE
+  // Product names/templates do not determine safety obligations. Readiness is
+  // based only on explicit safety requirements and compliance checks.
+  const safetyRequirements = (project.requirements || []).filter((requirement) => requirement.type === 'Safety');
+  const complianceChecks = mfgChecklist.filter((item) => item.category === 'Compliance');
   let safetyScore = 100;
-  if (isRing) {
-    const skinCheck = mfgChecklist.find((item) => item.item.toLowerCase().includes('skin') || item.item.toLowerCase().includes('material'));
-    if (!skinCheck || skinCheck.status !== 'Done') {
-      warnings.push('Safety: Skin hypoallergenic comfort verification is pending.');
-      safetyScore -= 30;
+
+  if (safetyRequirements.length === 0 && complianceChecks.length === 0) {
+    safetyScore = 0;
+    suggestions.push('Safety/compliance applicability has not been explicitly assessed.');
+  } else if (complianceChecks.length === 0) {
+    safetyScore = 0;
+    warnings.push(`${safetyRequirements.length} safety requirement${safetyRequirements.length === 1 ? '' : 's'} have no explicit compliance checklist evidence.`);
+  } else {
+    const blockedCompliance = complianceChecks.filter((item) => item.status === 'Blocked');
+    const incompleteCompliance = complianceChecks.filter((item) => item.status !== 'Done');
+    if (blockedCompliance.length > 0) {
+      blockers.push(`${blockedCompliance.length} compliance check${blockedCompliance.length === 1 ? ' is' : 's are'} blocked.`);
+      safetyScore -= Math.min(60, blockedCompliance.length * 20);
+    }
+    if (incompleteCompliance.length > 0) {
+      warnings.push(`${incompleteCompliance.length} compliance check${incompleteCompliance.length === 1 ? ' is' : 's are'} not complete.`);
+      safetyScore -= Math.min(40, incompleteCompliance.length * 10);
     }
   }
 

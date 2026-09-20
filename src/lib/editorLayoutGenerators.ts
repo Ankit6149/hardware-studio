@@ -13,6 +13,7 @@ import {
 import { applyCanonicalPcbPlacement, resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 import { resolveArchitectureProjection } from './product/architectureAuthority';
 import { resolveValidationAuthority } from './validation/validationAuthority';
+import { resolveMechanicalAuthority } from './mechanical/mechanicalAuthority';
 
 export const getInitialFactoryFiles = (project?: Project): Record<string, FactoryFileStatus> => {
   const hasBom = project && project.bom && project.bom.length > 0;
@@ -67,8 +68,7 @@ export const generateEditorLayouts = (project: Project): {
   const pinMap = project.pinMap || [];
   const validation = resolveValidationAuthority(project);
   const testing = validation.tests;
-
-  const isRing = project.projectName.toLowerCase().includes("ring") || project.templateName?.toLowerCase().includes("ring");
+  const mechanical = resolveMechanicalAuthority(project);
 
   // 1. PRODUCT ARCHITECTURE LAYOUT
   const categories = ["Input", "Processing", "Power", "Communication", "Wireless", "Feedback", "Mechanical", "Firmware", "Safety", "Manufacturing", "Integration"];
@@ -155,122 +155,93 @@ export const generateEditorLayouts = (project: Project): {
     });
   }
 
-  // 2. MECHANICAL LAYOUT
-  if (isRing) {
-    // Wearable Ring profile
-    const ringItems = [
-      { id: "outer_shell", name: "Outer Casing Shell", r: 80, stroke: "#0f172a", w: 10 },
-      { id: "inner_shell", name: "Inner Sleeve Comfort", r: 60, stroke: "#334155", w: 5 },
-      { id: "flex_pcb_arc", name: "Main Flex FPC Zone", r: 66, stroke: "#10b981", w: 2 },
-      { id: "battery_pouch", name: "LiPo Battery Pouch", r: 65, stroke: "#f43f5e", w: 4, angle: 180 },
-      { id: "haptic_cavity", name: "LRA Haptics Cavity", r: 52, stroke: "#eab308", w: 10, angle: 90 },
-      { id: "charging_contacts", name: "Charge Pins Contacts", r: 76, stroke: "#eab308", w: 6, angle: 270 },
-      { id: "antenna_keepout", name: "BLE Antenna Keepout", r: 66, stroke: "#6366f1", w: 8, angle: 0 }
-    ];
-    ringItems.forEach((item) => {
-      layouts.mechanical!.push({
-        id: `obj_m_${item.id}`,
-        mode: "mechanical",
-        sourceType: "mechanical-zone",
-        label: item.name,
-        kind: "circular-zone",
-        x: 300,
-        y: 200,
-        width: item.r * 2,
-        height: item.r * 2,
-        layer: "Enclosure",
-        metadata: {
-          widthMm: item.w,
-          angleDeg: item.angle || 0
-        }
-      });
-    });
-    
-    // Dimension labels
+  // 2. MECHANICAL LAYOUT PROJECTION
+  // This canvas is a view over explicit engineering geometry. It never creates
+  // product-specific demo geometry or substitutes UI coordinates for CAD truth.
+  const mechanicalDisplayScale = 4;
+  mechanical.objects.forEach((object) => {
+    const widthMm = object.shape === 'circle'
+      ? (object.radiusMm || 0) * 2
+      : object.widthMm || 0;
+    const heightMm = object.shape === 'circle'
+      ? (object.radiusMm || 0) * 2
+      : object.heightMm || 0;
+
     layouts.mechanical!.push({
-      id: "obj_m_dim_id",
+      id: `obj_m_${object.id}`,
+      mode: "mechanical",
+      sourceType: "mechanical-zone",
+      sourceId: object.id,
+      label: object.name,
+      kind: object.shape === 'circle' ? "circular-zone" : "rectangular-zone",
+      x: 80 + object.xMm * mechanicalDisplayScale,
+      y: 60 + object.yMm * mechanicalDisplayScale,
+      width: Math.max(24, widthMm * mechanicalDisplayScale),
+      height: Math.max(24, heightMm * mechanicalDisplayScale),
+      rotation: object.rotationDeg,
+      layer: object.layer || "Mechanical",
+      locked: object.locked,
+      visible: object.visible,
+      metadata: {
+        authoritySource: "canonical",
+        engineeringType: object.type,
+        displayProjectionOnly: true,
+      }
+    });
+  });
+
+  mechanical.dimensions.forEach((dimension) => {
+    const midpointX = (dimension.from.xMm + dimension.to.xMm) / 2;
+    const midpointY = (dimension.from.yMm + dimension.to.yMm) / 2;
+    layouts.mechanical!.push({
+      id: `obj_m_dim_${dimension.id}`,
       mode: "mechanical",
       sourceType: "dimension",
-      label: "ID: Ø 18.5 mm",
+      sourceId: dimension.id,
+      label: `${dimension.name}: ${dimension.valueMm} mm`,
       kind: "label",
-      x: 300,
-      y: 135,
-      width: 80,
-      height: 20,
-      layer: "Dimensions"
+      x: 80 + midpointX * mechanicalDisplayScale,
+      y: 60 + midpointY * mechanicalDisplayScale,
+      width: 120,
+      height: 24,
+      layer: "Dimensions",
+      metadata: {
+        authoritySource: "canonical",
+        valueMm: dimension.valueMm,
+        displayProjectionOnly: true,
+      }
     });
-    layouts.mechanical!.push({
-      id: "obj_m_dim_od",
-      mode: "mechanical",
-      sourceType: "dimension",
-      label: "OD: Ø 22.5 mm",
-      kind: "label",
-      x: 300,
-      y: 75,
-      width: 80,
-      height: 20,
-      layer: "Dimensions"
-    });
-  } else {
-    // Rectangular mechanical box
-    const mechBox = [
-      { id: "outer_casing", name: "Outer Casing Enclosure", x: 100, y: 80, w: 320, h: 200, stroke: "#0f172a" },
-      { id: "pcb_envelope", name: "Main PCBA Envelope", x: 120, y: 100, w: 280, h: 160, stroke: "#10b981" },
-      { id: "battery_pocket", name: "LiPo Battery Pocket", x: 140, y: 120, w: 80, h: 80, stroke: "#f43f5e" },
-      { id: "usb_port", name: "USB Charger Cutout", x: 90, y: 170, w: 20, h: 30, stroke: "#eab308" }
-    ];
-    mechBox.forEach((item) => {
-      layouts.mechanical!.push({
-        id: `obj_m_${item.id}`,
-        mode: "mechanical",
-        sourceType: "mechanical-zone",
-        label: item.name,
-        kind: "rectangular-zone",
-        x: item.x,
-        y: item.y,
-        width: item.w,
-        height: item.h,
-        layer: "Enclosure"
-      });
-    });
-  }
+  });
 
-  // 3. EXPLODED ASSEMBLY LAYOUT
-  const assemblySteps = [
-    { id: "outer_casing", label: "01. Outer Protection Enclosure", step: 1, method: "SLA Resin / CNC Metal" },
-    { id: "seal_gasket", label: "02. Adhesive Waterproof Gasket", step: 2, method: "UV Cure Adhesive" },
-    { id: "pcba_core", label: "03. Main PCBA Core Assembly", step: 3, method: "Reflow Solder" },
-    { id: "components_layer", label: "04. Placed SMT Components", step: 4, method: "SMD Solder" },
-    { id: "battery_layer", label: "05. Lithium Ion Pouch Cell", step: 5, method: "Contact spring / Tape" },
-    { id: "sensor_layer", label: "06. Haptics / Sensor Modules", step: 6, method: "Epoxy potting" },
-    { id: "inner_sleeve", label: "07. Biocompatible Comfort Liner", step: 7, method: "Slid-fit Adhesive" },
-    { id: "inspection_point", label: "08. Factory QA Test Point", step: 8, method: "Spring Probe Test jig" }
-  ];
-
-  assemblySteps.forEach((step, idx) => {
+  // 3. ASSEMBLY LAYOUT PROJECTION
+  const assemblyLayers = [...mechanical.assemblyLayers].sort((a, b) => a.order - b.order);
+  assemblyLayers.forEach((layer, index) => {
     layouts.assembly!.push({
-      id: `obj_a_${step.id}`,
+      id: `obj_a_${layer.id}`,
       mode: "assembly",
       sourceType: "assembly-layer",
-      label: step.label,
+      sourceId: layer.id,
+      label: `${String(layer.order).padStart(2, '0')}. ${layer.name}`,
       kind: "layer",
       x: 150,
-      y: 50 + idx * 55,
+      y: 50 + index * 55,
       width: 350,
       height: 38,
       layer: "Assembly Steps",
       metadata: {
-        stepNumber: step.step,
-        method: step.method
+        stepNumber: layer.order,
+        material: layer.material,
+        method: layer.fasteningMethod,
+        authoritySource: "canonical",
       }
     });
 
-    if (idx < assemblySteps.length - 1) {
+    if (index < assemblyLayers.length - 1) {
       connections.push({
-        id: `conn_a_${idx}`,
+        id: `conn_a_${layer.id}_${assemblyLayers[index + 1].id}`,
         mode: "assembly",
-        sourceObjectId: `obj_a_${step.id}`,
-        targetObjectId: `obj_a_${assemblySteps[idx + 1].id}`,
+        sourceObjectId: `obj_a_${layer.id}`,
+        targetObjectId: `obj_a_${assemblyLayers[index + 1].id}`,
         label: "next step",
         kind: "assembly"
       });
