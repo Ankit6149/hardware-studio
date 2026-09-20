@@ -384,10 +384,13 @@ describe('legacy validation reconciliation preview', () => {
     expect(await fingerprintLegacyValidationReconciliation(first))
       .toBe(await fingerprintLegacyValidationReconciliation(second));
 
+    const canonical = adopted.validationTests?.[0];
+    if (!canonical) throw new Error('missing canonical fingerprint fixture');
+
     const changed = await previewLegacyValidationReconciliation({
       ...adopted,
       validationTests: [{
-        ...(adopted.validationTests?.[0]!),
+        ...canonical,
         resultNotes: 'Local note added after review.',
       }],
     });
