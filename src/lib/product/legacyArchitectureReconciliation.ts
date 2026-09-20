@@ -482,7 +482,11 @@ function deletedConnectionItem(
   const source = connection.sourceIdentity!;
   const baseline = baselineFor(connection);
   const fieldDiffs = baseline
-    ? diffSnapshots(baseline, normalizedConnectionSnapshot(connection))
+    ? diffSnapshots(
+        baseline,
+        normalizedConnectionSnapshot(connection),
+        connection.reconciliationBaseline?.sourceSnapshot || baseline,
+      )
     : [];
   const localSemanticChanged = fieldDiffs.some((diff) => diff.localChanged);
   const deletionAlreadyReviewed = connection.reconciliationBaseline?.sourcePresence === 'deleted';
@@ -652,6 +656,7 @@ export async function fingerprintLegacyArchitectureReconciliation(
       localSemanticChanged: item.localSemanticChanged,
       sourceSemanticChanged: item.sourceSemanticChanged,
       sourceSemanticsResolved: item.sourceSemanticsResolved,
+      suppressed: item.suppressed === true,
       fieldDiffs: item.fieldDiffs,
       sourceIssueCodes: item.sourceIssues.map((issue) => issue.code).sort(),
     })),
