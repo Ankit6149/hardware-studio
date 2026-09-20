@@ -219,6 +219,7 @@ export function migrateProjectSchema(project: unknown): Project {
   if (!migrated.architectureNodes) migrated.architectureNodes = [];
   if (!migrated.architectureConnections) migrated.architectureConnections = [];
   if (!migrated.architectureReconciliationSuppressions) migrated.architectureReconciliationSuppressions = [];
+  if (!migrated.validationReconciliationSuppressions) migrated.validationReconciliationSuppressions = [];
   if (!migrated.mechanicalObjects) migrated.mechanicalObjects = [];
   if (!migrated.firmwareModules) migrated.firmwareModules = [];
   if (!migrated.validationTests) migrated.validationTests = [];
