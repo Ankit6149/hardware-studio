@@ -43,6 +43,7 @@ export interface ArchitectureReconciliationItem {
   fieldDiffs: ArchitectureReconciliationFieldDiff[];
   sourceIssues: LegacyArchitectureAdoptionIssue[];
   message: string;
+  suppressed?: boolean;
 }
 
 export interface ArchitectureReconciliationPreviewIssue {
@@ -361,39 +362,62 @@ function itemFromMatchedConnection(
   };
 }
 
-function newNodeItem(proposal: LegacyArchitectureNodeProposal): ArchitectureReconciliationItem {
+function matchingSuppression(
+  project: Project,
+  source: SourceIdentity,
+): boolean {
+  const hash = source.contentHash;
+  if (!hash) return false;
+  return (project.architectureReconciliationSuppressions || []).some((suppression) => (
+    suppression.decision === 'reject-new-source'
+    && sourceKey(suppression.sourceIdentity) === sourceKey(source)
+    && suppression.sourceContentHash === hash
+  ));
+}
+
+function newNodeItem(
+  proposal: LegacyArchitectureNodeProposal,
+  suppressed = false,
+): ArchitectureReconciliationItem {
   return {
     kind: 'node',
-    classification: 'new-source',
+    classification: suppressed ? 'unchanged' : 'new-source',
     sourceEntityId: proposal.sourceNodeId,
     sourceIdentity: proposal.sourceIdentity,
     currentSourceContentHash: proposal.sourceIdentity.contentHash,
-    sourceContentChanged: true,
+    sourceContentChanged: !suppressed,
     localSemanticChanged: false,
-    sourceSemanticChanged: Boolean(proposal.proposed),
+    sourceSemanticChanged: !suppressed && Boolean(proposal.proposed),
     sourceSemanticsResolved: Boolean(proposal.proposed),
     fieldDiffs: [],
     sourceIssues: proposal.issues,
-    message: nodeMessage('new-source', proposal.sourceNodeId),
+    message: suppressed
+      ? `New legacy node "${proposal.sourceNodeId}" was explicitly rejected at this exact source fingerprint and remains unchanged.`
+      : nodeMessage('new-source', proposal.sourceNodeId),
+    suppressed,
   };
 }
 
 function newConnectionItem(
   proposal: LegacyArchitectureConnectionProposal,
+  suppressed = false,
 ): ArchitectureReconciliationItem {
   return {
     kind: 'connection',
-    classification: 'new-source',
+    classification: suppressed ? 'unchanged' : 'new-source',
     sourceEntityId: proposal.sourceEdgeId,
     sourceIdentity: proposal.sourceIdentity,
     currentSourceContentHash: proposal.sourceIdentity.contentHash,
-    sourceContentChanged: true,
+    sourceContentChanged: !suppressed,
     localSemanticChanged: false,
-    sourceSemanticChanged: Boolean(proposal.proposed),
+    sourceSemanticChanged: !suppressed && Boolean(proposal.proposed),
     sourceSemanticsResolved: Boolean(proposal.proposed),
     fieldDiffs: [],
     sourceIssues: proposal.issues,
-    message: connectionMessage('new-source', proposal.sourceEdgeId),
+    message: suppressed
+      ? `New legacy connection "${proposal.sourceEdgeId}" was explicitly rejected at this exact source fingerprint and remains unchanged.`
+      : connectionMessage('new-source', proposal.sourceEdgeId),
+    suppressed,
   };
 }
 
@@ -507,7 +531,10 @@ export async function previewLegacyArchitectureReconciliation(
 
     const canonicalNode = candidates[0];
     if (!canonicalNode) {
-      items.push(newNodeItem(proposal));
+      items.push(newNodeItem(
+        proposal,
+        matchingSuppression(project, proposal.sourceIdentity),
+      ));
       continue;
     }
 
@@ -534,7 +561,10 @@ export async function previewLegacyArchitectureReconciliation(
 
     const canonicalConnection = candidates[0];
     if (!canonicalConnection) {
-      items.push(newConnectionItem(proposal));
+      items.push(newConnectionItem(
+        proposal,
+        matchingSuppression(project, proposal.sourceIdentity),
+      ));
       continue;
     }
 
