@@ -335,7 +335,6 @@ export const exportBlueprintSheetsHtml = (project: Project): string => {
   const report = calculateReadinessScore(project);
   const totalAvg = totalAvgCurrent(project);
   const runtime = totalAvg > 0 ? ((project.batteryCapacityMah || 18) / totalAvg).toFixed(1) : "0.0";
-  const validation = resolveValidationAuthority(project);
 
   return `<!DOCTYPE html>
 <html>
