@@ -228,6 +228,35 @@ function semanticConnectionFromProposal(
   };
 }
 
+function nodeSemanticSnapshot(
+  semantic: ArchitectureNodeSemanticValues | undefined,
+): Record<string, string | number | boolean | null | undefined> | undefined {
+  if (!semantic) return undefined;
+  return {
+    name: semantic.name,
+    category: semantic.category,
+    description: semantic.description,
+    x: semantic.x,
+    y: semantic.y,
+    width: semantic.width,
+    height: semantic.height,
+    status: semantic.status,
+  };
+}
+
+function connectionSemanticSnapshot(
+  semantic: ArchitectureConnectionSemanticValues | undefined,
+): Record<string, string | number | boolean | null | undefined> | undefined {
+  if (!semantic) return undefined;
+  return {
+    name: semantic.name,
+    type: semantic.type,
+    protocol: semantic.protocol,
+    voltage: semantic.voltage,
+    direction: semantic.direction,
+  };
+}
+
 function completeNodeManual(
   manual: Partial<ArchitectureNodeSemanticValues> | undefined,
 ): manual is ArchitectureNodeSemanticValues {
@@ -298,7 +327,7 @@ function refreshedNode(
       sourceContentHash: sourceIdentity.contentHash || node.reconciliationBaseline?.sourceContentHash || '',
       adoptedAt: node.reconciliationBaseline?.adoptedAt || review.reviewedAt,
       canonicalSnapshot: nodeSnapshot(node),
-      sourceSnapshot: sourceSemantic,
+      sourceSnapshot: nodeSemanticSnapshot(sourceSemantic),
       sourcePresence: 'present',
       resolution,
       reviewedBy: review.reviewerId,
@@ -323,7 +352,7 @@ function refreshedConnection(
       sourceContentHash: sourceIdentity.contentHash || connection.reconciliationBaseline?.sourceContentHash || '',
       adoptedAt: connection.reconciliationBaseline?.adoptedAt || review.reviewedAt,
       canonicalSnapshot: connectionSnapshot(connection),
-      sourceSnapshot: sourceSemantic,
+      sourceSnapshot: nodeSemanticSnapshot(sourceSemantic),
       sourcePresence: 'present',
       resolution,
       reviewedBy: review.reviewerId,
@@ -610,7 +639,7 @@ export async function buildLegacyArchitectureReconciliationApplyPlan(
         sourceContentHash: sourceIdentity.contentHash || '',
         adoptedAt: review.reviewedAt,
         canonicalSnapshot: nodeSnapshot(created),
-        sourceSnapshot: sourceSemantic,
+        sourceSnapshot: nodeSemanticSnapshot(sourceSemantic),
         sourcePresence: 'present',
         resolution: sourceSemantic ? 'take-source' : 'manual',
         reviewedBy: review.reviewerId,
@@ -819,7 +848,7 @@ export async function buildLegacyArchitectureReconciliationApplyPlan(
         canonicalSnapshot: connectionSnapshot(created),
         sourceSnapshot: sourceSemantic
           ? {
-              ...sourceSemantic,
+              ...connectionSemanticSnapshot(sourceSemantic),
               sourceNodeId,
               targetNodeId,
             }
