@@ -69,6 +69,14 @@ import {
   type LegacyArchitectureAdoptionApplyPlan,
 } from '../lib/product/legacyArchitectureAdoptionApply';
 import {
+  projectPatchFromArchitectureReconciliationPlan,
+  type ArchitectureReconciliationApplyPlan,
+} from '../lib/product/legacyArchitectureReconciliationApply';
+import {
+  fingerprintLegacyArchitectureReconciliation,
+  previewLegacyArchitectureReconciliation,
+} from '../lib/product/legacyArchitectureReconciliation';
+import {
   serializeProject,
   deserializeProject,
   validateProjectIntegrity
@@ -304,6 +312,9 @@ interface ProjectState extends Project {
   applyLegacyArchitectureAdoptionPlan: (
     plan: LegacyArchitectureAdoptionApplyPlan,
   ) => { success: boolean; reason?: string };
+  applyLegacyArchitectureReconciliationPlan: (
+    plan: ArchitectureReconciliationApplyPlan,
+  ) => Promise<{ success: boolean; reason?: string }>;
 
   addMechanicalObject: (obj: Omit<MechanicalObject, 'id'> & { id?: string }) => void;
   updateMechanicalObject: (id: string, data: Partial<MechanicalObject>) => void;
@@ -3503,6 +3514,37 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       return { success: true };
     },
 
+    applyLegacyArchitectureReconciliationPlan: async (plan) => {
+      const state = get();
+
+      if (!plan.canApply) {
+        return { success: false, reason: 'Reconciliation plan is not fully resolved and cannot be applied.' };
+      }
+      if (plan.projectId !== state.id) {
+        return { success: false, reason: 'Reconciliation plan belongs to a different project.' };
+      }
+
+      const currentPreview = await previewLegacyArchitectureReconciliation(state as ProjectState);
+      const currentFingerprint = await fingerprintLegacyArchitectureReconciliation(currentPreview);
+      if (currentFingerprint !== plan.previewFingerprint) {
+        return {
+          success: false,
+          reason: 'Reconciliation preview is stale because source or canonical architecture changed after review.',
+        };
+      }
+
+      const patch = projectPatchFromArchitectureReconciliationPlan(plan);
+      get().executeProjectCommand(
+        'RECONCILE_LEGACY_ARCHITECTURE',
+        `Apply reviewed legacy architecture reconciliation (${plan.previewFingerprint.slice(0, 18)})`,
+        () => {
+          persistChange(patch);
+        },
+      );
+
+      return { success: true };
+    },
+
     // Mechanical Dimensions
     addMechanicalDimension: (dim) => {
       const id = `mech_dim_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
@@ -3578,7 +3620,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
-        'requirements', 'architectureNodes', 'architectureConnections', 'mechanicalObjects', 'mechanicalDimensions',
+        'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
         'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
       ];
 
@@ -3615,7 +3657,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
-        'requirements', 'architectureNodes', 'architectureConnections', 'mechanicalObjects', 'mechanicalDimensions',
+        'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
         'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
       ];
 
@@ -3668,7 +3710,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
-        'requirements', 'architectureNodes', 'architectureConnections', 'mechanicalObjects', 'mechanicalDimensions',
+        'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
         'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
       ];
 
