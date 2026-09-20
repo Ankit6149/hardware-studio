@@ -12,6 +12,7 @@ import {
 } from '../types';
 import { applyCanonicalPcbPlacement, resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 import { resolveArchitectureProjection } from './product/architectureAuthority';
+import { resolveValidationAuthority } from './validation/validationAuthority';
 
 export const getInitialFactoryFiles = (project?: Project): Record<string, FactoryFileStatus> => {
   const hasBom = project && project.bom && project.bom.length > 0;
@@ -64,7 +65,8 @@ export const generateEditorLayouts = (project: Project): {
   const nets = project.nets || [];
   const powerBudget = project.powerBudget || [];
   const pinMap = project.pinMap || [];
-  const testing = project.testing || [];
+  const validation = resolveValidationAuthority(project);
+  const testing = validation.tests;
 
   const isRing = project.projectName.toLowerCase().includes("ring") || project.templateName?.toLowerCase().includes("ring");
 
@@ -663,8 +665,9 @@ export const generateEditorLayouts = (project: Project): {
   });
 
   testing.forEach((t, idx) => {
-    const stage = t.category || "EVT";
-    const colIdx = lanes.indexOf(stage.toUpperCase()) !== -1 ? lanes.indexOf(stage.toUpperCase()) : 0;
+    const stage = t.stage || t.category || "EVT";
+    const normalizedStage = stage === 'Factory QA' ? 'QA' : stage.toUpperCase();
+    const colIdx = lanes.indexOf(normalizedStage) !== -1 ? lanes.indexOf(normalizedStage) : 0;
 
     layouts.testing!.push({
       id: `obj_t_test_${t.id}`,
@@ -680,7 +683,8 @@ export const generateEditorLayouts = (project: Project): {
       layer: "Test Cards",
       metadata: {
         status: t.status,
-        criteria: t.passCriteria
+        criteria: t.passCriteria.join('; '),
+        authoritySource: t.source
       }
     });
   });

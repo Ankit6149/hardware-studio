@@ -1,5 +1,6 @@
-import { Project, CustomNode, BOMItem, TestStage } from '../types';
+import { Project, CustomNode, BOMItem } from '../types';
 import { calculateReadinessScore } from './readinessScore';
+import { resolveValidationAuthority } from './validation/validationAuthority';
 
 const escapeMarkdown = (text: string | number | undefined | null): string => {
   if (text === undefined || text === null) return '';
@@ -195,21 +196,30 @@ export const exportProjectMarkdown = (project: Project) => {
 
     // 7. TESTING BOARD
     md += `## 7. Stage-Based Testing & Verification Plan\n\n`;
-    if (project.testing.length === 0) {
-      md += `*No testing stages configured.*\n\n`;
+    const validation = resolveValidationAuthority(project);
+    if (validation.tests.length === 0) {
+      md += `*No validation definitions configured.*\n\n`;
     } else {
-      project.testing.forEach((stage: TestStage) => {
-        md += `### Test Stage: ${stage.name}\n`;
-        md += `- **Category:** ${stage.category || 'General'}\n`;
-        md += `- **Verification Status:** **${stage.status}**\n`;
-        md += `- **Goal:** ${stage.goal || 'N/A'}\n`;
-        md += `- **Parts Required:** ${stage.partsNeeded || 'N/A'}\n`;
-        md += `- **Steps:** ${stage.steps || 'N/A'}\n`;
-        md += `- **Pass Criteria:** ${stage.passCriteria || 'N/A'}\n`;
-        if (stage.risks) md += `- **Risks & Mitigation:** ${stage.risks}\n`;
-        if (stage.resultNotes) md += `- **Result Notes:** ${stage.resultNotes}\n`;
-        if (stage.evidenceLink) md += `- **Evidence Link/Ref:** ${stage.evidenceLink}\n`;
-        if (stage.notes) md += `- **Developer Notes:** ${stage.notes}\n`;
+      md += `**Validation authority:** ${validation.source}\n\n`;
+      validation.tests.forEach((test) => {
+        md += `### Validation Test: ${test.name}\n`;
+        md += `- **Stage:** ${test.stage || 'Unspecified'}\n`;
+        md += `- **Category:** ${test.category || 'General'}\n`;
+        md += `- **Verification Status:** **${test.status}**\n`;
+        md += `- **Pass Criteria:** ${test.passCriteria.length > 0 ? test.passCriteria.join('; ') : 'N/A'}\n`;
+        md += `- **Linked Requirements:** ${test.linkedRequirementIds.length > 0 ? test.linkedRequirementIds.join(', ') : 'None'}\n`;
+        md += `- **Evidence Count:** ${test.evidenceCount}\n`;
+
+        if (test.source === 'legacy-compatibility' && test.legacy) {
+          if (test.legacy.goal) md += `- **Legacy Goal:** ${test.legacy.goal}\n`;
+          if (test.legacy.partsNeeded) md += `- **Legacy Parts Required:** ${test.legacy.partsNeeded}\n`;
+          if (test.legacy.steps) md += `- **Legacy Steps:** ${test.legacy.steps}\n`;
+          if (test.legacy.risks) md += `- **Legacy Risks:** ${test.legacy.risks}\n`;
+          if (test.legacy.resultNotes) md += `- **Legacy Result Notes:** ${test.legacy.resultNotes}\n`;
+          if (test.legacy.evidenceLink) md += `- **Legacy Evidence Ref:** ${test.legacy.evidenceLink}\n`;
+          if (test.legacy.notes) md += `- **Legacy Notes:** ${test.legacy.notes}\n`;
+        }
+
         md += `\n`;
       });
     }
