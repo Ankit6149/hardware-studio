@@ -683,7 +683,7 @@ export const generateEditorLayouts = (project: Project): {
       layer: "Test Cards",
       metadata: {
         status: t.status,
-        criteria: t.passCriteria,
+        criteria: t.passCriteria.join('; '),
         authoritySource: t.source
       }
     });
