@@ -178,10 +178,10 @@ describe('legacy validation reconciliation preview', () => {
       validationTests: [{
         ...canonical,
         steps: [{
-          id: 'step-1',
-          order: 1,
+          stepNumber: 1,
           instruction: 'Measure the 3V3 rail.',
           expectedResult: 'Rail remains within tolerance.',
+          completed: true,
         }],
         evidence: [{
           id: 'ev-1',
@@ -276,11 +276,10 @@ describe('legacy validation reconciliation preview', () => {
         id: 'run-1',
         testId: canonicalId,
         runNumber: 1,
-        startedAt: '2026-09-21T01:00:00.000Z',
-        completedAt: '2026-09-21T01:05:00.000Z',
-        outcome: 'Passed',
-        measurements: [],
+        timestamp: '2026-09-21T01:05:00.000Z',
+        status: 'Passed',
         evidence: [],
+        logs: ['Run completed successfully.'],
       }],
       testing: [],
     };
