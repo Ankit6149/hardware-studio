@@ -71,6 +71,7 @@ export function serializeProject(project: Project): string {
     firmwareBuildRecords: project.firmwareBuildRecords || [],
     validationTests: project.validationTests || [],
     validationRuns: project.validationRuns || [],
+    validationReconciliationSuppressions: project.validationReconciliationSuppressions || [],
     revisions: project.revisions || [],
     branches: project.branches || [],
     releaseCandidates: project.releaseCandidates || [],
@@ -111,6 +112,7 @@ export function migrateProjectSchema(raw: unknown): Project {
   if (!pRecord.firmwareSourceFiles) pRecord.firmwareSourceFiles = [];
   if (!pRecord.firmwareBuildRecords) pRecord.firmwareBuildRecords = [];
   if (!pRecord.validationRuns) pRecord.validationRuns = [];
+  if (!pRecord.validationReconciliationSuppressions) pRecord.validationReconciliationSuppressions = [];
   if (!pRecord.revisions) pRecord.revisions = [];
   if (!pRecord.branches) pRecord.branches = [];
   if (!pRecord.releaseCandidates) pRecord.releaseCandidates = [];
