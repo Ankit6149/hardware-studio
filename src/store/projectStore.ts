@@ -606,6 +606,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       requirements: state.requirements || [],
       architectureNodes: state.architectureNodes || [],
       architectureConnections: state.architectureConnections || [],
+      architectureReconciliationSuppressions: state.architectureReconciliationSuppressions || [],
       mechanicalObjects: state.mechanicalObjects || [],
       mechanicalDimensions: state.mechanicalDimensions || [],
       mechanicalBodies: state.mechanicalBodies || [],
@@ -683,6 +684,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
 
     requirements: initialProject.requirements || [],
     architectureNodes: initialProject.architectureNodes || [],
+    architectureConnections: initialProject.architectureConnections || [],
+    architectureReconciliationSuppressions: initialProject.architectureReconciliationSuppressions || [],
     mechanicalObjects: initialProject.mechanicalObjects || [],
     firmwareModules: initialProject.firmwareModules || [],
     firmwareSourceFiles: initialProject.firmwareSourceFiles || [],
