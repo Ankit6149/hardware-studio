@@ -2,6 +2,7 @@ import { Project } from '../types';
 import { runDesignReview } from './designReview';
 import { resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 import { resolveArchitectureProjection } from './product/architectureAuthority';
+import { resolveValidationAuthority } from './validation/validationAuthority';
 
 export interface ReadinessReport {
   overallScore: number;
@@ -58,7 +59,8 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   const powerBudget = project.powerBudget || [];
   const pinMap = project.pinMap || [];
   const fwTasks = project.firmwareTasks || [];
-  const testing = project.testing || [];
+  const validation = resolveValidationAuthority(project);
+  const testing = validation.tests;
   const boards = project.boards || [];
   const circuitBlocks = project.circuitBlocks || [];
   const boardComponents = project.boardComponents || [];
