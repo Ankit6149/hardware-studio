@@ -244,7 +244,7 @@ function updateSuppression(
 function refreshedTest(
   test: ValidationTest,
   sourceIdentity: SourceIdentity,
-  sourceSemantic: ValidationSemanticValues | undefined,
+  sourceProposal: ValidationTest | undefined,
   review: ValidationReconciliationReviewMetadata,
   resolution: 'keep-local' | 'take-source' | 'manual',
 ): ValidationTest {
@@ -259,11 +259,8 @@ function refreshedTest(
     sourceContentHash: sourceIdentity.contentHash || test.reconciliationBaseline?.sourceContentHash || '',
     adoptedAt: test.reconciliationBaseline?.adoptedAt || review.reviewedAt,
     canonicalSnapshot: validationSnapshot(refreshed),
-    sourceSnapshot: sourceSemantic
-      ? validationSnapshot({
-          ...refreshed,
-          ...sourceSemantic,
-        })
+    sourceSnapshot: sourceProposal
+      ? validationSnapshot(sourceProposal)
       : undefined,
     sourcePresence: 'present',
     resolution,
@@ -472,8 +469,8 @@ export async function buildLegacyValidationReconciliationApplyPlan(
         sourceContentHash: sourceIdentity.contentHash || '',
         adoptedAt: review.reviewedAt,
         canonicalSnapshot: validationSnapshot(created),
-        sourceSnapshot: sourceSemantic
-          ? validationSnapshot({ ...created, ...sourceSemantic })
+        sourceSnapshot: proposal.proposed
+          ? validationSnapshot(proposal.proposed)
           : undefined,
         sourcePresence: 'present',
         resolution: sourceSemantic ? 'take-source' : 'manual',
@@ -562,7 +559,7 @@ export async function buildLegacyValidationReconciliationApplyPlan(
     next = refreshedTest(
       next,
       proposal.sourceIdentity,
-      sourceSemantic,
+      proposal.proposed,
       review,
       resolutionKind,
     );
