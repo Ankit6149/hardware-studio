@@ -636,6 +636,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       firmwareBuildRecords: state.firmwareBuildRecords || [],
       validationTests: state.validationTests || [],
       validationRuns: state.validationRuns || [],
+      validationReconciliationSuppressions: state.validationReconciliationSuppressions || [],
       revisions: state.revisions || [],
       branches: state.branches || [],
       releaseCandidates: state.releaseCandidates || [],
@@ -3702,7 +3703,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
         'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
-        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
+        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests', 'validationReconciliationSuppressions'
       ];
 
       const state = get();
@@ -3739,7 +3740,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
         'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
-        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
+        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests', 'validationReconciliationSuppressions'
       ];
 
       const updatedState = get();
@@ -3792,7 +3793,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
         'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
-        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
+        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests', 'validationReconciliationSuppressions'
       ];
 
       const state = get();
