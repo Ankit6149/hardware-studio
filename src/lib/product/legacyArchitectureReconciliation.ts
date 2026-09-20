@@ -22,6 +22,7 @@ export type ArchitectureReconciliationClassification =
 export interface ArchitectureReconciliationFieldDiff {
   field: string;
   baseline: string | number | boolean | null | undefined;
+  baselineSource: string | number | boolean | null | undefined;
   currentCanonical: string | number | boolean | null | undefined;
   currentSource: string | number | boolean | null | undefined;
   localChanged: boolean;
@@ -113,12 +114,14 @@ function equalValue(
 }
 
 function diffSnapshots(
-  baseline: SemanticSnapshot,
+  canonicalBaseline: SemanticSnapshot,
   currentCanonical: SemanticSnapshot,
+  sourceBaseline: SemanticSnapshot = canonicalBaseline,
   currentSource?: SemanticSnapshot,
 ): ArchitectureReconciliationFieldDiff[] {
   const fields = new Set([
-    ...Object.keys(baseline),
+    ...Object.keys(canonicalBaseline),
+    ...Object.keys(sourceBaseline),
     ...Object.keys(currentCanonical),
     ...Object.keys(currentSource || {}),
   ]);
@@ -126,16 +129,18 @@ function diffSnapshots(
   return [...fields]
     .sort()
     .map((field) => {
-      const baselineValue = baseline[field];
+      const canonicalBaselineValue = canonicalBaseline[field];
+      const sourceBaselineValue = sourceBaseline[field];
       const canonicalValue = currentCanonical[field];
       const sourceValue = currentSource?.[field];
       return {
         field,
-        baseline: baselineValue,
+        baseline: canonicalBaselineValue,
+        baselineSource: sourceBaselineValue,
         currentCanonical: canonicalValue,
         currentSource: sourceValue,
-        localChanged: !equalValue(canonicalValue, baselineValue),
-        sourceChanged: currentSource !== undefined && !equalValue(sourceValue, baselineValue),
+        localChanged: !equalValue(canonicalValue, canonicalBaselineValue),
+        sourceChanged: currentSource !== undefined && !equalValue(sourceValue, sourceBaselineValue),
       };
     });
 }
@@ -259,7 +264,13 @@ function itemFromMatchedNode(
     ? normalizedNodeSnapshot(proposal.proposed)
     : undefined;
   const effectiveBaseline = baseline || canonicalSnapshot;
-  const fieldDiffs = diffSnapshots(effectiveBaseline, canonicalSnapshot, sourceSnapshot);
+  const sourceBaseline = canonical.reconciliationBaseline?.sourceSnapshot || effectiveBaseline;
+  const fieldDiffs = diffSnapshots(
+    effectiveBaseline,
+    canonicalSnapshot,
+    sourceBaseline,
+    sourceSnapshot,
+  );
   const localSemanticChanged = fieldDiffs.some((diff) => diff.localChanged);
   const sourceSemanticChanged = fieldDiffs.some((diff) => diff.sourceChanged);
   const sourcePresenceChanged = canonical.reconciliationBaseline?.sourcePresence === 'deleted';
@@ -326,7 +337,13 @@ function itemFromMatchedConnection(
     ? normalizedConnectionSnapshot(proposal.proposed)
     : undefined;
   const effectiveBaseline = baseline || canonicalSnapshot;
-  const fieldDiffs = diffSnapshots(effectiveBaseline, canonicalSnapshot, sourceSnapshot);
+  const sourceBaseline = canonical.reconciliationBaseline?.sourceSnapshot || effectiveBaseline;
+  const fieldDiffs = diffSnapshots(
+    effectiveBaseline,
+    canonicalSnapshot,
+    sourceBaseline,
+    sourceSnapshot,
+  );
   const localSemanticChanged = fieldDiffs.some((diff) => diff.localChanged);
   const sourceSemanticChanged = fieldDiffs.some((diff) => diff.sourceChanged);
   const sourcePresenceChanged = canonical.reconciliationBaseline?.sourcePresence === 'deleted';
@@ -425,7 +442,11 @@ function deletedNodeItem(node: ProductArchitectureNode): ArchitectureReconciliat
   const source = node.sourceIdentity!;
   const baseline = baselineFor(node);
   const fieldDiffs = baseline
-    ? diffSnapshots(baseline, normalizedNodeSnapshot(node))
+    ? diffSnapshots(
+      baseline,
+      normalizedNodeSnapshot(node),
+      node.reconciliationBaseline?.sourceSnapshot || baseline,
+    )
     : [];
   const localSemanticChanged = fieldDiffs.some((diff) => diff.localChanged);
   const deletionAlreadyReviewed = node.reconciliationBaseline?.sourcePresence === 'deleted';
