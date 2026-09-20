@@ -38,6 +38,7 @@ export interface ValidationReconciliationItem {
   fieldDiffs: ValidationReconciliationFieldDiff[];
   sourceIssues: LegacyValidationAdoptionIssue[];
   message: string;
+  suppressed?: boolean;
 }
 
 export interface ValidationReconciliationPreviewIssue {
@@ -264,21 +265,38 @@ function matchedItem(
   };
 }
 
+function matchingSuppression(
+  project: Project,
+  source: SourceIdentity,
+): boolean {
+  const hash = source.contentHash;
+  if (!hash) return false;
+  return (project.validationReconciliationSuppressions || []).some((suppression) => (
+    suppression.decision === 'reject-new-source'
+    && sourceKey(suppression.sourceIdentity) === sourceKey(source)
+    && suppression.sourceContentHash === hash
+  ));
+}
+
 function newSourceItem(
   proposal: LegacyValidationTestProposal,
+  suppressed = false,
 ): ValidationReconciliationItem {
   return {
-    classification: 'new-source',
+    classification: suppressed ? 'unchanged' : 'new-source',
     sourceTestStageId: proposal.sourceTestStageId,
     sourceIdentity: proposal.sourceIdentity,
     currentSourceContentHash: proposal.sourceIdentity.contentHash,
-    sourceContentChanged: true,
+    sourceContentChanged: !suppressed,
     localSemanticChanged: false,
-    sourceSemanticChanged: Boolean(proposal.proposed),
+    sourceSemanticChanged: !suppressed && Boolean(proposal.proposed),
     sourceSemanticsResolved: Boolean(proposal.proposed),
     fieldDiffs: [],
     sourceIssues: proposal.issues,
-    message: message('new-source', proposal.sourceTestStageId),
+    message: suppressed
+      ? `New legacy validation stage "${proposal.sourceTestStageId}" was explicitly rejected at this exact fingerprint and remains unchanged.`
+      : message('new-source', proposal.sourceTestStageId),
+    suppressed,
   };
 }
 
@@ -357,7 +375,10 @@ export async function previewLegacyValidationReconciliation(
 
     const canonicalTest = candidates[0];
     if (!canonicalTest) {
-      items.push(newSourceItem(proposal));
+      items.push(newSourceItem(
+        proposal,
+        matchingSuppression(project, proposal.sourceIdentity),
+      ));
       continue;
     }
 
@@ -415,6 +436,7 @@ export async function fingerprintLegacyValidationReconciliation(
       localSemanticChanged: item.localSemanticChanged,
       sourceSemanticChanged: item.sourceSemanticChanged,
       sourceSemanticsResolved: item.sourceSemanticsResolved,
+      suppressed: item.suppressed === true,
       fieldDiffs: item.fieldDiffs,
       sourceIssueCodes: item.sourceIssues.map((issue) => issue.code).sort(),
     })),
