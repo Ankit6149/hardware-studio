@@ -261,7 +261,9 @@ function itemFromMatchedNode(
   const fieldDiffs = diffSnapshots(effectiveBaseline, canonicalSnapshot, sourceSnapshot);
   const localSemanticChanged = fieldDiffs.some((diff) => diff.localChanged);
   const sourceSemanticChanged = fieldDiffs.some((diff) => diff.sourceChanged);
-  const sourceContentChanged = Boolean(previousHash && currentHash && previousHash !== currentHash);
+  const sourcePresenceChanged = canonical.reconciliationBaseline?.sourcePresence === 'deleted';
+  const sourceContentChanged = sourcePresenceChanged
+    || Boolean(previousHash && currentHash && previousHash !== currentHash);
   const sourceSemanticsResolved = Boolean(sourceSnapshot);
   const classification = baseline
     ? classify(
@@ -326,7 +328,9 @@ function itemFromMatchedConnection(
   const fieldDiffs = diffSnapshots(effectiveBaseline, canonicalSnapshot, sourceSnapshot);
   const localSemanticChanged = fieldDiffs.some((diff) => diff.localChanged);
   const sourceSemanticChanged = fieldDiffs.some((diff) => diff.sourceChanged);
-  const sourceContentChanged = Boolean(previousHash && currentHash && previousHash !== currentHash);
+  const sourcePresenceChanged = canonical.reconciliationBaseline?.sourcePresence === 'deleted';
+  const sourceContentChanged = sourcePresenceChanged
+    || Boolean(previousHash && currentHash && previousHash !== currentHash);
   const sourceSemanticsResolved = Boolean(sourceSnapshot);
   const classification = baseline
     ? classify(
@@ -395,24 +399,35 @@ function newConnectionItem(
 
 function deletedNodeItem(node: ProductArchitectureNode): ArchitectureReconciliationItem {
   const source = node.sourceIdentity!;
+  const baseline = baselineFor(node);
+  const fieldDiffs = baseline
+    ? diffSnapshots(baseline, normalizedNodeSnapshot(node))
+    : [];
+  const localSemanticChanged = fieldDiffs.some((diff) => diff.localChanged);
+  const deletionAlreadyReviewed = node.reconciliationBaseline?.sourcePresence === 'deleted';
+  const classification: ArchitectureReconciliationClassification = deletionAlreadyReviewed
+    ? (localSemanticChanged ? 'local-only-change' : 'unchanged')
+    : 'source-deleted';
+  const sourceEntityId = source.entityId.replace(/^node:/, '');
+
   return {
     kind: 'node',
-    classification: 'source-deleted',
-    sourceEntityId: source.entityId.replace(/^node:/, ''),
+    classification,
+    sourceEntityId,
     canonicalEntityId: node.id,
     sourceIdentity: source,
     previousSourceContentHash: node.reconciliationBaseline?.sourceContentHash,
-    sourceContentChanged: true,
-    localSemanticChanged: baselineFor(node)
-      ? diffSnapshots(baselineFor(node)!, normalizedNodeSnapshot(node)).some((diff) => diff.localChanged)
-      : false,
-    sourceSemanticChanged: true,
+    sourceContentChanged: !deletionAlreadyReviewed,
+    localSemanticChanged,
+    sourceSemanticChanged: !deletionAlreadyReviewed,
     sourceSemanticsResolved: false,
-    fieldDiffs: baselineFor(node)
-      ? diffSnapshots(baselineFor(node)!, normalizedNodeSnapshot(node))
-      : [],
+    fieldDiffs,
     sourceIssues: [],
-    message: nodeMessage('source-deleted', source.entityId.replace(/^node:/, '')),
+    message: deletionAlreadyReviewed
+      ? localSemanticChanged
+        ? `Canonical node retained after source deletion has changed locally since the deletion was reviewed.`
+        : `Source deletion for legacy node "${sourceEntityId}" was already reviewed and the retained canonical node is unchanged.`
+      : nodeMessage('source-deleted', sourceEntityId),
   };
 }
 
@@ -420,33 +435,35 @@ function deletedConnectionItem(
   connection: ProductArchitectureConnection,
 ): ArchitectureReconciliationItem {
   const source = connection.sourceIdentity!;
+  const baseline = baselineFor(connection);
+  const fieldDiffs = baseline
+    ? diffSnapshots(baseline, normalizedConnectionSnapshot(connection))
+    : [];
+  const localSemanticChanged = fieldDiffs.some((diff) => diff.localChanged);
+  const deletionAlreadyReviewed = connection.reconciliationBaseline?.sourcePresence === 'deleted';
+  const classification: ArchitectureReconciliationClassification = deletionAlreadyReviewed
+    ? (localSemanticChanged ? 'local-only-change' : 'unchanged')
+    : 'source-deleted';
+  const sourceEntityId = source.entityId.replace(/^edge:/, '');
+
   return {
     kind: 'connection',
-    classification: 'source-deleted',
-    sourceEntityId: source.entityId.replace(/^edge:/, ''),
+    classification,
+    sourceEntityId,
     canonicalEntityId: connection.id,
     sourceIdentity: source,
     previousSourceContentHash: connection.reconciliationBaseline?.sourceContentHash,
-    sourceContentChanged: true,
-    localSemanticChanged: baselineFor(connection)
-      ? diffSnapshots(
-          baselineFor(connection)!,
-          normalizedConnectionSnapshot(connection),
-        ).some((diff) => diff.localChanged)
-      : false,
-    sourceSemanticChanged: true,
+    sourceContentChanged: !deletionAlreadyReviewed,
+    localSemanticChanged,
+    sourceSemanticChanged: !deletionAlreadyReviewed,
     sourceSemanticsResolved: false,
-    fieldDiffs: baselineFor(connection)
-      ? diffSnapshots(
-          baselineFor(connection)!,
-          normalizedConnectionSnapshot(connection),
-        )
-      : [],
+    fieldDiffs,
     sourceIssues: [],
-    message: connectionMessage(
-      'source-deleted',
-      source.entityId.replace(/^edge:/, ''),
-    ),
+    message: deletionAlreadyReviewed
+      ? localSemanticChanged
+        ? `Canonical connection retained after source deletion has changed locally since the deletion was reviewed.`
+        : `Source deletion for legacy connection "${sourceEntityId}" was already reviewed and the retained canonical connection is unchanged.`
+      : connectionMessage('source-deleted', sourceEntityId),
   };
 }
 
@@ -553,4 +570,47 @@ export async function previewLegacyArchitectureReconciliation(
     hasConflicts: summary.conflict > 0,
     mutationFree: true,
   };
+}
+
+function stableReconciliationSerialize(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableReconciliationSerialize).join(',')}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableReconciliationSerialize(record[key])}`)
+    .join(',')}}`;
+}
+
+export async function fingerprintLegacyArchitectureReconciliation(
+  preview: ArchitectureReconciliationPreview,
+): Promise<string> {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) throw new Error('SHA-256 is unavailable in this runtime');
+
+  const payload = {
+    projectId: preview.projectId,
+    items: preview.items.map((item) => ({
+      kind: item.kind,
+      classification: item.classification,
+      sourceEntityId: item.sourceEntityId,
+      canonicalEntityId: item.canonicalEntityId,
+      previousSourceContentHash: item.previousSourceContentHash,
+      currentSourceContentHash: item.currentSourceContentHash,
+      sourceContentChanged: item.sourceContentChanged,
+      localSemanticChanged: item.localSemanticChanged,
+      sourceSemanticChanged: item.sourceSemanticChanged,
+      sourceSemanticsResolved: item.sourceSemanticsResolved,
+      fieldDiffs: item.fieldDiffs,
+      sourceIssueCodes: item.sourceIssues.map((issue) => issue.code).sort(),
+    })),
+    issueCodes: preview.issues.map((issue) => issue.code).sort(),
+  };
+
+  const bytes = new TextEncoder().encode(stableReconciliationSerialize(payload));
+  const digest = await subtle.digest('SHA-256', bytes);
+  const hex = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+  return `sha256:${hex}`;
 }
