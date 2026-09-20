@@ -277,7 +277,7 @@ describe('legacy validation reconciliation preview', () => {
         testId: canonicalId,
         runNumber: 1,
         timestamp: '2026-09-21T01:05:00.000Z',
-        status: 'Passed',
+        status: 'Passed' as const,
         evidence: [],
         logs: ['Run completed successfully.'],
       }],
