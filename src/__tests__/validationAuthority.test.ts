@@ -177,7 +177,7 @@ describe('validation read authority', () => {
       label: 'Canonical DVT',
       metadata: {
         status: 'In Progress',
-        criteria: ['Canonical criteria'],
+        criteria: 'Canonical criteria',
         authoritySource: 'canonical',
       },
     });
