@@ -352,7 +352,7 @@ function refreshedConnection(
       sourceContentHash: sourceIdentity.contentHash || connection.reconciliationBaseline?.sourceContentHash || '',
       adoptedAt: connection.reconciliationBaseline?.adoptedAt || review.reviewedAt,
       canonicalSnapshot: connectionSnapshot(connection),
-      sourceSnapshot: nodeSemanticSnapshot(sourceSemantic),
+      sourceSnapshot: connectionSemanticSnapshot(sourceSemantic),
       sourcePresence: 'present',
       resolution,
       reviewedBy: review.reviewerId,
@@ -848,7 +848,7 @@ export async function buildLegacyArchitectureReconciliationApplyPlan(
         canonicalSnapshot: connectionSnapshot(created),
         sourceSnapshot: sourceSemantic
           ? {
-              ...connectionSemanticSnapshot(sourceSemantic),
+              ...(connectionSemanticSnapshot(sourceSemantic) || {}),
               sourceNodeId,
               targetNodeId,
             }
