@@ -190,7 +190,7 @@ export const generateEditorLayouts = (project: Project): {
     });
   });
 
-  mechanical.dimensions.forEach((dimension, index) => {
+  mechanical.dimensions.forEach((dimension) => {
     const midpointX = (dimension.from.xMm + dimension.to.xMm) / 2;
     const midpointY = (dimension.from.yMm + dimension.to.yMm) / 2;
     layouts.mechanical!.push({
