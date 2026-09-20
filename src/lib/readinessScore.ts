@@ -270,12 +270,28 @@ export const calculateReadinessScore = (project: Project): ReadinessReport => {
   }
 
   // 15. SAFETY / COMPLIANCE
+  // Product names/templates do not determine safety obligations. Readiness is
+  // based only on explicit safety requirements and compliance checks.
+  const safetyRequirements = (project.requirements || []).filter((requirement) => requirement.type === 'Safety');
+  const complianceChecks = mfgChecklist.filter((item) => item.category === 'Compliance');
   let safetyScore = 100;
-  if (isRing) {
-    const skinCheck = mfgChecklist.find((item) => item.item.toLowerCase().includes('skin') || item.item.toLowerCase().includes('material'));
-    if (!skinCheck || skinCheck.status !== 'Done') {
-      warnings.push('Safety: Skin hypoallergenic comfort verification is pending.');
-      safetyScore -= 30;
+
+  if (safetyRequirements.length === 0 && complianceChecks.length === 0) {
+    safetyScore = 0;
+    suggestions.push('Safety/compliance applicability has not been explicitly assessed.');
+  } else if (complianceChecks.length === 0) {
+    safetyScore = 0;
+    warnings.push(`${safetyRequirements.length} safety requirement${safetyRequirements.length === 1 ? '' : 's'} have no explicit compliance checklist evidence.`);
+  } else {
+    const blockedCompliance = complianceChecks.filter((item) => item.status === 'Blocked');
+    const incompleteCompliance = complianceChecks.filter((item) => item.status !== 'Done');
+    if (blockedCompliance.length > 0) {
+      blockers.push(`${blockedCompliance.length} compliance check${blockedCompliance.length === 1 ? ' is' : 's are'} blocked.`);
+      safetyScore -= Math.min(60, blockedCompliance.length * 20);
+    }
+    if (incompleteCompliance.length > 0) {
+      warnings.push(`${incompleteCompliance.length} compliance check${incompleteCompliance.length === 1 ? ' is' : 's are'} not complete.`);
+      safetyScore -= Math.min(40, incompleteCompliance.length * 10);
     }
   }
 
