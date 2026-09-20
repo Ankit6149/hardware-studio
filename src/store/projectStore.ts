@@ -81,6 +81,14 @@ import {
   type LegacyValidationAdoptionApplyPlan,
 } from '../lib/validation/legacyValidationAdoptionApply';
 import {
+  projectPatchFromValidationReconciliationPlan,
+  type ValidationReconciliationApplyPlan,
+} from '../lib/validation/legacyValidationReconciliationApply';
+import {
+  fingerprintLegacyValidationReconciliation,
+  previewLegacyValidationReconciliation,
+} from '../lib/validation/legacyValidationReconciliation';
+import {
   serializeProject,
   deserializeProject,
   validateProjectIntegrity
@@ -346,6 +354,9 @@ interface ProjectState extends Project {
   applyLegacyValidationAdoptionPlan: (
     plan: LegacyValidationAdoptionApplyPlan,
   ) => { success: boolean; reason?: string };
+  applyLegacyValidationReconciliationPlan: (
+    plan: ValidationReconciliationApplyPlan,
+  ) => Promise<{ success: boolean; reason?: string }>;
 
   // Command History System
   activeTransaction?: { type: string; description: string; beforeSnapshot: Partial<Project> } | null;
@@ -625,6 +636,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       firmwareBuildRecords: state.firmwareBuildRecords || [],
       validationTests: state.validationTests || [],
       validationRuns: state.validationRuns || [],
+      validationReconciliationSuppressions: state.validationReconciliationSuppressions || [],
       revisions: state.revisions || [],
       branches: state.branches || [],
       releaseCandidates: state.releaseCandidates || [],
@@ -699,6 +711,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     firmwareBuildRecords: initialProject.firmwareBuildRecords || [],
     validationTests: initialProject.validationTests || [],
     validationRuns: initialProject.validationRuns || [],
+    validationReconciliationSuppressions: initialProject.validationReconciliationSuppressions || [],
     revisions: initialProject.revisions || [],
     branches: initialProject.branches || [],
     releaseCandidates: initialProject.releaseCandidates || [],
@@ -3505,6 +3518,37 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       return { success: true };
     },
 
+    applyLegacyValidationReconciliationPlan: async (plan) => {
+      const state = get();
+
+      if (!plan.canApply) {
+        return { success: false, reason: 'Validation reconciliation plan is not fully resolved and cannot be applied.' };
+      }
+      if (plan.projectId !== state.id) {
+        return { success: false, reason: 'Validation reconciliation plan belongs to a different project.' };
+      }
+
+      const currentPreview = await previewLegacyValidationReconciliation(state as ProjectState);
+      const currentFingerprint = await fingerprintLegacyValidationReconciliation(currentPreview);
+      if (currentFingerprint !== plan.previewFingerprint) {
+        return {
+          success: false,
+          reason: 'Validation reconciliation preview is stale because source or canonical validation changed after review.',
+        };
+      }
+
+      const patch = projectPatchFromValidationReconciliationPlan(plan);
+      get().executeProjectCommand(
+        'RECONCILE_LEGACY_VALIDATION',
+        `Apply reviewed legacy validation reconciliation (${plan.previewFingerprint.slice(0, 18)})`,
+        () => {
+          persistChange(patch);
+        },
+      );
+
+      return { success: true };
+    },
+
     // Architecture Connections
     addArchitectureConnection: (conn) => {
       const id = `arch_conn_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
@@ -3659,7 +3703,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
         'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
-        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
+        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests', 'validationReconciliationSuppressions'
       ];
 
       const state = get();
@@ -3696,7 +3740,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
         'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
-        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
+        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests', 'validationReconciliationSuppressions'
       ];
 
       const updatedState = get();
@@ -3749,7 +3793,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
         'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
-        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests'
+        'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests', 'validationReconciliationSuppressions'
       ];
 
       const state = get();
