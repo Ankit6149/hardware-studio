@@ -81,6 +81,14 @@ import {
   type LegacyValidationAdoptionApplyPlan,
 } from '../lib/validation/legacyValidationAdoptionApply';
 import {
+  projectPatchFromValidationReconciliationPlan,
+  type ValidationReconciliationApplyPlan,
+} from '../lib/validation/legacyValidationReconciliationApply';
+import {
+  fingerprintLegacyValidationReconciliation,
+  previewLegacyValidationReconciliation,
+} from '../lib/validation/legacyValidationReconciliation';
+import {
   serializeProject,
   deserializeProject,
   validateProjectIntegrity
@@ -346,6 +354,9 @@ interface ProjectState extends Project {
   applyLegacyValidationAdoptionPlan: (
     plan: LegacyValidationAdoptionApplyPlan,
   ) => { success: boolean; reason?: string };
+  applyLegacyValidationReconciliationPlan: (
+    plan: ValidationReconciliationApplyPlan,
+  ) => Promise<{ success: boolean; reason?: string }>;
 
   // Command History System
   activeTransaction?: { type: string; description: string; beforeSnapshot: Partial<Project> } | null;
@@ -699,6 +710,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     firmwareBuildRecords: initialProject.firmwareBuildRecords || [],
     validationTests: initialProject.validationTests || [],
     validationRuns: initialProject.validationRuns || [],
+    validationReconciliationSuppressions: initialProject.validationReconciliationSuppressions || [],
     revisions: initialProject.revisions || [],
     branches: initialProject.branches || [],
     releaseCandidates: initialProject.releaseCandidates || [],
@@ -3497,6 +3509,37 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       get().executeProjectCommand(
         'ADOPT_LEGACY_VALIDATION',
         `Adopt reviewed legacy validation (${plan.adoptionSessionId})`,
+        () => {
+          persistChange(patch);
+        },
+      );
+
+      return { success: true };
+    },
+
+    applyLegacyValidationReconciliationPlan: async (plan) => {
+      const state = get();
+
+      if (!plan.canApply) {
+        return { success: false, reason: 'Validation reconciliation plan is not fully resolved and cannot be applied.' };
+      }
+      if (plan.projectId !== state.id) {
+        return { success: false, reason: 'Validation reconciliation plan belongs to a different project.' };
+      }
+
+      const currentPreview = await previewLegacyValidationReconciliation(state as ProjectState);
+      const currentFingerprint = await fingerprintLegacyValidationReconciliation(currentPreview);
+      if (currentFingerprint !== plan.previewFingerprint) {
+        return {
+          success: false,
+          reason: 'Validation reconciliation preview is stale because source or canonical validation changed after review.',
+        };
+      }
+
+      const patch = projectPatchFromValidationReconciliationPlan(plan);
+      get().executeProjectCommand(
+        'RECONCILE_LEGACY_VALIDATION',
+        `Apply reviewed legacy validation reconciliation (${plan.previewFingerprint.slice(0, 18)})`,
         () => {
           persistChange(patch);
         },
