@@ -999,6 +999,18 @@ export interface ValidationEvidence {
   notes?: string;
 }
 
+export interface ValidationReconciliationBaseline {
+  adoptionSessionId: string;
+  sourceContentHash: string;
+  adoptedAt: string;
+  canonicalSnapshot: Record<string, string | number | boolean | null | undefined>;
+  sourceSnapshot?: Record<string, string | number | boolean | null | undefined>;
+  sourcePresence?: 'present' | 'deleted';
+  resolution?: 'adopted' | 'keep-local' | 'take-source' | 'manual' | 'keep-after-source-delete';
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
 export interface ValidationTest {
   id: string;
   name: string;
@@ -1016,6 +1028,9 @@ export interface ValidationTest {
   status?: "Not Started" | "In Progress" | "Passed" | "Failed" | "Blocked" | "Untested" | string;
   evidence: ValidationEvidence[];
   resultNotes?: string;
+  sourceIdentity?: SourceIdentity;
+  provenance?: EngineeringProvenance;
+  reconciliationBaseline?: ValidationReconciliationBaseline;
 }
 
 export interface EngineeringCommand<TBefore = unknown, TAfter = unknown> {
