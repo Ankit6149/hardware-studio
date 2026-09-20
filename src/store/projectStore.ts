@@ -77,6 +77,10 @@ import {
   previewLegacyArchitectureReconciliation,
 } from '../lib/product/legacyArchitectureReconciliation';
 import {
+  projectPatchFromLegacyValidationApplyPlan,
+  type LegacyValidationAdoptionApplyPlan,
+} from '../lib/validation/legacyValidationAdoptionApply';
+import {
   serializeProject,
   deserializeProject,
   validateProjectIntegrity
@@ -339,6 +343,9 @@ interface ProjectState extends Project {
   addValidationTest: (test: Omit<ValidationTest, 'id'>) => void;
   updateValidationTest: (id: string, data: Partial<ValidationTest>) => void;
   deleteValidationTest: (id: string) => void;
+  applyLegacyValidationAdoptionPlan: (
+    plan: LegacyValidationAdoptionApplyPlan,
+  ) => { success: boolean; reason?: string };
 
   // Command History System
   activeTransaction?: { type: string; description: string; beforeSnapshot: Partial<Project> } | null;
@@ -3468,6 +3475,34 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const list = get().validationTests || [];
       const updated = list.filter(t => t.id !== id);
       persistChange({ validationTests: updated });
+    },
+
+    applyLegacyValidationAdoptionPlan: (plan) => {
+      const state = get();
+
+      if (!plan.canApply) {
+        return { success: false, reason: 'Validation adoption plan is not fully resolved and cannot be applied.' };
+      }
+      if (plan.projectId !== state.id) {
+        return { success: false, reason: 'Validation adoption plan belongs to a different project.' };
+      }
+      if (plan.sourceRevision !== state.version) {
+        return { success: false, reason: 'Project revision changed after validation review. Regenerate the preview and plan.' };
+      }
+      if ((state.validationTests || []).length > 0) {
+        return { success: false, reason: 'Canonical validation already exists. Reconciliation is required.' };
+      }
+
+      const patch = projectPatchFromLegacyValidationApplyPlan(plan);
+      get().executeProjectCommand(
+        'ADOPT_LEGACY_VALIDATION',
+        `Adopt reviewed legacy validation (${plan.adoptionSessionId})`,
+        () => {
+          persistChange(patch);
+        },
+      );
+
+      return { success: true };
     },
 
     // Architecture Connections
