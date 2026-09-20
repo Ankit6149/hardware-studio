@@ -333,8 +333,8 @@ export async function buildLegacyValidationReconciliationApplyPlan(
   for (const issue of preview.issues) {
     issues.push({
       code: 'preview-integrity-issue',
-      sourceTestStageId: issue.sourceTestStageId,
-      canonicalTestId: issue.canonicalTestId,
+      sourceTestStageId: issue.sourceEntityId,
+      canonicalTestId: issue.canonicalEntityId,
       message: issue.message,
     });
   }
