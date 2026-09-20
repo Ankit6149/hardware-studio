@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Project } from '../types';
 import { calculateReadinessScore } from './readinessScore';
 import { evaluateManufacturingContext, assertManufacturingContext } from './manufacturing/manufacturingContext';
+import { resolveValidationAuthority } from './validation/validationAuthority';
 import {
   exportBomCsv,
   generateNativeBoardLayoutJson,
@@ -90,13 +91,20 @@ export const exportFirmwareArchitectureJson = (project: Project): string => JSON
   disclaimer: 'Export contains only recorded firmware project state. No state machine, device result, or build evidence is synthesized.',
 }, null, 2);
 
-export const exportTestingPlanJson = (project: Project): string => JSON.stringify({
-  projectName: project.projectName,
-  validationTests: project.validationTests || [],
-  validationRuns: project.validationRuns || [],
-  legacyTesting: project.testing || [],
-  disclaimer: 'Validation definitions and recorded runs only. Missing measurements, evidence, operator identity, or review remain unresolved.',
-}, null, 2);
+export const exportTestingPlanJson = (project: Project): string => {
+  const validation = resolveValidationAuthority(project);
+  return JSON.stringify({
+    projectName: project.projectName,
+    authoritySource: validation.source,
+    tests: validation.tests,
+    validationRuns: project.validationRuns || [],
+    canonicalValidationTests: validation.canonicalTests,
+    legacyCompatibilityTesting: validation.source === 'legacy-compatibility'
+      ? validation.legacyStages
+      : [],
+    disclaimer: 'Validation definitions and recorded runs only. Legacy testing is compatibility input, not equal canonical authority. Missing measurements, evidence, operator identity, or review remain unresolved.',
+  }, null, 2);
+};
 
 export const exportFactoryReadinessJson = (project: Project): string => {
   const report = calculateReadinessScore(project);
