@@ -1,5 +1,6 @@
 import { Project } from '../types';
 import { calculateReadinessScore } from './readinessScore';
+import { resolveValidationAuthority } from './validation/validationAuthority';
 
 // Helper: Calculate average system current
 const totalAvgCurrent = (project: Project): number => {
@@ -16,6 +17,7 @@ export const exportBlueprintSheetsJson = (project: Project): string => {
   const report = calculateReadinessScore(project);
   const totalAvg = totalAvgCurrent(project);
   const runtime = totalAvg > 0 ? ((project.batteryCapacityMah || 18) / totalAvg).toFixed(1) : "0.0";
+  const validation = resolveValidationAuthority(project);
 
   const data = {
     generator: "Hardware Studio Blueprint Drawing Compiler v2",
@@ -44,7 +46,7 @@ export const exportBlueprintSheetsJson = (project: Project): string => {
           componentsCount: project.boardComponents?.length || 0,
           netsCount: project.nets?.length || 0,
           firmwareTasksCount: project.firmwareTasks?.length || 0,
-          testStagesCount: project.testing?.length || 0,
+          testStagesCount: validation.tests.length,
           checklistCount: project.manufacturingChecklist?.length || 0
         }
       },
@@ -182,12 +184,13 @@ export const exportBlueprintSheetsJson = (project: Project): string => {
         sheetNum: 14,
         title: "Testing & Validation Blueprint",
         group: "5. QUALITY & VALIDATION",
-        tests: project.testing?.map(t => ({
-          name: t.name,
-          stage: t.category || "EVT",
-          status: t.status,
-          criteria: t.passCriteria
-        })) || []
+        authoritySource: validation.source,
+        tests: validation.tests.map((test) => ({
+          name: test.name,
+          stage: test.stage || test.category || "Unspecified",
+          status: test.status,
+          criteria: test.passCriteria
+        }))
       },
       {
         sheetNum: 15,
@@ -223,6 +226,7 @@ export const exportBlueprintSheetsMarkdown = (project: Project): string => {
   const report = calculateReadinessScore(project);
   const totalAvg = totalAvgCurrent(project);
   const runtime = totalAvg > 0 ? ((project.batteryCapacityMah || 18) / totalAvg).toFixed(1) : "0.0";
+  const validation = resolveValidationAuthority(project);
 
   return `# SYSTEM DRAWING SPECIFICATION BLUEPRINT PACKAGE (PRE-ECAD REVIEW)
 **Project Name**: ${project.projectName}
@@ -308,7 +312,7 @@ ${project.firmwareTasks?.map(t => `  * **${t.name}** [${t.type}]: status: ${t.st
 
 ## SH 14: TESTING & VALIDATION BLUEPRINT
 - **Test protocols checklist**:
-${project.testing?.map(t => `  * **${t.name}** [${t.category || "EVT"}]: status: ${t.status} | criteria: ${t.passCriteria}`).join('\n')}
+${validation.tests.map((test) => `  * **${test.name}** [${test.stage || test.category || "Unspecified"}]: status: ${test.status} | criteria: ${test.passCriteria.join("; ") || "N/A"}`).join('\n')}
 
 ## SH 15: MANUFACTURING HANDOFF BLUEPRINT
 - **Completed checklist count**: ${project.manufacturingChecklist?.filter(m => m.status === 'Done').length || 0} / ${project.manufacturingChecklist?.length || 0} items
@@ -331,6 +335,7 @@ export const exportBlueprintSheetsHtml = (project: Project): string => {
   const report = calculateReadinessScore(project);
   const totalAvg = totalAvgCurrent(project);
   const runtime = totalAvg > 0 ? ((project.batteryCapacityMah || 18) / totalAvg).toFixed(1) : "0.0";
+  const validation = resolveValidationAuthority(project);
 
   return `<!DOCTYPE html>
 <html>
