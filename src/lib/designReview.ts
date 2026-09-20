@@ -2,6 +2,7 @@ import { Project, ReviewResult } from '../types';
 import { isPointInsideOutline } from '../components/board/boardGeometry';
 import { resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 import { resolveArchitectureProjection } from './product/architectureAuthority';
+import { resolveValidationAuthority } from './validation/validationAuthority';
 
 export const runDesignReview = (project: Project): ReviewResult[] => {
   const results: ReviewResult[] = [];
@@ -15,7 +16,8 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
   const nets = project.nets || [];
   const pins = project.pinMap || [];
   const firmware = project.firmwareTasks || [];
-  const testing = project.testing || [];
+  const validation = resolveValidationAuthority(project);
+  const testing = validation.tests;
   const checklist = project.manufacturingChecklist || [];
   const factoryFiles = project.factoryFiles || {};
   const mechanicalZones = project.mechanicalZones || [];
