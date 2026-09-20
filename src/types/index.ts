@@ -734,6 +734,7 @@ export interface Project {
   firmwareBuildRecords?: Record<string, unknown>[];
   validationTests?: ValidationTest[];
   validationRuns?: ValidationRun[];
+  validationReconciliationSuppressions?: ValidationReconciliationSuppression[];
   mcpProposals?: MCPProposal[];
   mcpAuditRecords?: MCPAuditRecord[];
 
@@ -997,6 +998,14 @@ export interface ValidationEvidence {
   value: string;
   createdAt: string;
   notes?: string;
+}
+
+export interface ValidationReconciliationSuppression {
+  sourceIdentity: SourceIdentity;
+  sourceContentHash: string;
+  decision: 'reject-new-source';
+  reviewedAt: string;
+  reviewedBy: string;
 }
 
 export interface ValidationReconciliationBaseline {
