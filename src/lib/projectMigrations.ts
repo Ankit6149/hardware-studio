@@ -222,6 +222,7 @@ export function migrateProjectSchema(project: unknown): Project {
   if (!migrated.mechanicalObjects) migrated.mechanicalObjects = [];
   if (!migrated.firmwareModules) migrated.firmwareModules = [];
   if (!migrated.validationTests) migrated.validationTests = [];
+  if (!migrated.validationReconciliationSuppressions) migrated.validationReconciliationSuppressions = [];
 
   const boardIds = new Set((migrated.boards || []).map((board) => board.id).filter(Boolean));
   const blockIds = new Set((migrated.circuitBlocks || []).map((block) => block.id).filter(Boolean));
