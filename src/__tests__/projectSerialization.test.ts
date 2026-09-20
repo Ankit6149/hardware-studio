@@ -37,6 +37,21 @@ describe('Project Serialization & Schema v5 Round-Trip Tests', () => {
       architectureConnections: [{
         id: 'conn_1', sourceNodeId: 'arch_1', targetNodeId: 'arch_1', type: 'Data', direction: 'Forward', name: 'Loopback'
       }],
+      architectureReconciliationSuppressions: [{
+        sourceIdentity: {
+          system: 'hardware-studio-legacy-react-flow',
+          documentId: 'proj_v5_test',
+          entityId: 'node:rejected-legacy-node',
+          revision: '5',
+          contentHash: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          adapterId: 'legacy-architecture-adoption',
+          adapterVersion: '1'
+        },
+        sourceContentHash: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        decision: 'reject-new-source',
+        reviewedAt: '2026-09-20T02:00:00.000Z',
+        reviewedBy: 'reviewer-1'
+      }],
       mechanicalObjects: [{
         id: 'mech_1', name: 'Enclosure Shell', type: 'Outer Profile', shape: 'rect', xMm: 0, yMm: 0, widthMm: 60, heightMm: 60, rotationDeg: 0, locked: false, visible: true
       }],
@@ -71,6 +86,14 @@ describe('Project Serialization & Schema v5 Round-Trip Tests', () => {
     expect(restored.id).toBe('proj_v5_test');
     expect(restored.requirements?.[0].id).toBe('req_1');
     expect(restored.architectureConnections?.[0].id).toBe('conn_1');
+    expect(restored.architectureReconciliationSuppressions?.[0]).toMatchObject({
+      sourceIdentity: {
+        entityId: 'node:rejected-legacy-node',
+        contentHash: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+      },
+      decision: 'reject-new-source',
+      reviewedBy: 'reviewer-1'
+    });
     expect(restored.mechanicalDimensions?.[0].id).toBe('dim_1');
     expect(restored.firmwareStates?.[0].name).toBe('IDLE');
     expect(restored.firmwareTransitions?.[0].event).toBe('EVT_TICK');

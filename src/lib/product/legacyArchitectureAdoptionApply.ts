@@ -203,6 +203,11 @@ function cloneNodeWithResolution(
       sourceContentHash: sourceIdentity.contentHash,
       adoptedAt: review.reviewedAt,
       canonicalSnapshot: nodeBaselineSnapshot(node),
+      sourceSnapshot: base ? nodeBaselineSnapshot(base) : undefined,
+      sourcePresence: 'present',
+      resolution: 'adopted',
+      reviewedBy: review.reviewerId,
+      reviewedAt: review.reviewedAt,
     };
   }
 
@@ -280,6 +285,11 @@ function cloneConnectionWithResolution(
       sourceContentHash: sourceIdentity.contentHash,
       adoptedAt: review.reviewedAt,
       canonicalSnapshot: connectionBaselineSnapshot(connection),
+      sourceSnapshot: base ? connectionBaselineSnapshot(base) : undefined,
+      sourcePresence: 'present',
+      resolution: 'adopted',
+      reviewedBy: review.reviewerId,
+      reviewedAt: review.reviewedAt,
     };
   }
 
