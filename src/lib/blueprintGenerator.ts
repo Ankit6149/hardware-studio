@@ -7,6 +7,7 @@ import { Project } from '../types';
 import { calculateReadinessScore } from './readinessScore';
 import { runDesignReview } from './designReview';
 import { resolveArchitectureProjection } from './product/architectureAuthority';
+import { resolveRequirementsAuthority } from './product/requirementsAuthority';
 import type {
   BlueprintPack,
   BlueprintSheet,
@@ -171,13 +172,12 @@ function generateProductArchitectureSheet(p: Project, reviewResults: ReturnType<
 // SHEET 2 — Product Requirements Blueprint
 // ============================================================
 function generateProductRequirementsSheet(p: Project): BlueprintSheet {
-  const canonicalRequirements = p.requirements || [];
-  const legacyNodes = p.nodes || [];
+  const authority = resolveRequirementsAuthority(p);
+  const canonicalRequirements = authority.canonicalRequirements;
   const warnings: BlueprintWarning[] = [];
   const sources: BlueprintSourceRef[] = [{ type: 'project', id: p.id, label: p.projectName }];
 
-  const usingCanonicalRequirements = canonicalRequirements.length > 0;
-  const reqRows: string[][] = usingCanonicalRequirements
+  const reqRows: string[][] = authority.source === 'canonical'
     ? canonicalRequirements.map((requirement) => [
         requirement.title,
         requirement.description,
@@ -187,15 +187,13 @@ function generateProductRequirementsSheet(p: Project): BlueprintSheet {
           ? `${requirement.linkedTestIds.length} linked test${requirement.linkedTestIds.length === 1 ? '' : 's'}`
           : requirement.acceptanceCriteria.join('; ') || 'No verification link',
       ])
-    : legacyNodes
-        .filter((node) => Boolean(node.data?.requirements))
-        .map((node) => [
-          node.data.name,
-          node.data.requirements,
-          node.data.priority || 'Medium',
-          node.data.status || 'MVP',
-          node.data.testingNotes || '—',
-        ]);
+    : authority.requirements.map((requirement) => [
+        requirement.title,
+        requirement.description,
+        'Unresolved',
+        'Needs review',
+        'Compatibility note only',
+      ]);
 
   if (reqRows.length === 0) {
     warnings.push({
@@ -203,21 +201,18 @@ function generateProductRequirementsSheet(p: Project): BlueprintSheet {
       sheetId: 'sh-2',
       severity: 'Warning',
       title: 'No Requirements',
-      message: 'No canonical requirements or legacy requirement text is available.',
+      message: 'No canonical requirements or legacy requirement notes are available.',
     });
   }
 
-  if (!usingCanonicalRequirements && legacyNodes.length > 0) {
-    const nodesWithoutReqs = legacyNodes.filter((node) => !node.data?.requirements);
-    if (nodesWithoutReqs.length > 0) {
-      warnings.push({
-        id: warnId(),
-        sheetId: 'sh-2',
-        severity: 'Info',
-        title: 'Missing Requirements',
-        message: `${nodesWithoutReqs.length} legacy nodes lack requirements fields.`,
-      });
-    }
+  if (authority.source === 'legacy-compatibility') {
+    warnings.push({
+      id: warnId(),
+      sheetId: 'sh-2',
+      severity: 'Warning',
+      title: 'Requirement Notes Need Review',
+      message: 'Legacy requirement notes are shown for context only. Convert them into measurable canonical requirements before using them for implementation or verification decisions.',
+    });
   }
 
   const canonicalRiskRows = canonicalRequirements.flatMap((requirement) =>
@@ -228,15 +223,15 @@ function generateProductRequirementsSheet(p: Project): BlueprintSheet {
       requirement.priority,
     ]),
   );
-  const legacyRiskRows = legacyNodes
-    .filter((node) => node.data?.risks)
-    .map((node) => [
-      node.data.name,
-      node.data.risks || '',
-      node.data?.mitigation || '—',
-      node.data?.priority || '—',
+  const legacyRiskRows = authority.legacyRequirementNotes
+    .filter((requirement) => Boolean(requirement.legacy?.risks))
+    .map((requirement) => [
+      requirement.title,
+      requirement.legacy?.risks || '',
+      requirement.legacy?.mitigation || '—',
+      'Unresolved',
     ]);
-  const riskRows = usingCanonicalRequirements ? canonicalRiskRows : legacyRiskRows;
+  const riskRows = authority.source === 'canonical' ? canonicalRiskRows : legacyRiskRows;
 
   if (riskRows.length === 0 && reqRows.length > 0) {
     warnings.push({
@@ -244,16 +239,22 @@ function generateProductRequirementsSheet(p: Project): BlueprintSheet {
       sheetId: 'sh-2',
       severity: 'Warning',
       title: 'No Risk Analysis',
-      message: usingCanonicalRequirements
+      message: authority.source === 'canonical'
         ? 'Canonical requirements contain no recorded risks.'
-        : 'Legacy architecture nodes contain no risk fields.',
+        : 'Legacy requirement notes contain no explicit risk context.',
     });
   }
 
-  if (usingCanonicalRequirements) {
+  if (authority.source === 'canonical') {
     sources.push(...canonicalRequirements.map((requirement) => ({
       type: 'requirement',
       id: requirement.id,
+      label: requirement.title,
+    })));
+  } else {
+    sources.push(...authority.legacyRequirementNotes.map((requirement) => ({
+      type: 'legacy-requirement-note',
+      id: requirement.legacy?.sourceNodeId || requirement.id,
       label: requirement.title,
     })));
   }
@@ -282,16 +283,18 @@ function generateProductRequirementsSheet(p: Project): BlueprintSheet {
     sheetNo: '02',
     title: 'Product Requirements Blueprint',
     category: 'product',
-    status: sheetStatus(reqRows.length > 0, warnings),
+    status: sheetStatus(authority.source === 'canonical' && reqRows.length > 0, warnings),
     sourceObjects: sources,
     drawing: { ...emptyDrawing(), objects: drawObjs },
     tables: [reqTable, riskTable],
     notes: [
-      `${reqRows.length} requirements captured from ${usingCanonicalRequirements ? 'canonical requirement records' : 'legacy architecture compatibility data'}.`,
-      `${riskRows.length} risks identified.`,
+      `${reqRows.length} requirement entr${reqRows.length === 1 ? 'y' : 'ies'} shown from ${authority.source === 'canonical' ? 'canonical requirement records' : authority.source === 'legacy-compatibility' ? 'legacy compatibility notes' : 'an empty requirement set'}.`,
+      `${riskRows.length} risk entr${riskRows.length === 1 ? 'y' : 'ies'} recorded.`,
     ],
     warnings,
-    disclaimer: 'Generated requirements summary. Final review required.',
+    disclaimer: authority.source === 'canonical'
+      ? 'Generated requirements summary. Final review required.'
+      : 'Legacy requirement notes are compatibility context only and are not qualified requirement records.',
   };
 }
 
