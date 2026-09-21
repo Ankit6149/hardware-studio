@@ -3,6 +3,7 @@ import { Project } from '../types';
 import { calculateReadinessScore } from './readinessScore';
 import { evaluateManufacturingContext, assertManufacturingContext } from './manufacturing/manufacturingContext';
 import { resolveValidationAuthority } from './validation/validationAuthority';
+import { resolveMechanicalAuthority } from './mechanical/mechanicalAuthority';
 import {
   exportBomCsv,
   generateNativeBoardLayoutJson,
@@ -65,17 +66,25 @@ export const exportConceptualSchematicJson = (project: Project): string => JSON.
   disclaimer: 'Structured schematic project data. Independent ERC and interchange qualification are required before release claims.',
 }, null, 2);
 
-export const exportConceptualMechanicalLayoutJson = (project: Project): string => JSON.stringify({
-  projectName: project.projectName,
-  boards: project.boards || [],
-  boardOutlines: project.boardOutlines || [],
-  mechanicalZones: project.mechanicalZones || [],
-  mechanicalObjects: project.mechanicalObjects || [],
-  mechanicalDimensions: project.mechanicalDimensions || [],
-  mechanicalBodies: project.mechanicalBodies || [],
-  assemblyLayers: project.assemblyLayers || [],
-  disclaimer: 'Recorded mechanical project data. Visualization objects are not automatically exact CAD solids.',
-}, null, 2);
+export const exportConceptualMechanicalLayoutJson = (project: Project): string => {
+  const mechanical = resolveMechanicalAuthority(project);
+  return JSON.stringify({
+    projectName: project.projectName,
+    authoritySource: mechanical.source,
+    boards: project.boards || [],
+    boardOutlines: project.boardOutlines || [],
+    engineeringObjects: mechanical.engineeringObjects,
+    completeBodies: mechanical.completeBodies,
+    mechanicalDimensions: mechanical.dimensions,
+    assemblyLayers: mechanical.assemblyLayers,
+    incompleteMechanicalObjects: mechanical.objects.filter(
+      (object) => object.type !== 'Annotation'
+        && !mechanical.engineeringObjects.some((candidate) => candidate.id === object.id),
+    ),
+    planningCompatibilityZones: project.mechanicalZones || [],
+    disclaimer: 'Recorded mechanical engineering state. Planning zones and display projections are not geometry authority; complete bodies are still lightweight project geometry, not independently qualified exact CAD/B-Rep.',
+  }, null, 2);
+};
 
 export const exportConceptualNetRoutingJson = (project: Project): string => generateNativeNetlistJson(project);
 
@@ -244,9 +253,10 @@ function boxStl(x: number, y: number, z: number, width: number, height: number, 
 }
 
 export function exportEnclosureSTL(project: Project): string {
-  const objects = project.mechanicalObjects || [];
+  const mechanical = resolveMechanicalAuthority(project);
+  const objects = mechanical.engineeringObjects.filter((object) => object.type !== 'Annotation');
   if (objects.length === 0) {
-    throw new Error('STL export is blocked because no explicit mechanical objects exist.');
+    throw new Error('STL export is blocked because no explicit qualified mechanical objects exist.');
   }
 
   const solidName = `${project.projectName.replace(/\s+/g, '_')}_DRAFT`;
