@@ -3,6 +3,10 @@ import { isPointInsideOutline } from '../components/board/boardGeometry';
 import { resolvePcbPlacement } from './pcb/pcbPlacementAuthority';
 import { resolveArchitectureProjection } from './product/architectureAuthority';
 import { resolveValidationAuthority } from './validation/validationAuthority';
+import {
+  mechanicalObjectHasExplicitGeometry,
+  resolveMechanicalAuthority,
+} from './mechanical/mechanicalAuthority';
 
 export const runDesignReview = (project: Project): ReviewResult[] => {
   const results: ReviewResult[] = [];
@@ -20,14 +24,13 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
   const testing = validation.tests;
   const checklist = project.manufacturingChecklist || [];
   const factoryFiles = project.factoryFiles || {};
-  const mechanicalZones = project.mechanicalZones || [];
-  const assemblyLayers = project.assemblyLayers || [];
+  const mechanical = resolveMechanicalAuthority(project);
+  const assemblyLayers = mechanical.assemblyLayers;
   const traces = project.traces || [];
   const vias = project.vias || [];
   const drillHoles = project.drillHoles || [];
   const boardOutlines = project.boardOutlines || [];
 
-  const isRing = project.projectName?.toLowerCase().includes("ring") || project.templateName?.toLowerCase().includes("ring");
 
   // ----------------------------------------------------
   // 1. ARCHITECTURE CHECKS
@@ -110,82 +113,67 @@ export const runDesignReview = (project: Project): ReviewResult[] => {
   // ----------------------------------------------------
   // 2. MECHANICAL CHECKS
   // ----------------------------------------------------
-  if (isRing) {
-    const sealZone = mechanicalZones.some(z => z.zoneType.toLowerCase().includes("seal") || z.name.toLowerCase().includes("seal") || z.name.toLowerCase().includes("potting"));
-    if (!sealZone) {
-      results.push({
-        id: "rev_mech_seal",
-        category: "Mechanical",
-        severity: "Error",
-        title: "No Waterproof Seal Zone Drafted",
-        description: "Wearable electronic rings require epoxy potting or gasket seal zones to prevent moisture ingress.",
-        linkedObjectType: "mechanical-zone",
-        linkedObjectId: "enclosure",
-        suggestedFix: "Create a waterproof epoxy seal zone in the mechanical layer panel.",
-        status: "Open",
-        autoFixAvailable: true
-      });
-    }
-
-    const battPocket = mechanicalZones.some(z => z.name.toLowerCase().includes("battery") || z.zoneType.toLowerCase().includes("battery"));
-    if (!battPocket) {
-      results.push({
-        id: "rev_mech_batt_pocket",
-        category: "Mechanical",
-        severity: "Error",
-        title: "No Battery Casing Pocket",
-        description: "Mechanical layout lacks a dedicated battery slot or protective keepout zone.",
-        linkedObjectType: "mechanical-zone",
-        linkedObjectId: "enclosure",
-        suggestedFix: "Configure a battery pouch mechanical zone.",
-        status: "Open",
-        autoFixAvailable: true
-      });
-    }
-
-    const antKeepout = mechanicalZones.some(z => z.name.toLowerCase().includes("antenna") || z.zoneType.toLowerCase().includes("keepout"));
-    if (!antKeepout) {
-      results.push({
-        id: "rev_mech_antenna",
-        category: "Mechanical",
-        severity: "Warning",
-        title: "Missing RF Antenna Keepout Zone",
-        description: "Radio transmission (BLE) requires clear zone bounds without metal structures around the antenna.",
-        linkedObjectType: "mechanical-zone",
-        linkedObjectId: "enclosure",
-        suggestedFix: "Add a 2.4GHz BLE chip antenna metal keepout zone.",
-        status: "Open",
-        autoFixAvailable: true
-      });
-    }
+  // Mechanical review is driven by explicit engineering objects and dimensions.
+  // Product/template names and legacy planning zones never establish physical
+  // requirements or mechanical evidence.
+  if (!mechanical.hasMechanicalEvidence) {
+    results.push({
+      id: "rev_mech_empty",
+      category: "Mechanical",
+      severity: "Warning",
+      title: "No Explicit Mechanical Geometry",
+      description: "No qualified mechanical object or complete 3D body is recorded. Planning zones and editor layout do not count as engineering geometry.",
+      linkedObjectType: "mechanical",
+      linkedObjectId: "mechanical",
+      suggestedFix: "Create explicit mechanical geometry or adopt a qualified mechanical representation before relying on fit or enclosure checks.",
+      status: "Open"
+    });
   }
 
-  mechanicalZones.forEach(z => {
-    if (!z.material || z.material.toLowerCase().includes("select") || z.material.trim() === "") {
+  mechanical.objects
+    .filter((object) => object.type !== 'Annotation')
+    .forEach((object) => {
+      if (!mechanicalObjectHasExplicitGeometry(object)) {
+        results.push({
+          id: `rev_mech_geometry_${object.id}`,
+          category: "Mechanical",
+          severity: "Warning",
+          title: `Incomplete Geometry: ${object.name}`,
+          description: "Mechanical object is present but lacks complete explicit engineering geometry.",
+          linkedObjectType: "mechanical-object",
+          linkedObjectId: object.id,
+          suggestedFix: "Provide the missing position and dimensions instead of relying on display defaults.",
+          status: "Open"
+        });
+      }
+
+      if (!object.material?.trim()) {
+        results.push({
+          id: `rev_mech_mat_${object.id}`,
+          category: "Mechanical",
+          severity: "Info",
+          title: `Material Unspecified: ${object.name}`,
+          description: "Mechanical object has no explicit material assignment.",
+          linkedObjectType: "mechanical-object",
+          linkedObjectId: object.id,
+          suggestedFix: "Assign material only when it is an engineering decision for this object.",
+          status: "Open"
+        });
+      }
+    });
+
+  mechanical.dimensions.forEach((dimension) => {
+    if (!Number.isFinite(dimension.valueMm) || dimension.valueMm <= 0) {
       results.push({
-        id: `rev_mech_mat_${z.id}`,
+        id: `rev_mech_dim_${dimension.id}`,
         category: "Mechanical",
         severity: "Warning",
-        title: `Material Unconfigured: ${z.name}`,
-        description: "Enclosure zone lacks a designated substrate or structure material (e.g. polycarbonate, titanium, resin).",
-        linkedObjectType: "mechanical-zone",
-        linkedObjectId: z.id,
-        suggestedFix: "Assign biocompatible polymer or titanium alloy material in inspector.",
+        title: `Invalid Dimension: ${dimension.name}`,
+        description: "Mechanical dimension does not contain a positive finite millimetre value.",
+        linkedObjectType: "mechanical-dimension",
+        linkedObjectId: dimension.id,
+        suggestedFix: "Record an explicit engineering dimension and tolerance.",
         status: "Open"
-      });
-    }
-    if (!z.dimensionNote || z.dimensionNote.toLowerCase().includes("tbd") || z.dimensionNote.trim() === "") {
-      results.push({
-        id: `rev_mech_dim_${z.id}`,
-        category: "Mechanical",
-        severity: "Warning",
-        title: `Missing Dimensions: ${z.name}`,
-        description: "No physical size dimension notes configured for this mechanical zone.",
-        linkedObjectType: "mechanical-zone",
-        linkedObjectId: z.id,
-        suggestedFix: "Enter a dimension value (e.g., 'Ø 18.5 mm' or '45 x 30 mm') in the inspector.",
-        status: "Open",
-        autoFixAvailable: true
       });
     }
   });
