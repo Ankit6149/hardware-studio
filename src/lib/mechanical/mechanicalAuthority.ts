@@ -48,20 +48,48 @@ export function mechanicalObjectHasExplicitGeometry(object: MechanicalObject): b
   }
 }
 
-export function mechanicalBodyHasExplicitGeometry(body: MechanicalBody): boolean {
-  const x = finite(body.xMm) ? body.xMm : body.position?.x;
-  const y = finite(body.yMm) ? body.yMm : body.position?.y;
-  const z = finite(body.zMm) ? body.zMm : body.position?.z;
-  const width = positive(body.widthMm) ? body.widthMm : body.dimensions?.x;
-  const height = positive(body.heightMm) ? body.heightMm : body.dimensions?.y;
-  const depth = positive(body.depthMm) ? body.depthMm : body.dimensions?.z;
+export interface ResolvedMechanicalBodyGeometry {
+  xMm: number;
+  yMm: number;
+  zMm: number;
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+}
 
-  return finite(x)
-    && finite(y)
-    && finite(z)
-    && positive(width)
-    && positive(height)
-    && positive(depth);
+export function resolveMechanicalBodyGeometry(
+  body: MechanicalBody,
+): ResolvedMechanicalBodyGeometry | null {
+  const xMm = finite(body.xMm) ? body.xMm : body.position?.x;
+  const yMm = finite(body.yMm) ? body.yMm : body.position?.y;
+  const zMm = finite(body.zMm) ? body.zMm : body.position?.z;
+  const widthMm = positive(body.widthMm) ? body.widthMm : body.dimensions?.x;
+  const heightMm = positive(body.heightMm) ? body.heightMm : body.dimensions?.y;
+  const depthMm = positive(body.depthMm) ? body.depthMm : body.dimensions?.z;
+
+  if (
+    !finite(xMm)
+    || !finite(yMm)
+    || !finite(zMm)
+    || !positive(widthMm)
+    || !positive(heightMm)
+    || !positive(depthMm)
+  ) {
+    return null;
+  }
+
+  return {
+    xMm,
+    yMm,
+    zMm,
+    widthMm,
+    heightMm,
+    depthMm,
+  };
+}
+
+export function mechanicalBodyHasExplicitGeometry(body: MechanicalBody): boolean {
+  return resolveMechanicalBodyGeometry(body) !== null;
 }
 
 /**
