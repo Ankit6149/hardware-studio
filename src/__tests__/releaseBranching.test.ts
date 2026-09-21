@@ -74,7 +74,7 @@ function releaseReadyProject(project: Project): Project {
       runNumber: 1,
       timestamp: '2026-09-20T00:00:00.000Z',
       status: 'Pass',
-      notes: 'Release fixture evidence.',
+      logs: ['Release fixture evidence.'],
     }],
   };
 }
