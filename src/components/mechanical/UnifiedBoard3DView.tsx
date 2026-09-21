@@ -15,6 +15,7 @@ import {
 import { useProjectStore } from '../../store/projectStore';
 import { useStudioContextStore } from '../../store/studioContextStore';
 import { resolvePcbPlacement } from '../../lib/pcb/pcbPlacementAuthority';
+import { resolveMechanicalAuthority } from '../../lib/mechanical/mechanicalAuthority';
 
 export type Board3DQuality = 'low' | 'balanced' | 'high';
 
@@ -88,6 +89,9 @@ export const UnifiedBoard3DView: React.FC = () => {
     boardOutlines = [],
     boardComponents = [],
     mechanicalObjects = [],
+    mechanicalBodies = [],
+    mechanicalDimensions = [],
+    assemblyLayers = [],
     setActiveView,
   } = store;
   const {
@@ -107,6 +111,13 @@ export const UnifiedBoard3DView: React.FC = () => {
     [boardComponents, boardId],
   );
   const selectedComponent = components.find((component) => component.id === activeComponentId);
+  const mechanicalAuthority = useMemo(() => resolveMechanicalAuthority({
+    mechanicalObjects,
+    mechanicalBodies,
+    mechanicalDimensions,
+    assemblyLayers,
+  }), [assemblyLayers, mechanicalBodies, mechanicalDimensions, mechanicalObjects]);
+  const enclosureObjects = mechanicalAuthority.engineeringObjects;
   const componentRepresentations = useMemo(() => components.map((component) => {
     const placement = resolvePcbPlacement(component);
     const xMm = placement.xMm;
@@ -213,7 +224,7 @@ export const UnifiedBoard3DView: React.FC = () => {
     });
 
     if (showEnclosure) {
-      mechanicalObjects.forEach((obj) => {
+      enclosureObjects.forEach((obj) => {
         if (obj.type === 'Mounting Point' && obj.radiusMm != null && obj.radiusMm > 0 && obj.depthMm != null && obj.depthMm > 0) {
           const bossMesh = new THREE.Mesh(
             new THREE.CylinderGeometry(obj.radiusMm, obj.radiusMm, obj.depthMm, 16),
@@ -316,7 +327,7 @@ export const UnifiedBoard3DView: React.FC = () => {
       renderer.forceContextLoss();
       if (renderer.domElement.parentElement === mount) mount.removeChild(renderer.domElement);
     };
-  }, [activeComponentId, board, mechanicalObjects, quality, renderableComponents, showEnclosure, size]);
+  }, [activeComponentId, board, enclosureObjects, quality, renderableComponents, showEnclosure, size]);
 
   if (!board) {
     return (
