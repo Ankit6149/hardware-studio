@@ -3,6 +3,7 @@ export type { ProductRevision };
 import { runBoardDRC } from './boardDRC';
 import { calculateRequirementCoverage } from './validation/validationCoverage';
 import { fingerprintSnapshot } from './releaseIntegrity';
+import { resolveRequirementsAuthority } from './product/requirementsAuthority';
 
 export interface ReleaseBlocker {
   domain: string;
@@ -68,7 +69,19 @@ export function validateReleaseEligibility(project: Project): ReleaseBlocker[] {
     });
   }
 
-  const coverage = calculateRequirementCoverage(project.requirements || [], project.validationTests || []);
+  const requirementAuthority = resolveRequirementsAuthority(project);
+  const canonicalRequirements = requirementAuthority.canonicalRequirements;
+  if (canonicalRequirements.length === 0) {
+    blockers.push({
+      domain: 'Requirements & Validation',
+      severity: 'Critical',
+      message: requirementAuthority.source === 'legacy-compatibility'
+        ? 'Legacy requirement notes must be reviewed into measurable canonical requirements before release.'
+        : 'At least one measurable canonical requirement is required before release.'
+    });
+  }
+
+  const coverage = calculateRequirementCoverage(canonicalRequirements, project.validationTests || []);
   const failedReqs = coverage.filter((entry) => entry.status === 'Failed' || entry.status === 'Not Covered');
   if (failedReqs.length > 0) {
     blockers.push({
