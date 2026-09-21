@@ -1,6 +1,7 @@
 import type { Project } from '../types';
 import { evaluateElectronicsWorkflow } from './electronics/electronicsWorkflow';
 import { evaluateFirmwareEvidence } from './firmware/firmwareEvidence';
+import { resolveRequirementsAuthority } from './product/requirementsAuthority';
 
 export type ProjectHomeAreaState = 'Not started' | 'In progress' | 'Evidence present' | 'Ready for review';
 
@@ -69,7 +70,9 @@ function electronicsAction(project: Project): ProjectHomeAction {
 }
 
 export function buildProjectHomeModel(project: Project): ProjectHomeModel {
-  const requirements = count(project.requirements);
+  const requirementAuthority = resolveRequirementsAuthority(project);
+  const requirements = requirementAuthority.requirements.length;
+  const hasCanonicalRequirements = requirementAuthority.source === 'canonical';
   const architecture = Math.max(count(project.architectureNodes), count(project.nodes));
   const components = count(project.boardComponents);
   const nets = count(project.nets);
@@ -83,13 +86,21 @@ export function buildProjectHomeModel(project: Project): ProjectHomeModel {
   const firmwareEvidence = evaluateFirmwareEvidence(project);
 
   let nextAction: ProjectHomeAction;
-  if (requirements === 0) {
+  if (requirementAuthority.source === 'empty') {
     nextAction = {
       eyebrow: 'Start with intent',
       title: 'Write the first measurable requirement',
       detail: 'Define what the product must achieve before choosing parts or drawing geometry.',
       viewId: 'requirements',
       label: 'Define requirements',
+    };
+  } else if (!hasCanonicalRequirements) {
+    nextAction = {
+      eyebrow: 'Review existing intent',
+      title: 'Turn requirement notes into measurable decisions',
+      detail: 'Older requirement notes are available as context, but they are not yet approved, linkable, or verifiable requirements.',
+      viewId: 'requirements',
+      label: 'Review requirements',
     };
   } else if (architecture === 0) {
     nextAction = {
@@ -168,9 +179,15 @@ export function buildProjectHomeModel(project: Project): ProjectHomeModel {
       id: 'define',
       label: 'Define',
       description: 'Requirements and architecture',
-      viewId: requirements === 0 ? 'requirements' : 'product-architecture',
-      state: requirements === 0 ? 'Not started' : architecture === 0 ? 'In progress' : 'Evidence present',
-      evidence: `${requirements} requirements · ${architecture} architecture items`,
+      viewId: !hasCanonicalRequirements ? 'requirements' : 'product-architecture',
+      state: requirementAuthority.source === 'empty'
+        ? 'Not started'
+        : !hasCanonicalRequirements || architecture === 0
+          ? 'In progress'
+          : 'Evidence present',
+      evidence: requirementAuthority.source === 'legacy-compatibility'
+        ? `${requirements} requirement note${requirements === 1 ? '' : 's'} to review · ${architecture} architecture items`
+        : `${requirements} requirements · ${architecture} architecture items`,
     },
     {
       id: 'electronics',
@@ -223,8 +240,15 @@ export function buildProjectHomeModel(project: Project): ProjectHomeModel {
     if (!attention.some((candidate) => candidate.id === item.id)) attention.push(item);
   };
 
-  if (requirements === 0) {
+  if (requirementAuthority.source === 'empty') {
     addAttention({ id: 'requirements-missing', label: 'Product intent is not measurable yet', detail: 'Create at least one measurable requirement.', viewId: 'requirements' });
+  } else if (!hasCanonicalRequirements) {
+    addAttention({
+      id: 'requirements-legacy-review',
+      label: 'Existing requirement notes need review',
+      detail: 'Convert the useful notes into measurable requirements before treating them as implementation or verification constraints.',
+      viewId: 'requirements',
+    });
   } else if (architecture === 0) {
     addAttention({ id: 'architecture-missing', label: 'Requirements have no architecture yet', detail: 'Describe the functions, devices, and interfaces that satisfy the current requirements.', viewId: 'product-architecture' });
   }
