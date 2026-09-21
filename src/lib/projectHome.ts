@@ -2,6 +2,7 @@ import type { Project } from '../types';
 import { evaluateElectronicsWorkflow } from './electronics/electronicsWorkflow';
 import { evaluateFirmwareEvidence } from './firmware/firmwareEvidence';
 import { resolveRequirementsAuthority } from './product/requirementsAuthority';
+import { resolveArchitectureProjection } from './product/architectureAuthority';
 
 export type ProjectHomeAreaState = 'Not started' | 'In progress' | 'Evidence present' | 'Ready for review';
 
@@ -73,7 +74,7 @@ export function buildProjectHomeModel(project: Project): ProjectHomeModel {
   const requirementAuthority = resolveRequirementsAuthority(project);
   const requirements = requirementAuthority.requirements.length;
   const hasCanonicalRequirements = requirementAuthority.source === 'canonical';
-  const architecture = Math.max(count(project.architectureNodes), count(project.nodes));
+  const architecture = resolveArchitectureProjection(project).nodes.length;
   const components = count(project.boardComponents);
   const nets = count(project.nets);
   const traces = count(project.traces);
