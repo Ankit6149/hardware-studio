@@ -8,6 +8,11 @@ import type {
 
 export type MechanicalAuthoritySource = 'canonical' | 'empty';
 
+export type MechanicalAuthorityProject = Pick<
+  Project,
+  'mechanicalObjects' | 'mechanicalBodies' | 'mechanicalDimensions' | 'assemblyLayers'
+>;
+
 export interface MechanicalAuthorityProjection {
   source: MechanicalAuthoritySource;
   objects: MechanicalObject[];
@@ -99,7 +104,9 @@ export function mechanicalBodyHasExplicitGeometry(body: MechanicalBody): boolean
  * projections and cannot establish mechanical geometry, assembly evidence, or
  * engineering readiness.
  */
-export function resolveMechanicalAuthority(project: Project): MechanicalAuthorityProjection {
+export function resolveMechanicalAuthority(
+  project: MechanicalAuthorityProject,
+): MechanicalAuthorityProjection {
   const objects = project.mechanicalObjects || [];
   const bodies = project.mechanicalBodies || [];
   const dimensions = project.mechanicalDimensions || [];
