@@ -7,6 +7,11 @@ import { Project } from '../types';
 import { calculateReadinessScore } from './readinessScore';
 import { runDesignReview } from './designReview';
 import { resolveArchitectureProjection } from './product/architectureAuthority';
+import {
+  resolveMechanicalAuthority,
+  resolveMechanicalBodyGeometry,
+} from './mechanical/mechanicalAuthority';
+import { getMechanicalBoundingBox } from './mechanical/mechanicalGeometry';
 import type {
   BlueprintPack,
   BlueprintSheet,
@@ -299,46 +304,223 @@ function generateProductRequirementsSheet(p: Project): BlueprintSheet {
 // SHEET 3 — Mechanical / Enclosure Blueprint
 // ============================================================
 function generateMechanicalSheet(p: Project): BlueprintSheet {
-  const zones = p.mechanicalZones || [];
+  const mechanical = resolveMechanicalAuthority(p);
+  const objects = mechanical.engineeringObjects;
+  const bodies = mechanical.completeBodies;
+  const dimensions = mechanical.dimensions;
+  const planningZones = p.mechanicalZones || [];
   const boards = p.boards || [];
-  const outlines = p.boardOutlines || [];
   const warnings: BlueprintWarning[] = [];
-  const sources: BlueprintSourceRef[] = zones.map(z => ({ type: "mechanical-zone", id: z.id, label: z.name }));
-  const isRing = p.projectName?.toLowerCase().includes("ring") || p.templateName?.toLowerCase().includes("ring");
 
-  const drawObjs: BlueprintDrawingObject[] = zones.map((z, i) => ({
-    id: objId(), type: "zone" as const, label: z.name,
-    x: z.x ?? (50 + (i % 3) * 240), y: z.y ?? (50 + Math.floor(i / 3) * 130), width: z.width ?? 220, height: z.height ?? 100,
-    sourceType: "mechanical-zone", sourceId: z.id,
-    metadata: { material: z.material || "", zoneType: z.zoneType || "", dimensionNote: z.dimensionNote || "" }
-  }));
+  const bodyGeometry = bodies
+    .map((body) => ({ body, geometry: resolveMechanicalBodyGeometry(body) }))
+    .filter((entry): entry is { body: typeof bodies[number]; geometry: NonNullable<ReturnType<typeof resolveMechanicalBodyGeometry>> } => Boolean(entry.geometry));
 
-  const dims: BlueprintDimension[] = [];
-  outlines.forEach(ol => {
-    if (ol.width && ol.height) {
-      dims.push({ id: dimId(), label: `${ol.width}×${ol.height} ${ol.units || "mm"}`, from: { x: 50, y: 450 }, to: { x: 50 + (ol.width * 5), y: 450 }, unit: ol.units || "mm" });
-    }
+  const sourceObjects: BlueprintSourceRef[] = [
+    ...objects.map((object) => ({ type: "mechanical-object", id: object.id, label: object.name })),
+    ...bodyGeometry.map(({ body }) => ({ type: "mechanical-body", id: body.id, label: body.name || body.id })),
+    ...dimensions.map((dimension) => ({ type: "mechanical-dimension", id: dimension.id, label: dimension.name })),
+  ];
+
+  const bounds: { xMin: number; yMin: number; xMax: number; yMax: number }[] = [];
+  objects.forEach((object) => {
+    const bbox = getMechanicalBoundingBox(object);
+    bounds.push({ xMin: bbox.xMin, yMin: bbox.yMin, xMax: bbox.xMax, yMax: bbox.yMax });
+  });
+  bodyGeometry.forEach(({ geometry }) => {
+    bounds.push({
+      xMin: geometry.xMm,
+      yMin: geometry.yMm,
+      xMax: geometry.xMm + geometry.widthMm,
+      yMax: geometry.yMm + geometry.heightMm,
+    });
+  });
+  dimensions.forEach((dimension) => {
+    bounds.push({
+      xMin: Math.min(dimension.from.xMm, dimension.to.xMm),
+      yMin: Math.min(dimension.from.yMm, dimension.to.yMm),
+      xMax: Math.max(dimension.from.xMm, dimension.to.xMm),
+      yMax: Math.max(dimension.from.yMm, dimension.to.yMm),
+    });
   });
 
-  if (zones.length === 0) warnings.push({ id: warnId(), sheetId: "sh-3", severity: "Warning", title: "No Mechanical Zones", message: "No mechanical zones defined. Generate Product Plan to seed zones." });
-  if (isRing) {
-    if (!zones.some(z => z.zoneType?.toLowerCase().includes("seal") || z.name?.toLowerCase().includes("seal")))
-      warnings.push({ id: warnId(), sheetId: "sh-3", severity: "Warning", title: "No Seal Zone", message: "Wearable ring lacks waterproof seal/potting zone." });
-    if (!zones.some(z => z.name?.toLowerCase().includes("antenna") || z.zoneType?.toLowerCase().includes("antenna")))
-      warnings.push({ id: warnId(), sheetId: "sh-3", severity: "Warning", title: "No Antenna Keepout", message: "RF wearable missing antenna keepout zone." });
+  const minX = bounds.length > 0 ? Math.min(...bounds.map((bound) => bound.xMin)) : 0;
+  const minY = bounds.length > 0 ? Math.min(...bounds.map((bound) => bound.yMin)) : 0;
+  const maxX = bounds.length > 0 ? Math.max(...bounds.map((bound) => bound.xMax)) : 100;
+  const maxY = bounds.length > 0 ? Math.max(...bounds.map((bound) => bound.yMax)) : 60;
+  const spanX = Math.max(1, maxX - minX);
+  const spanY = Math.max(1, maxY - minY);
+  const scale = Math.min(680 / spanX, 340 / spanY);
+  const mapX = (xMm: number) => 60 + (xMm - minX) * scale;
+  const mapY = (yMm: number) => 50 + (yMm - minY) * scale;
+
+  const drawObjs: BlueprintDrawingObject[] = [
+    ...objects.map((object) => {
+      const bbox = getMechanicalBoundingBox(object);
+      return {
+        id: objId(),
+        type: "zone" as const,
+        label: object.name,
+        x: mapX(bbox.xMin),
+        y: mapY(bbox.yMin),
+        width: Math.max(4, bbox.width * scale),
+        height: Math.max(4, bbox.height * scale),
+        rotation: object.rotationDeg,
+        sourceType: "mechanical-object",
+        sourceId: object.id,
+        metadata: {
+          mechanicalType: object.type,
+          shape: object.shape,
+          material: object.material || "",
+          depthMm: object.depthMm ?? "",
+          authoritySource: mechanical.source,
+          displayProjectionOnly: true,
+        },
+      };
+    }),
+    ...bodyGeometry.map(({ body, geometry }) => ({
+      id: objId(),
+      type: "zone" as const,
+      label: body.name || "Mechanical body",
+      x: mapX(geometry.xMm),
+      y: mapY(geometry.yMm),
+      width: Math.max(4, geometry.widthMm * scale),
+      height: Math.max(4, geometry.heightMm * scale),
+      sourceType: "mechanical-body",
+      sourceId: body.id,
+      metadata: {
+        objectType: body.objectType || "",
+        zMm: geometry.zMm,
+        depthMm: geometry.depthMm,
+        authoritySource: mechanical.source,
+        displayProjectionOnly: true,
+      },
+    })),
+  ];
+
+  const dims: BlueprintDimension[] = dimensions.map((dimension) => ({
+    id: dimId(),
+    label: `${dimension.valueMm} mm`,
+    from: { x: mapX(dimension.from.xMm), y: mapY(dimension.from.yMm) },
+    to: { x: mapX(dimension.to.xMm), y: mapY(dimension.to.yMm) },
+    unit: "mm",
+  }));
+
+  if (!mechanical.hasMechanicalEvidence) {
+    warnings.push({
+      id: warnId(),
+      sheetId: "sh-3",
+      severity: "Warning",
+      title: "No Explicit Mechanical Geometry",
+      message: planningZones.length > 0
+        ? "Planning zones exist, but they are not engineering geometry. Add explicit mechanical objects or qualified 3D bodies."
+        : "No explicit mechanical objects or qualified 3D bodies are recorded.",
+    });
   }
 
-  const zoneTable: BlueprintTable = {
-    id: tblId(), title: "Mechanical Zones", columns: ["Zone", "Type", "Material", "Dimensions", "Notes"],
-    rows: zones.map(z => [z.name, z.zoneType || "", z.material || "", z.dimensionNote || "", z.notes || ""])
+  const incompleteObjects = mechanical.objects.filter(
+    (object) => object.type !== "Annotation"
+      && !objects.some((candidate) => candidate.id === object.id),
+  );
+  if (incompleteObjects.length > 0) {
+    warnings.push({
+      id: warnId(),
+      sheetId: "sh-3",
+      severity: "Warning",
+      title: "Incomplete Mechanical Geometry",
+      message: `${incompleteObjects.length} mechanical object${incompleteObjects.length === 1 ? "" : "s"} lack complete explicit geometry and are excluded from the engineering projection.`,
+    });
+  }
+
+  if (mechanical.hasMechanicalEvidence && dimensions.length === 0) {
+    warnings.push({
+      id: warnId(),
+      sheetId: "sh-3",
+      severity: "Info",
+      title: "No Explicit Mechanical Dimensions",
+      message: "Mechanical geometry exists, but no explicit dimension/tolerance records are attached.",
+    });
+  }
+
+  const geometryTable: BlueprintTable = {
+    id: tblId(),
+    title: "Mechanical Engineering Geometry",
+    columns: ["Object", "Kind", "Geometry", "Material / Type", "Authority"],
+    rows: [
+      ...objects.map((object) => {
+        const bbox = getMechanicalBoundingBox(object);
+        return [
+          object.name,
+          object.type,
+          `${bbox.width} × ${bbox.height} mm${object.depthMm ? ` × ${object.depthMm} mm` : ""}`,
+          object.material || "—",
+          "Explicit project geometry",
+        ];
+      }),
+      ...bodyGeometry.map(({ body, geometry }) => [
+        body.name || body.id,
+        "3D Body",
+        `${geometry.widthMm} × ${geometry.heightMm} × ${geometry.depthMm} mm`,
+        body.objectType || "—",
+        "Explicit project body",
+      ]),
+    ],
   };
 
+  const dimensionTable: BlueprintTable = {
+    id: tblId(),
+    title: "Mechanical Dimensions / Tolerances",
+    columns: ["Dimension", "Value", "+Tol", "-Tol", "Linked Objects"],
+    rows: dimensions.map((dimension) => [
+      dimension.name,
+      `${dimension.valueMm} mm`,
+      dimension.tolerancePlusMm == null ? "—" : `+${dimension.tolerancePlusMm} mm`,
+      dimension.toleranceMinusMm == null ? "—" : `-${dimension.toleranceMinusMm} mm`,
+      dimension.linkedObjectIds.join(", ") || "—",
+    ]),
+  };
+
+  const planningTable: BlueprintTable = {
+    id: tblId(),
+    title: "Planning Compatibility Zones — Not Engineering Geometry",
+    columns: ["Zone", "Type", "Material", "Dimension Note", "Notes"],
+    rows: planningZones.map((zone) => [
+      zone.name,
+      zone.zoneType || "",
+      zone.material || "",
+      zone.dimensionNote || "",
+      zone.notes || "",
+    ]),
+  };
+
+  const tables = [geometryTable, dimensionTable];
+  if (planningZones.length > 0) tables.push(planningTable);
+
   return {
-    id: "sh-3", sheetNo: "03", title: "Mechanical / Enclosure Blueprint", category: "mechanical",
-    status: sheetStatus(zones.length > 0, warnings), sourceObjects: sources,
-    drawing: { viewBox: "0 0 800 500", grid: true, objects: drawObjs, connections: [], dimensions: dims, callouts: [] },
-    tables: [zoneTable], notes: [`${zones.length} mechanical zones.`, `${boards.length} boards referenced.`],
-    warnings, disclaimer: "Generated mechanical layout drawing. Final geometry review required before enclosure fabrication."
+    id: "sh-3",
+    sheetNo: "03",
+    title: "Mechanical / Enclosure Blueprint",
+    category: "mechanical",
+    status: sheetStatus(mechanical.hasMechanicalEvidence, warnings),
+    sourceObjects,
+    drawing: {
+      viewBox: "0 0 800 500",
+      grid: true,
+      objects: drawObjs,
+      connections: [],
+      dimensions: dims,
+      callouts: [],
+    },
+    tables,
+    notes: [
+      `${objects.length} explicit 2D mechanical objects.`,
+      `${bodyGeometry.length} complete 3D bodies.`,
+      `${dimensions.length} explicit dimensions.`,
+      `${planningZones.length} planning-only compatibility zones.`,
+      `${boards.length} boards referenced.`,
+    ],
+    warnings,
+    disclaimer: "Generated display projection of recorded mechanical engineering state. It is not an exact CAD/B-Rep model and planning zones do not establish geometry authority.",
   };
 }
 
@@ -346,7 +528,8 @@ function generateMechanicalSheet(p: Project): BlueprintSheet {
 // SHEET 4 — Assembly / Exploded Stack Blueprint
 // ============================================================
 function generateAssemblySheet(p: Project): BlueprintSheet {
-  const layers = (p.assemblyLayers || []).sort((a, b) => a.order - b.order);
+  const mechanical = resolveMechanicalAuthority(p);
+  const layers = [...mechanical.assemblyLayers].sort((a, b) => a.order - b.order);
   const warnings: BlueprintWarning[] = [];
   const sources: BlueprintSourceRef[] = layers.map(l => ({ type: "assembly-layer", id: l.id, label: l.name }));
 
