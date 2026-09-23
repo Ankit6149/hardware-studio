@@ -35,9 +35,33 @@ describe('canonical project-store board identity', () => {
     expect(storeSource).not.toContain("dimensionsMm: item.dimensionsMm || '50x50'");
   });
 
-  it('keeps a new board dimension unresolved when no geometry was supplied', () => {
+  it('keeps unspecified board engineering facts unresolved', () => {
     const board = useProjectStore.getState().addBoard({ name: 'Unknown Geometry PCB' });
+
+    expect(board.boardType).toBe('Unknown');
     expect(board.dimensionsMm).toBeUndefined();
+    expect(board.layerCount).toBeUndefined();
+    expect(board.substrate).toBeUndefined();
+    expect(board.placement).toBe('Unknown');
+  });
+
+  it('does not expose retired speculative project generators', () => {
+    for (const generator of [
+      'generateBOMFromMVP',
+      'generateTestsFromMVP',
+      'generatePowerFromBlueprint',
+      'generatePinMapFromBlueprint',
+      'generateFirmwareTasksFromBlueprint',
+      'generateBoardPlanFromProduct',
+      'generateCircuitsFromBlueprint',
+      'generateBoardComponentsFromBOM',
+      'generateNetsFromPinMap',
+      'generatePCBConstraintsFromBoard',
+      'generateManufacturingChecklist',
+      'generateFullProductPlan',
+    ]) {
+      expect(storeSource).not.toContain(generator);
+    }
   });
 
   it('does not invent a board relationship for a generic board component', () => {
@@ -119,27 +143,6 @@ describe('canonical project-store board identity', () => {
 
     expect(() => useProjectStore.getState().addProjectComponentFromLibrary(definition!, boardA.id, foreignBlock!.id))
       .toThrow('The selected circuit block does not belong to the target board.');
-  });
-
-  it('does not guess the first board for PCB constraints in an ambiguous multi-board project', () => {
-    const store = useProjectStore.getState();
-    store.addBoard({ name: 'Controller PCB', dimensionsMm: '40 x 30' });
-    useProjectStore.getState().addBoard({ name: 'Sensor PCB', dimensionsMm: '20 x 20' });
-    useProjectStore.getState().setActiveBoard('');
-
-    useProjectStore.getState().generatePCBConstraintsFromBoard();
-    expect(useProjectStore.getState().pcbConstraints).toEqual([]);
-  });
-
-  it('does not manufacture a board-outline dimension constraint when dimensions are unknown', () => {
-    const board = useProjectStore.getState().addBoard({ name: 'Unknown Outline PCB' });
-    useProjectStore.getState().setActiveBoard(board.id);
-
-    useProjectStore.getState().generatePCBConstraintsFromBoard();
-    const constraints = useProjectStore.getState().pcbConstraints || [];
-
-    expect(constraints.some((constraint) => constraint.constraintType === 'Board Outline')).toBe(false);
-    expect(constraints.some((constraint) => constraint.value === '100x60')).toBe(false);
   });
 
   it('creates repair components unplaced on the explicit real board', () => {
