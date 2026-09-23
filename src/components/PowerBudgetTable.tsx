@@ -10,7 +10,6 @@ import {
   Trash2, 
   Zap, 
   AlertTriangle, 
-  RefreshCw, 
   Download 
 } from 'lucide-react';
 import { exportToCSV } from '../lib/exportCsv';
@@ -18,22 +17,20 @@ import { exportToCSV } from '../lib/exportCsv';
 export const PowerBudgetTable: React.FC = () => {
   const {
     powerBudget,
-    batteryCapacityMah = 100,
-    nodes,
+    batteryCapacityMah = 0,
     addPowerItem,
     updatePowerItem,
     deletePowerItem,
-    setBatteryCapacity,
-    generatePowerFromBlueprint
+    setBatteryCapacity
   } = useProjectStore();
 
   const handleAddRow = () => {
     addPowerItem({
-      blockName: "New Rail Component",
-      voltage: "3.3",
-      activeCurrentMa: 1.0,
-      sleepCurrentUa: 10.0,
-      dutyCyclePercent: 5.0,
+      blockName: "",
+      voltage: "",
+      activeCurrentMa: 0,
+      sleepCurrentUa: 0,
+      dutyCyclePercent: 0,
       quantity: 1,
       notes: ""
     });
@@ -64,26 +61,26 @@ export const PowerBudgetTable: React.FC = () => {
     totalAverageCurrent += avg;
   });
 
-  const batteryCapacity = batteryCapacityMah || 100;
-  const runtimeHours = totalAverageCurrent > 0 ? batteryCapacity / totalAverageCurrent : 0;
+  const batteryCapacity = batteryCapacityMah || 0;
+  const hasUnresolvedRows = powerBudget.some((item) =>
+    !item.blockName.trim()
+    || !item.voltage.trim()
+    || item.activeCurrentMa === 0
+    || item.sleepCurrentUa === 0
+    || item.dutyCyclePercent === 0
+  );
+  const runtimeAvailable = batteryCapacity > 0 && powerBudget.length > 0 && !hasUnresolvedRows && totalAverageCurrent > 0;
+  const runtimeHours = runtimeAvailable ? batteryCapacity / totalAverageCurrent : 0;
   const runtimeDays = runtimeHours / 24;
 
-  // Warnings Engine
+  // Truthfulness warnings. Zero-valued editable numeric cells are the legacy
+  // compatibility representation for unresolved data until quantity migration #126.
   const powerWarnings: string[] = [];
-  const hasBattery = nodes.some(n => n.data?.name.toLowerCase().includes('battery') || n.id.includes('battery'));
-  
-  if (!hasBattery) {
-    powerWarnings.push("No physical battery or lithium energy cell block detected in the architecture canvas.");
+  if (batteryCapacity <= 0) {
+    powerWarnings.push("Battery capacity is unresolved. Runtime is not calculated until an explicit value is provided.");
   }
-  if (totalActiveCurrent > 200) {
-    powerWarnings.push("High active current draw (> 200mA) detected. This will limit pocket wearable lifetimes.");
-  }
-  const missingSleep = powerBudget.some(item => Number(item.sleepCurrentUa) === 0 && item.blockName.toLowerCase().includes('mcu'));
-  if (missingSleep) {
-    powerWarnings.push("Sleep current not configured for core MCU block. Quiescent sleep rates are vital for wearables.");
-  }
-  if (runtimeHours > 0 && runtimeHours < 24) {
-    powerWarnings.push(`Critical Runtime: Estimated lifetime (${runtimeHours.toFixed(1)} hrs) is under the 24-hour baseline standard.`);
+  if (hasUnresolvedRows) {
+    powerWarnings.push("One or more power rows contain unresolved values. Blank numeric cells are not measured zero and are excluded from runtime qualification.");
   }
 
   const handleExportCSV = () => {
@@ -174,9 +171,9 @@ export const PowerBudgetTable: React.FC = () => {
         />
         <StatCard
           title="Est. Runtime"
-          value={runtimeHours > 0 ? (runtimeHours > 72 ? runtimeDays.toFixed(1) : runtimeHours.toFixed(1)) : '0.0'}
-          unit={runtimeHours > 72 ? 'days' : 'hours'}
-          status={runtimeHours < 24 && runtimeHours > 0 ? 'error' : 'success'}
+          value={runtimeAvailable ? (runtimeHours > 72 ? runtimeDays.toFixed(1) : runtimeHours.toFixed(1)) : '—'}
+          unit={runtimeAvailable ? (runtimeHours > 72 ? 'days' : 'hours') : ''}
+          status={runtimeAvailable ? 'info' : 'warning'}
           icon={<Clock className="w-4 h-4 text-purple-500" />}
         />
       </div>
@@ -188,14 +185,6 @@ export const PowerBudgetTable: React.FC = () => {
             Load Line Estimate Sheet
           </span>
           <div className="flex items-center space-x-2">
-            <Button 
-              onClick={generatePowerFromBlueprint} 
-              variant="outline" 
-              size="xs"
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
-            >
-              Sync Power Blocks
-            </Button>
             <Button 
               onClick={handleAddRow} 
               variant="primary" 
@@ -234,7 +223,7 @@ export const PowerBudgetTable: React.FC = () => {
               {powerBudget.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-6 text-center text-slate-400">
-                    No active loads configured. Click &apos;Sync Power Blocks&apos; or add lines manually to build budget.
+                    No power data recorded. Add only values supported by a datasheet, measurement, or explicit engineering assumption.
                   </td>
                 </tr>
               ) : (

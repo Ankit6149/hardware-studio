@@ -3,7 +3,7 @@ import { useProjectStore } from '../store/projectStore';
 import { useStudioContextStore } from '../store/studioContextStore';
 import { BoardItem } from '../types';
 import { Button } from '../ui/Button';
-import { Box, Cpu, Edit2, Layers, Sparkles, Trash2 } from 'lucide-react';
+import { Box, Cpu, Edit2, Layers, Trash2 } from 'lucide-react';
 import { useFeedback } from './feedback/FeedbackProvider';
 
 type BoardTab = 'boards' | 'components';
@@ -16,8 +16,6 @@ export const BoardStudio: React.FC = () => {
     updateBoard,
     deleteBoard,
     unplaceComponentFromBoard,
-    generateBoardPlanFromProduct,
-    generateBoardComponentsFromBOM,
     activeView,
     setActiveView,
   } = useProjectStore();
@@ -28,21 +26,21 @@ export const BoardStudio: React.FC = () => {
 
   const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
   const [boardName, setBoardName] = useState('');
-  const [boardType, setBoardType] = useState<BoardItem['boardType']>('Main PCB');
-  const [substrate, setSubstrate] = useState<BoardItem['substrate']>('FR4');
-  const [layerCount, setLayerCount] = useState(2);
+  const [boardType, setBoardType] = useState<BoardItem['boardType']>('Unknown');
+  const [substrate, setSubstrate] = useState<BoardItem['substrate']>('');
+  const [layerCount, setLayerCount] = useState<number | ''>('');
   const [dimensionsMm, setDimensionsMm] = useState('');
-  const [placement, setPlacement] = useState<BoardItem['placement']>('Internal');
+  const [placement, setPlacement] = useState<BoardItem['placement']>('Unknown');
   const [purpose, setPurpose] = useState('');
 
   const clearBoardForm = () => {
     setEditingBoardId(null);
     setBoardName('');
-    setBoardType('Main PCB');
-    setSubstrate('FR4');
-    setLayerCount(2);
+    setBoardType('Unknown');
+    setSubstrate('');
+    setLayerCount('');
     setDimensionsMm('');
-    setPlacement('Internal');
+    setPlacement('Unknown');
     setPurpose('');
   };
 
@@ -53,11 +51,11 @@ export const BoardStudio: React.FC = () => {
 
     const boardData = {
       name,
-      boardType,
-      substrate,
-      layerCount,
+      boardType: boardType || 'Unknown',
+      substrate: substrate || undefined,
+      layerCount: layerCount === '' ? undefined : layerCount,
       dimensionsMm: dimensionsMm.trim() || undefined,
-      placement,
+      placement: placement || 'Unknown',
       purpose: purpose.trim() || undefined,
     };
 
@@ -113,11 +111,11 @@ export const BoardStudio: React.FC = () => {
   const handleStartEditBoard = (board: BoardItem) => {
     setEditingBoardId(board.id);
     setBoardName(board.name);
-    setBoardType(board.boardType || 'Main PCB');
-    setSubstrate(board.substrate || 'FR4');
-    setLayerCount(board.layerCount || 2);
+    setBoardType(board.boardType || 'Unknown');
+    setSubstrate(board.substrate || '');
+    setLayerCount(board.layerCount ?? '');
     setDimensionsMm(board.dimensionsMm || '');
-    setPlacement(board.placement || 'Internal');
+    setPlacement(board.placement || 'Unknown');
     setPurpose(board.purpose || '');
   };
 
@@ -185,14 +183,6 @@ export const BoardStudio: React.FC = () => {
                 <Box className="h-4 w-4 text-slate-500" />
                 Physical boards
               </div>
-              <button
-                type="button"
-                onClick={generateBoardPlanFromProduct}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Draft from architecture
-              </button>
             </div>
 
             <div className="space-y-2 p-4">
@@ -321,6 +311,7 @@ export const BoardStudio: React.FC = () => {
                     onChange={(event) => setBoardType(event.target.value)}
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-slate-500"
                   >
+                    <option value="Unknown">Unknown / unresolved</option>
                     <option value="Main PCB">Main PCB</option>
                     <option value="Rigid PCB">Rigid PCB</option>
                     <option value="Flex PCB">Flex PCB</option>
@@ -337,6 +328,7 @@ export const BoardStudio: React.FC = () => {
                     onChange={(event) => setSubstrate(event.target.value)}
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-slate-500"
                   >
+                    <option value="">Unresolved</option>
                     <option value="FR4">FR4</option>
                     <option value="Polyimide Flex">Polyimide Flex</option>
                     <option value="Rigid-Flex">Rigid-Flex</option>
@@ -354,7 +346,11 @@ export const BoardStudio: React.FC = () => {
                     min={1}
                     max={64}
                     value={layerCount}
-                    onChange={(event) => setLayerCount(Number.parseInt(event.target.value, 10) || 2)}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setLayerCount(value === '' ? '' : Number.parseInt(value, 10));
+                    }}
+                    placeholder="Unresolved"
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-slate-500"
                   />
                 </label>
@@ -377,12 +373,12 @@ export const BoardStudio: React.FC = () => {
                   onChange={(event) => setPlacement(event.target.value)}
                   className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-slate-500"
                 >
+                  <option value="Unknown">Unknown / unresolved</option>
                   <option value="Internal">Internal</option>
                   <option value="Outer">Outer</option>
                   <option value="Dock">Dock</option>
                   <option value="Strap">Strap</option>
                   <option value="Ring Arc">Ring Arc</option>
-                  <option value="Unknown">Unknown</option>
                 </select>
               </label>
 
@@ -415,21 +411,13 @@ export const BoardStudio: React.FC = () => {
                 Placement records are derived from project components; detailed geometry belongs in the PCB workbench.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={generateBoardComponentsFromBOM}
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Sync from BOM
-            </button>
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto p-4">
             {boardComponents.length === 0 ? (
               <div className="border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
                 <p className="text-sm font-medium text-slate-700">No board component placements exist.</p>
-                <p className="mt-1 text-xs text-slate-500">Sync project components only after a real board has been defined.</p>
+                <p className="mt-1 text-xs text-slate-500">Add qualified project components through Components, then place them on an explicit board from the PCB workbench.</p>
               </div>
             ) : (
               <div className="overflow-hidden border border-slate-200">
