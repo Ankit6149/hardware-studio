@@ -57,6 +57,7 @@ export function serializeProject(project: Project): string {
     customComponentLibrary: project.customComponentLibrary || [],
     keepoutZones: project.keepoutZones || [],
     requirements: project.requirements || [],
+    requirementReconciliationSuppressions: project.requirementReconciliationSuppressions || [],
     architectureNodes: project.architectureNodes || [],
     architectureConnections: project.architectureConnections || [],
     architectureReconciliationSuppressions: project.architectureReconciliationSuppressions || [],
@@ -103,6 +104,7 @@ export function migrateProjectSchema(raw: unknown): Project {
   const project = migrateBaseProjectSchema(raw);
 
   const pRecord = project as unknown as Record<string, unknown>;
+  if (!pRecord.requirementReconciliationSuppressions) pRecord.requirementReconciliationSuppressions = [];
   if (!pRecord.architectureConnections) pRecord.architectureConnections = [];
   if (!pRecord.architectureReconciliationSuppressions) pRecord.architectureReconciliationSuppressions = [];
   if (!pRecord.mechanicalDimensions) pRecord.mechanicalDimensions = [];
