@@ -36,4 +36,27 @@ describe('Electronics contextual tool convergence', () => {
     expect(shell).toContain("case 'pcb-constraints':");
     expect(shell).toContain('return <ElectronicsWorkspace />;');
   });
+  it('keeps contextual engineering entry explicit instead of synthesizing missing facts', () => {
+    const boards = source('../components/BoardStudio.tsx');
+    const power = source('../components/PowerBudgetTable.tsx');
+    const pins = source('../components/PinMapTable.tsx');
+
+    expect(boards).not.toContain('generateBoardPlanFromProduct');
+    expect(boards).not.toContain('generateBoardComponentsFromBOM');
+    expect(boards).not.toContain('Draft from architecture');
+    expect(boards).not.toContain('Sync from BOM');
+    expect(boards).toContain("useState<BoardItem['boardType']>('Unknown')");
+    expect(boards).toContain("useState<number | ''>('')");
+
+    expect(power).not.toContain('generatePowerFromBlueprint');
+    expect(power).not.toContain('Sync Power Blocks');
+    expect(power).not.toContain('batteryCapacityMah = 100');
+    expect(power).toContain('runtimeAvailable');
+
+    expect(pins).not.toContain('generatePinMapFromBlueprint');
+    expect(pins).not.toContain('Generate from Blueprint');
+    expect(pins).toContain('direction: "Unknown"');
+    expect(pins).toContain('protocol: "Unknown"');
+  });
+
 });
