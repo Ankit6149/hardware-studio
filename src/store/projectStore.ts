@@ -43,13 +43,6 @@ import {
 import { templates } from '../data/templates';
 import {
   generateEditorLayouts,
-  autoPlaceComponents,
-  autoCreateNetsFromPinMap,
-  autoCreatePinMapFromCircuits,
-  autoCreateFirmwareTasksFromHardware,
-  autoCreateTestsFromHardware,
-  autoCreateHandoffChecklist,
-  fixMissingDimensionsWithPlaceholder,
   getInitialFactoryFiles
 } from '../lib/editorLayoutGenerators';
 import { ElectronicComponentDefinition } from '../lib/components/componentLibrary';
@@ -208,14 +201,6 @@ interface ProjectState extends Project {
   deleteEditorConnection: (id: string) => void;
   generateEditorLayouts: () => void;
   resetEditorLayout: (mode: EditorMode) => void;
-  autoPlaceComponents: () => void;
-  autoCreateNetsFromPinMap: () => void;
-  autoCreatePinMapFromCircuits: () => void;
-  autoCreateFirmwareTasksFromHardware: () => void;
-  autoCreateTestsFromHardware: () => void;
-  autoCreateHandoffChecklist: () => void;
-  fixMissingDimensionsWithPlaceholder: () => void;
-  addRequiredFactoryFileChecklist: () => void;
   updateFactoryFileStatus: (fileKey: string, status?: FactoryFileStatus['status'], notes?: string, source?: FactoryFileStatus['source'], fileName?: string) => void;
   setFactoryPackageStatus: (status: 'Draft' | 'Generated' | 'Needs Review' | 'Verified' | 'Blocked') => void;
   setFactoryReviewCheck: (key: string, checked: boolean) => void;
@@ -1486,61 +1471,6 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         editorLayouts: currentLayouts, 
         editorConnections: [...currentConns, ...modeConns] 
       });
-    },
-
-    autoPlaceComponents: () => {
-      const project = getCleanProjectData(get());
-      const placed = autoPlaceComponents(project);
-      persistChange({ boardComponents: placed });
-      get().generateEditorLayouts();
-    },
-
-    autoCreateNetsFromPinMap: () => {
-      const project = getCleanProjectData(get());
-      const nets = autoCreateNetsFromPinMap(project);
-      persistChange({ nets });
-      get().generateEditorLayouts();
-    },
-
-    autoCreatePinMapFromCircuits: () => {
-      const project = getCleanProjectData(get());
-      const pinMap = autoCreatePinMapFromCircuits(project);
-      persistChange({ pinMap });
-      get().generateEditorLayouts();
-    },
-
-    autoCreateFirmwareTasksFromHardware: () => {
-      const project = getCleanProjectData(get());
-      const firmwareTasks = autoCreateFirmwareTasksFromHardware(project);
-      persistChange({ firmwareTasks });
-      get().generateEditorLayouts();
-    },
-
-    autoCreateTestsFromHardware: () => {
-      const project = getCleanProjectData(get());
-      const testing = autoCreateTestsFromHardware(project);
-      persistChange({ testing });
-      get().generateEditorLayouts();
-    },
-
-    autoCreateHandoffChecklist: () => {
-      const project = getCleanProjectData(get());
-      const checklist = autoCreateHandoffChecklist(project);
-      persistChange({ manufacturingChecklist: checklist });
-      get().generateEditorLayouts();
-    },
-
-    fixMissingDimensionsWithPlaceholder: () => {
-      const project = getCleanProjectData(get());
-      const boards = fixMissingDimensionsWithPlaceholder(project);
-      persistChange({ boards });
-      get().generateEditorLayouts();
-    },
-
-    addRequiredFactoryFileChecklist: () => {
-      const factoryFiles = get().factoryFiles || getInitialFactoryFiles(get());
-      persistChange({ factoryFiles });
-      get().generateEditorLayouts();
     },
 
     updateFactoryFileStatus: (fileKey, status, notes, source, fileName) => {
