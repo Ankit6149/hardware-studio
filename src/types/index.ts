@@ -720,6 +720,7 @@ export interface Project {
 
   // Shared Product Graph
   requirements?: ProductRequirement[];
+  requirementReconciliationSuppressions?: RequirementReconciliationSuppression[];
   architectureNodes?: ProductArchitectureNode[];
   architectureConnections?: ProductArchitectureConnection[];
   architectureReconciliationSuppressions?: ArchitectureReconciliationSuppression[];
@@ -825,6 +826,26 @@ export type FactoryFileStatus = {
 // SHARED PRODUCT GRAPH TYPINGS
 // ----------------------------------------------------
 
+export interface RequirementReconciliationBaseline {
+  adoptionSessionId: string;
+  sourceContentHash: string;
+  adoptedAt: string;
+  canonicalSnapshot: Record<string, string | number | boolean | null | undefined>;
+  sourceSnapshot?: Record<string, string | number | boolean | null | undefined>;
+  sourcePresence?: 'present' | 'deleted';
+  resolution?: 'adopted' | 'keep-local' | 'take-source' | 'manual' | 'keep-after-source-delete';
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
+export interface RequirementReconciliationSuppression {
+  sourceIdentity: SourceIdentity;
+  sourceContentHash: string;
+  decision: 'reject-new-source';
+  reviewedAt: string;
+  reviewedBy: string;
+}
+
 export interface ProductRequirement {
   id: string;
   title: string;
@@ -840,6 +861,9 @@ export interface ProductRequirement {
   linkedTestIds: string[];
   risks: string[];
   notes?: string;
+  sourceIdentity?: SourceIdentity;
+  provenance?: EngineeringProvenance;
+  reconciliationBaseline?: RequirementReconciliationBaseline;
 }
 
 export interface ArchitectureReconciliationBaseline {
