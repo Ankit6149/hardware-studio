@@ -59,6 +59,13 @@ describe('canonical project-store board identity', () => {
       'generatePCBConstraintsFromBoard',
       'generateManufacturingChecklist',
       'generateFullProductPlan',
+      'autoPlaceComponents',
+      'autoCreateNetsFromPinMap',
+      'autoCreatePinMapFromCircuits',
+      'autoCreateFirmwareTasksFromHardware',
+      'autoCreateTestsFromHardware',
+      'autoCreateHandoffChecklist',
+      'fixMissingDimensionsWithPlaceholder',
     ]) {
       expect(storeSource).not.toContain(generator);
     }
