@@ -216,6 +216,7 @@ export function migrateProjectSchema(project: unknown): Project {
   if (!migrated.keepoutZones) migrated.keepoutZones = [];
   if (!migrated.testing) migrated.testing = [];
   if (!migrated.requirements) migrated.requirements = [];
+  if (!migrated.requirementReconciliationSuppressions) migrated.requirementReconciliationSuppressions = [];
   if (!migrated.architectureNodes) migrated.architectureNodes = [];
   if (!migrated.architectureConnections) migrated.architectureConnections = [];
   if (!migrated.architectureReconciliationSuppressions) migrated.architectureReconciliationSuppressions = [];
