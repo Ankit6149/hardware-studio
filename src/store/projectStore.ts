@@ -98,6 +98,16 @@ import {
   deserializeProject,
   validateProjectIntegrity
 } from '../lib/projectSerialization';
+import {
+  createProjectRepository,
+  migrateLegacyLocalStorageProjects,
+  type ProjectRepository,
+} from '../lib/repository/projectRepository';
+import {
+  markRepositoryFailure,
+  markRepositorySaved,
+  markRepositorySaving,
+} from './storageHealthStore';
 
 export function normalizeNetName(name: string): string {
   const trimmed = name.trim();
@@ -198,7 +208,7 @@ interface ProjectState extends Project {
   deleteProject: (id: string) => void;
   loadProjectFromTemplate: (templateId: string) => void;
   resetProject: () => void;
-  loadProjectFromLocalStorage: () => void;
+  hydrateProjectRepository: () => Promise<void>;
 
   // Editor & Factory Handoff Actions
   updateEditorObjectPosition: (mode: EditorMode, id: string, x: number, y: number) => void;
@@ -362,168 +372,66 @@ interface ProjectState extends Project {
   futureCommands: { type: string; description: string; snapshot: string }[];
 }
 
-const PROJECTS_KEY = 'hardware_studio_projects_v1';
-const ACTIVE_ID_KEY = 'hardware_studio_active_project_id_v1';
-const OLD_KEY = 'hardware_studio_legacy_project';
+const projectRepository: ProjectRepository = createProjectRepository();
+let repositoryWriteQueue: Promise<void> = Promise.resolve();
 
-const inMemoryProjectsStore: Record<string, Project> = {};
-let inMemoryActiveId: string = 'the-ring';
+function createDefaultProject(): Project {
+  const template = templates.find((candidate) => candidate.id === 'the-ring')?.project;
+  const fallback = template
+    ? JSON.parse(JSON.stringify(template)) as Project
+    : {
+        id: 'empty-project',
+        projectName: 'New Hardware Project',
+        description: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        version: '1.0',
+        activeView: 'dashboard',
+        nodes: [],
+        edges: [],
+        bom: [],
+        testing: [],
+        powerBudget: [],
+        pinMap: [],
+        firmwareTasks: [],
+      } as Project;
 
-// Helpers to load/save list of projects from local storage
-const getSavedProjects = (): Record<string, Project> => {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      const savedStr = window.localStorage.getItem(PROJECTS_KEY);
-      if (savedStr) {
-        const parsed = JSON.parse(savedStr);
-        Object.assign(inMemoryProjectsStore, parsed);
-        return parsed;
-      }
-      
-      // Check old single-project localStorage key for backwards compatibility
-      const oldStr = window.localStorage.getItem(OLD_KEY);
-      if (oldStr) {
-        const oldObj = JSON.parse(oldStr);
-        const ringTpl = templates.find(t => t.id === 'the-ring')?.project;
-        const converted: Project = {
-          id: 'project_default',
-          projectName: oldObj.projectName || 'The Ring',
-          description: 'Imported from your previous workspace session.',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          templateName: 'The Ring',
-          version: '1.0',
-          activeView: oldObj.activeView || 'master',
-          nodes: oldObj.nodes || ringTpl?.nodes || [],
-          edges: oldObj.edges || ringTpl?.edges || [],
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          bom: (oldObj.bom || []).map((b: any) => ({
-            id: b.id || `bom_${Math.random()}`,
-            blockName: b.blockName || '',
-            candidateComponent: b.candidateComponent || '',
-            partNumber: b.partNumber || '',
-            stage: b.stage || 'Prototype',
-            quantity: typeof b.quantity === 'number' ? b.quantity : 1,
-            voltage: b.voltage || '',
-            currentEstimate: b.currentEstimate || '',
-            interface: b.interface || '',
-            packageSize: b.packageSize || '',
-            dimensions: b.dimensions || '',
-            costEstimate: b.costEstimate || '0.00',
-            supplier: b.supplier || '',
-            supplierUrl: b.supplierUrl || '',
-            datasheetUrl: b.datasheetUrl || '',
-            status: b.status || 'Not Started',
-            risk: b.risk || '',
-            alternative: b.alternative || '',
-            notes: b.notes || ''
-          })),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          testing: (oldObj.testing || []).map((t: any) => ({
-            id: t.id || `stage_${Math.random()}`,
-            name: t.name || '',
-            goal: t.goal || '',
-            partsNeeded: t.partsNeeded || '',
-            steps: t.steps || '',
-            passCriteria: t.passCriteria || '',
-            risks: t.risks || '',
-            status: t.status || 'Not Started',
-            notes: t.notes || '',
-            category: t.category || 'General',
-            linkedBlocks: t.linkedBlocks || [],
-            resultNotes: t.resultNotes || '',
-            evidenceLink: t.evidenceLink || '',
-            order: t.order || 0
-          })),
-          powerBudget: ringTpl?.powerBudget || [],
-          pinMap: ringTpl?.pinMap || [],
-          firmwareTasks: ringTpl?.firmwareTasks || [],
-          batteryCapacityMah: oldObj.batteryCapacityMah || 18
-        };
-        
-        const newProjects = { 'project_default': converted };
-        inMemoryProjectsStore['project_default'] = converted;
-        window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(newProjects));
-        window.localStorage.setItem(ACTIVE_ID_KEY, 'project_default');
-        // Clean up old key to avoid repeated migration
-        window.localStorage.removeItem(OLD_KEY);
-        return newProjects;
-      }
+  const initial = migrateProjectSchema(fallback);
+  const { layouts, connections } = generateEditorLayouts(initial);
+  initial.editorLayouts = layouts;
+  initial.editorConnections = connections;
+  initial.factoryFiles = getInitialFactoryFiles(initial);
+  return initial;
+}
 
-      // Default to 'The Ring' template if nothing exists
-      const ringTemplate = templates.find(t => t.id === 'the-ring')?.project;
-      if (ringTemplate) {
-        const initial = JSON.parse(JSON.stringify(ringTemplate)) as Project;
-        
-        // Pre-generate CAD layout coordinates and initial manufacturing status checks
-        const { layouts, connections } = generateEditorLayouts(initial);
-        initial.editorLayouts = layouts;
-        initial.editorConnections = connections;
-        initial.factoryFiles = getInitialFactoryFiles(initial);
-
-        const initialProjects = { [initial.id]: initial };
-        inMemoryProjectsStore[initial.id] = initial;
-        window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(initialProjects));
-        window.localStorage.setItem(ACTIVE_ID_KEY, initial.id);
-        return initialProjects;
-      }
-    } catch (e) {
-      console.error("Failed to load projects from storage:", e);
-    }
-  }
-  return inMemoryProjectsStore;
+const initialCachedProject = createDefaultProject();
+const inMemoryProjectsStore: Record<string, Project> = {
+  [initialCachedProject.id]: initialCachedProject,
 };
+let inMemoryActiveId = initialCachedProject.id;
 
-const getActiveId = (): string => {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    return window.localStorage.getItem(ACTIVE_ID_KEY) || inMemoryActiveId;
-  }
-  return inMemoryActiveId;
-};
+function replaceProjectCache(projects: readonly Project[], activeProjectId: string): void {
+  for (const key of Object.keys(inMemoryProjectsStore)) delete inMemoryProjectsStore[key];
+  for (const project of projects) inMemoryProjectsStore[project.id] = project;
+  inMemoryActiveId = activeProjectId;
+}
 
-const saveProjectsToStorage = (projects: Record<string, Project>, activeId: string) => {
-  Object.assign(inMemoryProjectsStore, projects);
-  inMemoryActiveId = activeId;
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-      window.localStorage.setItem(ACTIVE_ID_KEY, activeId);
-    } catch (e) {
-      console.error("Failed to save projects to storage:", e);
-    }
-  }
-};
+function queueRepositoryWrite(operation: () => Promise<void>, savedAt?: string): void {
+  markRepositorySaving();
+  repositoryWriteQueue = repositoryWriteQueue
+    .catch(() => undefined)
+    .then(operation)
+    .then(() => {
+      markRepositorySaved(savedAt);
+    })
+    .catch((error) => {
+      markRepositoryFailure(error);
+    });
+}
 
-// Initial template load
-const getInitialActiveProject = (): Project => {
-  const allProjects = getSavedProjects();
-  const activeId = getActiveId();
-  if (allProjects[activeId]) {
-    return migrateProjectSchema(allProjects[activeId]);
-  }
-  const firstId = Object.keys(allProjects)[0];
-  if (firstId && allProjects[firstId]) {
-    return migrateProjectSchema(allProjects[firstId]);
-  }
-  // Ultimate fallback
-  const ringTemplate = templates.find(t => t.id === 'the-ring')?.project;
-  return migrateProjectSchema(JSON.parse(JSON.stringify(ringTemplate || {
-    id: "empty-project",
-    projectName: "New Hardware Project",
-    description: "",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    version: "1.0",
-    activeView: "master",
-    nodes: [],
-    edges: [],
-    bom: [],
-    testing: [],
-    powerBudget: [],
-    pinMap: [],
-    firmwareTasks: []
-  })));
-};
+function getInitialActiveProject(): Project {
+  return initialCachedProject;
+}
 
 export const useProjectStore = create<ProjectState>((set, get) => {
   const initialProject = getInitialActiveProject();
@@ -645,15 +553,19 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     }
     const updatedState = { ...get(), ...changes };
     const cleanProject = getCleanProjectData(updatedState as ProjectState);
-    const saved = getSavedProjects();
-    saved[cleanProject.id] = cleanProject;
-    saveProjectsToStorage(saved, cleanProject.id);
-    
+    inMemoryProjectsStore[cleanProject.id] = cleanProject;
+    inMemoryActiveId = cleanProject.id;
+
     set({
       ...updatedState,
       updatedAt: cleanProject.updatedAt,
-      projectsList: syncProjectsList(saved)
+      projectsList: syncProjectsList(inMemoryProjectsStore)
     });
+
+    queueRepositoryWrite(async () => {
+      await projectRepository.saveProject(cleanProject);
+      await projectRepository.setActiveProjectId(cleanProject.id);
+    }, cleanProject.updatedAt);
   };
 
   return {
@@ -1010,10 +922,13 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     // Project Actions
     saveActiveProject: () => {
       const cleanProject = getCleanProjectData(get());
-      const saved = getSavedProjects();
-      saved[cleanProject.id] = cleanProject;
-      saveProjectsToStorage(saved, cleanProject.id);
-      set({ projectsList: syncProjectsList(saved) });
+      inMemoryProjectsStore[cleanProject.id] = cleanProject;
+      inMemoryActiveId = cleanProject.id;
+      set({ projectsList: syncProjectsList(inMemoryProjectsStore) });
+      queueRepositoryWrite(async () => {
+        await projectRepository.saveProject(cleanProject);
+        await projectRepository.setActiveProjectId(cleanProject.id);
+      }, cleanProject.updatedAt);
     },
 
     saveProjectAsCopy: (newName) => {
@@ -1028,52 +943,49 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         updatedAt: new Date().toISOString()
       };
 
-      const saved = getSavedProjects();
-      saved[newId] = copied;
-      saveProjectsToStorage(saved, newId);
-      
+      inMemoryProjectsStore[newId] = copied;
+      inMemoryActiveId = newId;
+
       set({
         ...copied,
         selectedNodeId: null,
-        projectsList: syncProjectsList(saved)
+        projectsList: syncProjectsList(inMemoryProjectsStore)
       });
+      queueRepositoryWrite(async () => {
+        await projectRepository.saveProject(copied);
+        await projectRepository.setActiveProjectId(newId);
+      }, copied.updatedAt);
     },
 
     loadProject: (id) => {
-      const saved = getSavedProjects();
-      const rawProj = saved[id];
+      const rawProj = inMemoryProjectsStore[id];
       if (rawProj) {
         const proj = migrateProjectSchema(rawProj);
+        inMemoryActiveId = id;
         set({
           ...proj,
           activeBoardId: proj.activeBoardId || '',
           selectedNodeId: null,
-          projectsList: syncProjectsList(saved)
+          projectsList: syncProjectsList(inMemoryProjectsStore)
         });
-        saveProjectsToStorage(saved, id);
+        queueRepositoryWrite(() => projectRepository.setActiveProjectId(id), proj.updatedAt);
       }
     },
 
     deleteProject: (id) => {
-      const saved = getSavedProjects();
-      
-      // Don't delete if it is the only project
-      if (Object.keys(saved).length <= 1) {
-        return;
-      }
+      if (Object.keys(inMemoryProjectsStore).length <= 1) return;
 
-      delete saved[id];
-      
-      // If deleted active project, switch to the first remaining one
-      const activeId = getActiveId();
-      let nextActiveId = activeId;
-      if (activeId === id) {
-        nextActiveId = Object.keys(saved)[0];
-      }
+      delete inMemoryProjectsStore[id];
+      const nextActiveId = inMemoryActiveId === id
+        ? Object.keys(inMemoryProjectsStore)[0]
+        : inMemoryActiveId;
 
-      saveProjectsToStorage(saved, nextActiveId);
-      
-      set({ projectsList: syncProjectsList(saved) });
+      inMemoryActiveId = nextActiveId;
+      set({ projectsList: syncProjectsList(inMemoryProjectsStore) });
+      queueRepositoryWrite(async () => {
+        await projectRepository.deleteProject(id);
+        await projectRepository.setActiveProjectId(nextActiveId);
+      });
       get().loadProject(nextActiveId);
     },
 
@@ -1094,16 +1006,19 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         copy.editorConnections = connections;
         copy.factoryFiles = getInitialFactoryFiles(copy);
 
-        const saved = getSavedProjects();
-        saved[newId] = copy;
-        saveProjectsToStorage(saved, newId);
+        inMemoryProjectsStore[newId] = copy;
+        inMemoryActiveId = newId;
 
         set({
           ...copy,
           activeBoardId: copy.activeBoardId || '',
           selectedNodeId: null,
-          projectsList: syncProjectsList(saved)
+          projectsList: syncProjectsList(inMemoryProjectsStore)
         });
+        queueRepositoryWrite(async () => {
+          await projectRepository.saveProject(copy);
+          await projectRepository.setActiveProjectId(newId);
+        }, copy.updatedAt);
       }
     },
 
@@ -1132,15 +1047,34 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       }
     },
 
-    loadProjectFromLocalStorage: () => {
-      const allProjects = getSavedProjects();
-      const activeId = getActiveId();
-      set({ projectsList: syncProjectsList(allProjects) });
-      if (allProjects[activeId]) {
-        get().loadProject(activeId);
-      } else {
-        const first = Object.keys(allProjects)[0];
-        if (first) get().loadProject(first);
+    hydrateProjectRepository: async () => {
+      try {
+        if (typeof window !== 'undefined') {
+          await migrateLegacyLocalStorageProjects(projectRepository, window.localStorage);
+        }
+
+        let projects = await projectRepository.listProjects();
+        if (projects.length === 0) {
+          const initial = createDefaultProject();
+          await projectRepository.saveProject(initial);
+          await projectRepository.setActiveProjectId(initial.id);
+          projects = [initial];
+        }
+
+        const requestedActiveId = await projectRepository.getActiveProjectId();
+        const active = projects.find((project) => project.id === requestedActiveId) || projects[0];
+        replaceProjectCache(projects, active.id);
+
+        set({
+          ...active,
+          activeBoardId: active.activeBoardId || '',
+          selectedNodeId: null,
+          projectsList: syncProjectsList(inMemoryProjectsStore),
+        });
+        markRepositorySaved(active.updatedAt);
+      } catch (error) {
+        markRepositoryFailure(error);
+        set({ projectsList: syncProjectsList(inMemoryProjectsStore) });
       }
     },
 
@@ -2935,14 +2869,17 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         ...migrated,
         activeBoardId: migrated.activeBoardId || ''
       } as ProjectState);
-      const saved = getSavedProjects();
-      saved[cleanProject.id] = cleanProject;
-      saveProjectsToStorage(saved, cleanProject.id);
+      inMemoryProjectsStore[cleanProject.id] = cleanProject;
+      inMemoryActiveId = cleanProject.id;
 
       set({
         ...cleanProject,
-        projectsList: syncProjectsList(saved)
+        projectsList: syncProjectsList(inMemoryProjectsStore)
       });
+      queueRepositoryWrite(async () => {
+        await projectRepository.saveProject(cleanProject);
+        await projectRepository.setActiveProjectId(cleanProject.id);
+      }, cleanProject.updatedAt);
 
       return { success: issues.filter(i => i.severity === 'Error').length === 0, issues };
     }
