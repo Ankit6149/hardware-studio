@@ -106,8 +106,8 @@ export interface PinMapItem {
   signalName: string;
   connectedBlock: string;
   mcuPin: string;
-  direction: 'Input' | 'Output' | 'Bidirectional' | 'Power' | 'Ground';
-  protocol: 'GPIO' | 'I2C' | 'SPI' | 'UART' | 'PWM' | 'ADC' | 'Touch' | 'Power' | 'Ground';
+  direction: 'Unknown' | 'Input' | 'Output' | 'Bidirectional' | 'Power' | 'Ground';
+  protocol: 'Unknown' | 'GPIO' | 'I2C' | 'SPI' | 'UART' | 'PWM' | 'ADC' | 'Touch' | 'Power' | 'Ground';
   voltage: string;
   notes: string;
 }
