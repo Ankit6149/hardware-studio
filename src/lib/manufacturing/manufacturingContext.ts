@@ -47,7 +47,7 @@ export type ManufacturingCopperSide = 'Top' | 'Bottom';
 export interface ManufacturingBoardContext {
   board: BoardItem;
   boardId: string;
-  dimensions?: BoardDimensionsMm;
+  dimensions: BoardDimensionsMm;
   outline: BoardOutline;
   components: BoardComponent[];
   placedComponents: BoardComponent[];
@@ -85,28 +85,37 @@ function isFinitePoint(point: { x: number; y: number }): boolean {
   return isFiniteNumber(point.x) && isFiniteNumber(point.y);
 }
 
-export function parseBoardDimensionsMm(dimensionsMm?: string): BoardDimensionsMm | undefined {
-  if (!dimensionsMm?.trim()) return undefined;
+const MM_PER_MIL = 0.0254;
 
-  const match = dimensionsMm
-    .trim()
-    .match(/^\s*(\d+(?:\.\d+)?)\s*(?:x|×)\s*(\d+(?:\.\d+)?)\s*(?:mm)?\s*$/i);
-  if (!match) return undefined;
+export function boardOutlineDimensionsMm(outline: BoardOutline): BoardDimensionsMm | undefined {
+  const factor = outline.units === 'mil' ? MM_PER_MIL : 1;
 
-  const widthMm = Number(match[1]);
-  const heightMm = Number(match[2]);
-  if (!isPositiveNumber(widthMm) || !isPositiveNumber(heightMm)) return undefined;
-  return { widthMm, heightMm };
+  if (isPositiveNumber(outline.width) && isPositiveNumber(outline.height)) {
+    return {
+      widthMm: outline.width * factor,
+      heightMm: outline.height * factor,
+    };
+  }
+
+  if (
+    outline.points
+    && outline.points.length >= 3
+    && outline.points.every(isFinitePoint)
+  ) {
+    const xs = outline.points.map((point) => point.x * factor);
+    const ys = outline.points.map((point) => point.y * factor);
+    const widthMm = Math.max(...xs) - Math.min(...xs);
+    const heightMm = Math.max(...ys) - Math.min(...ys);
+    if (isPositiveNumber(widthMm) && isPositiveNumber(heightMm)) {
+      return { widthMm, heightMm };
+    }
+  }
+
+  return undefined;
 }
 
 function isUsableOutline(outline: BoardOutline): boolean {
-  const hasPolygon = Boolean(
-    outline.points
-    && outline.points.length >= 3
-    && outline.points.every(isFinitePoint),
-  );
-  const hasExplicitSize = isPositiveNumber(outline.width) && isPositiveNumber(outline.height);
-  return hasPolygon || hasExplicitSize;
+  return boardOutlineDimensionsMm(outline) !== undefined;
 }
 
 function resolveBoard(project: Project): { board?: BoardItem; blocker?: ManufacturingBlocker } {
@@ -222,10 +231,10 @@ export function evaluateManufacturingContext(project: Project): ManufacturingCon
     });
   }
 
-  const dimensions = parseBoardDimensionsMm(board.dimensionsMm);
   const outline = (project.boardOutlines || []).find(
     (candidate) => candidate.boardId === boardId && isUsableOutline(candidate),
   );
+  const dimensions = outline ? boardOutlineDimensionsMm(outline) : undefined;
 
   if (!outline) {
     blockers.push({
@@ -383,7 +392,7 @@ export function evaluateManufacturingContext(project: Project): ManufacturingCon
     });
   }
 
-  const context = outline ? {
+  const context = outline && dimensions ? {
     board,
     boardId,
     dimensions,
