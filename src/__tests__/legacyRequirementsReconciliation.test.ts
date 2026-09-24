@@ -168,10 +168,11 @@ describe('legacy requirements three-way reconciliation preview', () => {
 
     expect(preview.summary.unchanged).toBe(1);
     expect(preview.summary['new-source']).toBe(1);
-    expect(preview.items.find((item) => item.sourceEntityId === 'sensor')).toMatchObject({
+    const sensorItem = preview.items.find((item) => item.sourceEntityId === 'sensor');
+    expect(sensorItem).toMatchObject({
       classification: 'new-source',
-      canonicalEntityId: undefined,
     });
+    expect(sensorItem?.canonicalEntityId).toBeUndefined();
   });
 
   it('reports duplicate canonical source identity as integrity conflict', async () => {
