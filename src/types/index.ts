@@ -825,6 +825,18 @@ export type FactoryFileStatus = {
 // SHARED PRODUCT GRAPH TYPINGS
 // ----------------------------------------------------
 
+export interface RequirementsReconciliationBaseline {
+  adoptionSessionId: string;
+  sourceContentHash: string;
+  adoptedAt: string;
+  canonicalSnapshot: Record<string, string | number | boolean | null | undefined>;
+  sourceSnapshot?: Record<string, string | number | boolean | null | undefined>;
+  sourcePresence?: 'present' | 'deleted';
+  resolution?: 'adopted' | 'keep-local' | 'take-source' | 'manual' | 'keep-after-source-delete';
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
 export interface ProductRequirement {
   id: string;
   title: string;
@@ -840,6 +852,9 @@ export interface ProductRequirement {
   linkedTestIds: string[];
   risks: string[];
   notes?: string;
+  sourceIdentity?: SourceIdentity;
+  provenance?: EngineeringProvenance;
+  reconciliationBaseline?: RequirementsReconciliationBaseline;
 }
 
 export interface ArchitectureReconciliationBaseline {

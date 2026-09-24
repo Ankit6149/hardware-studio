@@ -58,6 +58,10 @@ import {
   type PcbPlacementPatch,
 } from '../lib/pcb/pcbPlacementAuthority';
 import {
+  projectPatchFromLegacyRequirementsApplyPlan,
+  type LegacyRequirementsAdoptionApplyPlan,
+} from '../lib/product/legacyRequirementsAdoptionApply';
+import {
   projectPatchFromLegacyArchitectureApplyPlan,
   type LegacyArchitectureAdoptionApplyPlan,
 } from '../lib/product/legacyArchitectureAdoptionApply';
@@ -286,6 +290,9 @@ interface ProjectState extends Project {
   addRequirement: (req: Omit<ProductRequirement, 'id'>) => void;
   updateRequirement: (id: string, data: Partial<ProductRequirement>) => void;
   deleteRequirement: (id: string) => void;
+  applyLegacyRequirementsAdoptionPlan: (
+    plan: LegacyRequirementsAdoptionApplyPlan,
+  ) => { success: boolean; reason?: string };
 
   addArchitectureNode: (node: Omit<ProductArchitectureNode, 'id'>) => void;
   updateArchitectureNode: (id: string, data: Partial<ProductArchitectureNode>) => void;
@@ -2385,6 +2392,34 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       const list = get().requirements || [];
       const updated = list.filter(r => r.id !== id);
       persistChange({ requirements: updated });
+    },
+
+    applyLegacyRequirementsAdoptionPlan: (plan) => {
+      const state = get();
+
+      if (!plan.canApply) {
+        return { success: false, reason: 'Requirements adoption plan is not fully resolved and cannot be applied.' };
+      }
+      if (plan.projectId !== state.id) {
+        return { success: false, reason: 'Requirements adoption plan belongs to a different project.' };
+      }
+      if (plan.sourceRevision !== state.version) {
+        return { success: false, reason: 'Project revision changed after requirement review. Regenerate the preview and plan.' };
+      }
+      if ((state.requirements || []).length > 0) {
+        return { success: false, reason: 'Canonical requirements already exist. Reconciliation is required.' };
+      }
+
+      const patch = projectPatchFromLegacyRequirementsApplyPlan(plan);
+      get().executeProjectCommand(
+        'ADOPT_LEGACY_REQUIREMENTS',
+        `Adopt reviewed legacy requirements (${plan.adoptionSessionId})`,
+        () => {
+          persistChange(patch);
+        },
+      );
+
+      return { success: true };
     },
 
     addArchitectureNode: (node) => {
