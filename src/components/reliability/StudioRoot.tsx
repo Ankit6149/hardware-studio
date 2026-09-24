@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { RECOVER_TO_DASHBOARD_KEY } from '../../lib/reliability';
-import { prepareStorageReliability } from '../../store/storageHealthStore';
 import { FeedbackProvider } from '../feedback/FeedbackProvider';
 import { KnowledgeProvider } from '../knowledge/KnowledgeProvider';
 import { AppErrorBoundary } from './AppErrorBoundary';
@@ -14,7 +13,6 @@ const StudioApplicationLoader: React.FC = () => {
   const [loadError, setLoadError] = useState<Error | null>(null);
 
   useEffect(() => {
-    prepareStorageReliability();
     import('../AppShell')
       .then((module) => setShell(() => module.AppShell))
       .catch((error: unknown) => setLoadError(error instanceof Error ? error : new Error(String(error))));
