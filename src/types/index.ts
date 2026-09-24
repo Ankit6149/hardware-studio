@@ -720,6 +720,7 @@ export interface Project {
 
   // Shared Product Graph
   requirements?: ProductRequirement[];
+  requirementsReconciliationSuppressions?: RequirementsReconciliationSuppression[];
   architectureNodes?: ProductArchitectureNode[];
   architectureConnections?: ProductArchitectureConnection[];
   architectureReconciliationSuppressions?: ArchitectureReconciliationSuppression[];
@@ -835,6 +836,14 @@ export interface RequirementsReconciliationBaseline {
   resolution?: 'adopted' | 'keep-local' | 'take-source' | 'manual' | 'keep-after-source-delete';
   reviewedBy?: string;
   reviewedAt?: string;
+}
+
+export interface RequirementsReconciliationSuppression {
+  sourceIdentity: SourceIdentity;
+  sourceContentHash: string;
+  decision: 'reject-new-source';
+  reviewedAt: string;
+  reviewedBy: string;
 }
 
 export interface ProductRequirement {
