@@ -3,7 +3,7 @@ import { useProjectStore } from '../store/projectStore';
 import { Project } from '../types';
 
 describe('Slice 1 Mandatory Canonical Store Persistence Tests', () => {
-  it('should export, import, switch, and reload all V1 domains from local storage', () => {
+  it('should export, import, switch, and rehydrate all V1 domains from the project repository', async () => {
     const store = useProjectStore.getState();
 
     // Create rich data across all 24 V1 domains
@@ -253,8 +253,9 @@ describe('Slice 1 Mandatory Canonical Store Persistence Tests', () => {
     useProjectStore.getState().loadProject('store_test_proj_v1_full');
     expect(useProjectStore.getState().id).toBe('store_test_proj_v1_full');
 
-    // 5. Reload from localStorage
-    useProjectStore.getState().loadProjectFromLocalStorage();
+    // 5. Flush durable writes and rehydrate from the repository.
+    await useProjectStore.getState().flushProjectRepository();
+    await useProjectStore.getState().hydrateProjectRepository();
     const loadedState = useProjectStore.getState();
     expect(loadedState.id).toBe('store_test_proj_v1_full');
     expect(loadedState.firmwareSourceFiles?.[0]?.path).toBe('src/main.cpp');
