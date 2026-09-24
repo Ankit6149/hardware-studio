@@ -167,6 +167,36 @@ export interface LegacyProjectMigrationResult {
   sourceFound: boolean;
 }
 
+function legacySingleProjectToProject(raw: unknown): Project {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Legacy single-project storage is not a valid object.');
+  }
+
+  const value = raw as Record<string, unknown>;
+  const now = new Date().toISOString();
+  return migrateProjectSchema({
+    id: 'project_default',
+    projectName: typeof value.projectName === 'string' && value.projectName.trim()
+      ? value.projectName
+      : 'Imported Hardware Project',
+    description: 'Imported from the legacy Hardware Studio browser project format.',
+    createdAt: typeof value.createdAt === 'string' ? value.createdAt : now,
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : now,
+    version: typeof value.version === 'string' ? value.version : '1',
+    activeView: typeof value.activeView === 'string' ? value.activeView : 'dashboard',
+    nodes: Array.isArray(value.nodes) ? value.nodes : [],
+    edges: Array.isArray(value.edges) ? value.edges : [],
+    bom: Array.isArray(value.bom) ? value.bom : [],
+    testing: Array.isArray(value.testing) ? value.testing : [],
+    powerBudget: Array.isArray(value.powerBudget) ? value.powerBudget : [],
+    pinMap: Array.isArray(value.pinMap) ? value.pinMap : [],
+    firmwareTasks: Array.isArray(value.firmwareTasks) ? value.firmwareTasks : [],
+    batteryCapacityMah: typeof value.batteryCapacityMah === 'number'
+      ? value.batteryCapacityMah
+      : undefined,
+  });
+}
+
 export async function migrateLegacyLocalStorageProjects(
   repository: ProjectRepository,
   storage: Pick<Storage, 'getItem'>,
@@ -181,19 +211,23 @@ export async function migrateLegacyLocalStorageProjects(
   }
 
   const rawProjects = storage.getItem(LEGACY_PROJECTS_KEY);
-  if (!rawProjects) {
+  const rawSingleProject = storage.getItem(LEGACY_SINGLE_PROJECT_KEY);
+  if (!rawProjects && !rawSingleProject) {
     return {
       importedProjectIds: [],
       activeProjectId: null,
-      sourceFound: Boolean(storage.getItem(LEGACY_SINGLE_PROJECT_KEY)),
+      sourceFound: false,
     };
   }
 
-  const parsed = JSON.parse(rawProjects) as Record<string, unknown>;
   const imported: Project[] = [];
-
-  for (const value of Object.values(parsed)) {
-    imported.push(migrateProjectSchema(value));
+  if (rawProjects) {
+    const parsed = JSON.parse(rawProjects) as Record<string, unknown>;
+    for (const value of Object.values(parsed)) {
+      imported.push(migrateProjectSchema(value));
+    }
+  } else if (rawSingleProject) {
+    imported.push(legacySingleProjectToProject(JSON.parse(rawSingleProject)));
   }
 
   for (const project of imported) {
