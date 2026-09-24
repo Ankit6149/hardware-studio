@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { useProjectStore } from '../store/projectStore';
-import { allowStorageRecoveryOverwrite } from '../store/storageHealthStore';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Input, Textarea } from '../ui/FormControls';
@@ -115,7 +114,6 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose 
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        allowStorageRecoveryOverwrite();
         const res = importProjectJSON(json);
         if (res.success) {
           notify({ tone: 'success', title: 'Project imported', detail: `Imported “${json.projectName || 'project'}”.` });
