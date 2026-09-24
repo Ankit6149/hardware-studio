@@ -209,6 +209,7 @@ interface ProjectState extends Project {
   loadProjectFromTemplate: (templateId: string) => void;
   resetProject: () => void;
   hydrateProjectRepository: () => Promise<void>;
+  flushProjectRepository: () => Promise<void>;
 
   // Editor & Factory Handoff Actions
   updateEditorObjectPosition: (mode: EditorMode, id: string, x: number, y: number) => void;
@@ -1045,6 +1046,10 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           selectedNodeId: null
         });
       }
+    },
+
+    flushProjectRepository: async () => {
+      await repositoryWriteQueue;
     },
 
     hydrateProjectRepository: async () => {
