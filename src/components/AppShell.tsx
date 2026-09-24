@@ -77,7 +77,7 @@ const UnavailableWorkspace: React.FC<{ viewId: string; onReturn: () => void }> =
 
 export const AppShell: React.FC = () => {
   const activeView = useProjectStore((state) => state.activeView);
-  const loadProjectFromLocalStorage = useProjectStore((state) => state.loadProjectFromLocalStorage);
+  const hydrateProjectRepository = useProjectStore((state) => state.hydrateProjectRepository);
   const setActiveView = useProjectStore((state) => state.setActiveView);
   const storageHealth = useStorageHealthStore((state) => state.health);
   const retrySave = useCallback(() => {
@@ -89,33 +89,40 @@ export const AppShell: React.FC = () => {
   const notifiedStorageState = useRef('');
 
   useEffect(() => {
-    loadProjectFromLocalStorage();
+    let cancelled = false;
 
-    let targetView = getStudioViewForPath(window.location.pathname);
-    const legacyHashView = getStudioViewForLegacyHash(window.location.hash);
-    if (legacyHashView) {
-      targetView = legacyHashView;
-      const cleanPath = getStudioPathForView(legacyHashView);
-      if (cleanPath) window.history.replaceState({ studioView: legacyHashView }, '', cleanPath);
-    } else if (isStudioPath(window.location.pathname) && !targetView) {
-      targetView = '__unknown-studio-route__';
-    }
+    void (async () => {
+      await hydrateProjectRepository();
+      if (cancelled) return;
 
-    try {
-      if (window.sessionStorage.getItem(RECOVER_TO_DASHBOARD_KEY) === '1') {
-        window.sessionStorage.removeItem(RECOVER_TO_DASHBOARD_KEY);
-        targetView = 'dashboard';
-        window.history.replaceState({ studioView: 'dashboard' }, '', '/studio');
+      let targetView = getStudioViewForPath(window.location.pathname);
+      const legacyHashView = getStudioViewForLegacyHash(window.location.hash);
+      if (legacyHashView) {
+        targetView = legacyHashView;
+        const cleanPath = getStudioPathForView(legacyHashView);
+        if (cleanPath) window.history.replaceState({ studioView: legacyHashView }, '', cleanPath);
+      } else if (isStudioPath(window.location.pathname) && !targetView) {
+        targetView = '__unknown-studio-route__';
       }
-    } catch {
-      // The workspace can still load when session storage is blocked.
-    }
 
-    if (targetView) setActiveView(targetView);
+      try {
+        if (window.sessionStorage.getItem(RECOVER_TO_DASHBOARD_KEY) === '1') {
+          window.sessionStorage.removeItem(RECOVER_TO_DASHBOARD_KEY);
+          targetView = 'dashboard';
+          window.history.replaceState({ studioView: 'dashboard' }, '', '/studio');
+        }
+      } catch {
+        // The workspace can still load when session storage is blocked.
+      }
 
-    const timer = setTimeout(() => setMounted(true), 0);
-    return () => clearTimeout(timer);
-  }, [loadProjectFromLocalStorage, setActiveView]);
+      if (targetView) setActiveView(targetView);
+      setMounted(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrateProjectRepository, setActiveView]);
 
   useEffect(() => {
     const handlePopState = () => {
