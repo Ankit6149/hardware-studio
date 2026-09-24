@@ -7,7 +7,6 @@ import {
   Trash2, 
   Copy, 
   AlertTriangle, 
-  RefreshCw, 
   Download, 
   Cpu, 
   HelpCircle
@@ -19,20 +18,19 @@ export const PinMapTable: React.FC = () => {
     pinMap,
     addPinItem,
     updatePinItem,
-    deletePinItem,
-    generatePinMapFromBlueprint
+    deletePinItem
   } = useProjectStore();
 
   const [filterProtocol, setFilterProtocol] = useState<string>('ALL');
 
   const handleAddRow = () => {
     addPinItem({
-      signalName: "GPIO_SIGNAL",
-      connectedBlock: "External Header",
+      signalName: "",
+      connectedBlock: "",
       mcuPin: "",
-      direction: "Input",
-      protocol: "GPIO",
-      voltage: "3.3V",
+      direction: "Unknown",
+      protocol: "Unknown",
+      voltage: "",
       notes: ""
     });
   };
@@ -99,8 +97,8 @@ export const PinMapTable: React.FC = () => {
     return useProjectStore.getState().projectName.toLowerCase().replace(/\s+/g, '_');
   };
 
-  const directions = ["Input", "Output", "Bidirectional", "Power", "Ground"];
-  const protocols = ["GPIO", "I2C", "SPI", "UART", "PWM", "ADC", "Touch", "Power", "Ground"];
+  const directions = ["Unknown", "Input", "Output", "Bidirectional", "Power", "Ground"];
+  const protocols = ["Unknown", "GPIO", "I2C", "SPI", "UART", "PWM", "ADC", "Touch", "Power", "Ground"];
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative p-6 space-y-6 overflow-y-auto">
@@ -164,14 +162,6 @@ export const PinMapTable: React.FC = () => {
           </span>
           <div className="flex items-center space-x-2">
             <Button 
-              onClick={generatePinMapFromBlueprint} 
-              variant="outline" 
-              size="xs"
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
-            >
-              Generate from Blueprint
-            </Button>
-            <Button 
               onClick={handleAddRow} 
               variant="primary" 
               size="xs"
@@ -209,7 +199,7 @@ export const PinMapTable: React.FC = () => {
                 <tr>
                   <td colSpan={8} className="p-6 text-center text-slate-400">
                     {filterProtocol === 'ALL' 
-                      ? "No pins mapped. Click 'Generate from Blueprint' or add lines manually to build routing."
+                      ? "No pins mapped. Add only signals and electrical facts that are explicitly known."
                       : `No pins matching protocol filter: ${filterProtocol}`}
                   </td>
                 </tr>
