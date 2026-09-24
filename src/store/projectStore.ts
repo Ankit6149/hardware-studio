@@ -602,6 +602,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       blueprintPackStatus: state.blueprintPackStatus || 'Stale',
       activeBoardId: state.activeBoardId || '',
       requirements: state.requirements || [],
+      requirementsReconciliationSuppressions: state.requirementsReconciliationSuppressions || [],
       architectureNodes: state.architectureNodes || [],
       architectureConnections: state.architectureConnections || [],
       architectureReconciliationSuppressions: state.architectureReconciliationSuppressions || [],
@@ -682,6 +683,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     activeBoardId: initialProject.activeBoardId || '',
 
     requirements: initialProject.requirements || [],
+    requirementsReconciliationSuppressions: initialProject.requirementsReconciliationSuppressions || [],
     architectureNodes: initialProject.architectureNodes || [],
     architectureConnections: initialProject.architectureConnections || [],
     architectureReconciliationSuppressions: initialProject.architectureReconciliationSuppressions || [],
@@ -2706,7 +2708,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
-        'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
+        'requirements', 'requirementsReconciliationSuppressions', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
         'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests', 'validationReconciliationSuppressions'
       ];
 
@@ -2743,7 +2745,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
-        'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
+        'requirements', 'requirementsReconciliationSuppressions', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
         'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests', 'validationReconciliationSuppressions'
       ];
 
@@ -2796,7 +2798,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         'mechanicalZones', 'assemblyLayers', 'schematicSymbols', 'schematicConnections',
         'schematicWires', 'pcbLayers', 'copperShapes', 'traces', 'vias', 'drillHoles',
         'boardOutlines', 'pcbRules', 'reviewResults', 'padNetAssignments', 'keepoutZones',
-        'requirements', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
+        'requirements', 'requirementsReconciliationSuppressions', 'architectureNodes', 'architectureConnections', 'architectureReconciliationSuppressions', 'mechanicalObjects', 'mechanicalDimensions',
         'mechanicalBodies', 'firmwareModules', 'firmwareStates', 'firmwareTransitions', 'validationTests', 'validationReconciliationSuppressions'
       ];
 
