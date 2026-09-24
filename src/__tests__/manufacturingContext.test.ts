@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateManufacturingContext } from '../lib/manufacturing/manufacturingContext';
+import {
+  boardOutlineDimensionsMm,
+  evaluateManufacturingContext,
+} from '../lib/manufacturing/manufacturingContext';
+import { generateNativeBoardLayoutJson } from '../lib/manufacturing/nativePcbExports';
 import { Project } from '../types';
 
 function baseProject(overrides: Partial<Project> = {}): Project {
@@ -39,6 +43,71 @@ describe('manufacturing context preflight', () => {
 
     expect(result.ready).toBe(false);
     expect(result.blockers.some((blocker) => blocker.code === 'MISSING_BOARD_GEOMETRY')).toBe(true);
+  });
+
+  it('derives manufacturing dimensions from the explicit outline, never BoardItem.dimensionsMm', () => {
+    const result = evaluateManufacturingContext(baseProject({
+      boards: [{
+        id: 'board-a',
+        name: 'Board A',
+        boardType: 'Rigid',
+        dimensionsMm: '999 x 888 mm',
+        layerCount: 2,
+        status: 'Draft',
+      }],
+      boardOutlines: [{
+        id: 'outline-a',
+        boardId: 'board-a',
+        width: 50,
+        height: 40,
+        units: 'mm',
+      }],
+    }));
+
+    expect(result.ready).toBe(true);
+    expect(result.context?.dimensions).toEqual({ widthMm: 50, heightMm: 40 });
+
+    const layout = JSON.parse(generateNativeBoardLayoutJson(baseProject({
+      boards: [{
+        id: 'board-a',
+        name: 'Board A',
+        boardType: 'Rigid',
+        dimensionsMm: '999 x 888 mm',
+        layerCount: 2,
+        status: 'Draft',
+      }],
+      boardOutlines: [{
+        id: 'outline-a',
+        boardId: 'board-a',
+        width: 50,
+        height: 40,
+        units: 'mm',
+      }],
+    }))) as { boardDimensions: { widthMm: number; heightMm: number } };
+
+    expect(layout.boardDimensions).toEqual({ widthMm: 50, heightMm: 40 });
+  });
+
+  it('derives millimetre bounds from polygon outlines and controlled mil units', () => {
+    expect(boardOutlineDimensionsMm({
+      id: 'polygon-mm',
+      boardId: 'board-a',
+      units: 'mm',
+      points: [
+        { x: 10, y: 20 },
+        { x: 60, y: 20 },
+        { x: 60, y: 60 },
+        { x: 10, y: 60 },
+      ],
+    })).toEqual({ widthMm: 50, heightMm: 40 });
+
+    expect(boardOutlineDimensionsMm({
+      id: 'outline-mil',
+      boardId: 'board-a',
+      width: 1000,
+      height: 500,
+      units: 'mil',
+    })).toEqual({ widthMm: 25.4, heightMm: 12.7 });
   });
 
   it('preserves zero as a valid via coordinate when physical diameters are explicit', () => {
