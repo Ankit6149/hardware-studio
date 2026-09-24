@@ -10,7 +10,6 @@ import {
   Trash2, 
   Zap, 
   AlertTriangle, 
-  RefreshCw, 
   Download 
 } from 'lucide-react';
 import { exportToCSV } from '../lib/exportCsv';
@@ -18,23 +17,22 @@ import { exportToCSV } from '../lib/exportCsv';
 export const PowerBudgetTable: React.FC = () => {
   const {
     powerBudget,
-    batteryCapacityMah = 100,
+    batteryCapacityMah = 0,
     nodes,
     addPowerItem,
     updatePowerItem,
     deletePowerItem,
-    setBatteryCapacity,
-    generatePowerFromBlueprint
+    setBatteryCapacity
   } = useProjectStore();
 
   const handleAddRow = () => {
     addPowerItem({
-      blockName: "New Rail Component",
-      voltage: "3.3",
-      activeCurrentMa: 1.0,
-      sleepCurrentUa: 10.0,
-      dutyCyclePercent: 5.0,
-      quantity: 1,
+      blockName: "",
+      voltage: "",
+      activeCurrentMa: 0,
+      sleepCurrentUa: 0,
+      dutyCyclePercent: 0,
+      quantity: 0,
       notes: ""
     });
   };
@@ -55,7 +53,7 @@ export const PowerBudgetTable: React.FC = () => {
     const active = Number(item.activeCurrentMa) || 0;
     const sleep = Number(item.sleepCurrentUa) || 0;
     const duty = Number(item.dutyCyclePercent) || 0;
-    const qty = Number(item.quantity) || 1;
+    const qty = Number(item.quantity) || 0;
 
     // Formula: active * duty/100 + (sleep/1000) * (1 - duty/100)
     const avg = (active * (duty / 100) + (sleep / 1000) * (1 - duty / 100)) * qty;
@@ -64,7 +62,7 @@ export const PowerBudgetTable: React.FC = () => {
     totalAverageCurrent += avg;
   });
 
-  const batteryCapacity = batteryCapacityMah || 100;
+  const batteryCapacity = batteryCapacityMah || 0;
   const runtimeHours = totalAverageCurrent > 0 ? batteryCapacity / totalAverageCurrent : 0;
   const runtimeDays = runtimeHours / 24;
 
@@ -75,15 +73,9 @@ export const PowerBudgetTable: React.FC = () => {
   if (!hasBattery) {
     powerWarnings.push("No physical battery or lithium energy cell block detected in the architecture canvas.");
   }
-  if (totalActiveCurrent > 200) {
-    powerWarnings.push("High active current draw (> 200mA) detected. This will limit pocket wearable lifetimes.");
-  }
   const missingSleep = powerBudget.some(item => Number(item.sleepCurrentUa) === 0 && item.blockName.toLowerCase().includes('mcu'));
   if (missingSleep) {
     powerWarnings.push("Sleep current not configured for core MCU block. Quiescent sleep rates are vital for wearables.");
-  }
-  if (runtimeHours > 0 && runtimeHours < 24) {
-    powerWarnings.push(`Critical Runtime: Estimated lifetime (${runtimeHours.toFixed(1)} hrs) is under the 24-hour baseline standard.`);
   }
 
   const handleExportCSV = () => {
@@ -92,7 +84,7 @@ export const PowerBudgetTable: React.FC = () => {
       const active = Number(item.activeCurrentMa) || 0;
       const sleep = Number(item.sleepCurrentUa) || 0;
       const duty = Number(item.dutyCyclePercent) || 0;
-      const qty = Number(item.quantity) || 1;
+      const qty = Number(item.quantity) || 0;
       const avg = (active * (duty / 100) + (sleep / 1000) * (1 - duty / 100)) * qty;
       return [
         item.blockName,
@@ -155,7 +147,7 @@ export const PowerBudgetTable: React.FC = () => {
           title="Total Active Draw"
           value={totalActiveCurrent.toFixed(1)}
           unit="mA"
-          status={totalActiveCurrent > 200 ? 'warning' : 'info'}
+          status="info"
           icon={<Zap className="w-4 h-4 text-cyan-500" />}
         />
         <StatCard
@@ -176,7 +168,7 @@ export const PowerBudgetTable: React.FC = () => {
           title="Est. Runtime"
           value={runtimeHours > 0 ? (runtimeHours > 72 ? runtimeDays.toFixed(1) : runtimeHours.toFixed(1)) : '0.0'}
           unit={runtimeHours > 72 ? 'days' : 'hours'}
-          status={runtimeHours < 24 && runtimeHours > 0 ? 'error' : 'success'}
+          status={runtimeHours > 0 ? 'info' : 'warning'}
           icon={<Clock className="w-4 h-4 text-purple-500" />}
         />
       </div>
@@ -188,14 +180,6 @@ export const PowerBudgetTable: React.FC = () => {
             Load Line Estimate Sheet
           </span>
           <div className="flex items-center space-x-2">
-            <Button 
-              onClick={generatePowerFromBlueprint} 
-              variant="outline" 
-              size="xs"
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
-            >
-              Sync Power Blocks
-            </Button>
             <Button 
               onClick={handleAddRow} 
               variant="primary" 
@@ -234,7 +218,7 @@ export const PowerBudgetTable: React.FC = () => {
               {powerBudget.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-6 text-center text-slate-400">
-                    No active loads configured. Click &apos;Sync Power Blocks&apos; or add lines manually to build budget.
+                    No active loads configured. Add only measured, datasheet-backed, or explicitly estimated values.
                   </td>
                 </tr>
               ) : (
@@ -242,7 +226,7 @@ export const PowerBudgetTable: React.FC = () => {
                   const active = Number(item.activeCurrentMa) || 0;
                   const sleep = Number(item.sleepCurrentUa) || 0;
                   const duty = Number(item.dutyCyclePercent) || 0;
-                  const qty = Number(item.quantity) || 1;
+                  const qty = Number(item.quantity) || 0;
                   const itemAvg = (active * (duty / 100) + (sleep / 1000) * (1 - duty / 100)) * qty;
 
                   return (
@@ -299,7 +283,7 @@ export const PowerBudgetTable: React.FC = () => {
                           value={item.quantity}
                           onChange={(e) => handleUpdate(item.id, 'quantity', e.target.value)}
                           className="w-full bg-transparent border-0 hover:bg-slate-100 focus:bg-white focus:ring-1 focus:ring-slate-300 rounded px-1.5 py-0.5 text-xs text-slate-700 text-center"
-                          min="1"
+                          min="0"
                         />
                       </td>
                       <td className="p-2.5 font-bold text-slate-800 text-right">
