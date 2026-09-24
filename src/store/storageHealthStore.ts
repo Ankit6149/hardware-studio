@@ -52,6 +52,22 @@ export function allowStorageRecoveryOverwrite(): void {
   corruptionWriteBlock = false;
 }
 
+export function markRepositorySaving(): void {
+  setHealth(savingStorageHealth(useStorageHealthStore.getState().health));
+}
+
+export function markRepositorySaved(lastSavedAt?: string): void {
+  setHealth(savedStorageHealth(lastSavedAt));
+}
+
+export function markRepositoryFailure(error: unknown): void {
+  const health = classifyStorageError(error);
+  setHealth(health.status === 'failed' || health.status === 'unavailable'
+    ? health
+    : memoryFallbackStorageHealth(health.message));
+}
+
+
 export function prepareStorageReliability(): void {
   if (prepared || typeof window === 'undefined') return;
   prepared = true;
