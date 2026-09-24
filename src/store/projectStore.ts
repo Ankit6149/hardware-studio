@@ -58,6 +58,14 @@ import {
   type PcbPlacementPatch,
 } from '../lib/pcb/pcbPlacementAuthority';
 import {
+  projectPatchFromRequirementsReconciliationPlan,
+  type RequirementsReconciliationApplyPlan,
+} from '../lib/product/legacyRequirementsReconciliationApply';
+import {
+  fingerprintLegacyRequirementsReconciliation,
+  previewLegacyRequirementsReconciliation,
+} from '../lib/product/legacyRequirementsReconciliation';
+import {
   projectPatchFromLegacyRequirementsApplyPlan,
   type LegacyRequirementsAdoptionApplyPlan,
 } from '../lib/product/legacyRequirementsAdoptionApply';
@@ -293,6 +301,9 @@ interface ProjectState extends Project {
   applyLegacyRequirementsAdoptionPlan: (
     plan: LegacyRequirementsAdoptionApplyPlan,
   ) => { success: boolean; reason?: string };
+  applyLegacyRequirementsReconciliationPlan: (
+    plan: RequirementsReconciliationApplyPlan,
+  ) => Promise<{ success: boolean; reason?: string }>;
 
   addArchitectureNode: (node: Omit<ProductArchitectureNode, 'id'>) => void;
   updateArchitectureNode: (id: string, data: Partial<ProductArchitectureNode>) => void;
@@ -2416,6 +2427,37 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       get().executeProjectCommand(
         'ADOPT_LEGACY_REQUIREMENTS',
         `Adopt reviewed legacy requirements (${plan.adoptionSessionId})`,
+        () => {
+          persistChange(patch);
+        },
+      );
+
+      return { success: true };
+    },
+
+    applyLegacyRequirementsReconciliationPlan: async (plan) => {
+      const state = get();
+
+      if (!plan.canApply) {
+        return { success: false, reason: 'Requirements reconciliation plan is not fully resolved and cannot be applied.' };
+      }
+      if (plan.projectId !== state.id) {
+        return { success: false, reason: 'Requirements reconciliation plan belongs to a different project.' };
+      }
+
+      const currentPreview = await previewLegacyRequirementsReconciliation(state as ProjectState);
+      const currentFingerprint = await fingerprintLegacyRequirementsReconciliation(currentPreview);
+      if (currentFingerprint !== plan.previewFingerprint) {
+        return {
+          success: false,
+          reason: 'Requirements reconciliation preview is stale because source or canonical requirements changed after review.',
+        };
+      }
+
+      const patch = projectPatchFromRequirementsReconciliationPlan(plan);
+      get().executeProjectCommand(
+        'RECONCILE_LEGACY_REQUIREMENTS',
+        `Apply reviewed requirements reconciliation (${plan.previewFingerprint.slice(0, 18)})`,
         () => {
           persistChange(patch);
         },
